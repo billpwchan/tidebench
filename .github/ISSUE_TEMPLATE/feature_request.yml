@@ -1,0 +1,17 @@
+name: Feature request
+description: Explain a research or paper-trading workflow that could be better.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Which user workflow needs improvement?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior and trade-offs
+      description: Include data, accounting or operational implications where applicable.
+    validations:
+      required: true

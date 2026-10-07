@@ -1,0 +1,62 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.21"
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: uv sync --frozen --python 3.13
+      - run: uv run ruff check backend tests scripts
+      - run: uv run ruff format --check backend tests scripts
+      - run: uv run pytest -q
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run format:check
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:e2e
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t tidebench:ci .
+      - name: Smoke test the container
+        shell: bash
+        run: |
+          docker run -d --name tidebench-ci -p 127.0.0.1:8080:8000 -e TIDEBENCH_API_TOKEN=ephemeral-ci-token-only-32-characters tidebench:ci
+          curl --fail --retry 30 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/healthz
+          curl --fail -H 'Authorization: Bearer ephemeral-ci-token-only-32-characters' 'http://127.0.0.1:8080/api/v1/market/candles?source=example&limit=60' -o /tmp/candles.json
+          python -c "import json; d=json.load(open('/tmp/candles.json')); assert len(d['candles']) == 60 and d['source'] == 'example'"
+      - name: Container logs
+        if: failure()
+        run: docker logs tidebench-ci

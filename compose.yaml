@@ -1,0 +1,21 @@
+services:
+  tidebench:
+    build: .
+    init: true
+    ports:
+      - "127.0.0.1:8080:8000"
+    environment:
+      TIDEBENCH_API_TOKEN: ${TIDEBENCH_API_TOKEN:?Set a random workspace token of at least 32 characters in .env}
+      TIDEBENCH_REGION: ${TIDEBENCH_REGION:-global}
+      TIDEBENCH_ALLOWED_HOSTS: localhost,127.0.0.1
+      TIDEBENCH_ALLOWED_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+    volumes:
+      - tidebench-data:/app/data
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  tidebench-data:

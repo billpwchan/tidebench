@@ -1,0 +1,15 @@
+Tidebench
+Copyright (c) 2026 Bill Chan
+
+This application includes TradingView Lightweight Charts, used under the Apache License 2.0.
+The upstream v5.2.1 NOTICE reads:
+
+TradingView Lightweight Charts™
+Copyright (с) 2025 TradingView, Inc. https://www.tradingview.com/
+
+The application retains an on-chart TradingView attribution link.
+The upstream license is available at https://github.com/tradingview/lightweight-charts/blob/v5.2.1/LICENSE
+
+React, TanStack Query and Vite are used under their respective MIT licenses.
+Lucide icons are used under the ISC license.
+Dependency licenses remain in their installed packages. This notice does not grant data or trademark rights.
