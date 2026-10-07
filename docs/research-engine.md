@@ -1,5 +1,7 @@
 # Research engine contract
 
+This document describes the retained v0.1 Classic spot engine. The professional workspace's spot/perpetual, funding and out-of-sample contract is documented in [Professional research](pro-research.md).
+
 Tidebench v0.1 simulates long-only spot positions from confirmed OHLCV bars. It is
 a reproducible research model, not a reconstruction of an exchange matching
 engine. No engine function connects to an exchange or submits a real order.
