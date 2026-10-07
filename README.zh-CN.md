@@ -118,7 +118,14 @@ flowchart LR
 
 后端采用模块化单体，核心引擎仅使用 Python 标准库与 Decimal，后台计算有明确边界。前端使用 Vite、TanStack Query 和 Lightweight Charts。SQLite 事务串行提交账户变更，进程锁约束单实例运行。
 
-具体行为见 [架构说明](docs/architecture.md)、[API 契约](docs/api-contract.md) 和 [研究引擎契约](docs/research-engine.md)。
+具体行为见 [架构说明](docs/architecture.md)、[API 契约](docs/api-contract.md) 和 [研究引擎契约](docs/research-engine.md)。[交易员产品规格](docs/trader-product-spec.zh-CN.md) 与 [独立架构挑战](docs/architecture-review.md) 说明商业目标及必须承受的故障场景。
+
+<details>
+<summary>研究工作台：假设、基准、成交与快照重放</summary>
+
+![使用明确标记的合成价格运行研究；图中结果不是投资业绩](docs/assets/research.png)
+
+</details>
 
 ## 验证
 
@@ -130,7 +137,7 @@ make browser-test
 
 检查包括 Python lint/格式、引擎与后端测试、前端构建；浏览器测试覆盖用户流程。测试涵盖未来数据扰动、前缀重放、费用与精度、并发订单去重、事务回滚、账本重放、停止竞态和队列准入。
 
-上方 CI 徽章连接真实 workflow。测试通过证明的是具体检查结果，不代表生产成熟度或策略盈利能力。
+上方 CI 徽章连接真实 workflow。[验证记录](docs/verification.md) 列出观察结果及尚未验证的边界。测试通过证明的是具体检查结果，不代表生产成熟度或策略盈利能力。
 
 ## 模型与部署边界
 
