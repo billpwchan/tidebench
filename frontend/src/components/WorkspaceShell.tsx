@@ -1,6 +1,8 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import {
   Activity,
+  Database,
+  Gauge,
   ArrowRight,
   ArrowUpRight,
   ChevronDown,
@@ -11,7 +13,6 @@ import {
   Menu,
   Search,
   Settings2,
-  ShieldCheck,
   Wallet,
   X,
 } from 'lucide-react';
@@ -19,13 +20,16 @@ import type { System } from '../api';
 import { Logo } from '../components/workspace';
 import type { Page } from '../lib/config';
 import { symbols } from '../lib/config';
+import { useI18n } from '../lib/i18n';
+import { LanguageSelect, useSession } from './AuthGate';
 
-export const pages: { id: Page; label: string; icon: typeof Activity }[] = [
-  { id: 'overview', label: 'Overview', icon: Layers3 },
-  { id: 'research', label: 'Research', icon: FlaskConical },
-  { id: 'paper', label: 'Paper desk', icon: Wallet },
-  { id: 'risk', label: 'Risk & activity', icon: ShieldCheck },
-  { id: 'settings', label: 'Settings', icon: Settings2 },
+export const pages: { id: Page; label: string; icon: typeof Activity; group: string }[] = [
+  { id: 'overview', label: 'Overview', icon: Layers3, group: 'Research' },
+  { id: 'research', label: 'Research', icon: FlaskConical, group: 'Research' },
+  { id: 'execution', label: 'Execution', icon: Wallet, group: 'Execution' },
+  { id: 'data', label: 'Data library', icon: Database, group: 'Workspace' },
+  { id: 'operations', label: 'Operations', icon: Gauge, group: 'Workspace' },
+  { id: 'settings', label: 'Settings', icon: Settings2, group: 'Workspace' },
 ];
 
 export function Sidebar({
@@ -39,6 +43,9 @@ export function Sidebar({
   navigate: (p: Page) => void;
   system: UseQueryResult<System, Error>;
 }) {
+  const { t } = useI18n();
+  const session = useSession();
+  const activePage = page === 'paper' || page === 'risk' ? 'execution' : page;
   return (
     <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`}>
       <a className="brand" href="#overview" onClick={() => navigate('overview')}>
@@ -48,58 +55,59 @@ export function Sidebar({
         </span>
       </a>
       <div className="workspace-selector">
-        <span className="workspace-avatar">P</span>
+        <span className="workspace-avatar">
+          {(session?.user?.display_name ?? session?.user?.username ?? 'W')
+            .slice(0, 1)
+            .toUpperCase()}
+        </span>
         <div>
-          <strong>Personal workspace</strong>
-          <span>Self-hosted · v{system.data?.version ?? '0.1.0'}</span>
+          <strong>{t('Personal workspace')}</strong>
+          <span>
+            {t('Self-hosted')} · {system.data?.version ? `v${system.data.version}` : '—'}
+          </span>
         </div>
         <ChevronDown size={13} />
       </div>
-      <span className="nav-label">WORKSPACE</span>
       <nav aria-label="Main navigation">
-        {pages.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            className={`nav-item ${page === id ? 'active' : ''}`}
-            onClick={() => navigate(id)}
-            aria-label={label}
-            aria-current={page === id ? 'page' : undefined}
-          >
-            <Icon size={18} strokeWidth={1.65} />
-            <span>{label}</span>
-            {id === 'research' && (
-              <span className="nav-shortcut" aria-hidden="true">
-                R
-              </span>
-            )}
-          </button>
+        {['Research', 'Execution', 'Workspace'].map((group) => (
+          <div className="nav-group" key={group}>
+            <span className="nav-label">{t(group)}</span>
+            {pages
+              .filter((p) => p.group === group)
+              .map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  className={`nav-item ${activePage === id ? 'active' : ''}`}
+                  onClick={() => navigate(id)}
+                  aria-label={t(label)}
+                  aria-current={activePage === id ? 'page' : undefined}
+                >
+                  <Icon size={18} strokeWidth={1.65} />
+                  <span>{t(label)}</span>
+                </button>
+              ))}
+          </div>
         ))}
       </nav>
       <div className="sidebar-bottom">
-        <div className="side-note">
-          <span className="side-note-icon">
-            <ShieldCheck size={19} />
-          </span>
-          <strong>
-            Your research.
-            <br />
-            Your infrastructure.
-          </strong>
-          <p>Data and execution, with a clear audit trail.</p>
+        <div className="sidebar-session">
+          <span className="eyebrow">{t('Session')}</span>
+          <strong>{session?.user?.display_name ?? session?.user?.username ?? '—'}</strong>
+          <span>{session?.user?.role ?? '—'}</span>
         </div>
         <button className="sidebar-help" onClick={() => navigate('settings')}>
           <HelpCircle size={16} />
-          <span>Workspace settings</span>
+          <span>{t('Settings')}</span>
           <ArrowUpRight size={13} />
         </button>
         <div className="sidebar-status">
           <span className={`connection-dot ${system.isSuccess ? 'connected' : ''}`} />
           <span>
             {system.isSuccess
-              ? 'Local server connected'
+              ? t('Local server connected')
               : system.isError
-                ? 'Local server unavailable'
-                : 'Connecting to server'}
+                ? t('Local server unavailable')
+                : t('Connecting to server')}
           </span>
         </div>
       </div>
@@ -111,11 +119,16 @@ export function Topbar({
   page,
   setMobileNav,
   setSearchOpen,
+  executionMode,
 }: {
   page: Page;
   setMobileNav: (v: boolean) => void;
   setSearchOpen: (v: boolean) => void;
+  executionMode?: string;
 }) {
+  const { t } = useI18n();
+  const session = useSession();
+  const currentPage = page === 'paper' || page === 'risk' ? 'execution' : page;
   return (
     <header className="topbar">
       <div className="breadcrumbs">
@@ -126,9 +139,9 @@ export function Topbar({
         >
           <Menu size={20} />
         </button>
-        <span>Workspace</span>
+        <span>{t('Workspace')}</span>
         <ChevronRight size={12} />
-        <strong>{pages.find((p) => p.id === page)?.label}</strong>
+        <strong>{t(pages.find((p) => p.id === currentPage)?.label ?? 'Workspace')}</strong>
       </div>
       <div className="topbar-actions">
         <button
@@ -137,16 +150,22 @@ export function Topbar({
           aria-label="Search markets, Command K"
         >
           <Search size={15} />
-          <span>Find a market</span>
+          <span>{t('Find a market')}</span>
           <kbd>⌘ K</kbd>
         </button>
         <span className="topbar-divider" />
         <span className="execution-badge">
           <span />
-          Local paper
+          {executionMode === 'local-paper' ? t('Local paper') : (executionMode ?? '—')}
         </span>
-        <span className="user-avatar" title="Local workspace">
-          P
+        <LanguageSelect />
+        <span
+          className="user-avatar"
+          title={session?.user?.display_name ?? session?.user?.username}
+        >
+          {(session?.user?.display_name ?? session?.user?.username ?? 'W')
+            .slice(0, 1)
+            .toUpperCase()}
         </span>
       </div>
     </header>
@@ -168,6 +187,7 @@ export function MarketSearch({
   setSymbol: (v: string) => void;
   navigate: (p: Page) => void;
 }) {
+  const { t } = useI18n();
   return (
     <>
       {searchOpen && (
@@ -183,7 +203,7 @@ export function MarketSearch({
               <Search size={20} />
               <input
                 autoFocus
-                placeholder="Search markets…"
+                placeholder={t('Search markets…')}
                 aria-label="Search market symbol"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

@@ -1,21 +1,44 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test as base, type Page, type APIRequestContext } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 
-async function navigate(page: Page, name: string) {
-  const button = page.getByRole('navigation').getByRole('button', { name, exact: true });
-  const openNavigation = page.getByRole('button', { name: 'Open navigation' });
-  if (await openNavigation.isVisible()) await openNavigation.click();
-  await button.click();
-}
+const test = base.extend({
+  request: async ({ context }, use) => {
+    await use(context.request);
+  },
+});
 
+const credentials = {
+  username: 'browserqa',
+  password: 'isolated-browser-password-123',
+  display_name: 'Example workspace',
+};
+async function navigate(page: Page, name: string) {
+  const opener = page.getByRole('button', { name: 'Open navigation' });
+  if (await opener.isVisible()) await opener.click();
+  await page.getByRole('navigation').getByRole('button', { name, exact: true }).click();
+}
+async function login(request: APIRequestContext) {
+  const status = await (await request.get('/api/v1/auth/status')).json();
+  const response = await request.post(
+    status.setup_required ? '/api/v1/auth/setup' : '/api/v1/auth/login',
+    {
+      data: status.setup_required
+        ? credentials
+        : { username: credentials.username, password: credentials.password },
+    },
+  );
+  expect(response.ok()).toBeTruthy();
+  return (await response.json()).csrf_token as string;
+}
 test.beforeEach(async ({ page, request }) => {
-  // The isolated browser test database is disposable; no real exchange requests or funds are involved.
-  await request.post('/api/v1/risk/kill-switch', {
-    data: { source: 'example', active: false, reason: 'Isolated browser test setup' },
+  const csrf = await login(request);
+  await request.post('/api/v1/pro/execution/halt', {
+    data: { source: 'example', active: false, reason: 'Isolated browser verification' },
+    headers: { 'X-CSRF-Token': csrf },
   });
   await page.route('**/api/v1/**', async (route) => {
     const url = new URL(route.request().url());
-    if (url.searchParams.get('source') === 'okx') {
+    if (url.searchParams.get('source') === 'okx')
       await route.fulfill({
         status: 502,
         json: {
@@ -25,107 +48,133 @@ test.beforeEach(async ({ page, request }) => {
           },
         },
       });
-    } else await route.continue();
+    else await route.continue();
   });
   await page.goto('/');
   await page.getByLabel('Market source', { exact: true }).selectOption('example');
   await expect(page.getByText('Fixed synthetic dataset', { exact: true })).toBeVisible();
 });
 
-test('saved research, costs, snapshot replay and a real JSON download', async ({
+test('versioned research, saved results, replay and JSON export', async ({
   page,
   request,
 }, testInfo) => {
-  const capture =
-    process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop';
-  if (capture) {
-    await mkdir('../docs/assets', { recursive: true });
-    await expect(page.locator('.financial-chart canvas').first()).toBeVisible();
-    await page.screenshot({ path: '../docs/assets/workspace.png' });
-  }
+  const csrf = (await (await request.get('/api/v1/auth/status')).json()).csrf_token;
+  const end = 1767225600000;
+  const job = await (
+    await request.post('/api/v1/pro/catalog/jobs', {
+      data: {
+        source: 'example',
+        inst_id: 'BTC-USDT',
+        kind: 'trade',
+        bar: '1H',
+        start: end - 240 * 3600000,
+        end,
+      },
+      headers: { 'X-CSRF-Token': csrf },
+    })
+  ).json();
+  let dataset = '';
+  await expect
+    .poll(async () => {
+      const jobs = (await (await request.get('/api/v1/pro/catalog/jobs')).json()).items;
+      const found = jobs.find((j: { id: string }) => j.id === job.id);
+      dataset = found?.dataset_id;
+      return found?.status;
+    })
+    .toBe('completed');
   const pageErrors: string[] = [];
   page.on('pageerror', (e) => pageErrors.push(e.message));
   await navigate(page, 'Research');
-  await page.getByLabel('Candle count', { exact: true }).fill('100');
-  await page.getByLabel('Fast window', { exact: true }).fill('8');
-  await page.getByLabel('Slow window', { exact: true }).fill('21');
+  await page.getByLabel('Dataset', { exact: true }).selectOption(dataset);
   const queued = page.waitForResponse(
-    (r) => r.url().endsWith('/api/v1/backtests') && r.request().method() === 'POST',
+    (r) => r.url().endsWith('/pro/research/runs') && r.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Run backtest', exact: true }).click();
-  const created = await (await queued).json();
+  await page.getByRole('button', { name: 'Run research', exact: true }).click();
+  const run = await (await queued).json();
   await expect
-    .poll(async () => (await (await request.get(`/api/v1/backtests/${created.id}`)).json()).status)
+    .poll(
+      async () => (await (await request.get(`/api/v1/pro/research/runs/${run.id}`)).json()).status,
+    )
     .toBe('completed');
   await expect(page.getByRole('button', { name: 'Export JSON', exact: true })).toBeEnabled();
-  await expect(page.getByText('insufficient_sample', { exact: false })).toBeVisible();
-  if (capture) {
-    await page
-      .getByRole('heading', { name: 'Strategy research', exact: true })
-      .scrollIntoViewIfNeeded();
+  if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop') {
+    await mkdir('../docs/assets', { recursive: true });
+    await expect(page.locator('.pro-result-panel canvas').first()).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: '../docs/assets/research.png' });
+    await page.screenshot({ path: '../docs/assets/research.png', animations: 'disabled' });
   }
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
-  expect((await download).suggestedFilename()).toBe(`tidebench-${created.id}.json`);
-  const original = await (await request.get(`/api/v1/backtests/${created.id}`)).json();
+  expect((await download).suggestedFilename()).toBe(`tidebench-research-${run.id}.json`);
   const replay = page.waitForResponse((r) =>
-    r.url().endsWith(`/api/v1/backtests/${created.id}/replay`),
+    r.url().endsWith(`/pro/research/runs/${run.id}/replay`),
   );
   await page.getByRole('button', { name: 'Replay snapshot', exact: true }).click();
-  const replayRun = await (await replay).json();
+  const replayed = await (await replay).json();
   await expect
     .poll(
-      async () => (await (await request.get(`/api/v1/backtests/${replayRun.id}`)).json()).status,
+      async () =>
+        (await (await request.get(`/api/v1/pro/research/runs/${replayed.id}`)).json()).status,
     )
     .toBe('completed');
-  const reproduced = await (await request.get(`/api/v1/backtests/${replayRun.id}`)).json();
-  expect(reproduced.result).toEqual(original.result);
-  expect(reproduced.manifest.dataset_hash).toEqual(original.manifest.dataset_hash);
-  await page.getByRole('button', { name: 'Provenance', exact: true }).click();
-  await expect(page.locator('.data-inspector')).toContainText(reproduced.manifest.dataset_hash);
+  const a = await (await request.get(`/api/v1/pro/research/runs/${run.id}`)).json();
+  const b = await (await request.get(`/api/v1/pro/research/runs/${replayed.id}`)).json();
+  expect(b.result).toEqual(a.result);
   expect(pageErrors).toEqual([]);
 });
 
-test('paper fill, persistent risk halt, resume, and strategy start/stop', async ({
+test('unified portfolio order preview, fill and persistent risk halt', async ({
   page,
   request,
-}) => {
-  await navigate(page, 'Paper desk');
+}, testInfo) => {
+  await navigate(page, 'Execution');
   await page.getByLabel('Quantity', { exact: false }).fill('0.001');
-  await page.getByRole('button', { name: 'Submit paper order', exact: true }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Bought' })).toBeVisible();
-  const account = await (await request.get('/api/v1/paper/account?source=example')).json();
-  expect(Number(account.cash)).toBeLessThan(10000);
-  expect(account.positions.some((p: { inst_id: string }) => p.inst_id === 'BTC-USDT')).toBeTruthy();
-  await navigate(page, 'Risk & activity');
-  await page.getByLabel('Reason for halt').fill('Browser verification halt');
-  await page.getByRole('button', { name: 'Halt paper desk', exact: true }).click();
-  await expect(page.getByText('EXECUTION HALTED', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Preview order', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Order preview', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Submit order', exact: true }).click();
+  await expect
+    .poll(async () =>
+      Number(
+        (await (await request.get('/api/v1/pro/execution/account?source=example')).json()).cash,
+      ),
+    )
+    .toBeLessThan(10000);
+  await page.getByLabel('Product', { exact: true }).selectOption('SWAP');
+  await page.getByLabel('Quantity', { exact: false }).fill('1');
+  await page.getByLabel('Leverage', { exact: true }).fill('3');
+  await page.getByRole('button', { name: 'Preview order', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Order preview', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Submit order', exact: true }).click();
+  await expect(page.getByRole('cell').getByText('BTC-USDT-SWAP', { exact: true })).toBeVisible();
+  await expect(page.getByText('Account equity', { exact: true })).toBeVisible();
+  if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop') {
+    await expect(page.getByText('Loading workspace data…', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Loading market snapshot…', { exact: true })).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: '../docs/assets/workspace.png', animations: 'disabled' });
+  }
+  await page.getByRole('tab', { name: 'Risk', exact: true }).click();
+  await page.getByLabel('Reason', { exact: true }).fill('Browser verification halt');
+  await page.getByRole('button', { name: 'Halt execution', exact: true }).click();
   await page.reload();
-  await expect(page.getByText('EXECUTION HALTED', { exact: true })).toBeVisible();
-  await page.getByLabel('Reason to resume').fill('Browser verification complete');
-  await page.getByRole('button', { name: 'Resume paper desk', exact: true }).click();
-  await expect(page.getByText('EXECUTION ENABLED', { exact: true })).toBeVisible();
-  await navigate(page, 'Paper desk');
-  await page.getByRole('button', { name: 'Deploy strategy', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Deploy a strategy' })).toBeVisible();
-  await page.getByRole('button', { name: 'Start paper strategy', exact: true }).click();
-  await expect(page.getByText('Paper strategy deployed.', { exact: false })).toBeVisible();
-  await page.getByRole('button', { name: 'Stop', exact: true }).click();
-  await expect(page.getByText('Strategy stopped.', { exact: false })).toBeVisible();
+  await page.getByRole('tab', { name: 'Risk', exact: true }).click();
+  await expect(page.getByText('Execution halted', { exact: true })).toBeVisible();
 });
 
-test('source failures stay explicit and layout is usable at the viewport', async ({ page }) => {
+test('data download, operations, source failure and responsive layout', async ({ page }) => {
+  await navigate(page, 'Data library');
+  await expect(page.getByRole('heading', { name: 'Data library', exact: true })).toBeVisible();
+  await navigate(page, 'Operations');
+  await page.getByRole('tab', { name: 'Backups', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Create backup', exact: true })).toBeEnabled();
+  await navigate(page, 'Overview');
   await page.getByLabel('Market source', { exact: true }).selectOption('okx');
   await expect(
     page.getByRole('alert').filter({ hasText: 'OKX is unavailable' }).first(),
   ).toBeVisible();
-  await expect(page.getByLabel('Market source', { exact: true })).toHaveValue('okx');
   await page.getByRole('button', { name: 'Use synthetic example' }).first().click();
   await expect(page.getByLabel('Market source', { exact: true })).toHaveValue('example');
-  await expect(page.getByText('Fixed synthetic dataset', { exact: true })).toBeVisible();
   const dimensions = await page.evaluate(() => ({
     width: innerWidth,
     content: document.documentElement.scrollWidth,

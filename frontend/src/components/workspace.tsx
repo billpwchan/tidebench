@@ -8,11 +8,13 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react';
+import { Children, cloneElement, isValidElement, useId } from 'react';
 import type { ReactNode } from 'react';
 import type { Bar, Source, Strategy } from '../api';
 import { ApiError } from '../api';
 import { bars, symbols } from '../lib/config';
 import { barLabel } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 
 export function Logo() {
   return (
@@ -30,10 +32,11 @@ export function Status({
   children: ReactNode;
   type?: 'neutral' | 'good' | 'warning' | 'bad';
 }) {
+  const { t } = useI18n();
   return (
     <span className={`status status-${type}`}>
       <span />
-      {children}
+      {typeof children === 'string' ? t(children) : children}
     </span>
   );
 }
@@ -50,9 +53,10 @@ export function Metric({
   note?: ReactNode;
   className?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="metric">
-      <span className="metric-label">{label}</span>
+      <span className="metric-label">{t(label)}</span>
       <div className={`metric-value ${className}`}>
         {value}
         {unit && <small>{unit}</small>}
@@ -70,21 +74,23 @@ export function Empty({
   children: ReactNode;
   icon?: typeof Activity;
 }) {
+  const { t } = useI18n();
   return (
     <div className="empty-state">
       <span className="empty-icon">
         <Icon size={22} strokeWidth={1.5} />
       </span>
-      <h3>{title}</h3>
-      <p>{children}</p>
+      <h3>{t(title)}</h3>
+      <p>{typeof children === 'string' ? t(children) : children}</p>
     </div>
   );
 }
 export function Loading({ label = 'Loading workspace data…' }: { label?: string }) {
+  const { t } = useI18n();
   return (
     <div className="loading-state" role="status">
       <Loader2 className="spin" size={19} />
-      <span>{label}</span>
+      <span>{t(label)}</span>
     </div>
   );
 }
@@ -97,6 +103,7 @@ export function ErrorBox({
   onRetry?: () => void;
   onExample?: () => void;
 }) {
+  const { t } = useI18n();
   const err = error as Error;
   return (
     <div className="error-box" role="alert">
@@ -104,8 +111,8 @@ export function ErrorBox({
       <div>
         <strong>
           {error instanceof ApiError && error.status === 401
-            ? 'Authentication required'
-            : 'This data is unavailable'}
+            ? t('Authentication required')
+            : t('This data is unavailable')}
         </strong>
         <p>{err?.message ?? 'An unexpected error occurred.'}</p>
         {error instanceof ApiError && error.requestId && <code>Request {error.requestId}</code>}
@@ -113,12 +120,12 @@ export function ErrorBox({
           {onRetry && (
             <button className="text-button" onClick={onRetry}>
               <RefreshCw size={13} />
-              Retry
+              {t('Retry')}
             </button>
           )}
           {onExample && (
             <button className="text-button" onClick={onExample}>
-              Use synthetic example
+              {t('Use synthetic example')}
               <ArrowRight size={13} />
             </button>
           )}
@@ -126,6 +133,30 @@ export function ErrorBox({
       </div>
     </div>
   );
+}
+function labelControls(children: ReactNode, label: string, hintId?: string): ReactNode {
+  return Children.map(children, (child) => {
+    if (
+      !isValidElement<{ children?: ReactNode; 'aria-label'?: string; 'aria-describedby'?: string }>(
+        child,
+      )
+    )
+      return child;
+    if (typeof child.type === 'string' && ['input', 'select', 'textarea'].includes(child.type))
+      return cloneElement(child, {
+        'aria-label': child.props['aria-label'] ?? label,
+        ...(hintId
+          ? {
+              'aria-describedby': [child.props['aria-describedby'], hintId]
+                .filter(Boolean)
+                .join(' '),
+            }
+          : {}),
+      });
+    return child.props.children
+      ? cloneElement(child, { children: labelControls(child.props.children, label, hintId) })
+      : child;
+  });
 }
 export function Field({
   label,
@@ -136,11 +167,17 @@ export function Field({
   children: ReactNode;
   hint?: string;
 }) {
+  const { t } = useI18n();
+  const hintId = useId();
   return (
     <label className="field">
-      <span>{label}</span>
-      {children}
-      {hint && <small>{hint}</small>}
+      <span>{t(label)}</span>
+      {labelControls(children, t(label), hint ? hintId : undefined)}
+      {hint && (
+        <small id={hintId} aria-hidden="true">
+          {t(hint)}
+        </small>
+      )}
     </label>
   );
 }
@@ -153,10 +190,11 @@ export function ActionNote({ text, error = false }: { text: string | null; error
   ) : null;
 }
 export function SourceBadge({ source }: { source: Source }) {
+  const { t } = useI18n();
   return (
     <span className={`source-badge ${source === 'example' ? 'synthetic' : ''}`}>
       <Database size={12} />
-      {source === 'example' ? 'Example · synthetic' : 'OKX · public market data'}
+      {t(source === 'example' ? 'Example · synthetic' : 'OKX · public market data')}
     </span>
   );
 }
@@ -167,14 +205,15 @@ export function StrategyFields({
   value: Strategy;
   onChange: (s: Strategy) => void;
 }) {
+  const { t } = useI18n();
   const patch = (key: keyof Strategy, v: string | number) => onChange({ ...value, [key]: v });
   return (
     <>
       <Field label="Strategy">
         <select value={value.kind} onChange={(e) => patch('kind', e.target.value)}>
-          <option value="sma_cross">Moving average crossover</option>
-          <option value="rsi_reversion">RSI mean reversion</option>
-          <option value="buy_hold">Buy & hold</option>
+          <option value="sma_cross">{t('Moving average crossover')}</option>
+          <option value="rsi_reversion">{t('RSI mean reversion')}</option>
+          <option value="buy_hold">{t('Buy & hold')}</option>
         </select>
       </Field>
       {value.kind === 'sma_cross' && (
@@ -239,7 +278,7 @@ export function StrategyFields({
       )}
       <Field
         label="Capital allocation"
-        hint="Fraction of available cash allocated when long, including fees."
+        hint="Fraction of available cash allocated on entry, including fees."
       >
         <div className="input-suffix">
           <input
@@ -268,12 +307,13 @@ export function PageHeading({
   description: string;
   children?: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className="page-heading">
       <div>
-        <div className="eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
-        <p>{description}</p>
+        <div className="eyebrow">{t(eyebrow)}</div>
+        <h1>{t(title)}</h1>
+        <p>{t(description)}</p>
       </div>
       {children && <div className="heading-actions">{children}</div>}
     </div>

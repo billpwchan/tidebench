@@ -42,9 +42,11 @@ class QueueFullError(Exception):
 class Store:
     def __init__(self, path: Path):
         self.path = path
-        path.parent.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        path.parent.chmod(0o700)
         self._process_lock = None
         self.initialize()
+        path.chmod(0o600)
 
     def connect(self):
         connection = sqlite3.connect(self.path, timeout=15, isolation_level=None)
@@ -123,7 +125,7 @@ class Store:
             row = conn.execute("SELECT version FROM schema_version").fetchone()
             if row is None:
                 conn.execute("INSERT INTO schema_version VALUES(1)")
-            elif row[0] != 1:
+            elif row[0] not in {1, 2}:
                 raise RuntimeError("Unsupported database schema. Back up your data before upgrading.")
             for source in ("okx", "example"):
                 conn.execute(

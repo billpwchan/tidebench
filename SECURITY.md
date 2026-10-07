@@ -1,15 +1,13 @@
 # Security policy
 
-Tidebench 0.1 is a developer preview for one local operator. It is not a hardened multi-tenant service and does not submit exchange orders. Do not expose an unauthenticated instance to the internet.
+Tidebench supports authenticated users in one shared research and local simulation workspace. It sends no exchange orders and accepts no exchange credentials. Keep one application process per database. The current tagged release is supported; no response-time SLA or external security certification is claimed.
 
-The supported entry point binds to loopback by default. Binding beyond loopback requires an access token of at least 32 characters. Configure exact allowed hosts and origins, terminate TLS at a trusted reverse proxy and keep the service on a private network. Bearer access is not a replacement for production OIDC/RBAC or tenant isolation.
+Password authentication is enabled by default. Remote initialization requires the configured bootstrap token; remote binding requires enabled authentication and a sufficiently long bootstrap/service token. Configure exact allowed hosts/origins, terminate TLS at a trusted proxy, enable secure cookies and keep the backend private. See [operations](docs/operations.md) for roles, session expiry, password rotation and recovery.
 
-Exchange API keys, secrets and passphrases are not accepted by this version. Public data needs no key. The Settings access token is for the **Tidebench workspace**, not an exchange credential. Store it in an ignored local `.env`, and enter it only into the local workspace Settings form. Browser storage is session-only; API requests never put tokens in URLs.
+Sessions use random secrets in HTTP-only SameSite=Strict cookies, server-side token hashes, expiry, revocation and CSRF checks. Passwords use salted, bounded scrypt. The optional API token grants administrator privileges to automation; protect and rotate it accordingly. The browser's optional service token is session-only and is never included in URLs. Workspace roles do not provide tenant isolation.
 
-Back up the entire data directory with the process stopped, or use SQLite's online backup API. Do not copy only the database file while WAL writes are active. Backups and local JSON research exports may contain data subject to exchange terms. There is no implemented retention/export access policy for multiple users.
+Protect the private data directory, audit logs, backups and exports. Online backups are integrity/hash checked and published with private file permissions. Recovery prepares a revoked, halted image before replacing state. Local backups should also be copied to separately protected storage. Do not copy only a live SQLite database while ignoring WAL files.
 
 ## Reporting
 
-For a suspected credential exposure or exploitable issue, use the repository's **Security → Report a vulnerability** when private reporting is available. If unavailable, contact the maintainer through their public GitHub profile without posting exploit details or secrets. Never put credentials or private account data in a public issue.
-
-No response-time SLA or third-party security certification is claimed. Only the current development release is supported.
+Use **Security → Report a vulnerability** in the repository when private reporting is available. Otherwise contact the maintainer through the public GitHub profile without posting secrets, exploit details or private account data in public issues.

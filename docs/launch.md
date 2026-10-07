@@ -1,34 +1,32 @@
-# Launch notes and distribution draft
+# Release positioning and demonstration
 
-Publish the repository and release first. The text below is a draft for the maintainer to adapt; Tidebench does not automatically post to social networks or message communities.
+## Repository description
 
-## Repository positioning
+Self-hosted crypto research and paper execution for OKX spot and USDT perpetuals. Versioned data, walk-forward evaluation, funding, risk and auditable accounting.
 
-**Short description:** An inspectable crypto research & paper-trading workspace. OKX data, reproducible backtests, transactional risk controls. Self-hosted.
+The useful distinction is inspectable evidence across the workflow: a result identifies its data and model, an OOS choice identifies its training window, and an account change identifies its order, cost and journal entries. Real screenshots, reproducible installation and tested recovery make those claims reviewable.
 
-**Topics:** crypto, quantitative-finance, algorithmic-trading, backtesting, paper-trading, okx, self-hosted, fastapi, react, python, typescript.
+## Suggested announcement
 
-## Suggested launch post
+Tidebench is an open-source crypto research and execution workbench for OKX spot and USDT perpetuals.
 
-I built Tidebench, an open-source crypto research and paper-trading workspace.
+It connects immutable market datasets, out-of-sample research and a persistent simulation account. You can run single replays, parameter grids, cost stress, train/test or walk-forward plans, inspect settled funding and isolated-margin assumptions, and replay the captured evidence.
 
-The question I wanted it to answer: can I trace a result back to its data and execution assumptions, then reproduce it without fetching a different dataset?
+The portfolio supports previewed market/limit/stop simulation, reservations, cancellation, transactional risk and a native asset journal. Named users, server sessions, audit, metrics and verified backup recovery ship in the same application.
 
-It starts with OKX public data, runs long-only spot backtests with explicit fees and slippage, saves input snapshots, and provides a local paper ledger with durable idempotency and risk controls. It also includes an explicit synthetic mode that works without exchange access or keys.
+Public data needs no exchange key. Orders stay local; historical bar and funding-price approximations are explicit. The repository includes acceptance tests, a real HTTP workload script and operating procedures. Reviews of research causality, accounting and actual trader workflows are particularly welcome.
 
-This is a developer preview. It does not submit real exchange orders, promise profitable strategies, or claim institutional execution fidelity. I would especially welcome reviews of the causal replay tests, accounting invariants and data-quality behavior.
+[Repository](https://github.com/billpwchan/tidebench) · [Verification](verification.md) · [Model](pro-research.md)
 
-Repository: https://github.com/billpwchan/tidebench
+This text is a draft for the maintainer. No community post or external message is sent automatically.
 
-## 演示脚本
+## Demonstration sequence
 
-1. 以明确标识的 Example/Synthetic 模式打开工作台。
-2. 选择 BTC-USDT / 1H，修改 SMA 参数与手续费。
-3. 执行回测，展示样本期间、含成本收益、回撤与成交流水。
-4. 打开 manifest，导出结果，执行 snapshot replay。
-5. 在独立示例模拟账户提交订单，展示账本、风控和停止后的拒单。
-6. 说明真实 OKX 行情可按区域连接，而此演示既不是实盘，也不是投资业绩。
+1. Select the explicitly labeled Example source, then download a perpetual's trade, mark and funding datasets in Data library.
+2. Inspect dataset versions, quality, units and provenance; open them in Research.
+3. Run a walk-forward plan, inspect training selection and independent test folds, then compare a cost-stress plan.
+4. Export actual JSON and replay a captured run; show that its deterministic result agrees.
+5. Preview and submit a local perpetual order; inspect margin, funding, orders and journal. Queue and cancel a limit order.
+6. Halt new risk and reduce an existing position. Show verified backup recovery in a disposable workspace; sign in again and confirm execution remains halted.
 
-## Sustainable discovery
-
-Use real screenshots, clear installation steps, a small readable core and reproducible examples. Link directly to contribution entry points and limitations. Release notes should say what changed and how it was verified. Do not buy stars, invent users, copy unsupported performance claims, or post the same advertisement into unrelated communities. Stars are a possible outcome of useful software and credible maintenance, not a guaranteed launch metric.
+Screenshots and any published example returns must remain labeled synthetic. Do not promise returns, manufacture adoption numbers, buy stars or post unsolicited repeated advertisements. Discoverability should come from useful code, clear scope, searchable topics, concrete release notes and maintained contribution paths.

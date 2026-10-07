@@ -2,37 +2,37 @@
 
 **Evidence before execution.**
 
-An inspectable crypto research and paper-trading workspace, starting with OKX public market data.
+An open-source crypto research and execution workbench for OKX spot and linear USDT perpetuals. Version your market data, test a hypothesis out of sample, and follow every simulated order through the account ledger.
 
 [![CI](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml/badge.svg)](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![React 19](https://img.shields.io/badge/react-19-149ECA?logo=react&logoColor=white)](frontend/package.json)
 
-English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Architecture](docs/architecture.md) · [Contributing](CONTRIBUTING.md)
+English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Research model](docs/pro-research.md) · [Operations](docs/operations.md)
 
-![Tidebench market workspace with explicitly synthetic example data](docs/assets/workspace.png)
+![Tidebench portfolio, using explicitly synthetic prices](docs/assets/workspace.png)
 
-**Developer preview · spot only · local paper execution.** Tidebench reads real OKX data through REST polling. Its simulated orders stay in a local ledger; they are neither OKX Demo Trading nor live exchange orders. No exchange API key is needed or accepted.
+## A connected trading workflow
 
-## Why Tidebench
+| Workspace | What you can do |
+|---|---|
+| Markets | Inspect confirmed candles and timestamped OKX quotes; switch explicitly to an isolated synthetic source |
+| Data library | Download trade, mark, index and settled funding history; resume interrupted jobs; inspect gaps, rules, provenance and content hashes; import attributed historical records |
+| Research | Single replay, parameter grid, cost stress, train/test and rolling walk-forward evaluation; independent out-of-sample results, fills, funding, liquidations and round trips |
+| Portfolio | Spot inventory and isolated perpetual positions in one account; order previews, market/limit/stop simulation, reservations, cancellation, leverage, margin and funding |
+| Risk | Transactional order, gross exposure, leverage and observed-day loss limits; a persistent halt that permits reducing exposure |
+| Operations | Named users and roles, server-side sessions, audit records, feed age, durable job checkpoints, Prometheus metrics, verified backups and maintenance-mode recovery |
 
-A backtest should come with enough evidence to inspect it: the exact inputs, when information became available, execution assumptions, costs, and the resulting account changes.
+The research engine makes time, costs and accounting visible. Signals use confirmed closes; historical fills occur at the next open. Walk-forward candidates are selected on training data only. Test folds start with independent accounts; the UI does not invent a continuous equity curve from overlapping experiments.
 
-Tidebench connects that evidence to an interactive workspace for exploring markets, comparing experiments and following a paper account.
+Perpetual research uses separate mark prices, actual settled funding rates, contract multipliers and captured maintenance tiers. It exposes historical bar approximations and the use of current tiers as a scenario assumption. A liquidation gap becomes an explicit liability and pauses new simulated risk; it does not disappear from P&L.
 
-| Question | What you can inspect |
-| --- | --- |
-| Which data produced this result? | Saved candles, instrument rules, dataset hash and a versioned manifest |
-| Can I reproduce it later? | Snapshot replay and a JSON export of the inputs and result |
-| When could this trade occur? | Confirmed-close signals, next-open historical fills, explicit fees and slippage |
-| What changed in the account? | Decimal balances, average-cost inventory, fills and audit events committed together |
-| What can stop new risk? | Order/exposure/loss limits and a persistent halt switch checked inside the fill transaction |
-| Can I try it offline? | An explicitly synthetic Example source with its own account and research records |
+**Execution is local simulation.** Tidebench reads real public market data but sends no exchange orders. No exchange API key is needed or accepted. This is the execution scope of this product, including its Docker deployment.
 
 ## Quick start
 
-Install **Python 3.12–3.14**, [uv](https://docs.astral.sh/uv/getting-started/installation/), **Node.js 22.12+**, Git and Make. The Docker build uses Node.js 24.
+Requires Python 3.12–3.14, [uv](https://docs.astral.sh/uv/getting-started/installation/), Node.js 22.12+ and Make.
 
 ```bash
 git clone https://github.com/billpwchan/tidebench.git
@@ -41,89 +41,71 @@ make setup
 make dev
 ```
 
-Open **[localhost:5173](http://localhost:5173)**. `make dev` starts the API and Vite together; stop them with Ctrl+C.
+Open [localhost:5173](http://localhost:5173) and create your administrator. Passwords have a 12-character minimum; sessions use HTTP-only cookies. No default account is shipped.
 
-Choose **Example** in the source selector for an offline walkthrough. It generates deterministic synthetic prices with a fixed clock; it is separate from OKX data and does not advance as a live feed.
+For an offline walkthrough, choose **Example**:
 
-1. Explore a market and open Research.
-2. Run a strategy with explicit fee, slippage and allocation settings.
-3. Inspect the equity curve, fills and manifest; export or replay the saved snapshot.
-4. Submit a local paper order, review its account changes, then test a risk limit or halt.
+1. Open **Data library**, choose a market and date range, and download trade candles. For perpetuals, also download mark and funding datasets for the same range.
+2. Open a dataset in **Research**. Set a hypothesis, costs and evaluation mode; run it, inspect results, export the complete evidence or replay it.
+3. Open **Execution**. Preview an order, submit it and inspect the positions, orders and ledger. Test cancellation and the risk halt.
+4. Open **Operations**. Create and verify a backup. A restore replaces workspace state, revokes sessions, cancels pending orders and halts strategies.
 
-Selecting **OKX** requires access to the configured regional public endpoints. Connection failures remain visible; Tidebench does not silently substitute Example data.
+Example prices use a fixed synthetic clock and separate capital. OKX failures remain visible; the application never substitutes synthetic prices automatically.
 
-### Serve the built workspace locally
+### Built application
 
 ```bash
 make build
 uv run python -m tidebench
 ```
 
-Open **[localhost:8000](http://localhost:8000)**. One Python process serves the built frontend, API and supervisors. Data persists in `./data`; use one process and one worker per database.
+Open [localhost:8000](http://localhost:8000). One Python process serves the application, API and bounded background workers. Local state lives in `./data`.
 
 ### Docker
-
-Prepare a workspace token locally:
 
 ```bash
 cp .env.example .env
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Put the generated value in `TIDEBENCH_API_TOKEN` in `.env` before continuing. Use at least 32 random characters and keep `.env` private.
+Put the generated value in `TIDEBENCH_BOOTSTRAP_TOKEN` in your private `.env`, then:
 
 ```bash
 docker compose up --build
 ```
 
-Open **[localhost:8080](http://localhost:8080)** and enter that **workspace token** in Settings. This token protects Tidebench; it is separate from an exchange API key. Compose stores account and research data in a named volume.
+Open [localhost:8080](http://localhost:8080). Enter that bootstrap token when creating the first administrator. It is needed because the container sees the browser connection through the Docker network. Subsequent logins use your username and password.
 
-The container CI job builds the image and smoke-tests its health endpoint and authenticated synthetic-data API. See the linked workflow for the actual result; this is not an operational-readiness assessment.
+For HTTPS hosting, set exact allowed hosts/origins, enable secure cookies and use the [deployment runbook](docs/operations.md). Keep one process and one writer per database. The supplied Compose binding is private to the host.
 
-### Regional data endpoints
-
-Set `TIDEBENCH_REGION` to `global` (default), `us`, or `eea` in your environment or `.env`:
-
-```bash
-TIDEBENCH_REGION=us make dev
-```
-
-Instrument availability varies by region. See [OKX integration and data terms](docs/okx-integration.md).
-
-## What ships in v0.1
-
-| Area | Implemented scope |
-| --- | --- |
-| Markets | BTC-USDT, ETH-USDT, SOL-USDT, OKB-USDT, DOGE-USDT; subject to regional availability |
-| Bars | `15m`, `1H`, `4H`, `1Dutc` |
-| Strategies | SMA crossover, Wilder RSI reversion, buy and hold |
-| Research | 60–2,000 confirmed bars, saved inputs, quality validation, cost assumptions, benchmark, export and replay |
-| Paper desk | Manual orders and strategy supervision; persistent, separate OKX-sourced and Example accounts |
-| Controls | Durable idempotency, cash/inventory checks, order and position limits, observed-day loss guard, halt, audit log |
-| Interface | Market charts, research, paper inventory, risk and workspace settings |
-
-Historical research fills at the next bar's open. Forward paper strategies use an observed bid/ask after the signal closes, plus polling delay, tick rounding and simulated costs. Their fills and PnL can differ. Paper fills use a **10 bps fee and 5 bps adverse slippage**; historical research exposes both as parameters.
-
-## Architecture
+## Inspect the implementation
 
 ```mermaid
 flowchart LR
-    UI[React + TypeScript] --> API[FastAPI]
-    API --> Data[OKX REST / isolated Example]
-    API --> Research[Saved-input research engine]
-    API --> Paper[Transactional paper desk]
-    Research --> DB[(SQLite WAL)]
-    Paper --> DB
+    UI[React / TypeScript workbench] --> API[FastAPI + sessions / roles / CSRF]
+    API --> Catalog[Immutable datasets + durable downloads]
+    Catalog --> OKX[Regional OKX public endpoints]
+    Catalog --> Research[Deterministic research plans]
+    API --> Book[Unified spot / perpetual simulation]
+    Book --> Risk[Transactional risk + native asset journal]
+    Research --> DB[(SQLite WAL / single writer)]
+    Risk --> DB
+    DB --> Recovery[Verified backups + safe recovery]
 ```
 
-The backend is a modular monolith with a pure Python/Decimal engine and bounded background work. The frontend uses Vite, TanStack Query and Lightweight Charts. SQLite transactions serialize account mutations; a process lease enforces the single-instance boundary.
-
-Read the [architecture](docs/architecture.md), [API contract](docs/api-contract.md) and [engine contract](docs/research-engine.md) for the precise behavior. The [trader product specification](docs/trader-product-spec.zh-CN.md) and [independent architecture challenge](docs/architecture-review.md) describe the commercial target and the failures its design must withstand.
+| Contract | Read more |
+|---|---|
+| Data identity, pagination, retention and imports | [Data operations](docs/data-operations.md) |
+| Signals, costs, funding, liquidation and OOS selection | [Professional research](docs/pro-research.md) |
+| Process boundaries, persistence and precision | [Architecture](docs/architecture.md) |
+| Authentication, roles, recovery and deployment | [Operations](docs/operations.md) |
+| Actual acceptance evidence | [Verification](docs/verification.md) |
+| Public APIs and data rights | [OKX integration](docs/okx-integration.md) |
 
 <details>
-<summary>Research workspace: assumptions, benchmark, fills and replay</summary>
+<summary>Research workspace</summary>
 
-![Saved-input research using explicitly synthetic prices; this is not investment performance](docs/assets/research.png)
+![Research on a synthetic dataset; illustrative, not investment performance](docs/assets/research.png)
 
 </details>
 
@@ -135,47 +117,23 @@ cd frontend && npx playwright install chromium && cd ..
 make browser-test
 ```
 
-The checks cover Python lint/formatting, engine and backend tests, and the frontend build; browser tests exercise user workflows. Tests include future-data perturbation, prefix replay, fee/precision accounting, concurrent command deduplication, rollback, ledger replay, stop races and queue admission limits.
+Tests exercise causal replay, indicator state, cost sensitivity, train-only selection, margin tiers, funding deduplication, native asset accounting, concurrent idempotency, stop races, role/CSRF boundaries and actual backup recovery. Browser acceptance covers the rendered desktop and mobile workflows. The [verification record](docs/verification.md) identifies what was measured and the exact scope of that evidence.
 
-CI status above links to the actual workflow. See the [verification record](docs/verification.md) for observed results and untested boundaries. Test coverage is evidence of specific checks, not a claim of production maturity or profitable strategies.
+## Model boundaries
 
-## Model and deployment limits
+- REST polling is suitable for bar research and forward paper workflows; it does not provide tick-level execution or a latency guarantee.
+- Market, limit and stop orders use a local full-fill model. Historical bars cannot reconstruct queue position, partial fills, market impact or exact intrabar paths.
+- Public settled funding history has limited retention. Older research requires attributed imports with an explicit coverage declaration; missing history blocks derivative research.
+- Historical funding marks can be one-minute bar-open approximations. Captured current maintenance tiers are scenario inputs, not historical tier evidence.
+- One shared workspace with role-based users, one process and one SQLite writer. This deployment does not provide distributed failover or tenant isolation.
+- A short test run cannot prove months of availability or strategy profitability. Metrics state insufficient-sample and insolvent-account conditions explicitly.
 
-- Long-only spot simulation; no shorts, leverage, derivatives or exchange execution.
-- Bar data cannot reconstruct intrabar paths, order queues, partial fills or market impact. The benchmark enters with full allocation, which may differ from the strategy's allocation.
-- Sharpe remains unavailable with fewer than **30 complete UTC daily returns**, or negligible return variation. Thirty observations do not establish statistical significance.
-- Fees are simulated in USDT. Per-asset exchange fee accounting and account reconciliation are future work.
-- The daily loss anchor is the pre-fill equity of the **first accepted paper command with complete fresh marks** in that UTC day. It is not a midnight valuation or continuous account-wide stop.
-- One workspace, one operator, one process, one SQLite writer. Multi-tenant authorization, distributed execution and availability guarantees are outside this release.
-- Example prices have a fixed clock. A deployed Example strategy evaluates the available bar and then waits for new data.
+See [scope and acceptance](docs/commercial-readiness.md) for implemented controls and evidence boundaries. Exchange execution is a separate product boundary requiring explicit authorization and a private reconciliation adapter.
 
-The halt switch blocks all new simulated fills and retains positions. Stopping a strategy also retains positions. Already committed commands remain retrievable through their idempotency keys.
+## Contribute
 
-## Roadmap
-
-| Available now | Planned, subject to explicit readiness gates |
-| --- | --- |
-| Validated OKX REST data and isolated synthetic examples | WebSocket ingestion with reconnect and gap recovery |
-| Saved-input bar research and replay | Larger datasets, walk-forward evaluation and research catalogs |
-| Transactional local spot paper ledger | Exchange demo adapter with reconciliation and partial-fill handling |
-| Single-workspace access and risk controls | PostgreSQL, worker fencing, observability and tested recovery |
-| Local interactive workspace | User research, accessibility review and broader workflow validation |
-
-Private exchange execution requires its own reviewed design and acceptance evidence. See the [commercial readiness gates](docs/commercial-readiness.md).
-
-## Documentation and contributions
-
-- [Product plan / 产品方案](docs/product-plan.zh-CN.md)
-- [Trader workflows and commercial target / 交易员产品规格](docs/trader-product-spec.zh-CN.md)
-- [Architecture challenge and failure scenarios](docs/architecture-review.md)
-- [Architecture and risk semantics](docs/architecture.md)
-- [Research engine and metric assumptions](docs/research-engine.md)
-- [OKX data integration and licensing](docs/okx-integration.md)
-- [Commercial readiness gates](docs/commercial-readiness.md)
-- [Launch notes](docs/launch.md)
-
-Reviews of causal replay, accounting invariants, data quality and usability are especially useful. Read [CONTRIBUTING.md](CONTRIBUTING.md), open an [issue](https://github.com/billpwchan/tidebench/issues), or propose a focused pull request with a reproducible example. Report security issues through [SECURITY.md](SECURITY.md).
+Reproducible issues and focused changes to research correctness, accounting, data quality and trader workflows are particularly useful. Read [CONTRIBUTING.md](CONTRIBUTING.md), open an [issue](https://github.com/billpwchan/tidebench/issues), or submit a pull request. Report security findings through [SECURITY.md](SECURITY.md).
 
 ## License and data rights
 
-Original application code is available under the [MIT License](LICENSE). That license does not grant rights to exchange market data, services or trademarks. No real OKX historical dataset is bundled. Locally fetched data and exports remain subject to the provider's terms; hosted or commercial redistribution needs a separate assessment. See [data rights](docs/okx-integration.md#data-rights-and-commercial-scope).
+Original application code uses the [MIT License](LICENSE). It grants no rights to exchange data, services or trademarks. No real OKX dataset is bundled. Hosted redistribution and commercial data services must satisfy the applicable provider terms; see [data rights](docs/okx-integration.md#data-rights-and-commercial-scope).

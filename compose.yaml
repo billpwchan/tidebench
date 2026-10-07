@@ -5,7 +5,9 @@ services:
     ports:
       - "127.0.0.1:8080:8000"
     environment:
-      TIDEBENCH_API_TOKEN: ${TIDEBENCH_API_TOKEN:?Set a random workspace token of at least 32 characters in .env}
+      TIDEBENCH_BOOTSTRAP_TOKEN: ${TIDEBENCH_BOOTSTRAP_TOKEN:?Set a random bootstrap token of at least 32 characters in .env}
+      TIDEBENCH_API_TOKEN: ${TIDEBENCH_API_TOKEN:-}
+      TIDEBENCH_AUTH_ENABLED: "true"
       TIDEBENCH_REGION: ${TIDEBENCH_REGION:-global}
       TIDEBENCH_ALLOWED_HOSTS: localhost,127.0.0.1
       TIDEBENCH_ALLOWED_ORIGINS: http://localhost:8080,http://127.0.0.1:8080

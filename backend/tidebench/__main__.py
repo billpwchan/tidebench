@@ -6,8 +6,11 @@ from .config import Settings
 
 settings = Settings()
 bind_address = os.getenv("TIDEBENCH_BIND", "127.0.0.1")
-if bind_address not in {"127.0.0.1", "::1", "localhost"} and len(settings.api_token) < 32:
-    raise SystemExit("Set a TIDEBENCH_API_TOKEN of at least 32 characters before binding beyond loopback.")
+if bind_address not in {"127.0.0.1", "::1", "localhost"}:
+    if not settings.auth_enabled or max(len(settings.api_token), len(settings.bootstrap_token)) < 32:
+        raise SystemExit(
+            "Remote binding requires authentication and a random API or bootstrap token of at least 32 characters."
+        )
 uvicorn.run(
     "tidebench.main:app",
     host=bind_address,

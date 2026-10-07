@@ -8,7 +8,7 @@ from tidebench.market import MarketError, MarketService
 
 
 def settings(tmp_path, **kwargs):
-    return Settings(data_dir=tmp_path, _env_file=None, **kwargs)
+    return Settings(data_dir=tmp_path, _env_file=None, auth_enabled=False, **kwargs)
 
 
 def wait_for_run(client, run_id):

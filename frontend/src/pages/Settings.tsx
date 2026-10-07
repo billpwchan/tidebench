@@ -4,8 +4,10 @@ import type { FormEvent } from 'react';
 import { useState } from 'react';
 import type { Source, System } from '../api';
 import { readToken, saveToken } from '../api';
-import { ActionNote, Field, Logo, PageHeading, Status } from '../components/workspace';
+import { ActionNote, Field, PageHeading, Status } from '../components/workspace';
 import { date } from '../lib/format';
+import { SessionPanel, UserManagement } from '../components/AuthGate';
+import { useI18n } from '../lib/i18n';
 
 export default function Settings({
   system,
@@ -16,6 +18,7 @@ export default function Settings({
   source: Source;
   setSource: (s: Source) => void;
 }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [token, setToken] = useState(readToken);
   const [notice, setNotice] = useState<string | null>(null);
@@ -25,26 +28,28 @@ export default function Settings({
     saveToken(token);
     setNotice(
       token.trim()
-        ? 'Session token saved. Protected workspace data is being refreshed.'
-        : 'Session token removed.',
+        ? t('API token saved. Protected workspace data is being refreshed.')
+        : t('API token removed.'),
     );
     void qc.resetQueries();
   };
   return (
     <>
       <PageHeading
-        eyebrow="YOUR INFRASTRUCTURE, YOUR RULES"
+        eyebrow="WORKSPACE"
         title="Workspace settings"
         description="Connections and preferences for your self-hosted research desk."
       />
       <ActionNote text={notice} />
       <div className="settings-layout">
+        <SessionPanel />
+        <UserManagement />
         <section className="settings-section">
           <div className="section-heading">
             <div>
-              <h2>Market data</h2>
+              <h2>{t('Market data')}</h2>
               <p className="section-description">
-                Choose which data powers this browser's workspace.
+                {t('Choose which data powers this browser’s workspace.')}
               </p>
             </div>
             <Database size={20} className="muted-icon" />
@@ -57,8 +62,12 @@ export default function Settings({
             >
               <span className="source-option-icon">OKX</span>
               <div>
-                <strong>OKX public markets</strong>
-                <p>Real public spot data over REST. No exchange credentials required.</p>
+                <strong>{t('OKX public markets')}</strong>
+                <p>
+                  {t(
+                    'Public spot and USDT perpetual data over REST. No exchange credentials required.',
+                  )}
+                </p>
               </div>
               <span className="radio-indicator">{source === 'okx' && <span />}</span>
             </button>
@@ -71,109 +80,110 @@ export default function Settings({
                 <FlaskConical size={22} />
               </span>
               <div>
-                <strong>Synthetic example</strong>
-                <p>A deterministic dataset for exploring the product. Not real OKX prices.</p>
+                <strong>{t('Synthetic example')}</strong>
+                <p>{t('Deterministic synthetic market data, separate from OKX.')}</p>
               </div>
               <span className="radio-indicator">{source === 'example' && <span />}</span>
             </button>
           </div>
           <p className="form-footnote">
-            Each source has an independent paper account. Source selection is stored locally in your
-            browser. Errors never switch your source automatically.
+            {t(
+              'Each source has an independent execution account. Source preference is stored in this browser.',
+            )}
           </p>
         </section>
         <section className="settings-section">
           <div className="section-heading">
             <div>
-              <h2>Session authentication</h2>
+              <h2>{t('API integration')}</h2>
               <p className="section-description">
-                Access your protected API when server authentication is enabled.
+                {t('Optional service token for API clients and managed deployments.')}
               </p>
             </div>
             <ShieldCheck size={20} className="muted-icon" />
           </div>
-          <Status type={system?.auth_required ? 'warning' : 'neutral'}>
-            {system
-              ? system.auth_required
-                ? 'Server requires a bearer token'
-                : 'Server authentication is not configured'
-              : 'Server status unavailable'}
-          </Status>
-          <form className="auth-form" onSubmit={save}>
-            <Field
-              label="API bearer token"
-              hint="Stored in sessionStorage for this tab session. Never sent in a URL."
-            >
-              <div className="token-input">
-                <input
-                  type={showToken ? 'text' : 'password'}
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  placeholder="Paste your server token"
-                />
+          <Status type="neutral">{t('Browser access uses your signed-in session.')}</Status>
+          <details className="service-token-details">
+            <summary>{t('API service token (advanced)')}</summary>
+            <form className="auth-form" onSubmit={save}>
+              <Field
+                label="API bearer token"
+                hint="Stored in sessionStorage for this tab session. Never sent in a URL."
+              >
+                <div className="token-input">
+                  <input
+                    type={showToken ? 'text' : 'password'}
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="Paste your server token"
+                  />
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setShowToken((v) => !v)}
+                  >
+                    {t(showToken ? 'Hide' : 'Show')}
+                  </button>
+                </div>
+              </Field>
+              <div className="button-row">
+                <button type="submit" className="button button-dark">
+                  <Check size={14} />
+                  {t('Save API token')}
+                </button>
                 <button
                   type="button"
-                  className="text-button"
-                  onClick={() => setShowToken((v) => !v)}
+                  className="button button-secondary"
+                  onClick={() => {
+                    setToken('');
+                    saveToken('');
+                    setNotice(t('API token removed.'));
+                    void qc.resetQueries();
+                  }}
                 >
-                  {showToken ? 'Hide' : 'Show'}
+                  {t('Clear token')}
                 </button>
               </div>
-            </Field>
-            <div className="button-row">
-              <button type="submit" className="button button-dark">
-                <Check size={14} />
-                Save session token
-              </button>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => {
-                  setToken('');
-                  saveToken('');
-                  setNotice('Session token removed.');
-                  void qc.resetQueries();
-                }}
-              >
-                Clear token
-              </button>
-            </div>
-          </form>
-          <p className="form-footnote">
-            Use the Tidebench server token here. Exchange API keys and passphrases are not accepted
-            or required.
-          </p>
+            </form>
+            <p className="form-footnote">
+              {t(
+                'Use a Tidebench service token. Exchange API keys and passphrases are not used here.',
+              )}
+            </p>
+          </details>
         </section>
         <section className="settings-section server-settings">
           <div className="section-heading">
             <div>
-              <h2>Server configuration</h2>
-              <p className="section-description">Read-only values from your running backend.</p>
+              <h2>{t('Server configuration')}</h2>
+              <p className="section-description">
+                {t('Read-only values from your running backend.')}
+              </p>
             </div>
-            <span className="subtle-tag">READ ONLY</span>
+            <span className="subtle-tag">{t('Read only')}</span>
           </div>
           <dl>
             <div>
-              <dt>Application</dt>
+              <dt>{t('Application')}</dt>
               <dd>Tidebench {system ? `v${system.version}` : '—'}</dd>
             </div>
             <div>
-              <dt>Market region</dt>
+              <dt>{t('Market region')}</dt>
               <dd>{system?.market_region ?? '—'}</dd>
             </div>
             <div>
-              <dt>Execution engine</dt>
+              <dt>{t('Execution engine')}</dt>
               <dd>{system?.execution ?? '—'}</dd>
             </div>
             <div>
-              <dt>Server time</dt>
+              <dt>{t('Server time')}</dt>
               <dd>{date(system?.time, true)}</dd>
             </div>
           </dl>
           <div className="server-capabilities">
-            <span className="eyebrow">REPORTED CAPABILITIES</span>
+            <span className="eyebrow">{t('Reported capabilities')}</span>
             <div>
               {system?.capabilities.length ? (
                 system.capabilities.map((c) => (
@@ -182,23 +192,24 @@ export default function Settings({
                   </span>
                 ))
               ) : (
-                <span className="quiet-copy">No capabilities reported.</span>
+                <span className="quiet-copy">{t('No capabilities reported.')}</span>
               )}
             </div>
           </div>
         </section>
         <section className="settings-section about-settings">
-          <Logo />
-          <h2>Evidence before execution.</h2>
+          <h2>{t('Research and execution model')}</h2>
           <p>
-            Tidebench is an open-source crypto research and local paper-trading workspace. Inspect
-            your assumptions, replay a saved dataset, and understand every simulated fill.
+            {t(
+              'Research runs capture their data, costs and instrument rules. Exports include the snapshot required for replay.',
+            )}
           </p>
           <div className="about-note">
             <CircleAlert size={17} />
             <span>
-              This developer preview does not place real exchange orders. Backtests and synthetic
-              data do not establish a profitable trading strategy.
+              {t(
+                'Execution currently uses the local paper engine. Real orders are not sent to an exchange.',
+              )}
             </span>
           </div>
         </section>

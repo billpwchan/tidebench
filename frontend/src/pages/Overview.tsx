@@ -25,9 +25,20 @@ import {
 } from '../components/workspace';
 import type { Page } from '../lib/config';
 import { symbols } from '../lib/config';
-import { barLabel, compact, date, nameOf, number, percent, price, tone } from '../lib/format';
+import { compact, date, nameOf, number, percent, price, tone } from '../lib/format';
 import { useNow } from '../lib/hooks';
+import { proApi } from '../proApi';
+import type { ProResult, ProRun, RecordData } from '../proApi';
+import { useI18n } from '../lib/i18n';
 
+const runReturn = (r: ProRun) =>
+  r.summary?.total_return_pct ??
+  (r.summary?.metrics as RecordData | undefined)?.total_return_pct ??
+  (r.summary?.oos_summary as RecordData | undefined)?.median_return_pct ??
+  r.summary?.median_return_pct ??
+  r.result?.metrics?.total_return_pct ??
+  (r.result?.result as ProResult | undefined)?.metrics?.total_return_pct ??
+  (r.result?.oos_summary as RecordData | undefined)?.median_return_pct;
 export default function Overview({
   source,
   symbol,
@@ -58,26 +69,92 @@ export default function Overview({
     queryFn: () => api.candles(source, symbol, bar, 240),
     refetchInterval: source === 'okx' ? 30000 : false,
   });
-  const runs = useQuery({ queryKey: ['runs', source], queryFn: () => api.runs(source) });
-  const account = useQuery({ queryKey: ['account', source], queryFn: () => api.account(source) });
+  const { t } = useI18n();
+  const runs = useQuery({ queryKey: ['pro-runs'], queryFn: proApi.runs });
+  const account = useQuery({
+    queryKey: ['pro-account', source],
+    queryFn: () => proApi.account(source),
+    refetchInterval: 5000,
+  });
+  const risk = useQuery({
+    queryKey: ['pro-risk', source],
+    queryFn: () => proApi.risk(source),
+    refetchInterval: 5000,
+  });
+  const ops = useQuery({ queryKey: ['pro-ops'], queryFn: proApi.ops, refetchInterval: 10000 });
   const now = useNow();
   const ticker = tickers?.find((t) => t.inst_id === symbol);
   const quoteAge = ticker ? Math.max(0, now - ticker.ts) : null;
   const quoteStale = source === 'okx' && quoteAge !== null && quoteAge >= 15000;
-  const completed = runs.data?.items.filter((r) => r.status === 'completed') ?? [];
+  const sourceRuns = runs.data?.items.filter((r) => r.source === source) ?? [];
+  const completed = sourceRuns.filter((r) => r.status === 'completed');
   return (
     <>
       <PageHeading
-        eyebrow="THE RESEARCH DESK"
+        eyebrow="WORKSPACE OVERVIEW"
         title="Market overview"
-        description="Follow the market. Build a thesis. Put it to the test."
+        description="Market snapshots, portfolio exposure, research, and service health."
       >
         <button className="button button-dark" onClick={() => navigate('research')}>
           <Plus size={16} />
-          New experiment
+          {t('Research')}
           <ArrowUpRight size={15} />
         </button>
       </PageHeading>
+      <div className="desk-health-strip">
+        <button onClick={() => navigate('execution')}>
+          <span>{t('Account equity')}</span>
+          <strong>
+            {number(account.data?.equity)} <small>USDT</small>
+          </strong>
+          <Status type={account.data?.valuation_status === 'fresh' ? 'good' : 'neutral'}>
+            {account.data?.valuation_status ?? 'unavailable'}
+          </Status>
+        </button>
+        <button onClick={() => navigate('execution')}>
+          <span>{t('Used margin')}</span>
+          <strong>
+            {number(account.data?.used_margin)} <small>USDT</small>
+          </strong>
+          <small>
+            {t('Maintenance margin')}: {number(account.data?.maintenance_margin)}
+          </small>
+        </button>
+        <button onClick={() => navigate('risk')}>
+          <span>{t('Risk')}</span>
+          <strong>
+            {risk.data ? t(risk.data.halted ? 'Execution halted' : 'Execution enabled') : '—'}
+          </strong>
+          <small>
+            {t('Maximum leverage')}: {risk.data ? `${risk.data.max_leverage}×` : '—'}
+          </small>
+        </button>
+        <button onClick={() => navigate('operations')}>
+          <span>{t('Service health')}</span>
+          <strong>
+            {ops.data?.health
+              ? String(
+                  typeof ops.data.health === 'string'
+                    ? ops.data.health
+                    : (ops.data.health.status ?? '—'),
+                )
+              : '—'}
+          </strong>
+          <small>
+            {t('Operations')} <ChevronRight size={11} />
+          </small>
+        </button>
+      </div>
+      {(account.isError || risk.isError || ops.isError) && (
+        <ErrorBox
+          error={account.error ?? risk.error ?? ops.error}
+          onRetry={() => {
+            void account.refetch();
+            void risk.refetch();
+            void ops.refetch();
+          }}
+        />
+      )}
       <div className="overview-layout">
         <section className="market-canvas">
           <div className="market-hero">
@@ -247,16 +324,21 @@ export default function Overview({
                 : 'REST snapshots refresh every 5 seconds. Check quote age before execution.'}
             </span>
           </div>
-          <div className="research-callout">
-            <div className="eyebrow">FROM OBSERVATION TO EVIDENCE</div>
-            <h3>
-              Every idea deserves
-              <br />a proper test.
-            </h3>
-            <p>Explore a strategy with explicit costs and a reproducible dataset.</p>
-            <button className="text-button" onClick={() => navigate('research')}>
-              Open research
+          <div className="watchlist-ops">
+            <h3>{t('Workspace')}</h3>
+            <button className="summary-link" onClick={() => navigate('data')}>
+              <span>{t('Data library')}</span>
               <ArrowUpRight size={14} />
+            </button>
+            <button className="summary-link" onClick={() => navigate('operations')}>
+              <span>
+                {t('Feeds')} / {t('Jobs')}
+              </span>
+              <ArrowUpRight size={14} />
+            </button>
+            <button className="summary-link" onClick={() => navigate('execution')}>
+              <span>{t('Positions')}</span>
+              <strong>{account.data?.positions?.length ?? '—'}</strong>
             </button>
           </div>
         </aside>
@@ -265,11 +347,11 @@ export default function Overview({
         <section className="recent-section">
           <div className="section-heading">
             <div>
-              <h2>Recent experiments</h2>
-              <p className="section-description">Your research, kept on record.</p>
+              <h2>{t('Research runs')}</h2>
+              <p className="section-description">{t('Run history')}</p>
             </div>
             <button className="text-button" onClick={() => navigate('research')}>
-              View research
+              {t('Research')}
               <ArrowRight size={14} />
             </button>
           </div>
@@ -277,9 +359,9 @@ export default function Overview({
             <Loading />
           ) : runs.isError ? (
             <ErrorBox error={runs.error} onRetry={() => void runs.refetch()} />
-          ) : runs.data.items.length ? (
+          ) : sourceRuns.length ? (
             <div className="recent-runs">
-              {runs.data.items.slice(0, 3).map((r) => (
+              {sourceRuns.slice(0, 3).map((r) => (
                 <button key={r.id} onClick={() => navigate('research')}>
                   <span className="run-icon">
                     <FlaskConical size={17} />
@@ -287,7 +369,7 @@ export default function Overview({
                   <span className="recent-run-name">
                     <strong>{nameOf(r.config.strategy.kind)}</strong>
                     <small>
-                      {r.config.inst_id} · {barLabel(r.config.bar)} · {date(r.created_at)}
+                      {r.config.direction} · {r.config.mode} · {date(r.created_at)}
                     </small>
                   </span>
                   <Status
@@ -297,8 +379,8 @@ export default function Overview({
                   >
                     {r.status}
                   </Status>
-                  <span className={tone(r.result?.metrics.total_return_pct)}>
-                    {r.result ? percent(r.result.metrics.total_return_pct) : '—'}
+                  <span className={tone(runReturn(r))}>
+                    {r.result ? percent(runReturn(r)) : '—'}
                   </span>
                   <ChevronRight size={15} />
                 </button>
@@ -308,11 +390,11 @@ export default function Overview({
             <div className="recent-empty">
               <FlaskConical size={23} strokeWidth={1.4} />
               <div>
-                <strong>A clean slate for your next idea.</strong>
-                <p>Run your first backtest to start a reproducible research history.</p>
+                <strong>{t('No research runs')}</strong>
+                <p>{t('Choose an immutable dataset and submit a research configuration.')}</p>
               </div>
               <button className="text-button" onClick={() => navigate('research')}>
-                Create experiment
+                {t('Start research')}
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -320,17 +402,17 @@ export default function Overview({
         </section>
         <section className="workspace-summary">
           <div className="section-heading">
-            <h2>Workspace snapshot</h2>
+            <h2>{t('Portfolio')}</h2>
             <span className="subtle-tag">LOCAL PAPER</span>
           </div>
           <div className="summary-row">
-            <span>Paper account equity</span>
+            <span>{t('Account equity')}</span>
             <strong>
               {account.data ? number(account.data.equity) : '—'} <small>USDT</small>
             </strong>
           </div>
           <div className="summary-row">
-            <span>Completed experiments</span>
+            <span>{t('Research runs')}</span>
             <strong>{runs.data ? completed.length : '—'}</strong>
           </div>
           <div className="summary-row">
@@ -338,7 +420,7 @@ export default function Overview({
             <SourceBadge source={source} />
           </div>
           <p className="quiet-copy">
-            Research and simulated execution stay on your infrastructure.
+            {t('Account and execution mode are reported by the server.')}
           </p>
         </section>
       </div>

@@ -194,14 +194,24 @@ export class ApiError extends Error {
     this.requestId = requestId;
   }
 }
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+let csrfToken: string | null = null;
+export function setCsrfToken(value: string | null) {
+  csrfToken = value;
+}
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (options.body) headers.set('Content-Type', 'application/json');
   const token = readToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (
+    csrfToken &&
+    options.method &&
+    !['GET', 'HEAD', 'OPTIONS'].includes(options.method.toUpperCase())
+  )
+    headers.set('X-CSRF-Token', csrfToken);
   let response: Response;
   try {
-    response = await fetch(`/api/v1${path}`, { ...options, headers });
+    response = await fetch(`/api/v1${path}`, { credentials: 'same-origin', ...options, headers });
   } catch {
     throw new ApiError(
       'The API is unreachable. Check that the Tidebench server is running.',
@@ -210,6 +220,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     );
   }
   if (!response.ok) {
+    if (response.status === 401 && path !== '/auth/status')
+      window.dispatchEvent(new Event('tidebench:auth-required'));
     const data = await response.json().catch(() => null);
     throw new ApiError(
       data?.error?.message ?? `Request failed (${response.status}).`,
@@ -218,6 +230,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       data?.request_id,
     );
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
 const q = (values: Record<string, string | number>) =>

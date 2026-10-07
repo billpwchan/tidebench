@@ -1,6 +1,6 @@
 [project]
 name = "tidebench"
-version = "0.1.0"
+version = "0.2.0"
 description = "An inspectable crypto research and paper-trading workspace."
 readme = "README.md"
 requires-python = ">=3.12,<3.15"

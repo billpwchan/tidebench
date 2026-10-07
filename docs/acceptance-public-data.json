@@ -1,0 +1,39 @@
+{
+  "region": "global",
+  "range": {
+    "start": 1791230400000,
+    "end": 1791403200000
+  },
+  "instrument": "BTC-USDT-SWAP",
+  "contract_rules_validated": true,
+  "current_margin_tiers": 99,
+  "datasets": [
+    {
+      "kind": "trade",
+      "rows": 48,
+      "complete": true,
+      "hash_verified": true
+    },
+    {
+      "kind": "mark",
+      "rows": 48,
+      "complete": true,
+      "hash_verified": true
+    },
+    {
+      "kind": "index",
+      "rows": 48,
+      "complete": true,
+      "hash_verified": true
+    },
+    {
+      "kind": "funding",
+      "rows": 6,
+      "complete": true,
+      "hash_verified": true
+    }
+  ],
+  "settled_funding_events_with_timestamp_matched_marks": 6,
+  "settlement_mark_model": "historical_mark_1m_open_approximation",
+  "measured_date_utc": "2026-10-07"
+}

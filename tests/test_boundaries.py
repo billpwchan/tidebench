@@ -156,7 +156,7 @@ async def test_replay_uses_the_same_queue_capacity_guard(app):
 @pytest.mark.asyncio
 async def test_unauthenticated_remote_client_cannot_use_loopback_mode(tmp_path):
     app = create_app(
-        Settings(data_dir=tmp_path, _env_file=None, worker_enabled=False, api_token=""),
+        Settings(data_dir=tmp_path, _env_file=None, worker_enabled=False, api_token="", auth_enabled=False),
         market=NoNetworkMarket(),
     )
     async with client(app, remote="203.0.113.8") as session:

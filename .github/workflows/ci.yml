@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +37,13 @@ jobs:
         working-directory: frontend
       - run: npm run test:e2e
         working-directory: frontend
+      - name: Measured isolated acceptance workload
+        run: uv run python scripts/acceptance_load.py > acceptance-load.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-load-evidence
+          path: acceptance-load.json
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -45,7 +52,7 @@ jobs:
           retention-days: 7
 
   container:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -55,9 +62,12 @@ jobs:
         run: |
           docker run -d --name tidebench-ci -p 127.0.0.1:8080:8000 -e TIDEBENCH_API_TOKEN=ephemeral-ci-token-only-32-characters tidebench:ci
           curl --fail --retry 30 --retry-all-errors --retry-delay 1 --retry-max-time 60 --max-time 3 http://127.0.0.1:8080/healthz
+          curl --fail http://127.0.0.1:8080/readyz
           curl --fail http://127.0.0.1:8080/ -o /tmp/workspace.html
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://127.0.0.1:8080/api/v1/paper/account?source=example')" = "401"
           curl --fail -H 'Authorization: Bearer ephemeral-ci-token-only-32-characters' 'http://127.0.0.1:8080/api/v1/market/candles?source=example&limit=60' -o /tmp/candles.json
+          curl --fail -H 'Authorization: Bearer ephemeral-ci-token-only-32-characters' 'http://127.0.0.1:8080/api/v1/pro/execution/account?source=example' -o /tmp/account.json
+          python -c "import json; d=json.load(open('/tmp/account.json')); assert d['cash'] == '10000' and d['execution_mode'] == 'local-paper'"
           python -c "import json; d=json.load(open('/tmp/candles.json')); assert len(d['candles']) == 60 and d['source'] == 'example'; assert 'Tidebench' in open('/tmp/workspace.html').read()"
       - name: Container logs
         if: failure()

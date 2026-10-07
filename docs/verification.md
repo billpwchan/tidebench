@@ -1,35 +1,49 @@
 # Verification record
 
-Date: 2026-10-08. This records specific release checks, not a production certification or a profitability assessment.
+Observed 2026-10-07 UTC / 2026-10-08 Singapore. Checks apply to the professional workspace and its explicit public-data / local-execution scope.
 
-## Local checks
-
-Environment: macOS arm64, Python 3.13, Node.js 26. CI independently targets Python 3.13 and Node.js 24 on Linux. Dependencies are resolved in `uv.lock` and `frontend/package-lock.json`.
+## Automated acceptance
 
 | Check | Observed result |
-| --- | --- |
-| Ruff lint and formatting, backend/tests/dev launcher | Passed |
-| Python tests | 121 passed |
-| TypeScript and production Vite build | Passed |
-| Frontend Prettier check | Passed |
-| Chromium desktop and mobile workflows | 6 passed |
-| npm dependency audit | No reported vulnerabilities at the time of the check |
-| Live OKX adapter smoke check | Five supported spot instruments and tickers returned; 720 confirmed BTC-USDT hourly bars passed completeness and timestamp-alignment checks |
+|---|---|
+| Backend/core/property/API tests | 323 passed |
+| Ruff lint and formatting | Passed |
+| TypeScript and production build | Passed |
+| Prettier | Passed |
+| Frozen Python lock / npm dependency audit | Passed / zero reported vulnerabilities |
+| Desktop and mobile Chromium workflows | 6 passed |
+| Rendered professional workflows | Five research modes, SWAP replay/export, spot/SWAP fills, pending cancellation, halt reductions, data import, strategy start/stop, user permissions/passwords, actual backup create/verify/restore and re-login |
+| Public OKX integration | 48h trade/mark/index: 48 confirmed records each; 6 settled funding events with timestamp-matched minute marks; 99 current tiers; all dataset hashes verified |
 
-Live endpoint observations are time- and region-dependent. They are not deterministic tests, latency benchmarks or availability guarantees. No private account endpoint or exchange trading credential was used. Raw market data from that check is not distributed in this repository.
+The tests use isolated databases and synthetic inputs; live public integration is a separate read-only observation. No exchange credential or private account/order endpoint is used. No raw OKX market-history dataset is distributed. See [public integration evidence](acceptance-public-data.json).
 
-The browser tests run against an isolated disposable database and explicitly synthetic data. They check saved-input research, costs, JSON download, identical snapshot replay, paper fills, persistent halt/resume, strategy start/stop, explicit source failures, market search and viewport overflow. Chromium's mobile emulation is not a test on a physical iPhone or Safari.
+Financial tests cover signal causality and indicator state; train-only selection and independent OOS folds; fee/funding/margin behavior; tier boundaries; explicit insolvency; native asset journal balance and persisted-cash replay; cancellation and canonical command deduplication under concurrency; stale independent marks; late, conflicting and duplicate funding; two-phase reversal crashes; and stop races.
 
-Product screenshots in `docs/assets/` come from the actual application with the Example source selected. Recreate them with `TIDEBENCH_CAPTURE_ASSETS=1 npm --prefix frontend run test:e2e -- --project=desktop` after building the frontend and installing Chromium.
+Security/recovery acceptance includes all five role boundaries, cookie CSRF including malformed headers, service-token behavior, setup bootstrap, persistent throttling, password revocation, session expiry, body limits, metric label redaction, actual backup mutation/restore, retention protection, schema mismatch and concurrent/canceled recovery. Injected stop/restart failures retain maintenance HTTP 503 and persist account halts and strategy stops; repeated request cancellation cannot release maintenance during database replacement.
 
-The first clean Linux CI run found a randomized accounting replay using the caller's default 28-digit Decimal context rather than the engine's 50-digit contract. That exact case is retained as a regression. Follow-up adversarial checks found and fixed inherited rounding/traps/exponent settings and a non-progressing one-lot correction at extreme magnitude. The engine now rejects unsupported numeric/step-resolution domains; accepted paths still require exact replayed balances and nonnegative cash/inventory.
+## Measured workload
 
-One dependency emits a Starlette TestClient deprecation warning for its current HTTPX integration. The warning is visible in test output; application requests and tests pass with the locked dependencies.
+Run `uv run python scripts/acceptance_load.py`. It starts a disposable real HTTP server and executes 240 synthetic-account reads at concurrency 12 while a 24-case × 1,000-bar research grid runs with two computation threads.
 
-## Container and CI
+On the recorded macOS arm64 / Python 3.13.15 run:
 
-The local Docker daemon was unavailable, so local container-runtime verification was not performed. The published [CI workflow](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml) separately builds and starts the image, checks `/healthz` and the frontend, verifies that an unauthenticated account request is rejected, and requests an authenticated synthetic candle dataset. The workflow's actual status is the evidence for those checks. Startup readiness tolerates bounded connection resets while the container begins listening.
+- 240 HTTP 200 responses; no request failures.
+- 2.965 seconds total, 80.93 requests/second.
+- Median 78.71 ms; P95 456.34 ms; maximum 1,098.8 ms.
+- All 24 research experiments completed.
 
-## Remaining acceptance work
+[Machine-readable evidence](acceptance-load.json) states the environment and workload. This is local capacity evidence, not a cloud benchmark or availability guarantee. CI runs the same script and publishes its own result artifact.
 
-No external security audit, physical-device/browser matrix, prolonged paper soak, backup/restore exercise, multi-tenant isolation assessment or real exchange order execution has been completed. Those belong to the [commercial readiness gates](commercial-readiness.md) and [architecture challenge](architecture-review.md). Existing tests establish bounded model behavior; they do not validate order-book execution fidelity or investment performance.
+Run `uv run python scripts/smoke_okx.py --region global --hours 48` for public venue acceptance. Network/region/time affect observations; failures remain failures, never synthetic fallbacks.
+
+## Interface evidence
+
+The automated browser flows cover versioned research, identical replay and actual JSON download; spot/perpetual order preview/fill and persistent halt; data/operations navigation, source failure, market search and viewport overflow. Chromium mobile emulation does not establish physical iPhone/Safari support. Additional rendered review exercised 390px Chinese controls, viewer restrictions, password revocation and re-login, all five professional research modes, imports, strategy lifecycle and actual backup restoration with forced re-login and restored balances without browser page errors.
+
+Screenshots in `docs/assets` come from the actual Example workspace. Recreate them after a build with `TIDEBENCH_CAPTURE_ASSETS=1 npm --prefix frontend run test:e2e -- --project=desktop`.
+
+## CI and release
+
+The [CI workflow](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml) independently runs lint, formatting, tests, production build, desktop/mobile workflows and measured load on Ubuntu 24.04 / Python 3.13 / Node 24. Its container job builds and starts the non-root image, checks health/readiness and static UI, rejects anonymous account access and verifies authenticated market/account reads. Use the actual workflow result for the published commit as the evidence.
+
+The local Docker daemon was unavailable; container runtime acceptance is performed by CI. One locked dependency emits a Starlette TestClient/HTTPX deprecation warning; the warning remains visible. No external security certification, multi-month availability result, distributed failover claim or profitable-strategy claim is implied by these checks.

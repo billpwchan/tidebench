@@ -10,7 +10,7 @@ Money = Annotated[Decimal, Field(gt=0, le=Decimal("1000000000"), max_digits=28, 
 
 
 class InputModel(BaseModel):
-    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False, validate_default=True)
 
 
 class StrategyInput(InputModel):

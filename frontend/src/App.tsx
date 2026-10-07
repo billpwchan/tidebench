@@ -3,30 +3,58 @@ import { FlaskConical } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Bar, Source } from './api';
 import { api } from './api';
-import { SourceBadge } from './components/workspace';
-import { MarketSearch, pages, Sidebar, Topbar } from './components/WorkspaceShell';
+import AuthGate from './components/AuthGate';
+import { WorkspaceTabs } from './components/ProWorkspace';
+import { PageHeading, SourceBadge } from './components/workspace';
+import { MarketSearch, Sidebar, Topbar } from './components/WorkspaceShell';
 import type { Page } from './lib/config';
 import { useDialogFocus } from './lib/hooks';
+import { LanguageProvider, useI18n } from './lib/i18n';
 import Overview from './pages/Overview';
-import Paper from './pages/Paper';
-import Research from './pages/Research';
-import RiskPage from './pages/Risk';
+import ClassicPaper from './pages/Paper';
+import ClassicResearch from './pages/Research';
 import SettingsPage from './pages/Settings';
+import DataLibrary from './pages/DataLibrary';
+import ProResearch from './pages/ProResearch';
+import Portfolio, { ExecutionRisk } from './pages/Portfolio';
+import Operations from './pages/Operations';
 
+const routes: Page[] = [
+  'overview',
+  'research',
+  'execution',
+  'paper',
+  'risk',
+  'data',
+  'operations',
+  'settings',
+];
 export default function App() {
+  return (
+    <LanguageProvider>
+      <AuthGate>
+        <Workspace />
+      </AuthGate>
+    </LanguageProvider>
+  );
+}
+function Workspace() {
+  const { t } = useI18n();
   const [page, setPage] = useState<Page>(() => {
     const hash = window.location.hash.slice(1);
-    return pages.some((p) => p.id === hash) ? (hash as Page) : 'overview';
+    return routes.includes(hash as Page) ? (hash as Page) : 'overview';
   });
   const [source, setSourceState] = useState<Source>(() =>
     localStorage.getItem('tidebench:source') === 'example' ? 'example' : 'okx',
   );
   const [symbol, setSymbol] = useState('BTC-USDT');
   const [bar, setBar] = useState<Bar>('1H');
+  const [researchTab, setResearchTab] = useState('advanced');
+  const [selectedDataset, setSelectedDataset] = useState<string | undefined>();
   const [mobileNav, setMobileNav] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const system = useQuery({ queryKey: ['system'], queryFn: api.system });
+  const system = useQuery({ queryKey: ['system'], queryFn: api.system, refetchInterval: 30000 });
   const tickers = useQuery({
     queryKey: ['tickers', source],
     queryFn: () => api.tickers(source),
@@ -45,7 +73,7 @@ export default function App() {
   useEffect(() => {
     const onHash = () => {
       const p = window.location.hash.slice(1);
-      if (pages.some((x) => x.id === p)) setPage(p as Page);
+      if (routes.includes(p as Page)) setPage(p as Page);
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
@@ -65,34 +93,40 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   useDialogFocus(searchOpen, '.search-dialog', () => setSearchOpen(false));
-  const selectedTicker = tickers.data?.items.find((t) => t.inst_id === symbol);
+  const selectedTicker = tickers.data?.items.find((x) => x.inst_id === symbol);
+  const execution = page === 'execution' || page === 'paper' || page === 'risk';
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
-        Skip to content
+        {t('Skip to content')}
       </a>
       {mobileNav && (
         <button
           className="nav-scrim"
-          aria-label="Close navigation"
+          aria-label={t('Close navigation')}
           onClick={() => setMobileNav(false)}
         />
       )}
       <Sidebar mobileNav={mobileNav} page={page} navigate={navigate} system={system} />
       <div className="workspace-main">
-        <Topbar page={page} setMobileNav={setMobileNav} setSearchOpen={setSearchOpen} />
+        <Topbar
+          page={page}
+          setMobileNav={setMobileNav}
+          setSearchOpen={setSearchOpen}
+          executionMode={system.data?.execution}
+        />
         <main id="main-content" className={`page-content page-${page}`}>
           <div className="source-bar">
             <SourceBadge source={source} />
             <div className="source-control">
-              <span>Data source</span>
+              <span>{t('Data source')}</span>
               <select
                 aria-label="Market source"
                 value={source}
                 onChange={(e) => setSource(e.target.value as Source)}
               >
-                <option value="okx">OKX public</option>
-                <option value="example">Example · synthetic</option>
+                <option value="okx">{t('OKX public')}</option>
+                <option value="example">{t('Example · synthetic')}</option>
               </select>
             </div>
           </div>
@@ -100,8 +134,9 @@ export default function App() {
             <div className="example-notice">
               <FlaskConical size={14} />
               <span>
-                Synthetic example data. Prices and results are illustrative; this paper account is
-                separate from OKX.
+                {t(
+                  'Synthetic example data. Prices and results are illustrative; this paper account is separate from OKX.',
+                )}
               </span>
             </div>
           )}
@@ -122,34 +157,87 @@ export default function App() {
             />
           )}
           {page === 'research' && (
-            <Research
+            <>
+              <WorkspaceTabs
+                value={researchTab}
+                onChange={setResearchTab}
+                items={[
+                  { key: 'advanced', label: 'Advanced' },
+                  { key: 'classic', label: 'Classic' },
+                ]}
+              />
+              {researchTab === 'advanced' ? (
+                <ProResearch
+                  key={source}
+                  source={source}
+                  initialDatasetId={selectedDataset}
+                  onOpenData={() => navigate('data')}
+                />
+              ) : (
+                <ClassicResearch
+                  key={source}
+                  source={source}
+                  symbol={symbol}
+                  setSymbol={setSymbol}
+                  bar={bar}
+                  setBar={setBar}
+                  onExample={() => setSource('example')}
+                />
+              )}
+            </>
+          )}
+          {execution && (
+            <>
+              <WorkspaceTabs
+                value={page === 'risk' ? 'risk' : 'portfolio'}
+                onChange={(value) => navigate(value === 'risk' ? 'risk' : 'execution')}
+                items={[
+                  { key: 'portfolio', label: 'Portfolio' },
+                  { key: 'risk', label: 'Risk' },
+                ]}
+              />
+              {page === 'execution' && <Portfolio key={source} source={source} />}
+              {page === 'paper' && (
+                <ClassicPaper
+                  key={source}
+                  source={source}
+                  symbol={symbol}
+                  setSymbol={setSymbol}
+                  ticker={selectedTicker}
+                />
+              )}
+              {page === 'risk' && (
+                <>
+                  <PageHeading
+                    eyebrow="EXECUTION"
+                    title="Risk"
+                    description="Portfolio limits and durable execution controls."
+                  />
+                  <ExecutionRisk key={source} source={source} />
+                </>
+              )}
+            </>
+          )}
+          {page === 'data' && (
+            <DataLibrary
               key={source}
               source={source}
-              symbol={symbol}
-              setSymbol={setSymbol}
-              bar={bar}
-              setBar={setBar}
-              onExample={() => setSource('example')}
+              onResearch={(id) => {
+                setSelectedDataset(id);
+                setResearchTab('advanced');
+                navigate('research');
+              }}
             />
           )}
-          {page === 'paper' && (
-            <Paper
-              key={source}
-              source={source}
-              symbol={symbol}
-              setSymbol={setSymbol}
-              ticker={selectedTicker}
-            />
-          )}
-          {page === 'risk' && <RiskPage key={source} source={source} />}
+          {page === 'operations' && <Operations />}
           {page === 'settings' && (
             <SettingsPage system={system.data} source={source} setSource={setSource} />
           )}
           <footer className="page-footer">
             <span>
-              Tidebench <span className="footer-dot">·</span> Evidence before execution.
+              Tidebench <span className="footer-dot">·</span> {t('Self-hosted')}
             </span>
-            <span>Local simulated execution. No real funds are traded.</span>
+            <span>{t('Local simulated execution. No real funds are traded.')}</span>
           </footer>
         </main>
       </div>

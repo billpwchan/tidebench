@@ -1,33 +1,31 @@
-# Commercial readiness gates
+# Scope and release acceptance
 
-**Release 0.1: developer preview, single operator, local paper only.** Good architecture and a passing test suite do not establish production maturity. This document is a gate list for future releases, not a claim that all controls are implemented.
+The professional workspace ships public OKX data, historical research and persistent local spot / linear USDT perpetual simulation. Authentication, recovery and operating controls below are implemented in the application. This document records their evidence; it is not a list of promised future replacements for missing core functionality.
 
-| Gate | v0.1 evidence or limit | Required before expanding scope |
+| Control | Implemented behavior | Evidence |
 |---|---|---|
-| Research causality | Next-open fills, prefix/perturbation tests, closed-bar validation | Wider strategy-path coverage, independent review |
-| Input reproducibility | Saved normalized dataset, instrument snapshot, hash, versioned manifest and replay | Data catalog, change policy, large-dataset artifact retention |
-| Accounting | Decimal, atomic local fills, durable idempotency, concurrency/rollback tests | Multi-asset fee ledger, property testing of additional order types |
-| Execution | Local spot market-fill approximation | Exchange demo state machine, partial fills, unknown states and reconciliation |
-| Data transport | Bounded REST polling, timestamp/quality checks | WS subscribe/reconnect/gap recovery and soak tests |
-| Availability | Single process with recovery of saved research inputs | SLOs, chaos tests, worker fencing and incident exercises |
-| Access | Local listener, optional bearer token, origin/host checks | OIDC, RBAC, tenant isolation, session/token lifecycle |
-| Secrets | No exchange credentials in browser/API/database | KMS/Vault, rotation, IP allowlists, private worker-only access |
-| Operations | Docker/source setup, health endpoint, CI | Tested backup/restore, migrations, logs/metrics/tracing, upgrade rollback |
-| Legal/data | Synthetic examples; users fetch market data locally | Applicable exchange/data licensing and regional product review |
-| Product quality | Functional UI, responsive layout and workflow tests | User interviews, accessibility audit, support and usability validation |
+| Data lineage | Durable pagination, cancellation fencing, immutable manifests, rules, quality, provider attribution and record hashes | `test_catalog.py`; public 48h integration acceptance |
+| Research causality | Confirmed closes, next-open orders, prefix/future perturbation checks and explicit costs | `test_engine.py`, `test_pro_research.py` |
+| OOS evaluation | Train-only candidate selection, purged windows, independent test folds, bounded grids/cost stress | `test_pro_research.py`; all five modes exercised through the rendered UI |
+| Derivative accounting | Contract units, signed P&L, actual funding events, isolated tiers, explicit gap liabilities | `test_derivatives.py`, `test_pro_execution.py` |
+| Durable orders | Transactional risk, cash/margin reservations, canonical idempotency, cancellation and native asset journal | Concurrency, rollback, exact balance replay and source/freshness tests |
+| Forward strategies | Shared directional policy, persisted close/open intents, per-fill ownership and stop checks | Real Store/book crash/restart and stop-race tests in `test_pro_service.py` |
+| Access | Salted bounded scrypt, server sessions, expiry, CSRF, five roles, password reset and revocation | `test_platform.py`, `test_pro_boundaries.py`; actual browser user/password workflows |
+| Recovery | Online checksummed backups, retention, schema matching, maintenance/drain, pre-halted restore image | Actual SQLite mutate/restore tests, concurrent recovery and canceled-drain tests |
+| Operations | Readiness, independent feed ages, job checkpoints, disk/WAL sizes, audit and Prometheus request metrics | API acceptance and measured HTTP workload |
+| Deployment | Locked source build, non-root image, private Compose binding, schema upgrade record and rollback runbook | CI verify + container startup/auth/account smoke |
+| Product usability | Connected data→research→execution workflow, bilingual controls, responsive layout, large-table pagination | Desktop/mobile browser acceptance and recorded workflow review |
 
-## Exchange execution acceptance
+Detailed results, environment and scripts are in the [verification record](verification.md). Backups, role controls and deployment procedures are described in the [operations runbook](operations.md).
 
-An order acknowledgement is not a fill. Startup and reconnect must reconcile pending orders, fills and balances. `clOrdId` is not a permanent global idempotency key. Network timeouts require an Unknown state and reconciliation before retries can create risk. See [OKX trading best practices](https://www.okx.com/docs-v5/trick_en/).
+## Evidence boundaries
 
-No real-money execution should be introduced merely by adding an environment flag to this release. It needs a reviewed adapter, state machine, durable outbox, fill deduplication, per-asset accounting, independent risk controls and explicit operational approval.
+The repository can establish tested behavior and reproducible local workloads. It cannot establish months of service availability from a short run, manufacture an external security certification, provide tenant isolation from shared-workspace roles, or grant rights to a third party's data. No such claim is made.
 
-## Pilot evidence to collect
+Historical bars and public observations support explicit simulation models. They do not establish exchange matching fidelity, investment edge, future returns or a live account reconciliation guarantee. Current tiers are captured scenarios; one-minute settlement marks are labeled approximations. Missing funding evidence blocks continuation rather than becoming zero cost.
 
-- A defined continuous demo/paper run with observed reconnects and no unexplained balance drift.
-- Crash/restart tests around submission, acknowledgement, partial fill and ledger commit.
-- Complete recovery from a tested backup, including risk state and deduplication records.
-- Measured API/job latency and capacity under a documented workload; no invented benchmarks.
-- A published limitations and incident policy, maintained alongside release notes.
+The supplied local deployment is operational with authentication and recovery. A public HTTPS host, domain, separately protected off-host backup destination and any applicable provider permissions belong to the actual hosting environment. Configure those resources using the runbook when operating a hosted service.
 
-Profitability and trading-system correctness are different questions. Passing these gates would not establish an investment edge.
+## Exchange execution boundary
+
+No exchange order endpoint is called. Introducing private execution would expand the authorized product scope and needs a dedicated acknowledgement/fill/unknown-state reconciliation adapter, durable outbox, deduplication and explicit live-execution authorization. An OKX Read key does not grant that authorization. This boundary is distinct from the implemented local simulation product.
