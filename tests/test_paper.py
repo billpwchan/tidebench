@@ -5,7 +5,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime
-from decimal import Decimal, localcontext
+from decimal import ROUND_UP, Decimal, Inexact, localcontext
 from threading import Barrier
 from threading import Event as ThreadEvent
 from types import SimpleNamespace
@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 import tidebench.paper as paper_module
 from tidebench.engine import Candle, Instrument
-from tidebench.paper import DeskError, PaperDesk
+from tidebench.paper import DeskError, PaperDesk, order_payload
 from tidebench.schemas import OrderInput, RiskInput, StrategyInput
 from tidebench.store import Store, dumps
 from tidebench.worker import Supervisor
@@ -92,6 +92,45 @@ def position_row(store, source="example", inst_id="BTC-USDT"):
 
 def events(store, kind, source="example"):
     return [item for item in store.events(source, limit=200) if item["kind"] == kind]
+
+
+def test_paper_fills_and_valuation_ignore_caller_decimal_context(desk, tmp_path):
+    other = PaperDesk(Store(tmp_path / "independent.sqlite3"))
+    buy, sell = order(quantity="1.237"), order(side="sell", quantity="0.123")
+    quotes = tickers()
+    expected_buy, _ = other.place(buy, "context-buy", INSTRUMENT, quotes)
+    expected_sell, _ = other.place(sell, "context-sell", INSTRUMENT, quotes)
+    expected_account = other.account("example", quotes)
+    with localcontext() as caller:
+        caller.prec, caller.rounding = 6, ROUND_UP
+        caller.Emin, caller.Emax = -2, 2
+        caller.traps[Inexact] = True
+        actual_buy, _ = desk.place(buy, "context-buy", INSTRUMENT, quotes)
+        actual_sell, _ = desk.place(sell, "context-sell", INSTRUMENT, quotes)
+        actual_account = desk.account("example", quotes)
+        assert (caller.prec, caller.rounding, caller.Emin, caller.Emax, caller.traps[Inexact]) == (
+            6,
+            ROUND_UP,
+            -2,
+            2,
+            True,
+        )
+    for actual, expected in [(actual_buy, expected_buy), (actual_sell, expected_sell)]:
+        assert {k: v for k, v in actual.items() if k != "id"} == {
+            k: v for k, v in expected.items() if k != "id"
+        }
+    assert actual_account == expected_account
+
+
+def test_idempotency_payload_does_not_round_distinct_quantities():
+    first = order(quantity="0.123456789012")
+    second = order(quantity="0.123456789013")
+    expected = order_payload(first)
+    with localcontext() as caller:
+        caller.prec = 4
+        caller.traps[Inexact] = True
+        assert order_payload(first) == expected
+        assert order_payload(second) != expected
 
 
 def test_same_idempotency_key_serializes_concurrent_fills(desk, store):
@@ -483,9 +522,15 @@ async def test_stop_during_warmup_does_not_advance_bar_or_emit_observed_event(de
 
 
 @pytest.mark.asyncio
-async def test_auto_entry_budget_matches_fee_inclusive_cash_allocation(desk, store):
+@pytest.mark.parametrize("hostile_context", [False, True])
+async def test_auto_entry_budget_matches_fee_inclusive_cash_allocation(desk, store, hostile_context):
     snapshot = deployment(store, StrategyInput(kind="buy_hold", allocation=D("0.25")))
-    await Supervisor(store, FakeMarket(), desk, SimpleNamespace()).evaluate(snapshot)
+    with localcontext() as caller:
+        if hostile_context:
+            caller.prec, caller.rounding = 6, ROUND_UP
+            caller.Emin, caller.Emax = -2, 2
+            caller.traps[Inexact] = True
+        await Supervisor(store, FakeMarket(), desk, SimpleNamespace()).evaluate(snapshot)
     fill = store.orders("example")[0]
     assert D(fill["notional"]) + D(fill["fee"]) <= D("2500")
 

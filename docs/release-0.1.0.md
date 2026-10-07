@@ -14,7 +14,7 @@ Evidence before execution: an open-source, self-hosted crypto research and local
 
 ## Validation
 
-112 backend tests and six Chromium desktop/mobile workflow tests pass locally; TypeScript, the production build, Ruff and Prettier pass. The live OKX smoke check returned the five supported spot markets and 720 confirmed hourly BTC-USDT bars. See [verification details](https://github.com/billpwchan/tidebench/blob/main/docs/verification.md) and the [CI workflow](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml) for independent build/container status.
+121 backend tests and six Chromium desktop/mobile workflow tests pass locally; TypeScript, the production build, Ruff and Prettier pass. The live OKX smoke check returned the five supported spot markets and 720 confirmed hourly BTC-USDT bars. See [verification details](https://github.com/billpwchan/tidebench/blob/main/docs/verification.md) and the [CI workflow](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml) for independent build/container status.
 
 ## Boundaries
 

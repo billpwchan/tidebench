@@ -2,10 +2,11 @@
 
 import json
 from dataclasses import replace
-from decimal import Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_EVEN, ROUND_UP, Context, Decimal, Inexact, Rounded, localcontext
 
 import pytest
-from hypothesis import given, settings
+import tidebench.engine as engine_module
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 from tidebench.engine import (
     DAY_MS,
@@ -250,30 +251,107 @@ def test_serialization_is_json_safe_and_deterministic():
     slip=st.integers(min_value=0, max_value=500),
     allocation=st.integers(min_value=0, max_value=100),
 )
+@example(prices=[1, 2, 1, 19910, 1, 2, 1, 9, 1, 515906], initial=159291, fee=1, slip=496, allocation=97)
 @settings(max_examples=100, deadline=None)
 def test_spot_accounting_remains_solvent_under_random_paths(prices, initial, fee, slip, allocation):
     instrument = replace(INSTRUMENT, lot_size=D("0.000001"), min_size=D("0.000001"))
     cfg = BacktestConfig(
         D(initial), D(fee), D(slip), StrategyConfig(fast=1, slow=2, allocation=D(allocation) / 100)
     )
-    result = run_backtest(bars(prices), HOUR, instrument, cfg)
-    cash = D(initial)
-    holdings = D("0")
-    total_fees = D("0")
-    for trade in result["trades"]:
-        size, price, charged = D(trade["quantity"]), D(trade["price"]), D(trade["fee"])
-        assert size >= instrument.min_size and size % instrument.lot_size == 0
-        if trade["side"] == "buy":
-            assert holdings == 0
-            cash -= size * price + charged
-            holdings += size
-        else:
-            assert size == holdings
-            cash += size * price - charged
-            holdings -= size
-        total_fees += charged
-        assert cash >= 0 and holdings >= 0
-        assert cash == D(trade["cash"])
-    assert total_fees == D(result["metrics"]["fees_paid"])
-    assert cash + holdings * D(prices[-1]) == D(result["metrics"]["final_equity"])
+    try:
+        result = run_backtest(bars(prices), HOUR, instrument, cfg)
+    except EngineError as exc:
+        # A bounded model must reject an unsupported path, rather than return
+        # a rounded ledger or loop forever. Every accepted path stays strict.
+        assert "supported numeric domain" in str(exc)
+        return
+    # Replaying decimal-string line items requires the engine's stated 50-digit
+    # arithmetic contract. Ambient Decimal's default 28 digits can truncate an
+    # otherwise correct high-value cash balance, as the fixed cloud case proved.
+    with localcontext(Context(prec=50, rounding=ROUND_HALF_EVEN)):
+        cash = D(initial)
+        holdings = D("0")
+        total_fees = D("0")
+        for trade in result["trades"]:
+            size, price, charged = D(trade["quantity"]), D(trade["price"]), D(trade["fee"])
+            assert size >= instrument.min_size and size % instrument.lot_size == 0
+            if trade["side"] == "buy":
+                assert holdings == 0
+                cash -= size * price + charged
+                holdings += size
+            else:
+                assert size == holdings
+                cash += size * price - charged
+                holdings -= size
+            total_fees += charged
+            assert cash >= 0 and holdings >= 0
+            assert cash == D(trade["cash"])
+        assert total_fees == D(result["metrics"]["fees_paid"])
+        assert cash + holdings * D(prices[-1]) == D(result["metrics"]["final_equity"])
     assert 0 <= result["metrics"]["max_drawdown_pct"] <= 100
+
+
+def _context_snapshot(context):
+    return (
+        context.prec,
+        context.rounding,
+        context.Emin,
+        context.Emax,
+        context.capitals,
+        context.clamp,
+        dict(context.traps),
+        dict(context.flags),
+    )
+
+
+@pytest.mark.parametrize("precision,rounding", [(6, ROUND_DOWN), (28, ROUND_UP), (90, ROUND_HALF_EVEN)])
+def test_engine_is_independent_of_caller_decimal_context_and_preserves_it(precision, rounding):
+    candles = bars([1, 2, 1, 19910, 1, 2, 1, 9, 1, 515906])
+    instrument = replace(INSTRUMENT, lot_size=D("0.000001"), min_size=D("0.000001"))
+    cfg = BacktestConfig(D("159291"), D("1"), D("496"), StrategyConfig(fast=1, slow=2, allocation=D("0.97")))
+    rsi = StrategyConfig(kind="rsi_reversion", rsi_period=3)
+    baseline = run_backtest(candles, HOUR, instrument, cfg)
+    baseline_signal = target_position(candles, rsi)
+    assert baseline["trades"][-1]["cash"] == "17838442183682199.027932203593"
+    with localcontext() as caller:
+        caller.prec, caller.rounding = precision, rounding
+        caller.Emin, caller.Emax = -9, 9
+        caller.capitals, caller.clamp = 0, 1
+        caller.traps[Inexact] = caller.traps[Rounded] = True
+        caller.clear_flags()
+        caller.flags[Rounded] = True
+        before = _context_snapshot(caller)
+        assert run_backtest(candles, HOUR, instrument, cfg) == baseline
+        assert target_position(candles, rsi) == baseline_signal
+        assert _context_snapshot(caller) == before
+
+
+def test_extreme_compounding_path_fails_closed_at_the_numeric_domain_boundary():
+    candles = bars([1, 1_000_000] * 25)
+    with pytest.raises(EngineError, match="supported numeric domain"):
+        run_backtest(candles, HOUR, INSTRUMENT, config("sma_cross", fast=1, slow=2, allocation=D("1")))
+    with pytest.raises(EngineError, match="supported numeric domain"):
+        run_backtest(bars([100, 100]), HOUR, INSTRUMENT, replace(config(), initial_cash=D("1e30")))
+
+
+def test_lot_resolution_and_multiples_outside_finite_precision_fail_closed():
+    instrument = replace(INSTRUMENT, lot_size=D("0.000001"), min_size=D("0.000001"))
+    with localcontext(Context(prec=50, rounding=ROUND_HALF_EVEN)):
+        with pytest.raises(EngineError, match="supported numeric domain"):
+            engine_module._buy_quantity(D("1e60"), D("95"), D("0.0098"), instrument)
+        with pytest.raises(EngineError, match="supported numeric domain"):
+            engine_module._floor_lot(D("100"), D("0.12345678901234567890123456789012345678901234567891"))
+        with pytest.raises(EngineError, match="price tick"):
+            engine_module._fill_price(D("100"), "buy", replace(instrument, tick_size=D("1e-50")), D("0"))
+
+
+def test_one_lot_correction_must_make_progress_even_if_a_prior_precision_gate_is_bypassed(monkeypatch):
+    # This rounded quotient used to enter an infinite correction loop: the cost
+    # exceeds the budget, while subtracting one micro-lot leaves it unchanged.
+    rounded_quantity = D("1.0424159030970176481012394325087823539835923736853e58")
+    instrument = replace(INSTRUMENT, lot_size=D("0.000001"), min_size=D("0.000001"))
+    monkeypatch.setattr(engine_module, "_floor_lot", lambda *_: rounded_quantity)
+    with localcontext(Context(prec=50, rounding=ROUND_HALF_EVEN)):
+        assert rounded_quantity - instrument.lot_size == rounded_quantity
+        with pytest.raises(EngineError, match="one-lot correction"):
+            engine_module._buy_quantity(D("1e60"), D("95"), D("0.0098"), instrument)

@@ -3,10 +3,11 @@
 import asyncio
 import hashlib
 import logging
-from decimal import ROUND_DOWN, Decimal
+from decimal import ROUND_DOWN, Decimal, localcontext
 
 from . import __version__
 from .engine import (
+    ACCOUNTING_CONTEXT,
     BacktestConfig,
     Candle,
     EngineError,
@@ -256,14 +257,15 @@ class Supervisor:
                     "valuation_unavailable", "The strategy needs complete account marks before buying."
                 )
             side = "buy"
-            price = quote_price(quote, "buy") * (1 + SLIPPAGE_RATE)
-            price = (price / instrument.tick_size).to_integral_value(
-                rounding="ROUND_CEILING"
-            ) * instrument.tick_size
-            budget = Decimal(account["cash"]) * target / (1 + FEE_RATE)
-            qty = (budget / price / instrument.lot_size).to_integral_value(
-                rounding=ROUND_DOWN
-            ) * instrument.lot_size
+            with localcontext(ACCOUNTING_CONTEXT):
+                price = quote_price(quote, "buy") * (1 + SLIPPAGE_RATE)
+                price = (price / instrument.tick_size).to_integral_value(
+                    rounding="ROUND_CEILING"
+                ) * instrument.tick_size
+                budget = Decimal(account["cash"]) * target / (1 + FEE_RATE)
+                qty = (budget / price / instrument.lot_size).to_integral_value(
+                    rounding=ROUND_DOWN
+                ) * instrument.lot_size
         elif target == 0 and quantity > 0:
             side, qty = "sell", quantity
         if side and qty >= instrument.min_size:

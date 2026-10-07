@@ -10,7 +10,18 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, localcontext
+from decimal import (
+    ROUND_CEILING,
+    ROUND_FLOOR,
+    ROUND_HALF_EVEN,
+    Context,
+    Decimal,
+    DecimalException,
+    DivisionByZero,
+    InvalidOperation,
+    Overflow,
+    localcontext,
+)
 from math import isfinite, sqrt
 from statistics import mean, stdev
 from typing import Any
@@ -19,6 +30,18 @@ ZERO = Decimal("0")
 ONE = Decimal("1")
 BPS = Decimal("10000")
 DAY_MS = 86_400_000
+ACCOUNTING_PRECISION = 50
+ACCOUNTING_LIMIT = Decimal("1e30")
+ACCOUNTING_CONTEXT = Context(
+    prec=ACCOUNTING_PRECISION,
+    rounding=ROUND_HALF_EVEN,
+    Emin=-999999,
+    Emax=999999,
+    capitals=1,
+    clamp=0,
+    flags=[],
+    traps=[InvalidOperation, DivisionByZero, Overflow],
+)
 
 
 class EngineError(ValueError):
@@ -69,6 +92,22 @@ class BacktestConfig:
 def _decimal(value: Decimal, name: str) -> Decimal:
     if not isinstance(value, Decimal) or not value.is_finite():
         raise EngineError(f"{name} must be a finite Decimal")
+    digits = value.as_tuple().digits
+    end = len(digits)
+    while end > 0 and digits[end - 1] == 0:
+        end -= 1
+    if end > ACCOUNTING_PRECISION:
+        raise EngineError(
+            f"Accounting precision exceeds the supported numeric domain (50 significant digits): {name}"
+        )
+    return value
+
+
+def _accounting_value(value: Decimal, name: str) -> Decimal:
+    if not value.is_finite() or value.copy_abs() >= ACCOUNTING_LIMIT:
+        raise EngineError(
+            f"Accounting value is outside the supported numeric domain (absolute value < 1e30): {name}"
+        )
     return value
 
 
@@ -121,6 +160,7 @@ def _validate_config(instrument: Instrument, config: BacktestConfig) -> None:
         raise EngineError("instrument and config must use the engine dataclasses")
     if _decimal(config.initial_cash, "initial_cash") <= ZERO:
         raise EngineError("initial_cash must be positive")
+    _accounting_value(config.initial_cash, "initial_cash")
     for name in ("fee_bps", "slippage_bps"):
         if not ZERO <= _decimal(getattr(config, name), name) < BPS:
             raise EngineError(f"{name} must be >= 0 and < 10000")
@@ -162,6 +202,7 @@ def validate_candles(
         for name in ("open", "high", "low", "close"):
             if _decimal(getattr(candle, name), f"candle {index} {name}") <= ZERO:
                 raise EngineError(f"candle {index} prices must be positive")
+            _accounting_value(getattr(candle, name), f"candle {index} {name}")
         if not candle.low <= min(candle.open, candle.close) <= max(candle.open, candle.close) <= candle.high:
             raise EngineError(f"candle {index} has invalid OHLC bounds")
         if _decimal(candle.volume, f"candle {index} volume") < ZERO:
@@ -256,32 +297,57 @@ def target_position(history: list[Candle], strategy: StrategyConfig) -> Decimal 
             raise EngineError(f"history candle {index} must be confirmed closed")
         if _decimal(candle.close, f"history candle {index} close") <= ZERO:
             raise EngineError("history prices must be positive")
+        _accounting_value(candle.close, f"history candle {index} close")
         _integer(candle.ts, f"history candle {index} ts", 0)
         if previous is not None and candle.ts <= previous:
             raise EngineError("history timestamps must be strictly ascending and unique")
         previous = candle.ts
-    with localcontext() as context:
-        context.prec = 50
-        signal = _SignalState(strategy)
-        result = None
-        for candle in history:
-            result = signal.on_close(candle.close)
-        return result
+    try:
+        with localcontext(ACCOUNTING_CONTEXT):
+            signal = _SignalState(strategy)
+            result = None
+            for candle in history:
+                result = signal.on_close(candle.close)
+            return result
+    except DecimalException as exc:
+        raise EngineError("Accounting precision is outside the supported numeric domain") from exc
+
+
+def _round_to_step(value: Decimal, step: Decimal, rounding: str, unit: str) -> Decimal:
+    try:
+        ratio = value / step
+    except DecimalException as exc:
+        raise EngineError(
+            f"Accounting precision cannot resolve one {unit} in the supported numeric domain"
+        ) from exc
+    if not ratio.is_finite() or ratio.adjusted() >= ACCOUNTING_PRECISION:
+        raise EngineError(f"Accounting precision cannot resolve one {unit} in the supported numeric domain")
+    units = ratio.to_integral_value(rounding=rounding)
+    result = units * step
+    # Verify that context rounding did not turn an executable lot multiple into
+    # a fractional lot. Extra precision is only used for this exact check.
+    with localcontext(ACCOUNTING_CONTEXT) as check_context:
+        check_context.prec = max(
+            ACCOUNTING_PRECISION, len(units.as_tuple().digits) + len(step.as_tuple().digits)
+        )
+        if result != units * step:
+            raise EngineError(
+                f"Accounting precision cannot represent a {unit} multiple in the supported numeric domain"
+            )
+    return result
 
 
 def _floor_lot(quantity: Decimal, lot: Decimal) -> Decimal:
-    return (quantity / lot).to_integral_value(rounding=ROUND_FLOOR) * lot
+    return _round_to_step(quantity, lot, ROUND_FLOOR, "lot")
 
 
 def _fill_price(open_price: Decimal, side: str, instrument: Instrument, slippage: Decimal) -> Decimal:
     multiplier = ONE + slippage if side == "buy" else ONE - slippage
     rounding = ROUND_CEILING if side == "buy" else ROUND_FLOOR
-    price = (open_price * multiplier / instrument.tick_size).to_integral_value(
-        rounding=rounding
-    ) * instrument.tick_size
+    price = _round_to_step(open_price * multiplier, instrument.tick_size, rounding, "price tick")
     if price <= ZERO:
         raise EngineError("sell price rounds to zero at the instrument tick size")
-    return price
+    return _accounting_value(price, "execution price")
 
 
 def _buy_quantity(budget: Decimal, price: Decimal, fee_rate: Decimal, instrument: Instrument) -> Decimal:
@@ -289,7 +355,13 @@ def _buy_quantity(budget: Decimal, price: Decimal, fee_rate: Decimal, instrument
     # Decimal division can round a mathematical boundary upward. Correct the
     # executable quantity, never the resulting balance, to preserve solvency.
     while quantity > ZERO and quantity * price * (ONE + fee_rate) > budget:
-        quantity -= instrument.lot_size
+        next_quantity = quantity - instrument.lot_size
+        if next_quantity >= quantity:
+            raise EngineError(
+                "Accounting precision cannot make a one-lot correction in the supported numeric domain"
+            )
+        quantity = next_quantity
+    _accounting_value(quantity, "order quantity")
     return quantity if quantity >= instrument.min_size else ZERO
 
 
@@ -324,9 +396,11 @@ def run_backtest(
     _validate_config(instrument, config)
     if len(candles) < 2:
         raise EngineError("at least two candles are required for next-open execution")
-    with localcontext() as context:
-        context.prec = 50
-        return _run(candles, interval_ms, instrument, config, quality)
+    try:
+        with localcontext(ACCOUNTING_CONTEXT):
+            return _run(candles, interval_ms, instrument, config, quality)
+    except DecimalException as exc:
+        raise EngineError("Accounting precision is outside the supported numeric domain") from exc
 
 
 def _run(
@@ -361,8 +435,11 @@ def _run(
                 _buy_quantity(cash * allocation, price, fee_rate, instrument) if side == "buy" else quantity
             )
             if fill_quantity > ZERO:
+                _accounting_value(fill_quantity, "fill quantity")
                 notional = fill_quantity * price
                 fee = notional * fee_rate
+                _accounting_value(notional, "fill notional")
+                _accounting_value(fee, "fill fee")
                 if side == "buy":
                     cost_basis = notional + fee
                     cash -= cost_basis
@@ -373,6 +450,14 @@ def _run(
                     quantity = ZERO
                     cost_basis = ZERO
                 fees += fee
+                for name, amount in (
+                    ("cash", cash),
+                    ("quantity", quantity),
+                    ("cost_basis", cost_basis),
+                    ("fees_paid", fees),
+                    ("realized_pnl", realized),
+                ):
+                    _accounting_value(amount, name)
                 if cash < ZERO or quantity < ZERO:
                     raise EngineError("spot accounting invariant violated")
                 trades.append(
@@ -390,9 +475,14 @@ def _run(
         if index == 1:
             price = _fill_price(candle.open, "buy", instrument, slippage)
             benchmark_quantity = _buy_quantity(benchmark_cash, price, fee_rate, instrument)
-            benchmark_cash -= benchmark_quantity * price * (ONE + fee_rate)
+            benchmark_notional = _accounting_value(benchmark_quantity * price, "benchmark notional")
+            benchmark_fee = _accounting_value(benchmark_notional * fee_rate, "benchmark fee")
+            benchmark_cash -= benchmark_notional + benchmark_fee
+            _accounting_value(benchmark_cash, "benchmark cash")
         value = cash + quantity * candle.close
         benchmark_value = benchmark_cash + benchmark_quantity * candle.close
+        _accounting_value(value, "equity")
+        _accounting_value(benchmark_value, "benchmark equity")
         high_water = max(high_water, value)
         drawdown = (ONE - value / high_water) * Decimal("100")
         maximum_drawdown = max(maximum_drawdown, drawdown)
@@ -432,6 +522,12 @@ def _run(
         "equity": equity,
         "trades": trades,
         "assumptions": {
+            "accounting": {
+                "precision": ACCOUNTING_PRECISION,
+                "rounding": "ROUND_HALF_EVEN",
+                "absolute_amount_limit_exclusive": "1e30",
+                "mode": "finite_decimal_context",
+            },
             "market": "long_only_spot",
             "instrument": instrument.inst_id,
             "strategy": config.strategy.kind,

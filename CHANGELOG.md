@@ -7,6 +7,7 @@ First developer preview of Tidebench.
 - OKX public spot-data adapter with regional hosts, validation and historical pagination.
 - Explicit deterministic synthetic example mode, isolated from OKX-driven paper accounts.
 - Decimal backtesting with closed-bar decisions, next-open fills, cost assumptions and a buy-and-hold benchmark.
+- Independent accounting contexts, explicit numeric-domain rejection and correction-loop termination checks.
 - Saved research inputs, manifest hashes, JSON export and snapshot replay.
 - Durable local spot paper ledger, permanent command deduplication and transactional risk controls.
 - Confirmed-bar forward paper-strategy supervision and audit history.

@@ -53,6 +53,8 @@ cost basis includes the buy fee; realized PnL includes the sell fee. Cash and
 inventory must remain non-negative. Decimal arithmetic is retained for prices,
 quantities, balances and fees; JSON represents these values as decimal strings.
 
+The arithmetic contract is an explicit **50 significant digits**, half-even Decimal context, independent of the caller's precision, rounding, exponent limits and traps. Prices, executable quantities, ledger amounts and equity must have absolute values **below `1e30`**; inputs may not exceed 50 significant digits. Unsupported step resolution, a non-progressing lot correction or out-of-domain compounding raises `EngineError` instead of returning an unresolvable ledger. The result's `assumptions.accounting` records these limits. This is finite decimal arithmetic, not an unlimited-precision claim.
+
 The buy-and-hold benchmark enters with the full starting cash at the second bar's
 open using the same price, lot, minimum-size and fee policies. Strategy allocation
 may differ, so a return comparison is not a claim of risk-adjusted alpha.

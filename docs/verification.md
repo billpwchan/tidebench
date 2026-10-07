@@ -9,7 +9,7 @@ Environment: macOS arm64, Python 3.13, Node.js 26. CI independently targets Pyth
 | Check | Observed result |
 | --- | --- |
 | Ruff lint and formatting, backend/tests/dev launcher | Passed |
-| Python tests | 112 passed |
+| Python tests | 121 passed |
 | TypeScript and production Vite build | Passed |
 | Frontend Prettier check | Passed |
 | Chromium desktop and mobile workflows | 6 passed |
@@ -22,11 +22,13 @@ The browser tests run against an isolated disposable database and explicitly syn
 
 Product screenshots in `docs/assets/` come from the actual application with the Example source selected. Recreate them with `TIDEBENCH_CAPTURE_ASSETS=1 npm --prefix frontend run test:e2e -- --project=desktop` after building the frontend and installing Chromium.
 
+The first clean Linux CI run found a randomized accounting replay using the caller's default 28-digit Decimal context rather than the engine's 50-digit contract. That exact case is retained as a regression. Follow-up adversarial checks found and fixed inherited rounding/traps/exponent settings and a non-progressing one-lot correction at extreme magnitude. The engine now rejects unsupported numeric/step-resolution domains; accepted paths still require exact replayed balances and nonnegative cash/inventory.
+
 One dependency emits a Starlette TestClient deprecation warning for its current HTTPX integration. The warning is visible in test output; application requests and tests pass with the locked dependencies.
 
 ## Container and CI
 
-The local Docker daemon was unavailable, so local container-runtime verification was not performed. The published [CI workflow](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml) separately builds the image and starts it, checks `/healthz`, and requests an authenticated synthetic candle dataset. The workflow's actual status is the evidence for those checks.
+The local Docker daemon was unavailable, so local container-runtime verification was not performed. The published [CI workflow](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml) separately builds and starts the image, checks `/healthz` and the frontend, verifies that an unauthenticated account request is rejected, and requests an authenticated synthetic candle dataset. The workflow's actual status is the evidence for those checks. Startup readiness tolerates bounded connection resets while the container begins listening.
 
 ## Remaining acceptance work
 

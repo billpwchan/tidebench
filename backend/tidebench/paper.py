@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime
 from decimal import ROUND_CEILING, ROUND_DOWN, Decimal, localcontext
 
-from .engine import Instrument
+from .engine import ACCOUNTING_CONTEXT, Instrument
 from .schemas import OrderInput
 from .store import Store, dumps, new_id, now_ms
 
@@ -20,9 +20,10 @@ class DeskError(Exception):
 
 
 def order_payload(order: OrderInput) -> str:
-    body = order.model_dump()
-    body["quantity"] = str(order.quantity.normalize())
-    return dumps(body)
+    with localcontext(ACCOUNTING_CONTEXT):
+        body = order.model_dump()
+        body["quantity"] = str(order.quantity.normalize())
+        return dumps(body)
 
 
 def fresh_quote(quote: dict, source: str):
@@ -52,8 +53,15 @@ def valid_mark(quote: dict) -> Decimal:
 def quote_price(quote: dict, side: str) -> Decimal:
     try:
         bid, ask = Decimal(quote["bid"]), Decimal(quote["ask"])
-        if not bid.is_finite() or not ask.is_finite() or bid <= 0 or ask < bid or ask / bid > Decimal("1.05"):
-            raise ValueError
+        with localcontext(ACCOUNTING_CONTEXT):
+            if (
+                not bid.is_finite()
+                or not ask.is_finite()
+                or bid <= 0
+                or ask < bid
+                or ask / bid > Decimal("1.05")
+            ):
+                raise ValueError
         return ask if side == "buy" else bid
     except (ValueError, KeyError, TypeError, ArithmeticError):
         raise DeskError(
@@ -66,6 +74,10 @@ class PaperDesk:
         self.store = store
 
     def account(self, source: str, tickers: dict | None):
+        with localcontext(ACCOUNTING_CONTEXT):
+            return self._account(source, tickers)
+
+    def _account(self, source: str, tickers: dict | None):
         with self.store.read() as conn:
             account = dict(conn.execute("SELECT * FROM accounts WHERE source=?", (source,)).fetchone())
             positions = conn.execute("SELECT * FROM positions WHERE source=?", (source,)).fetchall()
@@ -136,8 +148,7 @@ class PaperDesk:
         """Return (order, replay). Market I/O happens before acquiring the write transaction."""
         payload = order_payload(order)
         try:
-            with localcontext() as context:
-                context.prec = 50
+            with localcontext(ACCOUNTING_CONTEXT):
                 with self.store.write() as conn:
                     existing = conn.execute(
                         "SELECT payload,body FROM orders WHERE source=? AND idempotency_key=?",

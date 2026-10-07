@@ -35,6 +35,8 @@ flowchart LR
 
 Amounts are decimal strings over the API and decimal text in storage. Python `Decimal` is used for accounting; JavaScript numbers are display/chart coordinates only. Spot base quantity, USDT quote value and fee basis are explicit.
 
+Research, paper fills, account valuation, quantity canonicalization and automatic sizing use an explicit 50-significant-digit, half-even Decimal context. They do not inherit a caller's rounding mode, exponent limits or arithmetic traps. This is bounded decimal arithmetic, not infinite-precision accounting.
+
 ## Correctness
 
 The database uses WAL, foreign keys, `synchronous=FULL` and `BEGIN IMMEDIATE` for mutations. A paper command checks its durable idempotency record, risk state, account and inventory before committing the order, balance, position and audit event together. SQLite's one-writer constraint is an explicit deployment boundary, not a substitute for distributed coordination. [SQLite WAL](https://www.sqlite.org/wal.html)
