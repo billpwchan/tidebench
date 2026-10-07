@@ -375,6 +375,7 @@ class SimulationBook:
                         "quantity": str(qty),
                         "side": "long" if qty > 0 else "short",
                         "entry_price": str(entry),
+                        "basis": row["basis"] if meta["inst_type"] == "SPOT" else None,
                         "mark": str(mark) if mark is not None else None,
                         "market_value": str(value) if value is not None else None,
                         "unrealized_pnl": str(upnl) if upnl is not None else None,

@@ -52,7 +52,7 @@ test.beforeEach(async ({ page, request }) => {
   });
   await page.goto('/');
   await page.getByLabel('Market source', { exact: true }).selectOption('example');
-  await expect(page.getByText('Fixed synthetic dataset', { exact: true })).toBeVisible();
+  await expect(page.locator('.example-notice')).toContainText('Synthetic example data.');
 });
 
 test('versioned research, saved results, replay and JSON export', async ({
@@ -154,6 +154,31 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: '../docs/assets/workspace.png', animations: 'disabled' });
   }
+  await page.getByRole('tab', { name: 'Exposure & scenarios', exact: true }).click();
+  await expect(page.locator('.metric-label').filter({ hasText: /^Gross exposure$/ })).toBeVisible();
+  await page.getByRole('tab', { name: 'Stress scenarios', exact: true }).click();
+  await page.getByLabel('Scenario name', { exact: true }).fill('Browser stress');
+  await page.getByLabel('Parallel price change (%)', { exact: true }).fill('-20');
+  await page.getByRole('button', { name: 'Calculate scenario', exact: true }).click();
+  await expect(page.getByText('Captured custom scenario', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Browser stress', exact: true })).toBeVisible();
+  if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop') {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: '../docs/assets/portfolio-risk.png',
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await navigate(page, 'Overview');
+  await expect(page.getByRole('heading', { name: 'Trading overview', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell').getByText('BTC-USDT-SWAP', { exact: true })).toBeVisible();
+  if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop') {
+    await expect(page.getByText('Loading account state…', { exact: true })).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: '../docs/assets/overview.png', animations: 'disabled' });
+  }
+  await navigate(page, 'Execution');
   await page.getByRole('tab', { name: 'Risk', exact: true }).click();
   await page.getByLabel('Reason', { exact: true }).fill('Browser verification halt');
   await page.getByRole('button', { name: 'Halt execution', exact: true }).click();
@@ -173,7 +198,7 @@ test('data download, operations, source failure and responsive layout', async ({
   await expect(
     page.getByRole('alert').filter({ hasText: 'OKX is unavailable' }).first(),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Use synthetic example' }).first().click();
+  await page.getByLabel('Market source', { exact: true }).selectOption('example');
   await expect(page.getByLabel('Market source', { exact: true })).toHaveValue('example');
   const dimensions = await page.evaluate(() => ({
     width: innerWidth,
@@ -187,5 +212,57 @@ test('data download, operations, source failure and responsive layout', async ({
     .getByRole('button')
     .filter({ hasText: 'ETH' })
     .click();
-  await expect(page.getByLabel('Trading pair')).toHaveValue('ETH-USDT');
+  await page.getByRole('button', { name: /Market context/ }).click();
+  await expect(page.getByLabel('Market', { exact: true })).toHaveValue('ETH-USDT');
+});
+
+test('one-click perpetual research package preserves all input versions', async ({
+  page,
+  request,
+}, testInfo) => {
+  await navigate(page, 'Data library');
+  await page.getByLabel('Product', { exact: true }).selectOption('SWAP');
+  await page.getByLabel('Start (UTC)', { exact: true }).fill('2025-12-22T00:00');
+  await page.getByLabel('End (UTC)', { exact: true }).fill('2026-01-01T00:00');
+  const created = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/catalog/packages') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Prepare research package', exact: true }).click();
+  const response = await created;
+  expect(response.status()).toBe(202);
+  const queued = await response.json();
+  let ready;
+  await expect
+    .poll(async () => {
+      ready = await (await request.get(`/api/v1/pro/catalog/packages/${queued.id}`)).json();
+      return ready.status;
+    })
+    .toBe('ready');
+  const row = page.locator('.package-row').filter({ hasText: ready.manifest_hash.slice(0, 12) });
+  await expect(row.getByRole('button', { name: 'Open in research', exact: true })).toBeEnabled();
+  if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop') {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: '../docs/assets/data-packages.png', animations: 'disabled' });
+  }
+  await row.getByRole('button', { name: 'Open in research', exact: true }).click();
+  await expect(page.getByLabel('Dataset', { exact: true })).toHaveValue(
+    ready.research_inputs.dataset_id,
+  );
+  await expect(page.getByLabel('Mark dataset', { exact: true })).toHaveValue(
+    ready.research_inputs.mark_dataset_id,
+  );
+  await expect(page.getByLabel('Funding dataset', { exact: true })).toHaveValue(
+    ready.research_inputs.funding_dataset_id,
+  );
+  const submitted = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/research/runs') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Run research', exact: true }).click();
+  const run = await (await submitted).json();
+  expect(run.config.package_manifest_hash).toBe(ready.manifest_hash);
+  await expect
+    .poll(
+      async () => (await (await request.get(`/api/v1/pro/research/runs/${run.id}`)).json()).status,
+    )
+    .toBe('completed');
 });

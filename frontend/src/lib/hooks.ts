@@ -10,9 +10,9 @@ export function useDialogFocus(active: boolean, selector: string, onClose: () =>
     const focusable = () =>
       Array.from(
         dialog.querySelectorAll<HTMLElement>(
-          'button:not(:disabled),input:not(:disabled),select:not(:disabled),[href],[tabindex="0"]',
+          'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,[href],[tabindex="0"]',
         ),
-      );
+      ).filter((item) => item.getClientRects().length > 0 && !item.closest('[inert]'));
     focusable()[0]?.focus();
     const trap = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -46,4 +46,16 @@ export function useNow() {
     return () => window.clearInterval(id);
   }, []);
   return now;
+}
+
+export function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const change = () => setMatches(media.matches);
+    change();
+    media.addEventListener('change', change);
+    return () => media.removeEventListener('change', change);
+  }, [query]);
+  return matches;
 }

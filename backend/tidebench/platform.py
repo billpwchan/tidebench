@@ -406,6 +406,11 @@ class RuntimeMetrics:
         self.bounds = (0.01, 0.05, 0.1, 0.5, 1, 5, float("inf"))
 
     def record(self, method, path, status, elapsed):
+        method = (
+            method
+            if method in {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT"}
+            else "OTHER"
+        )
         key = (method, path, str(status))
         with self.lock:
             self.requests[key] += 1
@@ -503,7 +508,7 @@ class BackupService:
                 or manifest["size_bytes"] <= 0
                 or type(manifest.get("created_at")) is not int
                 or type(manifest.get("database_schema")) is not int
-                or manifest["database_schema"] not in (1, 2)
+                or manifest["database_schema"] not in (1, 2, 3)
             ):
                 raise ValueError
         except (OSError, ValueError, TypeError, UnicodeError):
@@ -525,7 +530,7 @@ class BackupService:
             versions = [row[0] for row in conn.execute("SELECT version FROM schema_version")]
         except sqlite3.Error:
             raise PlatformError("backup_schema", "Backup database schema is missing.", 409) from None
-        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2):
+        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3):
             raise PlatformError("backup_schema", "Backup database schema is unsupported.", 409)
         return versions[0]
 
@@ -540,12 +545,15 @@ class BackupService:
         if not {"schema_version", "accounts", "risk", "deployments", "audit"}.issubset(tables):
             raise PlatformError("backup_schema", "Backup is missing required workspace tables.", 409)
         version = cls._schema_version(conn)
-        if version == 2 and not {
+        if version >= 2 and not {
             "workspace_users",
             "workspace_sessions",
             "pro_accounts",
             "pro_positions",
             "pro_orders",
+            "pro_ledger",
+            "pro_funding",
+            "pro_strategy_intents",
             "pro_risk",
             "pro_deployments",
             "pro_runs",
@@ -554,11 +562,18 @@ class BackupService:
             "catalog_records",
             "catalog_instruments",
             "catalog_watches",
+            "catalog_settlement_marks",
             "schema_migrations",
         }.issubset(tables):
             raise PlatformError(
                 "backup_schema", "Schema version 2 is missing professional workspace tables.", 409
             )
+        if version >= 3 and not {
+            "data_packages",
+            "data_package_components",
+            "data_package_funding_marks",
+        }.issubset(tables):
+            raise PlatformError("backup_schema", "Schema version 3 is missing research package tables.", 409)
         required_columns = {
             "accounts": {"source", "cash"},
             "risk": {"kill_switch"},
@@ -569,6 +584,43 @@ class BackupService:
             "pro_deployments": {"status"},
             "pro_orders": {"id", "status", "body", "reservation", "updated_at"},
         }
+        if version >= 2:
+            required_columns.update(
+                {
+                    "pro_accounts": {"source", "cash", "debt", "realized", "fees", "funding"},
+                    "pro_positions": {
+                        "source",
+                        "inst_id",
+                        "quantity",
+                        "basis",
+                        "margin",
+                        "metadata",
+                        "funding_cursor",
+                    },
+                    "pro_ledger": {
+                        "tx_id",
+                        "source",
+                        "ts",
+                        "asset",
+                        "account",
+                        "debit",
+                        "credit",
+                        "reference",
+                    },
+                    "pro_funding": {"source", "inst_id", "ts", "body"},
+                    "pro_strategy_intents": {"deployment_id", "bar", "target", "status", "updated_at"},
+                    "catalog_settlement_marks": {"source", "region", "inst_id", "ts", "price", "observed_at"},
+                }
+            )
+        if version >= 3:
+            required_columns.update(
+                {
+                    "pro_runs": {"summary"},
+                    "data_packages": {"id", "status", "manifest", "manifest_hash", "prepare_token"},
+                    "data_package_components": {"package_id", "kind", "job_id", "dataset_id"},
+                    "data_package_funding_marks": {"package_id", "ts", "body"},
+                }
+            )
         for table, required in required_columns.items():
             if table in tables and not required.issubset(
                 {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}

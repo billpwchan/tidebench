@@ -1114,7 +1114,7 @@ class CatalogService:
             "observed_at": EXAMPLE_ANCHOR if source == "example" else now_ms(),
             "unit": "contracts",
             "historical": False,
-            "boundary_policy": "At a shared boundary use the more conservative requirement; the API does not specify inclusivity.",
+            "boundary_policy": "Model convention: minimum exclusive, maximum inclusive (min,max]; not exchange-verified boundary semantics.",
             "tiers": tiers,
         }
 
@@ -1191,6 +1191,13 @@ class CatalogService:
 
     async def get_market_snapshot(self, inst_id: str, source: str = "okx") -> dict[str, Any]:
         """Unified execution inputs; all prices are USDT per base asset."""
+        _source(source)
+        _symbol(inst_id)
+        return await self.market._cached(
+            ("professional-quote", source, inst_id), 1.5, lambda: self._load_market_snapshot(inst_id, source)
+        )
+
+    async def _load_market_snapshot(self, inst_id: str, source: str) -> dict[str, Any]:
         instrument = await self.get_instrument(inst_id, source)
         derivative = (
             await self.get_derivative_snapshot(inst_id, source) if _symbol(inst_id) == "SWAP" else None

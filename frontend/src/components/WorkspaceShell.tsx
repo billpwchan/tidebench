@@ -21,6 +21,7 @@ import { Logo } from '../components/workspace';
 import type { Page } from '../lib/config';
 import { symbols } from '../lib/config';
 import { useI18n } from '../lib/i18n';
+import { useMediaQuery } from '../lib/hooks';
 import { LanguageSelect, useSession } from './AuthGate';
 
 export const pages: { id: Page; label: string; icon: typeof Activity; group: string }[] = [
@@ -45,9 +46,16 @@ export function Sidebar({
 }) {
   const { t } = useI18n();
   const session = useSession();
+  const compact = useMediaQuery('(max-width: 850px)');
   const activePage = page === 'paper' || page === 'risk' ? 'execution' : page;
   return (
-    <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`}>
+    <aside
+      className={`sidebar ${mobileNav ? 'is-open' : ''}`}
+      inert={compact && !mobileNav}
+      role={compact && mobileNav ? 'dialog' : undefined}
+      aria-modal={compact && mobileNav ? true : undefined}
+      aria-label={compact ? t('Main navigation') : undefined}
+    >
       <a className="brand" href="#overview" onClick={() => navigate('overview')}>
         <Logo />
         <span>
@@ -134,7 +142,7 @@ export function Topbar({
       <div className="breadcrumbs">
         <button
           className="icon-button mobile-menu"
-          aria-label="Open navigation"
+          aria-label={t('Open navigation')}
           onClick={() => setMobileNav(true)}
         >
           <Menu size={20} />
@@ -147,7 +155,7 @@ export function Topbar({
         <button
           className="search-trigger"
           onClick={() => setSearchOpen(true)}
-          aria-label="Search markets, Command K"
+          aria-label={t('Search markets, Command K')}
         >
           <Search size={15} />
           <span>{t('Find a market')}</span>

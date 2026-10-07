@@ -31,6 +31,26 @@ async def measure(base, token):
             await asyncio.sleep(0.1)
         else:
             raise RuntimeError("Disposable server did not become ready")
+        for index, (instrument, quantity) in enumerate(
+            [("BTC-USDT", "0.01"), ("ETH-USDT", "0.1"), ("BTC-USDT-SWAP", "1"), ("ETH-USDT-SWAP", "1")]
+        ):
+            response = await client.post(
+                "/api/v1/pro/execution/orders",
+                headers={"Idempotency-Key": f"acceptance-position-{index}"},
+                json={
+                    "source": "example",
+                    "inst_id": instrument,
+                    "side": "sell" if instrument.endswith("-SWAP") else "buy",
+                    "quantity": quantity,
+                    "leverage": 3 if instrument.endswith("-SWAP") else 1,
+                },
+            )
+            response.raise_for_status()
+            assert response.json()["status"] == "filled", response.json()
+        response = await client.get("/api/v1/pro/execution/account?source=example")
+        response.raise_for_status()
+        initial_account = response.json()
+        assert len(initial_account["positions"]) == 4, initial_account
         end = 1767225600000
         response = await client.post(
             "/api/v1/pro/catalog/jobs",
@@ -45,13 +65,16 @@ async def measure(base, token):
         )
         response.raise_for_status()
         identifier = response.json()["id"]
-        while True:
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
             jobs = (await client.get("/api/v1/pro/catalog/jobs")).json()["items"]
             job = next(item for item in jobs if item["id"] == identifier)
             if job["status"] in {"completed", "failed", "degraded"}:
                 assert job["status"] == "completed", job
                 break
             await asyncio.sleep(0.1)
+        else:
+            raise RuntimeError("Catalog acceptance job exceeded 120 seconds")
         response = await client.post(
             "/api/v1/pro/research/runs",
             json={
@@ -68,24 +91,36 @@ async def measure(base, token):
         latencies, statuses = [], []
         gate = asyncio.Semaphore(12)
 
-        async def read():
+        async def read(index):
             async with gate:
                 started = time.perf_counter()
-                response = await client.get("/api/v1/pro/execution/account?source=example")
+                analytics = index % 5 == 0
+                endpoint = "analytics" if analytics else "account"
+                response = await client.get(f"/api/v1/pro/execution/{endpoint}?source=example")
                 latencies.append((time.perf_counter() - started) * 1000)
                 statuses.append(response.status_code)
                 response.raise_for_status()
-                assert response.json()["cash"] == "10000"
+                body = response.json()
+                if analytics:
+                    assert body["status"] == "available", body
+                    assert len(body["positions"]) == 4, body
+                    assert body["scenarios"], body
+                else:
+                    assert body["cash"] == initial_account["cash"], body
+                    assert len(body["positions"]) == 4, body
 
         started = time.perf_counter()
-        await asyncio.gather(*(read() for _ in range(240)))
+        await asyncio.gather(*(read(index) for index in range(240)))
         elapsed = time.perf_counter() - started
-        while True:
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
             run = (await client.get(f"/api/v1/pro/research/runs/{run_id}")).json()
             if run["status"] in {"completed", "failed"}:
                 assert run["status"] == "completed", run
                 break
             await asyncio.sleep(0.1)
+        else:
+            raise RuntimeError("Research acceptance grid exceeded 120 seconds")
         ordered = sorted(latencies)
         return {
             "transport": "real HTTP over loopback",
@@ -100,6 +135,13 @@ async def measure(base, token):
                 "median": round(statistics.median(ordered), 2),
                 "p95": round(ordered[int(0.95 * (len(ordered) - 1))], 2),
                 "maximum": round(max(ordered), 2),
+            },
+            "read_workload": {
+                "account_requests": 192,
+                "portfolio_analytics_requests": 48,
+                "open_positions": 4,
+                "assets": ["BTC", "ETH"],
+                "products": ["SPOT", "SWAP"],
             },
             "concurrent_work": "24 research grid cases x 1000 synthetic bars; two computation threads",
             "research_status": run["status"],

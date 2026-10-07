@@ -40,13 +40,22 @@ class QueueFullError(Exception):
 
 
 class Store:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, *, acquire_lock: bool = False):
+        path = path.resolve()
+        if path.exists() and path.stat().st_nlink != 1:
+            raise RuntimeError("Database hard links are unsupported; use one canonical workspace database.")
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         path.parent.chmod(0o700)
         self._process_lock = None
-        self.initialize()
-        path.chmod(0o600)
+        if acquire_lock:
+            self.acquire_process_lock()
+        try:
+            self.initialize()
+            path.chmod(0o600)
+        except BaseException:
+            self.release_process_lock()
+            raise
 
     def connect(self):
         connection = sqlite3.connect(self.path, timeout=15, isolation_level=None)
@@ -125,7 +134,7 @@ class Store:
             row = conn.execute("SELECT version FROM schema_version").fetchone()
             if row is None:
                 conn.execute("INSERT INTO schema_version VALUES(1)")
-            elif row[0] not in {1, 2}:
+            elif row[0] not in {1, 2, 3}:
                 raise RuntimeError("Unsupported database schema. Back up your data before upgrading.")
             for source in ("okx", "example"):
                 conn.execute(
@@ -135,6 +144,8 @@ class Store:
                 conn.execute("INSERT OR IGNORE INTO risk(source,updated_at) VALUES(?,?)", (source, now_ms()))
 
     def acquire_process_lock(self):
+        if self._process_lock is not None:
+            return
         import fcntl
 
         handle = open(self.path.with_suffix(".process.lockfile"), "a+")

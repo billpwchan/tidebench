@@ -5,6 +5,9 @@ The professional workspace ships public OKX data, historical research and persis
 | Control | Implemented behavior | Evidence |
 |---|---|---|
 | Data lineage | Durable pagination, cancellation fencing, immutable manifests, rules, quality, provider attribution and record hashes | `test_catalog.py`; public 48h integration acceptance |
+| Research packages | Atomic trade/mark/funding preparation, bounded exact-time mark capture, immutable manifests and strict research binding | `test_data_packages.py`; complete perpetual-package browser workflow |
+| Captured portfolio analysis | Asset/market gross and net exposure, concentration, isolated margin, custom price shocks, deterministic capture/replay | `test_portfolio_analytics.py`; read-only API and rendered workflow acceptance |
+| Research reproducibility | Installed module identity, canonical full-result hash and explicit replay divergence failure | `test_pro_service.py`; API and browser replay acceptance |
 | Research causality | Confirmed closes, next-open orders, prefix/future perturbation checks and explicit costs | `test_engine.py`, `test_pro_research.py` |
 | OOS evaluation | Train-only candidate selection, purged windows, independent test folds, bounded grids/cost stress | `test_pro_research.py`; all five modes exercised through the rendered UI |
 | Derivative accounting | Contract units, signed P&L, actual funding events, isolated tiers, explicit gap liabilities | `test_derivatives.py`, `test_pro_execution.py` |

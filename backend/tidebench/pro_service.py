@@ -12,10 +12,12 @@ from decimal import Decimal, localcontext
 
 from . import __version__
 from .catalog import CATALOG_BARS, CatalogService
+from .data_packages import DataPackageService
 from .derivatives import FundingEvent, LinearContract, MarginTier
 from .engine import ACCOUNTING_CONTEXT, Instrument, StrategyConfig
 from .platform import BackupService, PlatformError, RuntimeMetrics
 from .pro_execution import SimulationBook, base_size, number
+from .provenance import research_identity, serialized_result
 from .store import dumps, encode, new_id, now_ms
 
 logger = logging.getLogger("tidebench.professional")
@@ -26,9 +28,11 @@ class ProfessionalRuntime:
     def __init__(self, store, market, settings):
         self.store, self.market, self.settings = store, market, settings
         self.catalog = CatalogService(store, market)
+        self.packages = DataPackageService(store, self.catalog)
         self.book = SimulationBook(store)
         self.backups = BackupService(store, settings)
         self.metrics = RuntimeMetrics()
+        self.engine_identity = research_identity()
         self.tasks, self.inflight = [], set()
         self.snapshots, self.market_errors = {}, {}
         self.funding_checks = {}
@@ -38,8 +42,11 @@ class ProfessionalRuntime:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS pro_runs(id TEXT PRIMARY KEY,source TEXT NOT NULL,status TEXT NOT NULL,config TEXT NOT NULL,snapshot TEXT,manifest TEXT,result TEXT,error TEXT,progress REAL NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL);
                 CREATE INDEX IF NOT EXISTS pro_runs_pending ON pro_runs(status,created_at);
+                CREATE INDEX IF NOT EXISTS pro_runs_history ON pro_runs(source,created_at DESC,id DESC);
                 CREATE TABLE IF NOT EXISTS pro_strategy_intents(deployment_id TEXT NOT NULL,bar INTEGER NOT NULL,target TEXT,status TEXT NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(deployment_id,bar));
             """)
+            if "summary" not in {row[1] for row in conn.execute("PRAGMA table_info(pro_runs)")}:
+                conn.execute("ALTER TABLE pro_runs ADD COLUMN summary TEXT")
 
     async def offload(self, function, *args, **kwargs):
         task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
@@ -51,6 +58,7 @@ class ProfessionalRuntime:
         if self.tasks:
             raise RuntimeError("Professional supervisors are already started")
         self.catalog.resume_pending()
+        self.packages.resume_pending()
         with self.store.write() as conn:
             conn.execute(
                 "UPDATE pro_runs SET status='queued',updated_at=? WHERE status='running'", (now_ms(),)
@@ -73,40 +81,95 @@ class ProfessionalRuntime:
 
     def run(self, identifier, *, include_snapshot=False):
         with self.store.read() as conn:
-            row = conn.execute("SELECT * FROM pro_runs WHERE id=?", (identifier,)).fetchone()
+            columns = (
+                "*"
+                if include_snapshot
+                else "id,source,status,config,manifest,result,error,progress,created_at,updated_at,summary"
+            )
+            row = conn.execute(f"SELECT {columns} FROM pro_runs WHERE id=?", (identifier,)).fetchone()
         if not row:
             raise PlatformError("not_found", "Research run not found.", 404)
         output = dict(row)
-        for key in ("config", "snapshot", "manifest", "result"):
-            output[key] = json.loads(output[key]) if output[key] else None
-        if not include_snapshot:
-            output.pop("snapshot")
+        for key in ("config", "snapshot", "manifest", "result", "summary"):
+            if key in output:
+                output[key] = json.loads(output[key]) if output[key] else None
         return output
 
-    def runs(self, source=None):
+    @staticmethod
+    def summarize(config, plan):
+        if not plan:
+            return None
+        return (
+            (plan.get("result") or {}).get("metrics", {})
+            if config["mode"] == "single"
+            else plan.get(
+                "oos_summary", {"mode": config["mode"], "experiments": len(plan.get("experiments", []))}
+            )
+        )
+
+    def runs(self, source=None, *, limit=100, before=None):
+        if not 1 <= limit <= 100:
+            raise PlatformError("history_limit", "Use a history page of one to one hundred runs.", 422)
+        boundary, boundary_id = 2**63 - 1, "z"
+        if before:
+            try:
+                timestamp, boundary_id = before.split(":", 1)
+                boundary = int(timestamp)
+                if (
+                    not 0 <= boundary < 2**63
+                    or len(boundary_id) != 32
+                    or any(char not in "0123456789abcdef" for char in boundary_id)
+                ):
+                    raise ValueError
+            except (ValueError, AttributeError):
+                raise PlatformError("history_cursor", "History cursor is invalid.", 422) from None
         with self.store.read() as conn:
             rows = conn.execute(
-                "SELECT id FROM pro_runs WHERE (? IS NULL OR source=?) ORDER BY created_at DESC LIMIT 100",
-                (source, source),
+                "SELECT id,source,status,config,manifest,summary,error,progress,created_at,updated_at "
+                "FROM pro_runs WHERE (? IS NULL OR source=?) AND "
+                "(created_at<? OR (created_at=? AND id<?)) ORDER BY created_at DESC,id DESC LIMIT ?",
+                (source, source, boundary, boundary, boundary_id, limit),
             ).fetchall()
         items = []
         for row in rows:
-            run = self.run(row[0])
-            if run["result"]:
-                plan = run["result"]
-                run["summary"] = (
-                    (plan.get("result") or {}).get("metrics", {})
-                    if run["config"]["mode"] == "single"
-                    else plan.get(
-                        "oos_summary",
-                        {"mode": run["config"]["mode"], "experiments": len(plan.get("experiments", []))},
-                    )
+            run = dict(row)
+            for key in ("config", "manifest", "summary"):
+                run[key] = json.loads(run[key]) if run[key] else None
+            if run["status"] == "completed" and run["summary"] is None:
+                # One bounded, lazy migration per older run; subsequent pages
+                # never read or decode its potentially large financial tables.
+                with self.store.read() as conn:
+                    previous = conn.execute("SELECT result FROM pro_runs WHERE id=?", (run["id"],)).fetchone()
+                run["summary"] = self.summarize(
+                    run["config"], json.loads(previous[0]) if previous[0] else None
                 )
-            run.pop("result")
+                with self.store.write() as conn:
+                    conn.execute(
+                        "UPDATE pro_runs SET summary=? WHERE id=? AND summary IS NULL",
+                        (dumps(run["summary"] or {}), run["id"]),
+                    )
             items.append(run)
         return items
 
-    def create_run(self, config, *, snapshot=None, replay_of=None):
+    def create_run(self, config, *, snapshot=None, replay_of=None, replay_evidence=None):
+        if config.get("package_id"):
+            inputs = self.packages.research_inputs(config["package_id"])
+            if any(
+                config.get(key) != inputs.get(key)
+                for key in (
+                    "dataset_id",
+                    "mark_dataset_id",
+                    "funding_dataset_id",
+                    "start_ts",
+                    "end_ts",
+                    "package_manifest_hash",
+                )
+            ):
+                raise PlatformError(
+                    "research_package_mismatch",
+                    "Research inputs must match the exact ready package version and UTC window.",
+                    409,
+                )
         dataset = self.catalog.get_dataset(config["dataset_id"])
         if dataset["kind"] != "trade" or not dataset["quality"].get("complete"):
             raise PlatformError(
@@ -170,7 +233,7 @@ class ProfessionalRuntime:
                     dataset["source"],
                     dumps(config),
                     dumps(snapshot) if snapshot else None,
-                    dumps({"replay_of": replay_of}) if replay_of else None,
+                    dumps({"replay_of": replay_of, **(replay_evidence or {})}) if replay_of else None,
                     now,
                     now,
                 ),
@@ -189,7 +252,25 @@ class ProfessionalRuntime:
         run = self.run(identifier, include_snapshot=True)
         if run["status"] != "completed" or not run["snapshot"]:
             raise PlatformError("run_not_complete", "Only a completed captured run can be replayed.", 409)
-        return self.create_run(run["config"], snapshot=run["snapshot"], replay_of=identifier)
+        _, expected_hash = serialized_result(run["result"])
+        manifest = run["manifest"] or {}
+        actual_snapshot_hash = hashlib.sha256(dumps(run["snapshot"]).encode()).hexdigest()
+        if (manifest.get("result_hash") is not None and manifest["result_hash"] != expected_hash) or (
+            manifest.get("snapshot_hash") is not None and manifest["snapshot_hash"] != actual_snapshot_hash
+        ):
+            raise PlatformError(
+                "run_artifact_integrity", "Saved research evidence does not match its recorded checksum.", 409
+            )
+        captured = (run["manifest"] or {}).get("research_implementation", {})
+        return self.create_run(
+            run["config"],
+            snapshot=run["snapshot"],
+            replay_of=identifier,
+            replay_evidence={
+                "expected_result_hash": expected_hash,
+                "original_code_fingerprint": captured.get("code_fingerprint"),
+            },
+        )
 
     async def catalog_loop(self):
         while True:
@@ -202,7 +283,13 @@ class ProfessionalRuntime:
                 except Exception:
                     logger.exception("Catalog worker failure")
                     await asyncio.sleep(1)
-            else:
+            try:
+                await self.packages.advance_pending()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Research package preparation failed")
+            if not jobs:
                 await asyncio.sleep(0.25)
 
     async def jobs_loop(self):
@@ -248,7 +335,11 @@ class ProfessionalRuntime:
                     "instrument": dataset["metadata"],
                     "captured_at": now_ms(),
                 }
-                if snapshot["funding"]:
+                if config.get("package_id"):
+                    package_manifest = self.packages.get_manifest(config["package_id"])
+                    snapshot["data_package"] = package_manifest
+                    snapshot["funding_events"] = package_manifest["funding_events"]
+                if snapshot["funding"] and "funding_events" not in snapshot:
                     events = self.catalog.load_funding(config["funding_dataset_id"])
                     start = config.get("start_ts") or dataset["start"]
                     end = config.get("end_ts") or dataset["end"]
@@ -262,11 +353,27 @@ class ProfessionalRuntime:
                             captured_events.append(event)
                     snapshot["funding_events"] = encode(captured_events)
             manifest = {
+                **(run["manifest"] or {}),
                 "version": 2,
                 "engine_version": __version__,
                 "build_sha": self.settings.build_sha,
+                "research_implementation": self.engine_identity,
+                "package_id": config.get("package_id"),
+                "package_manifest_hash": config.get("package_manifest_hash"),
                 "dataset_hash": snapshot["trade"]["content_hash"],
                 "snapshot_hash": hashlib.sha256(dumps(snapshot).encode()).hexdigest(),
+                "maintenance_tiers_hash": hashlib.sha256(
+                    dumps(
+                        {
+                            key: value
+                            for key, value in (snapshot.get("margin_tiers") or {}).items()
+                            if key != "observed_at"
+                        }
+                    ).encode()
+                ).hexdigest(),
+                "funding_observations_hash": hashlib.sha256(
+                    dumps(snapshot.get("funding_events") or []).encode()
+                ).hexdigest(),
                 "source": run["source"],
                 "config": config,
                 "replay_of": (run["manifest"] or {}).get("replay_of"),
@@ -288,18 +395,28 @@ class ProfessionalRuntime:
                     (dumps(snapshot), dumps(manifest), now_ms(), identifier),
                 )
             result = await self.offload(self.compute, config, snapshot, manifest)
-            with self.store.write() as conn:
-                conn.execute(
-                    "UPDATE pro_runs SET status='completed',result=?,progress=1,updated_at=? WHERE id=?",
-                    (dumps(result), now_ms(), identifier),
-                )
-                self.store.audit(
-                    conn,
-                    run["source"],
-                    "pro.research_completed",
-                    "Professional research completed",
-                    {"run_id": identifier},
-                )
+            payload, result_hash = await self.offload(serialized_result, result)
+            manifest["result_hash"] = result_hash
+            if manifest.get("replay_of"):
+                manifest["replay_verified"] = result_hash == manifest.get("expected_result_hash")
+                if not manifest["replay_verified"]:
+                    with self.store.write() as conn:
+                        conn.execute(
+                            "UPDATE pro_runs SET manifest=? WHERE id=?", (dumps(manifest), identifier)
+                        )
+                    raise PlatformError(
+                        "replay_mismatch",
+                        "Recomputed results differ from the captured original. No identical-replay claim is made; use the recorded application and input artifact.",
+                        409,
+                    )
+            await self.offload(
+                self.complete_run,
+                identifier,
+                run["source"],
+                payload,
+                self.summarize(config, result),
+                manifest,
+            )
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -309,6 +426,24 @@ class ProfessionalRuntime:
                     "UPDATE pro_runs SET status='failed',error=?,updated_at=? WHERE id=?",
                     (str(exc)[:1000], now_ms(), identifier),
                 )
+
+    def complete_run(self, identifier, source, payload, summary, manifest):
+        with self.store.write() as conn:
+            conn.execute(
+                "UPDATE pro_runs SET status='completed',result=?,summary=?,manifest=?,progress=1,updated_at=? WHERE id=?",
+                (payload, dumps(summary or {}), dumps(manifest), now_ms(), identifier),
+            )
+            self.store.audit(
+                conn,
+                source,
+                "pro.research_completed",
+                "Professional research completed",
+                {
+                    "run_id": identifier,
+                    "result_hash": manifest["result_hash"],
+                    "replay_verified": manifest.get("replay_verified"),
+                },
+            )
 
     def compute(self, config, snapshot, manifest):
         from .pro_research import ResearchConfig, run_research_plan

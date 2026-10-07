@@ -294,6 +294,7 @@ async def test_metadata_preserves_swap_base_units_and_tier_snapshots(service):
     assert instrument["lot_size"] == Decimal("0.01")
     tiers = await service.get_margin_tiers("BTC-USDT-SWAP")
     assert tiers["unit"] == "contracts" and not tiers["historical"]
+    assert "minimum exclusive, maximum inclusive" in tiers["boundary_policy"]
     assert tiers["tiers"][0]["mmr"] == Decimal("0.004")
 
 
@@ -602,3 +603,52 @@ async def test_dataset_hash_binds_quality_and_instrument_metadata(service, mutat
         )
     with pytest.raises(MarketError, match="hash"):
         service.verify_dataset(manifest["id"])
+
+
+async def test_professional_snapshot_cache_coalesces_and_preserves_source_age_and_ownership(
+    service, monkeypatch
+):
+    calls = []
+
+    async def load(inst_id, source):
+        calls.append((inst_id, source))
+        await asyncio.sleep(0)
+        return {
+            "source": source,
+            "inst_id": inst_id,
+            "ts": 123,
+            "mark_ts": 120,
+            "instrument": {"tick_size": "0.1"},
+        }
+
+    monkeypatch.setattr(service, "_load_market_snapshot", load)
+    snapshots = await asyncio.gather(*(service.get_market_snapshot("BTC-USDT", "okx") for _ in range(20)))
+    assert calls == [("BTC-USDT", "okx")]
+    snapshots[0]["instrument"]["tick_size"] = "999"
+    snapshots[0]["mark_ts"] = 999
+    same = await service.get_market_snapshot("BTC-USDT", "okx")
+    assert same["instrument"]["tick_size"] == "0.1" and same["mark_ts"] == 120
+    assert all(item["ts"] == 123 for item in snapshots)
+    await service.get_market_snapshot("BTC-USDT", "example")
+    await service.get_market_snapshot("ETH-USDT", "okx")
+    assert len(calls) == 3
+    key = ("professional-quote", "okx", "BTC-USDT")
+    service.market._cache[key] = (0, service.market._cache[key][1])
+    await service.get_market_snapshot("BTC-USDT", "okx")
+    assert len(calls) == 4
+
+
+async def test_professional_snapshot_cache_does_not_relabel_provider_failure(service, monkeypatch):
+    calls = 0
+
+    async def load(inst_id, source):
+        nonlocal calls
+        calls += 1
+        raise MarketError("upstream_unavailable", "Observed provider outage")
+
+    monkeypatch.setattr(service, "_load_market_snapshot", load)
+    for _ in range(2):
+        with pytest.raises(MarketError, match="Observed provider outage"):
+            await service.get_market_snapshot("BTC-USDT", "okx")
+    assert calls == 2
+    assert ("professional-quote", "okx", "BTC-USDT") not in service.market._cache

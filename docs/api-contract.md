@@ -26,6 +26,10 @@ Roles: admin, trader, researcher, risk_operator, viewer. See [permission matrix]
 | Method | Path | Contract |
 |---|---|---|
 | GET | `/pro/catalog/instruments?source=okx&inst_type=SWAP` | Normalized rules, contract size and units |
+| GET / POST | `/pro/catalog/packages` | List or atomically prepare `{source,inst_id,bar,start,end,include_index?,idempotency_key?,dataset_ids?}` |
+| GET | `/pro/catalog/packages/{id}` | Progress, component states, blockers and verified-ready research handoff |
+| POST | `/pro/catalog/packages/{id}/cancel`, `/retry` | Cancel owned work or explicitly retry a failed version |
+| GET | `/pro/catalog/packages/{id}/manifest` | Full hash-bound package manifest attachment |
 | GET / POST | `/pro/catalog/jobs` | List or enqueue `{source,inst_id,kind,bar,start,end}`; kinds trade/mark/index/funding |
 | POST | `/pro/catalog/jobs/{id}/cancel`, `/retry` | Durable cancellation or retry |
 | GET | `/pro/catalog/datasets` | `{items}` of immutable manifests |
@@ -38,13 +42,13 @@ See [data operations](data-operations.md) for import records, coverage declarati
 
 ## Research
 
-`POST /pro/research/runs` accepts `{dataset_id,mark_dataset_id?,funding_dataset_id?,strategy,direction,initial_cash,leverage,fee_bps,slippage_bps,liquidation_fee_bps,start_ts?,end_ts?,mode,options}` and returns HTTP 202. Perpetuals require independently versioned mark and realized funding datasets. Trade and mark intervals must match; coverage and source must agree. Selected windows allow 2–98,000 bars plus up to 2,000 prior warmup bars. RSI seed dependence is recorded.
+`POST /pro/research/runs` accepts `{dataset_id,mark_dataset_id?,funding_dataset_id?,strategy,direction,initial_cash,leverage,fee_bps,slippage_bps,liquidation_fee_bps,start_ts?,end_ts?,package_id?,package_manifest_hash?,mode,options}` and returns HTTP 202. Perpetuals require independently versioned mark and realized funding datasets. Trade and mark intervals must match; coverage and source must agree. Selected windows allow 2–98,000 bars plus up to 2,000 prior warmup bars. RSI seed dependence is recorded.
 
 Modes: `single`, `grid`, `cost_stress`, `train_test`, `walk_forward`. Options include strategy parameter arrays, fee/slippage arrays, training fraction or bar windows, test/step/purge bars and bounded worker count. Invalid plans fail with an explicit error, never a fabricated successful result.
 
-- `GET /pro/research/runs` → summaries with mode-appropriate metrics.
+- `GET /pro/research/runs?source=...&limit=100&before=...` → lightweight materialized summaries and `next_cursor`; stable creation-time/ID keyset pagination, maximum 100 items.
 - `GET /pro/research/runs/{id}` → status/progress/config/manifest/result/error.
-- `POST /pro/research/runs/{id}/replay` → new run from captured evidence.
+- `POST /pro/research/runs/{id}/replay` → new run from captured evidence; `manifest.replay_verified` is true only when the full result SHA-256 equals the original. Divergence fails the replay.
 - `GET /pro/research/runs/{id}/export` → actual JSON attachment with captured inputs and results.
 - `GET /pro/research/compare?ids=id1,id2` → 2–8 completed runs plus differing-assumption warnings.
 
@@ -57,6 +61,8 @@ Plans deliberately have different shapes: single has `result`; grid/stress have 
 `POST /pro/execution/orders` accepts the same command plus required `Idempotency-Key` (8–128 safe ASCII characters). Numeric formatting is canonicalized. A retry returns the original order; a different payload conflicts. Market orders fill locally; limit/stop orders remain pending until an observed trigger and current risk checks permit the full fill. Preview is not an execution guarantee.
 
 - `GET /pro/execution/account?source=...`: unified account, positions, cash/reservations, margin, funding, fees and liability. Unavailable valuation remains explicit.
+- `GET /pro/execution/analytics?source=...`: captured asset/market exposure, concentration, isolated maintenance and default price shocks.
+- `POST /pro/execution/analytics`: `{source,scenarios:[{name,parallel_pct,asset_pct?,market_pct?}]}`; custom read-only hypotheses. All roles can analyze; cookie CSRF still applies. Decimal strings, null reasons, input capture and hash are returned. See [portfolio risk](portfolio-risk.md).
 - `GET /pro/execution/orders`, `/ledger`: order lifecycle and native asset journal.
 - `POST /pro/execution/orders/{id}/cancel`: releases pending reservation.
 - `GET / POST /pro/execution/deployments`: list/start forward strategies.

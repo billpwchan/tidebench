@@ -1,79 +1,66 @@
-import { useQuery } from '@tanstack/react-query';
-import {
-  ArrowDownLeft,
-  ArrowRight,
-  ArrowUpRight,
-  ChevronRight,
-  CircleAlert,
-  Clock3,
-  FlaskConical,
-  Plus,
-} from 'lucide-react';
-import type { Bar, Source, Ticker } from '../api';
-import { api } from '../api';
-import Chart from '../Chart';
-import {
-  BarSwitch,
-  Empty,
-  ErrorBox,
-  Loading,
-  Metric,
-  PageHeading,
-  SourceBadge,
-  Status,
-  SymbolSelect,
-} from '../components/workspace';
-import type { Page } from '../lib/config';
-import { symbols } from '../lib/config';
-import { compact, date, nameOf, number, percent, price, tone } from '../lib/format';
-import { useNow } from '../lib/hooks';
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowRight, CircleAlert, Clock3, RefreshCw } from 'lucide-react';
+import type { Source } from '../api';
 import { proApi } from '../proApi';
-import type { ProResult, ProRun, RecordData } from '../proApi';
+import type { Page } from '../lib/config';
+import { date, number, percent, price, quantityText, tone } from '../lib/format';
+import { useNow } from '../lib/hooks';
 import { useI18n } from '../lib/i18n';
+import { canTrade } from '../lib/permissions';
+import { researchReturn, resultScope } from '../lib/research';
+import { useSession } from '../components/AuthGate';
+import {
+  DataTable,
+  JsonDetails,
+  ProductSymbol,
+  WorkspaceTabs,
+  valueText,
+} from '../components/ProWorkspace';
+import { ErrorBox, Loading, Metric, PageHeading, Status } from '../components/workspace';
 
-const runReturn = (r: ProRun) =>
-  r.summary?.total_return_pct ??
-  (r.summary?.metrics as RecordData | undefined)?.total_return_pct ??
-  (r.summary?.oos_summary as RecordData | undefined)?.median_return_pct ??
-  r.summary?.median_return_pct ??
-  r.result?.metrics?.total_return_pct ??
-  (r.result?.result as ProResult | undefined)?.metrics?.total_return_pct ??
-  (r.result?.oos_summary as RecordData | undefined)?.median_return_pct;
+type Alert = {
+  key: string;
+  title: string;
+  detail: string;
+  page: Page;
+  view?: string;
+  severity: 'warning' | 'neutral' | 'bad';
+};
 export default function Overview({
   source,
+  navigate,
   symbol,
   setSymbol,
-  bar,
-  setBar,
-  tickers,
-  tickerError,
-  tickerLoading,
-  retryTickers,
-  onExample,
-  navigate,
 }: {
   source: Source;
   symbol: string;
-  setSymbol: (s: string) => void;
-  bar: Bar;
-  setBar: (b: Bar) => void;
-  tickers?: Ticker[];
-  tickerError: unknown;
-  tickerLoading: boolean;
-  retryTickers: () => void;
-  onExample: () => void;
-  navigate: (p: Page) => void;
+  setSymbol: (symbol: string) => void;
+  navigate: (page: Page, view?: string) => void;
 }) {
-  const candles = useQuery({
-    queryKey: ['candles', source, symbol, bar, 240],
-    queryFn: () => api.candles(source, symbol, bar, 240),
-    refetchInterval: source === 'okx' ? 30000 : false,
-  });
   const { t } = useI18n();
-  const runs = useQuery({ queryKey: ['pro-runs'], queryFn: proApi.runs });
+  const qc = useQueryClient();
+  const now = useNow();
+  const canOperate = canTrade(useSession()?.user?.role);
+  const [bookTab, setBookTab] = useState('positions');
   const account = useQuery({
     queryKey: ['pro-account', source],
     queryFn: () => proApi.account(source),
+    refetchInterval: 5000,
+  });
+  const analytics = useQuery({
+    queryKey: ['portfolio-analytics', source],
+    queryFn: () => proApi.analytics(source),
+    refetchInterval: 10000,
+  });
+  const orders = useQuery({
+    queryKey: ['pro-orders', source],
+    queryFn: () => proApi.orders(source),
+    refetchInterval: 5000,
+  });
+  const deployments = useQuery({
+    queryKey: ['pro-deployments', source],
+    queryFn: () => proApi.deployments(source),
     refetchInterval: 5000,
   });
   const risk = useQuery({
@@ -82,348 +69,618 @@ export default function Overview({
     refetchInterval: 5000,
   });
   const ops = useQuery({ queryKey: ['pro-ops'], queryFn: proApi.ops, refetchInterval: 10000 });
-  const now = useNow();
-  const ticker = tickers?.find((t) => t.inst_id === symbol);
-  const quoteAge = ticker ? Math.max(0, now - ticker.ts) : null;
-  const quoteStale = source === 'okx' && quoteAge !== null && quoteAge >= 15000;
-  const sourceRuns = runs.data?.items.filter((r) => r.source === source) ?? [];
-  const completed = sourceRuns.filter((r) => r.status === 'completed');
+  const packages = useQuery({
+    queryKey: ['pro-packages', source],
+    queryFn: () => proApi.packages(source),
+    refetchInterval: 5000,
+  });
+  const runs = useQuery({
+    queryKey: ['pro-runs', source, 'latest'],
+    queryFn: () => proApi.runs(source, undefined, 6),
+    refetchInterval: 10000,
+  });
+  const refresh = () => {
+    for (const key of [
+      'pro-account',
+      'portfolio-analytics',
+      'pro-orders',
+      'pro-deployments',
+      'pro-risk',
+      'pro-ops',
+      'pro-packages',
+      'pro-runs',
+    ])
+      void qc.invalidateQueries({ queryKey: [key] });
+  };
+  const cancel = useMutation({ mutationFn: proApi.cancelOrder, onSuccess: refresh });
+  const a = account.data;
+  const summary = analytics.data?.summary;
+  const positions = a?.positions ?? [];
+  const pending = orders.data?.items.filter((o) => o.status === 'pending') ?? [];
+  const strategies = deployments.data?.items ?? [];
+  const currentPackages = packages.data?.items.filter((p) => p.source === source) ?? [];
+  const currentRuns = runs.data?.items.filter((r) => r.source === source) ?? [];
+  const jobs = (ops.data?.jobs ?? []).filter((j) => !j.source || j.source === source);
+  const activeJobs = jobs.filter((j) => ['queued', 'running', 'preparing'].includes(j.status));
+  const health = ops.data?.health;
+  const healthStatus = typeof health === 'object' ? health.status : health;
+  const alerts: Alert[] = [];
+  if (risk.data?.halted)
+    alerts.push({
+      key: 'halt',
+      title: t('New risk is halted'),
+      detail: t('Reduce-only exits remain available. Review the saved risk controls.'),
+      page: 'risk',
+      severity: 'bad',
+    });
+  if (a && !['fresh', 'example'].includes(a.valuation_status ?? ''))
+    alerts.push({
+      key: 'valuation',
+      title: t('Account valuation needs attention'),
+      detail: `${t('Valuation status')}: ${t(a.valuation_status ?? 'unavailable')}`,
+      page: 'execution',
+      severity: 'warning',
+    });
+  const strategyErrors = strategies.filter(
+    (s) => s.last_error || ['failed', 'blocked', 'error'].includes(s.status),
+  );
+  if (strategyErrors.length)
+    alerts.push({
+      key: 'strategies',
+      title: `${strategyErrors.length} ${t('strategies report an error')}`,
+      detail: strategyErrors.map((s) => s.inst_id).join(' · '),
+      page: 'execution',
+      view: 'strategies',
+      severity: 'bad',
+    });
+  const blocked = currentPackages.filter((p) => ['blocked', 'failed'].includes(p.status));
+  if (blocked.length)
+    alerts.push({
+      key: 'packages',
+      title: `${blocked.length} ${t('research packages need attention')}`,
+      detail:
+        blocked[0].blockers?.[0]?.message ??
+        t('Inspect component errors and coverage before research.'),
+      page: 'data',
+      severity: 'warning',
+    });
+  if (pending.length)
+    alerts.push({
+      key: 'orders',
+      title: `${pending.length} ${t('orders are working')}`,
+      detail: t('Review limits, triggers and reserved cash.'),
+      page: 'execution',
+      view: 'orders',
+      severity: 'neutral',
+    });
+  if (analytics.data && analytics.data.status !== 'available')
+    alerts.push({
+      key: 'analytics',
+      title: t('Exposure is not fully valued'),
+      detail: t('Missing prices or instrument rules limit risk calculations.'),
+      page: 'risk',
+      severity: 'warning',
+    });
+  const errors = [account, analytics, orders, deployments, risk, ops, packages, runs].filter(
+    (q) => q.isError,
+  );
+  const ready = [account, analytics, orders, deployments, risk, ops, packages, runs].every(
+    (q) => q.isSuccess,
+  );
   return (
     <>
       <PageHeading
-        eyebrow="WORKSPACE OVERVIEW"
-        title="Market overview"
-        description="Market snapshots, portfolio exposure, research, and service health."
+        eyebrow="TRADING WORKSPACE"
+        title="Trading overview"
+        description="Current account state, working orders, strategy health, and research readiness."
       >
-        <button className="button button-dark" onClick={() => navigate('research')}>
-          <Plus size={16} />
-          {t('Research')}
-          <ArrowUpRight size={15} />
+        <button className="button button-secondary" onClick={refresh}>
+          <RefreshCw size={14} />
+          {t('Refresh')}
+        </button>
+        <button className="button button-dark" onClick={() => navigate('execution')}>
+          {t('Open execution')}
+          <ArrowRight size={14} />
         </button>
       </PageHeading>
-      <div className="desk-health-strip">
-        <button onClick={() => navigate('execution')}>
-          <span>{t('Account equity')}</span>
-          <strong>
-            {number(account.data?.equity)} <small>USDT</small>
-          </strong>
-          <Status type={account.data?.valuation_status === 'fresh' ? 'good' : 'neutral'}>
-            {account.data?.valuation_status ?? 'unavailable'}
+      <div className="overview-state-line">
+        <span>
+          <Clock3 size={12} />
+          {t('Account snapshot')}: {date(a?.as_of)}
+        </span>
+        <Status type={risk.data?.halted ? 'bad' : 'neutral'}>
+          {risk.data
+            ? t(risk.data.halted ? 'New risk halted' : 'New risk enabled')
+            : t('Risk status unavailable')}
+        </Status>
+        <span>
+          {t('Execution engine')}: {a?.execution_mode ?? '—'}
+        </span>
+        {a && (
+          <Status type={a.valuation_status === 'fresh' ? 'good' : 'neutral'}>
+            {a.valuation_status ?? 'unavailable'}
           </Status>
-        </button>
-        <button onClick={() => navigate('execution')}>
-          <span>{t('Used margin')}</span>
-          <strong>
-            {number(account.data?.used_margin)} <small>USDT</small>
-          </strong>
-          <small>
-            {t('Maintenance margin')}: {number(account.data?.maintenance_margin)}
-          </small>
-        </button>
-        <button onClick={() => navigate('risk')}>
-          <span>{t('Risk')}</span>
-          <strong>
-            {risk.data ? t(risk.data.halted ? 'Execution halted' : 'Execution enabled') : '—'}
-          </strong>
-          <small>
-            {t('Maximum leverage')}: {risk.data ? `${risk.data.max_leverage}×` : '—'}
-          </small>
-        </button>
-        <button onClick={() => navigate('operations')}>
-          <span>{t('Service health')}</span>
-          <strong>
-            {ops.data?.health
-              ? String(
-                  typeof ops.data.health === 'string'
-                    ? ops.data.health
-                    : (ops.data.health.status ?? '—'),
-                )
-              : '—'}
-          </strong>
-          <small>
-            {t('Operations')} <ChevronRight size={11} />
-          </small>
-        </button>
+        )}
       </div>
-      {(account.isError || risk.isError || ops.isError) && (
-        <ErrorBox
-          error={account.error ?? risk.error ?? ops.error}
-          onRetry={() => {
-            void account.refetch();
-            void risk.refetch();
-            void ops.refetch();
-          }}
+      <div className="pro-metric-strip trader-metrics">
+        <Metric label="Account equity" value={number(a?.equity)} unit="USDT" />
+        <Metric label="Available cash" value={number(a?.available_cash)} unit="USDT" />
+        <Metric label="Gross exposure" value={number(summary?.gross_notional)} unit="USDT" />
+        <Metric label="Net exposure" value={number(summary?.net_notional)} unit="USDT" />
+        <Metric
+          label="Used margin"
+          value={number(a?.used_margin)}
+          unit="USDT"
+          note={`${t('Maintenance margin')}: ${number(a?.maintenance_margin)}`}
         />
+        <Metric
+          label="Unrealized P&L"
+          value={number(a?.unrealized_pnl)}
+          className={tone(a?.unrealized_pnl)}
+          unit="USDT"
+        />
+      </div>
+      {account.isPending && <Loading label="Loading account state…" />}
+      {!!errors.length && (
+        <div className="overview-errors">
+          <p className="inline-warning">
+            {t(
+              'Some snapshots could not be refreshed. Timestamped values may be from the previous successful capture.',
+            )}
+          </p>
+          {errors.map((q, i) => (
+            <ErrorBox key={i} error={q.error} onRetry={() => void q.refetch()} />
+          ))}
+        </div>
       )}
-      <div className="overview-layout">
-        <section className="market-canvas">
-          <div className="market-hero">
-            <div>
-              <div className="instrument-label">
-                <span className="coin-icon coin-btc">
-                  {symbol === 'BTC-USDT' ? '₿' : symbol.slice(0, 1)}
-                </span>
-                <SymbolSelect value={symbol} onChange={setSymbol} />
-                <span className="spot-label">SPOT</span>
+      <div className="trader-overview-layout">
+        <div className="trader-primary">
+          <section className="pro-panel overview-book">
+            <div className="section-heading">
+              <div>
+                <h2>{t('Portfolio & working orders')}</h2>
+                <p className="section-description">
+                  {t(
+                    'Current positions and pending instructions. Historical returns are not account performance.',
+                  )}
+                </p>
               </div>
-              <div className="market-price">
-                {price(ticker?.last)}
-                <span>USDT</span>
+              <button className="text-button" onClick={() => navigate('execution', bookTab)}>
+                {t('Open execution')}
+                <ArrowRight size={13} />
+              </button>
+            </div>
+            <WorkspaceTabs
+              value={bookTab}
+              onChange={setBookTab}
+              items={[
+                { key: 'positions', label: 'Positions' },
+                { key: 'orders', label: 'Pending orders' },
+              ]}
+            />
+            {bookTab === 'positions' ? (
+              account.isPending ? (
+                <Loading />
+              ) : account.isError ? (
+                <ErrorBox error={account.error} />
+              ) : (
+                <DataTable
+                  rows={positions}
+                  empty="No open positions"
+                  columns={[
+                    {
+                      key: 'inst_id',
+                      label: 'Market',
+                      render: (p) => (
+                        <div className="table-stacked">
+                          <strong>{valueText(p.inst_id)}</strong>
+                          <small>
+                            {valueText(p.inst_type)} · {t(valueText(p.side))}
+                          </small>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'quantity',
+                      label: 'Quantity',
+                      render: (p) => (
+                        <div className="table-stacked">
+                          <span>{quantityText(p.quantity)}</span>
+                          <small>{t(p.inst_type === 'SWAP' ? 'Contracts' : 'Base units')}</small>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'mark',
+                      label: 'Mark',
+                      render: (p) => (
+                        <div className="table-stacked">
+                          <span>{price(p.mark)}</span>
+                          <small>{date(Number(p.as_of))}</small>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'market_value',
+                      label: 'Market value',
+                      render: (p) => number(p.market_value),
+                    },
+                    { key: 'margin', label: 'Margin', render: (p) => number(p.margin) },
+                    {
+                      key: 'unrealized_pnl',
+                      label: 'Unrealized P&L',
+                      render: (p) => (
+                        <span className={tone(p.unrealized_pnl)}>{number(p.unrealized_pnl)}</span>
+                      ),
+                    },
+                  ]}
+                />
+              )
+            ) : orders.isPending ? (
+              <Loading />
+            ) : orders.isError ? (
+              <ErrorBox error={orders.error} />
+            ) : (
+              <DataTable
+                rows={pending}
+                empty="No working orders"
+                columns={[
+                  {
+                    key: 'inst_id',
+                    label: 'Market',
+                    render: (o) => (
+                      <div className="table-stacked">
+                        <strong>{valueText(o.inst_id)}</strong>
+                        <small>{date(Number(o.created_at))}</small>
+                      </div>
+                    ),
+                  },
+                  { key: 'side', label: 'Side', render: (o) => t(valueText(o.side)) },
+                  {
+                    key: 'order_type',
+                    label: 'Order type',
+                    render: (o) => t(valueText(o.order_type)),
+                  },
+                  { key: 'quantity', label: 'Quantity', render: (o) => quantityText(o.quantity) },
+                  {
+                    key: 'trigger',
+                    label: 'Limit / trigger',
+                    render: (o) => price(o.limit_price ?? o.stop_price),
+                  },
+                  {
+                    key: 'reduce_only',
+                    label: 'Reduce only',
+                    render: (o) => t(o.reduce_only ? 'Yes' : 'No'),
+                  },
+                  {
+                    key: 'actions',
+                    label: 'Actions',
+                    render: (o) => (
+                      <button
+                        className="text-button"
+                        disabled={!canOperate || cancel.isPending}
+                        onClick={() => cancel.mutate(String(o.id))}
+                      >
+                        {t('Cancel order')}
+                      </button>
+                    ),
+                  },
+                ]}
+              />
+            )}{' '}
+            {cancel.isError && <ErrorBox error={cancel.error} />}
+          </section>
+          <section className="pro-panel overview-exposures">
+            <div className="section-heading">
+              <div>
+                <h2>{t('Exposure by asset')}</h2>
+                <p className="section-description">
+                  {t('Spot and perpetual exposure are combined by underlying asset.')}
+                </p>
               </div>
-              <div className={`market-change ${tone(ticker?.change_pct)}`}>
-                {ticker && (
+              <button className="text-button" onClick={() => navigate('risk')}>
+                {t('Stress scenarios')}
+                <ArrowRight size={13} />
+              </button>
+            </div>
+            {analytics.isPending ? (
+              <Loading />
+            ) : analytics.isError ? (
+              <ErrorBox error={analytics.error} />
+            ) : (
+              <>
+                <DataTable
+                  rows={analytics.data?.assets ?? []}
+                  empty="No asset exposure"
+                  columns={[
+                    {
+                      key: 'asset',
+                      label: 'Asset',
+                      render: (r) => <strong>{valueText(r.asset)}</strong>,
+                    },
+                    {
+                      key: 'long_notional',
+                      label: 'Long exposure',
+                      render: (r) => number(r.long_notional),
+                    },
+                    {
+                      key: 'short_notional',
+                      label: 'Short exposure',
+                      render: (r) => number(r.short_notional),
+                    },
+                    {
+                      key: 'gross_notional',
+                      label: 'Gross exposure',
+                      render: (r) => number(r.gross_notional),
+                    },
+                    {
+                      key: 'net_notional',
+                      label: 'Net exposure',
+                      render: (r) => number(r.net_notional),
+                    },
+                    {
+                      key: 'gross_share_pct',
+                      label: 'Gross share',
+                      render: (r) =>
+                        r.gross_share_pct == null ? '—' : `${number(r.gross_share_pct)}%`,
+                    },
+                  ]}
+                />
+                <p className="snapshot-footnote">
+                  {t(
+                    'Current snapshot only. No account equity history is inferred from research results.',
+                  )}
+                </p>
+              </>
+            )}
+          </section>
+          <section className="pro-panel overview-research">
+            <div className="section-heading">
+              <h2>{t('Research workspace')}</h2>
+              <button className="text-button" onClick={() => navigate('research')}>
+                {t('Open research')}
+                <ArrowRight size={13} />
+              </button>
+            </div>
+            {runs.isPending ? (
+              <Loading />
+            ) : runs.isError ? (
+              <ErrorBox error={runs.error} />
+            ) : (
+              <DataTable
+                rows={currentRuns.slice(0, 6)}
+                empty="No research runs"
+                columns={[
+                  { key: 'id', label: 'Run', render: (r) => <code>{r.id.slice(0, 10)}</code> },
+                  { key: 'mode', label: 'Evaluation scope', render: (r) => t(resultScope(r)) },
+                  {
+                    key: 'status',
+                    label: 'Status',
+                    render: (r) => (
+                      <Status type={r.status === 'failed' ? 'bad' : 'neutral'}>{r.status}</Status>
+                    ),
+                  },
+                  {
+                    key: 'return',
+                    label: 'Research return',
+                    render: (r) => percent(researchReturn(r)),
+                  },
+                  { key: 'created_at', label: 'Created', render: (r) => date(r.created_at) },
+                ]}
+              />
+            )}
+          </section>
+        </div>
+        <aside className="trader-secondary">
+          <section className="pro-panel attention-panel">
+            <div className="section-heading">
+              <h2>{t('Attention queue')}</h2>
+              <span className="subtle-tag">{ready ? alerts.length : '—'}</span>
+            </div>
+            {alerts.length ? (
+              <div className="attention-list">
+                {alerts.map((alert) => (
+                  <button
+                    key={alert.key}
+                    className={`attention-item attention-${alert.severity}`}
+                    onClick={() => navigate(alert.page, alert.view)}
+                  >
+                    <CircleAlert size={15} />
+                    <span>
+                      <strong>{alert.title}</strong>
+                      <small>{alert.detail}</small>
+                    </span>
+                    <ArrowRight size={13} />
+                  </button>
+                ))}
+              </div>
+            ) : ready ? (
+              <p className="quiet-state">
+                {t('Loaded services report no blocked work, pending orders or strategy errors.')}
+              </p>
+            ) : (
+              <p className="quiet-state">
+                {t('Waiting for service snapshots. Missing data does not mean zero risk.')}
+              </p>
+            )}
+          </section>
+          <section className="pro-panel overview-strategies">
+            <div className="section-heading">
+              <h2>{t('Strategy health')}</h2>
+              <button className="text-button" onClick={() => navigate('execution', 'strategies')}>
+                <ArrowRight size={14} />
+                <span className="sr-only">{t('Open strategies')}</span>
+              </button>
+            </div>
+            {deployments.isPending ? (
+              <Loading />
+            ) : deployments.isError ? (
+              <ErrorBox error={deployments.error} />
+            ) : strategies.length ? (
+              <div className="strategy-health-list">
+                {strategies.slice(0, 6).map((s) => (
+                  <div key={s.id}>
+                    <div>
+                      <strong>{s.inst_id}</strong>
+                      <Status type={s.last_error ? 'bad' : 'neutral'}>{s.status}</Status>
+                    </div>
+                    <small>
+                      {t('Last evaluation')}: {date(s.last_bar)}
+                    </small>
+                    {s.last_error && <p className="inline-warning">{s.last_error}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="quiet-state">{t('No strategy is running for this source.')}</p>
+            )}
+          </section>
+          <section className="pro-panel overview-work">
+            <div className="section-heading">
+              <h2>{t('Work & service')}</h2>
+              <Status type={healthStatus === 'healthy' ? 'good' : 'neutral'}>
+                {String(healthStatus ?? 'unavailable')}
+              </Status>
+            </div>
+            <div className="desk-status-row">
+              <span>{t('Active jobs')}</span>
+              <strong>{ops.isSuccess ? activeJobs.length : '—'}</strong>
+            </div>
+            <div className="desk-status-row">
+              <span>{t('Research packages ready')}</span>
+              <strong>
+                {packages.isSuccess ? currentPackages.filter((p) => p.ready).length : '—'}
+              </strong>
+            </div>
+            <div className="desk-status-row">
+              <span>{t('Research packages preparing')}</span>
+              <strong>
+                {packages.isSuccess
+                  ? currentPackages.filter((p) =>
+                      ['queued', 'running', 'preparing'].includes(p.status),
+                    ).length
+                  : '—'}
+              </strong>
+            </div>
+            {!!activeJobs.length && (
+              <ul className="active-job-list">
+                {activeJobs.slice(0, 4).map((j) => (
+                  <li key={j.id}>
+                    <span>{j.inst_id ?? j.id.slice(0, 8)}</span>
+                    <Status>{j.status}</Status>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="overview-side-actions">
+              <button className="text-button" onClick={() => navigate('data')}>
+                {t('Prepare research data')}
+                <ArrowRight size={12} />
+              </button>
+              <button className="text-button" onClick={() => navigate('operations')}>
+                {t('Inspect operations')}
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          </section>
+        </aside>
+      </div>
+      <MarketContext source={source} initialSymbol={symbol} onSymbol={setSymbol} now={now} />
+    </>
+  );
+}
+function MarketContext({
+  source,
+  initialSymbol,
+  onSymbol,
+  now,
+}: {
+  source: Source;
+  initialSymbol: string;
+  onSymbol: (symbol: string) => void;
+  now: number;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
+  const [symbol, setSymbol] = useState(initialSymbol);
+  useEffect(() => {
+    setSymbol(initialSymbol);
+    setProduct(initialSymbol.endsWith('-SWAP') ? 'SWAP' : 'SPOT');
+  }, [initialSymbol]);
+  const market = useQuery({
+    queryKey: ['pro-market', source, symbol],
+    queryFn: () => proApi.market(source, symbol),
+    enabled: open,
+    refetchInterval: open ? 5000 : false,
+  });
+  const m = market.data;
+  const stale = source === 'okx' && m && now - Number(m.ts) >= 15000;
+  return (
+    <section className="pro-panel overview-market-context">
+      <button
+        type="button"
+        className="market-context-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>
+          <strong>{t('Market context')}</strong>
+          <small>{t('Spot and perpetual snapshots, requested on demand.')}</small>
+        </span>
+        <span>
+          {t(open ? 'Hide' : 'Show')}
+          <ArrowRight size={13} />
+        </span>
+      </button>
+      {open && (
+        <div className="market-context-content">
+          <ProductSymbol
+            source={source}
+            value={symbol}
+            product={product}
+            onProductChange={setProduct}
+            onChange={(s) => {
+              setSymbol(s);
+              if (!s.endsWith('-SWAP')) onSymbol(s);
+            }}
+          />
+          {market.isPending ? (
+            <Loading />
+          ) : market.isError ? (
+            <ErrorBox error={market.error} onRetry={() => void market.refetch()} />
+          ) : (
+            <>
+              <div className="market-snapshot-strip">
+                <Metric label="Last price" value={price(m?.last)} />
+                <Metric label="Bid" value={price(m?.bid)} />
+                <Metric label="Ask" value={price(m?.ask)} />
+                {product === 'SWAP' && (
                   <>
-                    {ticker.change_pct >= 0 ? (
-                      <ArrowUpRight size={15} />
-                    ) : (
-                      <ArrowDownLeft size={15} />
-                    )}
-                    <span>{percent(ticker.change_pct)}</span>
-                    <small>past 24 hours</small>
+                    <Metric label="Mark price" value={price(m?.mark)} />
+                    <Metric
+                      label="Funding rate"
+                      value={
+                        m?.funding_rate == null
+                          ? '—'
+                          : `${number(Number(m.funding_rate) * 100, 4)}%`
+                      }
+                    />
                   </>
                 )}
               </div>
-              {ticker && (
-                <div className={`quote-age ${quoteStale ? 'stale' : ''}`}>
-                  <Clock3 size={11} />
-                  {source === 'example'
-                    ? 'Fixed example quote'
-                    : `Exchange as of ${date(ticker.ts)} · ${Math.floor((quoteAge ?? 0) / 1000)}s old`}
-                </div>
-              )}
-              {quoteStale && (
-                <p className="inline-warning">
-                  Quote is at least 15 seconds old. Paper execution may be rejected until a fresh
-                  quote arrives.
-                </p>
-              )}
-            </div>
-            <div className="market-range">
-              <span className="eyebrow">CANDLE INTERVAL</span>
-              <BarSwitch value={bar} onChange={setBar} />
-            </div>
-          </div>
-          <div className="chart-heading">
-            <div className="chart-legend">
-              <span>
-                <i className="legend-swatch candles" />
-                Price
-              </span>
-              <span>
-                <i className="legend-swatch ma-fast" />
-                SMA 12
-              </span>
-              <span>
-                <i className="legend-swatch ma-slow" />
-                SMA 26
-              </span>
-            </div>
-            <span className="chart-denomination">USDT</span>
-          </div>
-          {candles.isPending ? (
-            <Loading label="Fetching confirmed market candles…" />
-          ) : candles.isError ? (
-            <ErrorBox
-              error={candles.error}
-              onRetry={() => void candles.refetch()}
-              onExample={source === 'okx' ? onExample : undefined}
-            />
-          ) : candles.data.candles.some((c) => c.confirmed) ? (
-            <Chart candles={candles.data.candles} height={350} />
-          ) : (
-            <Empty title="No confirmed candles">Try another interval or trading pair.</Empty>
+              <p className={stale ? 'inline-warning' : 'snapshot-footnote'}>
+                {t('Exchange as of')}: {date(Number(m?.ts))} ·{' '}
+                {source === 'example'
+                  ? t('Example · synthetic')
+                  : `${Math.max(0, Math.floor((now - Number(m?.ts)) / 1000))}s ${t('old')}`}
+                {stale && ` · ${t('Quote is stale. New risk may be rejected.')}`}
+              </p>
+              <JsonDetails value={m} label="Instrument rules" />
+            </>
           )}
-          <div className="chart-provenance">
-            <span>
-              <span className="connection-dot" />
-              {source === 'example' ? 'Fixed synthetic dataset' : 'Confirmed candles · OKX REST'}
-            </span>
-            <span>
-              {candles.data
-                ? `${candles.data.candles.filter((c) => c.confirmed).length} bars · updated ${date(candles.data.fetched_at)}`
-                : 'Waiting for market data'}
-            </span>
-          </div>
-          {candles.data?.warning && (
-            <p className="inline-warning">
-              <CircleAlert size={13} />
-              {candles.data.warning}
-            </p>
-          )}
-          <div className="market-stat-strip">
-            <Metric label="24h high" value={price(ticker?.high_24h)} />
-            <Metric label="24h low" value={price(ticker?.low_24h)} />
-            <Metric label="24h volume" value={compact(ticker?.volume_24h)} unit="USDT" />
-            <button className="research-market-button" onClick={() => navigate('research')}>
-              Research this market
-              <ArrowRight size={17} />
-            </button>
-          </div>
-        </section>
-        <aside className="watchlist-panel">
-          <div className="section-heading">
-            <h2>Watchlist</h2>
-            <span className="count-label">05 MARKETS</span>
-          </div>
-          <p className="section-description">A focused view of the spot market.</p>
-          <div className="watchlist-column-labels">
-            <span>ASSET</span>
-            <span>PRICE / 24H</span>
-          </div>
-          {tickerLoading ? (
-            <Loading label="Loading markets…" />
-          ) : tickerError ? (
-            <ErrorBox
-              error={tickerError}
-              onRetry={retryTickers}
-              onExample={source === 'okx' ? onExample : undefined}
-            />
-          ) : (
-            symbols.map((s, i) => {
-              const t = tickers?.find((x) => x.inst_id === s);
-              return (
-                <button
-                  key={s}
-                  className={`watchlist-row ${symbol === s ? 'selected' : ''}`}
-                  onClick={() => setSymbol(s)}
-                  aria-pressed={symbol === s}
-                >
-                  <span className={`coin-icon coin-${i}`}>
-                    {s === 'BTC-USDT' ? '₿' : s.slice(0, 1)}
-                  </span>
-                  <span className="watchlist-asset">
-                    <strong>{s.split('-')[0]}</strong>
-                    <small>
-                      {
-                        (
-                          {
-                            BTC: 'Bitcoin',
-                            ETH: 'Ethereum',
-                            SOL: 'Solana',
-                            OKB: 'OKB',
-                            DOGE: 'Dogecoin',
-                          } as Record<string, string>
-                        )[s.split('-')[0]]
-                      }
-                    </small>
-                  </span>
-                  <span className="watchlist-price">
-                    <strong>{price(t?.last)}</strong>
-                    <small className={tone(t?.change_pct)}>{percent(t?.change_pct)}</small>
-                  </span>
-                  {symbol === s && <span className="watchlist-indicator" />}
-                </button>
-              );
-            })
-          )}
-          <div className="watchlist-note">
-            <Clock3 size={14} />
-            <span>
-              {source === 'example'
-                ? 'Fixed example prices. No live feed.'
-                : 'REST snapshots refresh every 5 seconds. Check quote age before execution.'}
-            </span>
-          </div>
-          <div className="watchlist-ops">
-            <h3>{t('Workspace')}</h3>
-            <button className="summary-link" onClick={() => navigate('data')}>
-              <span>{t('Data library')}</span>
-              <ArrowUpRight size={14} />
-            </button>
-            <button className="summary-link" onClick={() => navigate('operations')}>
-              <span>
-                {t('Feeds')} / {t('Jobs')}
-              </span>
-              <ArrowUpRight size={14} />
-            </button>
-            <button className="summary-link" onClick={() => navigate('execution')}>
-              <span>{t('Positions')}</span>
-              <strong>{account.data?.positions?.length ?? '—'}</strong>
-            </button>
-          </div>
-        </aside>
-      </div>
-      <div className="overview-lower">
-        <section className="recent-section">
-          <div className="section-heading">
-            <div>
-              <h2>{t('Research runs')}</h2>
-              <p className="section-description">{t('Run history')}</p>
-            </div>
-            <button className="text-button" onClick={() => navigate('research')}>
-              {t('Research')}
-              <ArrowRight size={14} />
-            </button>
-          </div>
-          {runs.isPending ? (
-            <Loading />
-          ) : runs.isError ? (
-            <ErrorBox error={runs.error} onRetry={() => void runs.refetch()} />
-          ) : sourceRuns.length ? (
-            <div className="recent-runs">
-              {sourceRuns.slice(0, 3).map((r) => (
-                <button key={r.id} onClick={() => navigate('research')}>
-                  <span className="run-icon">
-                    <FlaskConical size={17} />
-                  </span>
-                  <span className="recent-run-name">
-                    <strong>{nameOf(r.config.strategy.kind)}</strong>
-                    <small>
-                      {r.config.direction} · {r.config.mode} · {date(r.created_at)}
-                    </small>
-                  </span>
-                  <Status
-                    type={
-                      r.status === 'completed' ? 'good' : r.status === 'failed' ? 'bad' : 'neutral'
-                    }
-                  >
-                    {r.status}
-                  </Status>
-                  <span className={tone(runReturn(r))}>
-                    {r.result ? percent(runReturn(r)) : '—'}
-                  </span>
-                  <ChevronRight size={15} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="recent-empty">
-              <FlaskConical size={23} strokeWidth={1.4} />
-              <div>
-                <strong>{t('No research runs')}</strong>
-                <p>{t('Choose an immutable dataset and submit a research configuration.')}</p>
-              </div>
-              <button className="text-button" onClick={() => navigate('research')}>
-                {t('Start research')}
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          )}
-        </section>
-        <section className="workspace-summary">
-          <div className="section-heading">
-            <h2>{t('Portfolio')}</h2>
-            <span className="subtle-tag">LOCAL PAPER</span>
-          </div>
-          <div className="summary-row">
-            <span>{t('Account equity')}</span>
-            <strong>
-              {account.data ? number(account.data.equity) : '—'} <small>USDT</small>
-            </strong>
-          </div>
-          <div className="summary-row">
-            <span>{t('Research runs')}</span>
-            <strong>{runs.data ? completed.length : '—'}</strong>
-          </div>
-          <div className="summary-row">
-            <span>Market data</span>
-            <SourceBadge source={source} />
-          </div>
-          <p className="quiet-copy">
-            {t('Account and execution mode are reported by the server.')}
-          </p>
-        </section>
-      </div>
-    </>
+        </div>
+      )}
+    </section>
   );
 }

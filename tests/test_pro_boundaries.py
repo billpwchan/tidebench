@@ -132,11 +132,13 @@ async def test_every_role_has_explicit_read_and_command_permissions(app):
     reads = (
         ("/pro/catalog/datasets", ALL),
         ("/pro/catalog/jobs", ALL),
+        ("/pro/catalog/packages", ALL),
         ("/pro/research/runs", ALL),
         ("/pro/execution/orders", ALL),
         ("/pro/execution/ledger", ALL),
         ("/pro/execution/deployments", ALL),
         ("/pro/execution/risk", ALL),
+        ("/pro/execution/analytics?source=example", ALL),
         ("/pro/ops", ALL),
         ("/pro/ops/audit", ALL),
         ("/auth/users", {"admin"}),
@@ -144,10 +146,12 @@ async def test_every_role_has_explicit_read_and_command_permissions(app):
     )
     commands = (
         ("POST", "/pro/catalog/jobs", RESEARCH),
+        ("POST", "/pro/catalog/packages", RESEARCH),
         ("POST", "/pro/catalog/import", RESEARCH),
         ("POST", "/pro/research/runs", RESEARCH),
         ("POST", "/backtests", RESEARCH),
         ("POST", "/pro/execution/orders/preview", TRADING),
+        ("POST", "/pro/execution/analytics", ALL),
         ("POST", "/pro/execution/orders", TRADING),
         ("POST", "/paper/orders", TRADING),
         ("POST", "/pro/execution/deployments", TRADING),

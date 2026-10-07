@@ -3,10 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Database, Download, Loader2, RefreshCw, Square, X } from 'lucide-react';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
-import type { Dataset, Job } from '../proApi';
+import type { Dataset, Job, ResearchInputs } from '../proApi';
 import { useSession } from '../components/AuthGate';
 import { canResearch } from '../lib/permissions';
 import DatasetImport from '../components/DatasetImport';
+import ResearchPackages from '../components/ResearchPackages';
 import { useI18n } from '../lib/i18n';
 import { bars } from '../lib/config';
 import { useDialogFocus } from '../lib/hooks';
@@ -39,11 +40,12 @@ export default function DataLibrary({
   onResearch,
 }: {
   source: Source;
-  onResearch: (id: string) => void;
+  onResearch: (inputs: ResearchInputs) => void;
 }) {
   const { t } = useI18n();
   const canOperate = canResearch(useSession()?.user?.role);
   const qc = useQueryClient();
+  const [catalogTab, setCatalogTab] = useState('packages');
   const [inputTab, setInputTab] = useState('download');
   const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
   const [symbol, setSymbol] = useState('BTC-USDT');
@@ -120,248 +122,274 @@ export default function DataLibrary({
           {t('Refresh')}
         </button>
       </PageHeading>
-      <ActionNote text={notice} />
-      <div className="data-library-layout">
-        <section className="pro-panel data-catalog-panel">
-          <div className="section-heading">
-            <h2>{t('Dataset versions')}</h2>
-            <span className="subtle-tag">
-              {visibleDatasets.length} {t('Dataset')}
-            </span>
-          </div>
-          {datasets.isPending ? (
-            <Loading />
-          ) : datasets.isError ? (
-            <ErrorBox error={datasets.error} onRetry={() => void datasets.refetch()} />
-          ) : (
-            <DataTable
-              rows={visibleDatasets}
-              empty="No datasets yet"
-              columns={[
-                {
-                  key: 'inst_id',
-                  label: 'Market',
-                  render: (d) => (
-                    <div className="table-stacked">
-                      <strong>{d.inst_id}</strong>
-                      <small>
-                        {d.kind} · {d.bar}
-                      </small>
-                      <small>
-                        {d.transport === 'user_import'
-                          ? t('Imported')
-                          : d.source === 'example'
-                            ? t('Example · synthetic')
-                            : 'OKX REST'}
-                      </small>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'range',
-                  label: 'Coverage',
-                  render: (d) => (
-                    <div className="table-stacked">
-                      <span>{date(datasetStart(d), true)}</span>
-                      <small>{date(datasetEnd(d), true)}</small>
-                    </div>
-                  ),
-                },
-                { key: 'rows', label: 'Rows', render: (d) => number(datasetRows(d), 0) },
-                {
-                  key: 'quality',
-                  label: 'Quality',
-                  render: (d) => (
-                    <Status type={d.quality?.complete === true ? 'good' : 'warning'}>
-                      {d.quality?.complete === true ? 'complete' : 'incomplete'}
-                    </Status>
-                  ),
-                },
-                {
-                  key: 'version',
-                  label: 'Version',
-                  render: (d) => (
-                    <code>
-                      {d.version ? `v${d.version} · ` : ''}
-                      {String(
-                        d.content_hash ?? d.dataset_hash ?? d.hash ?? d.version ?? d.id,
-                      ).slice(0, 10)}
-                    </code>
-                  ),
-                },
-                {
-                  key: 'actions',
-                  label: 'Actions',
-                  render: (d) => (
-                    <div className="table-actions">
-                      <button className="text-button" onClick={() => setSelected(d)}>
-                        {t('Inspect')}
-                      </button>
-                      {d.kind === 'trade' && (
-                        <button className="text-button" onClick={() => onResearch(d.id)}>
-                          {t('Research')}
-                          <ArrowRight size={12} />
-                        </button>
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-            />
-          )}
-        </section>
-        <aside className="pro-panel data-download-panel">
-          <div className="section-heading">
-            <h2>{t('Add market data')}</h2>
-            <Download size={18} />
-          </div>
-          <WorkspaceTabs
-            value={inputTab}
-            onChange={setInputTab}
-            items={[
-              { key: 'download', label: 'Download' },
-              { key: 'import', label: 'Import JSON' },
-            ]}
-          />
-          {inputTab === 'download' ? (
-            <form
-              className="compact-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                submit();
-              }}
-            >
-              <ProductSymbol
-                source={source}
-                value={symbol}
-                onChange={setSymbol}
-                product={product}
-                onProductChange={(p) => {
-                  setProduct(p);
-                  if (p === 'SPOT') setKind('trade');
-                }}
-              />
-              <div className="form-grid">
-                <Field label="Kind">
-                  <select value={kind} onChange={(e) => setKind(e.target.value)}>
-                    <option value="trade">{t('Trade candles')}</option>
-                    <option value="mark" disabled={product === 'SPOT'}>
-                      {t('Mark price')}
-                    </option>
-                    <option value="index" disabled={product === 'SPOT'}>
-                      {t('Index price')}
-                    </option>
-                    <option value="funding" disabled={product === 'SPOT'}>
-                      {t('Funding rates')}
-                    </option>
-                  </select>
-                </Field>
-                <Field label="Interval">
-                  <select
-                    value={bar}
-                    onChange={(e) => {
-                      const b = e.target.value;
-                      setBar(b);
-                      const ms = (
-                        {
-                          '1m': 60000,
-                          '5m': 300000,
-                          '15m': 900000,
-                          '1H': 3600000,
-                          '4H': 14400000,
-                          '1Dutc': 86400000,
-                        } as Record<string, number>
-                      )[b];
-                      setStart((v) => utcInput(Math.floor(Date.parse(`${v}Z`) / ms) * ms));
-                      setEnd((v) => utcInput(Math.floor(Date.parse(`${v}Z`) / ms) * ms));
-                    }}
-                  >
-                    {['1m', '5m', ...bars].map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+      <WorkspaceTabs
+        value={catalogTab}
+        onChange={setCatalogTab}
+        items={[
+          { key: 'packages', label: 'Research packages' },
+          { key: 'raw', label: 'Raw datasets & imports' },
+        ]}
+      />
+      {catalogTab === 'packages' && (
+        <ResearchPackages
+          source={source}
+          onResearch={onResearch}
+          onOpenRaw={() => setCatalogTab('raw')}
+        />
+      )}
+      {catalogTab === 'raw' && (
+        <>
+          <ActionNote text={notice} />
+          <div className="data-library-layout">
+            <section className="pro-panel data-catalog-panel">
+              <div className="section-heading">
+                <h2>{t('Dataset versions')}</h2>
+                <span className="subtle-tag">
+                  {visibleDatasets.length} {t('Dataset')}
+                </span>
               </div>
-              <Field label="Start (UTC)">
-                <input
-                  required
-                  type="datetime-local"
-                  value={start}
-                  onChange={(e) => setStart(e.target.value)}
+              {datasets.isPending ? (
+                <Loading />
+              ) : datasets.isError ? (
+                <ErrorBox error={datasets.error} onRetry={() => void datasets.refetch()} />
+              ) : (
+                <DataTable
+                  rows={visibleDatasets}
+                  empty="No datasets yet"
+                  columns={[
+                    {
+                      key: 'inst_id',
+                      label: 'Market',
+                      render: (d) => (
+                        <div className="table-stacked">
+                          <strong>{d.inst_id}</strong>
+                          <small>
+                            {d.kind} · {d.bar}
+                          </small>
+                          <small>
+                            {d.transport === 'user_import'
+                              ? t('Imported')
+                              : d.source === 'example'
+                                ? t('Example · synthetic')
+                                : 'OKX REST'}
+                          </small>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'range',
+                      label: 'Coverage',
+                      render: (d) => (
+                        <div className="table-stacked">
+                          <span>{date(datasetStart(d), true)}</span>
+                          <small>{date(datasetEnd(d), true)}</small>
+                        </div>
+                      ),
+                    },
+                    { key: 'rows', label: 'Rows', render: (d) => number(datasetRows(d), 0) },
+                    {
+                      key: 'quality',
+                      label: 'Quality',
+                      render: (d) => (
+                        <Status type={d.quality?.complete === true ? 'good' : 'warning'}>
+                          {d.quality?.complete === true ? 'complete' : 'incomplete'}
+                        </Status>
+                      ),
+                    },
+                    {
+                      key: 'version',
+                      label: 'Version',
+                      render: (d) => (
+                        <code>
+                          {d.version ? `v${d.version} · ` : ''}
+                          {String(
+                            d.content_hash ?? d.dataset_hash ?? d.hash ?? d.version ?? d.id,
+                          ).slice(0, 10)}
+                        </code>
+                      ),
+                    },
+                    {
+                      key: 'actions',
+                      label: 'Actions',
+                      render: (d) => (
+                        <div className="table-actions">
+                          <button className="text-button" onClick={() => setSelected(d)}>
+                            {t('Inspect')}
+                          </button>
+                          {d.kind === 'trade' && (
+                            <button
+                              className="text-button"
+                              onClick={() => onResearch({ dataset_id: d.id })}
+                            >
+                              {t('Research')}
+                              <ArrowRight size={12} />
+                            </button>
+                          )}
+                        </div>
+                      ),
+                    },
+                  ]}
                 />
-              </Field>
-              <Field label="End (UTC)">
-                <input
-                  required
-                  type="datetime-local"
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                />
-              </Field>
-              <p className="range-hint">
-                {t(
-                  'Range is start-inclusive and end-exclusive. UTC boundaries must align to the selected interval.',
-                )}
-              </p>
-              <div className="download-source">
-                <Database size={13} />
-                <span>{source === 'okx' ? 'OKX public REST' : t('Example · synthetic')}</span>
-              </div>
-              {(create.isError || validation) && (
-                <ErrorBox error={validation ? new Error(validation) : create.error} />
               )}
-              <button
-                type="submit"
-                className="button button-citrus full-width"
-                disabled={!canOperate || create.isPending}
-              >
-                {create.isPending ? <Loader2 size={14} className="spin" /> : <Download size={14} />}{' '}
-                {t('Create download job')}
-              </button>
-            </form>
-          ) : (
-            <DatasetImport
-              source={source}
-              onImported={(dataset) => {
-                setNotice(`${t('Dataset imported')} · ${dataset.id.slice(0, 12)}`);
-                refresh();
-                setSelected(dataset);
-              }}
-            />
-          )}
-        </aside>
-      </div>
-      <section className="pro-panel jobs-panel">
-        <div className="section-heading">
-          <h2>{t('Download jobs')}</h2>
-          <span className="quiet-copy">
-            {t('Download progress is measured by the server. Unknown totals remain unknown.')}
-          </span>
-        </div>
-        {jobs.isPending ? (
-          <Loading />
-        ) : jobs.isError ? (
-          <ErrorBox error={jobs.error} onRetry={() => void jobs.refetch()} />
-        ) : visibleJobs.length ? (
-          <div className="job-list">
-            {visibleJobs.map((job) => (
-              <JobRow
-                key={job.id}
-                job={job}
-                onCancel={() => cancel.mutate(job.id)}
-                pending={!canOperate || cancel.isPending}
+            </section>
+            <aside className="pro-panel data-download-panel">
+              <div className="section-heading">
+                <h2>{t('Add market data')}</h2>
+                <Download size={18} />
+              </div>
+              <WorkspaceTabs
+                value={inputTab}
+                onChange={setInputTab}
+                items={[
+                  { key: 'download', label: 'Download' },
+                  { key: 'import', label: 'Import JSON' },
+                ]}
               />
-            ))}
+              {inputTab === 'download' ? (
+                <form
+                  className="compact-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    submit();
+                  }}
+                >
+                  <ProductSymbol
+                    source={source}
+                    value={symbol}
+                    onChange={setSymbol}
+                    product={product}
+                    onProductChange={(p) => {
+                      setProduct(p);
+                      if (p === 'SPOT') setKind('trade');
+                    }}
+                  />
+                  <div className="form-grid">
+                    <Field label="Kind">
+                      <select value={kind} onChange={(e) => setKind(e.target.value)}>
+                        <option value="trade">{t('Trade candles')}</option>
+                        <option value="mark" disabled={product === 'SPOT'}>
+                          {t('Mark price')}
+                        </option>
+                        <option value="index" disabled={product === 'SPOT'}>
+                          {t('Index price')}
+                        </option>
+                        <option value="funding" disabled={product === 'SPOT'}>
+                          {t('Funding rates')}
+                        </option>
+                      </select>
+                    </Field>
+                    <Field label="Interval">
+                      <select
+                        value={bar}
+                        onChange={(e) => {
+                          const b = e.target.value;
+                          setBar(b);
+                          const ms = (
+                            {
+                              '1m': 60000,
+                              '5m': 300000,
+                              '15m': 900000,
+                              '1H': 3600000,
+                              '4H': 14400000,
+                              '1Dutc': 86400000,
+                            } as Record<string, number>
+                          )[b];
+                          setStart((v) => utcInput(Math.floor(Date.parse(`${v}Z`) / ms) * ms));
+                          setEnd((v) => utcInput(Math.floor(Date.parse(`${v}Z`) / ms) * ms));
+                        }}
+                      >
+                        {['1m', '5m', ...bars].map((b) => (
+                          <option key={b} value={b}>
+                            {b}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                  <Field label="Start (UTC)">
+                    <input
+                      required
+                      type="datetime-local"
+                      value={start}
+                      onChange={(e) => setStart(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="End (UTC)">
+                    <input
+                      required
+                      type="datetime-local"
+                      value={end}
+                      onChange={(e) => setEnd(e.target.value)}
+                    />
+                  </Field>
+                  <p className="range-hint">
+                    {t(
+                      'Range is start-inclusive and end-exclusive. UTC boundaries must align to the selected interval.',
+                    )}
+                  </p>
+                  <div className="download-source">
+                    <Database size={13} />
+                    <span>{source === 'okx' ? 'OKX public REST' : t('Example · synthetic')}</span>
+                  </div>
+                  {(create.isError || validation) && (
+                    <ErrorBox error={validation ? new Error(validation) : create.error} />
+                  )}
+                  <button
+                    type="submit"
+                    className="button button-citrus full-width"
+                    disabled={!canOperate || create.isPending}
+                  >
+                    {create.isPending ? (
+                      <Loader2 size={14} className="spin" />
+                    ) : (
+                      <Download size={14} />
+                    )}{' '}
+                    {t('Create download job')}
+                  </button>
+                </form>
+              ) : (
+                <DatasetImport
+                  source={source}
+                  onImported={(dataset) => {
+                    setNotice(`${t('Dataset imported')} · ${dataset.id.slice(0, 12)}`);
+                    refresh();
+                    setSelected(dataset);
+                  }}
+                />
+              )}
+            </aside>
           </div>
-        ) : (
-          <Empty title="Download history is empty">
-            {t('Download a date range to create an immutable research dataset.')}
-          </Empty>
-        )}
-        {cancel.isError && <ErrorBox error={cancel.error} />}
-      </section>
+          <section className="pro-panel jobs-panel">
+            <div className="section-heading">
+              <h2>{t('Download jobs')}</h2>
+              <span className="quiet-copy">
+                {t('Download progress is measured by the server. Unknown totals remain unknown.')}
+              </span>
+            </div>
+            {jobs.isPending ? (
+              <Loading />
+            ) : jobs.isError ? (
+              <ErrorBox error={jobs.error} onRetry={() => void jobs.refetch()} />
+            ) : visibleJobs.length ? (
+              <div className="job-list">
+                {visibleJobs.map((job) => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    onCancel={() => cancel.mutate(job.id)}
+                    pending={!canOperate || cancel.isPending}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Empty title="Download history is empty">
+                {t('Download a date range to create an immutable research dataset.')}
+              </Empty>
+            )}
+            {cancel.isError && <ErrorBox error={cancel.error} />}
+          </section>
+        </>
+      )}
       {selected && (
         <div className="modal-backdrop" onClick={() => setSelected(null)}>
           <section
@@ -415,7 +443,7 @@ export default function DataLibrary({
               <button
                 className="button button-dark"
                 onClick={() => {
-                  onResearch(selected.id);
+                  onResearch({ dataset_id: selected.id });
                   setSelected(null);
                 }}
               >

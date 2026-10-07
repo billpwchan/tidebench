@@ -8,7 +8,8 @@ import { WorkspaceTabs } from './components/ProWorkspace';
 import { PageHeading, SourceBadge } from './components/workspace';
 import { MarketSearch, Sidebar, Topbar } from './components/WorkspaceShell';
 import type { Page } from './lib/config';
-import { useDialogFocus } from './lib/hooks';
+import type { ResearchInputs } from './proApi';
+import { useDialogFocus, useMediaQuery } from './lib/hooks';
 import { LanguageProvider, useI18n } from './lib/i18n';
 import Overview from './pages/Overview';
 import ClassicPaper from './pages/Paper';
@@ -50,8 +51,13 @@ function Workspace() {
   const [symbol, setSymbol] = useState('BTC-USDT');
   const [bar, setBar] = useState<Bar>('1H');
   const [researchTab, setResearchTab] = useState('advanced');
-  const [selectedDataset, setSelectedDataset] = useState<string | undefined>();
+  const [selectedInputs, setSelectedInputs] = useState<ResearchInputs | undefined>();
+  const [executionView, setExecutionView] = useState('positions');
   const [mobileNav, setMobileNav] = useState(false);
+  const compactNavigation = useMediaQuery('(max-width: 850px)');
+  useEffect(() => {
+    if (!compactNavigation) setMobileNav(false);
+  }, [compactNavigation]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
   const system = useQuery({ queryKey: ['system'], queryFn: api.system, refetchInterval: 30000 });
@@ -59,12 +65,15 @@ function Workspace() {
     queryKey: ['tickers', source],
     queryFn: () => api.tickers(source),
     refetchInterval: source === 'okx' ? 5000 : false,
+    enabled: page === 'paper',
   });
   const setSource = (s: Source) => {
     setSourceState(s);
+    setSelectedInputs(undefined);
     localStorage.setItem('tidebench:source', s);
   };
-  const navigate = (p: Page) => {
+  const navigate = (p: Page, view?: string) => {
+    if (p === 'execution') setExecutionView(view ?? 'positions');
     setPage(p);
     window.location.hash = p;
     setMobileNav(false);
@@ -82,6 +91,7 @@ function Workspace() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
+        setMobileNav(false);
         setSearchOpen((v) => !v);
       }
       if (e.key === 'Escape') {
@@ -93,6 +103,7 @@ function Workspace() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   useDialogFocus(searchOpen, '.search-dialog', () => setSearchOpen(false));
+  useDialogFocus(mobileNav, '.sidebar', () => setMobileNav(false));
   const selectedTicker = tickers.data?.items.find((x) => x.inst_id === symbol);
   const execution = page === 'execution' || page === 'paper' || page === 'risk';
   return (
@@ -108,7 +119,7 @@ function Workspace() {
         />
       )}
       <Sidebar mobileNav={mobileNav} page={page} navigate={navigate} system={system} />
-      <div className="workspace-main">
+      <div className="workspace-main" inert={mobileNav && compactNavigation}>
         <Topbar
           page={page}
           setMobileNav={setMobileNav}
@@ -146,13 +157,6 @@ function Workspace() {
               source={source}
               symbol={symbol}
               setSymbol={setSymbol}
-              bar={bar}
-              setBar={setBar}
-              tickers={tickers.data?.items}
-              tickerError={tickers.error}
-              tickerLoading={tickers.isPending}
-              retryTickers={() => void tickers.refetch()}
-              onExample={() => setSource('example')}
               navigate={navigate}
             />
           )}
@@ -170,7 +174,7 @@ function Workspace() {
                 <ProResearch
                   key={source}
                   source={source}
-                  initialDatasetId={selectedDataset}
+                  initialInputs={selectedInputs}
                   onOpenData={() => navigate('data')}
                 />
               ) : (
@@ -196,7 +200,9 @@ function Workspace() {
                   { key: 'risk', label: 'Risk' },
                 ]}
               />
-              {page === 'execution' && <Portfolio key={source} source={source} />}
+              {page === 'execution' && (
+                <Portfolio key={source} source={source} initialView={executionView} />
+              )}
               {page === 'paper' && (
                 <ClassicPaper
                   key={source}
@@ -213,7 +219,7 @@ function Workspace() {
                     title="Risk"
                     description="Portfolio limits and durable execution controls."
                   />
-                  <ExecutionRisk key={source} source={source} />
+                  <ExecutionRisk key={source} source={source} analytics />
                 </>
               )}
             </>
@@ -222,8 +228,8 @@ function Workspace() {
             <DataLibrary
               key={source}
               source={source}
-              onResearch={(id) => {
-                setSelectedDataset(id);
+              onResearch={(inputs) => {
+                setSelectedInputs(inputs);
                 setResearchTab('advanced');
                 navigate('research');
               }}

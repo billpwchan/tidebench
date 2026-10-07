@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
@@ -81,6 +81,17 @@ export function DataTable<T extends RecordData>({
   const { t } = useI18n();
   const [page, setPage] = useState(0);
   const scroll = useRef<HTMLDivElement>(null);
+  const [overflow, setOverflow] = useState(false);
+  useEffect(() => {
+    const element = scroll.current;
+    if (!element) return;
+    const update = () => setOverflow(element.scrollWidth > element.clientWidth + 1);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    if (element.firstElementChild) observer.observe(element.firstElementChild);
+    return () => observer.disconnect();
+  }, [rows.length, columns.length]);
   const pageSize = 100;
   const pageCount = Math.ceil(rows.length / pageSize);
   const currentPage = Math.min(page, Math.max(0, pageCount - 1));
@@ -91,7 +102,13 @@ export function DataTable<T extends RecordData>({
   };
   return rows.length ? (
     <div className="data-table-region">
-      <div ref={scroll} className="table-scroll dense-table">
+      <div
+        ref={scroll}
+        className="table-scroll dense-table"
+        tabIndex={0}
+        role="region"
+        aria-label={t('Scrollable data table')}
+      >
         <table>
           <thead>
             <tr>
@@ -115,6 +132,11 @@ export function DataTable<T extends RecordData>({
           </tbody>
         </table>
       </div>
+      {overflow && (
+        <p className="table-overflow-hint">
+          {t('Scroll horizontally for more columns. Keyboard: focus the table and use arrow keys.')}
+        </p>
+      )}
       {pageCount > 1 && (
         <div className="table-pagination">
           <span role="status" aria-live="polite">

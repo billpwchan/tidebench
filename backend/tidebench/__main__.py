@@ -12,7 +12,8 @@ if bind_address not in {"127.0.0.1", "::1", "localhost"}:
             "Remote binding requires authentication and a random API or bootstrap token of at least 32 characters."
         )
 uvicorn.run(
-    "tidebench.main:app",
+    "tidebench.main:create_app",
+    factory=True,
     host=bind_address,
     port=int(os.getenv("TIDEBENCH_PORT", "8000")),
     workers=1,

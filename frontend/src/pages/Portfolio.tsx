@@ -14,6 +14,7 @@ import {
 import { defaultStrategy, downloadCsv } from '../api';
 import type { Source, Strategy } from '../api';
 import { useSession } from '../components/AuthGate';
+import PortfolioAnalytics from '../components/PortfolioAnalytics';
 import { proApi } from '../proApi';
 import type { Direction, OrderRequest, ProRisk, RecordData } from '../proApi';
 import { useI18n } from '../lib/i18n';
@@ -40,12 +41,19 @@ import {
   valueText,
 } from '../components/ProWorkspace';
 
-export default function Portfolio({ source }: { source: Source }) {
+export default function Portfolio({
+  source,
+  initialView = 'positions',
+}: {
+  source: Source;
+  initialView?: string;
+}) {
   const { t } = useI18n();
   const canOperate = canTrade(useSession()?.user?.role);
   const qc = useQueryClient();
   const now = useNow();
-  const [table, setTable] = useState('positions');
+  const [table, setTable] = useState(initialView);
+  useEffect(() => setTable(initialView), [initialView]);
   const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
   const [symbol, setSymbol] = useState('BTC-USDT');
   const [side, setSide] = useState<'buy' | 'sell'>('buy');
@@ -106,7 +114,14 @@ export default function Portfolio({ source }: { source: Source }) {
   const riskBlocksOrder = !!risk.data?.halted && !body.reduce_only;
   const payload = JSON.stringify(body);
   const refresh = () => {
-    for (const key of ['pro-account', 'pro-orders', 'pro-ledger', 'pro-deployments', 'pro-risk'])
+    for (const key of [
+      'pro-account',
+      'pro-orders',
+      'pro-ledger',
+      'pro-deployments',
+      'pro-risk',
+      'portfolio-analytics',
+    ])
       void qc.invalidateQueries({ queryKey: [key, source] });
     void qc.invalidateQueries({ queryKey: ['pro-ops'] });
   };
@@ -193,7 +208,7 @@ export default function Portfolio({ source }: { source: Source }) {
       )}
       <div className="execution-layout">
         <div className="execution-main">
-          <section className="pro-panel">
+          <section className="pro-panel account-book-panel">
             <div className="section-heading">
               <h2>{t('Portfolio')}</h2>
               <button
@@ -211,11 +226,13 @@ export default function Portfolio({ source }: { source: Source }) {
               onChange={setTable}
               items={[
                 { key: 'positions', label: 'Positions' },
+                { key: 'analytics', label: 'Exposure & scenarios' },
                 { key: 'orders', label: 'Orders' },
                 { key: 'ledger', label: 'Ledger' },
                 { key: 'strategies', label: 'Strategies' },
               ]}
             />
+            {table === 'analytics' && <PortfolioAnalytics source={source} />}
             {table === 'positions' &&
               (account.isPending ? (
                 <Loading />
@@ -562,9 +579,9 @@ export default function Portfolio({ source }: { source: Source }) {
                 value={orderType}
                 onChange={(e) => setOrderType(e.target.value as OrderRequest['order_type'])}
               >
-                <option value="market">Market</option>
-                <option value="limit">Limit</option>
-                <option value="stop_market">Stop market</option>
+                <option value="market">{t('Market order')}</option>
+                <option value="limit">{t('Limit order')}</option>
+                <option value="stop_market">{t('Stop market order')}</option>
               </select>
             </Field>
             <Field label="Quantity" hint={product === 'SWAP' ? t('Contracts') : t('Base units')}>
@@ -765,7 +782,13 @@ export default function Portfolio({ source }: { source: Source }) {
     </>
   );
 }
-export function ExecutionRisk({ source }: { source: Source }) {
+export function ExecutionRisk({
+  source,
+  analytics = false,
+}: {
+  source: Source;
+  analytics?: boolean;
+}) {
   const { t } = useI18n();
   const canOperate = canManageRisk(useSession()?.user?.role);
   const qc = useQueryClient();
@@ -812,111 +835,114 @@ export function ExecutionRisk({ source }: { source: Source }) {
     },
   });
   return (
-    <section className="pro-panel execution-risk">
-      <div className="section-heading">
-        <h2>{t('Risk limits')}</h2>
-        {risk.data && (
-          <Status type={risk.data.halted ? 'bad' : 'good'}>
-            {t(risk.data.halted ? 'Execution halted' : 'Execution enabled')}
-          </Status>
-        )}
-      </div>
-      <ActionNote text={notice} />
-      {risk.isError ? (
-        <ErrorBox error={risk.error} />
-      ) : risk.isPending ? (
-        <Loading />
-      ) : (
-        <>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              save.mutate({ source, ...limits });
-            }}
-          >
-            <div className="risk-input-grid">
-              <Field label="Maximum order notional">
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={limits.max_order_notional}
-                  onChange={(e) => patchLimits({ max_order_notional: e.target.value })}
-                />
-              </Field>
-              <Field label="Maximum gross exposure">
-                <div className="input-suffix">
+    <>
+      <section className="pro-panel execution-risk">
+        <div className="section-heading">
+          <h2>{t('Risk limits')}</h2>
+          {risk.data && (
+            <Status type={risk.data.halted ? 'bad' : 'good'}>
+              {t(risk.data.halted ? 'Execution halted' : 'Execution enabled')}
+            </Status>
+          )}
+        </div>
+        <ActionNote text={notice} />
+        {risk.isError ? (
+          <ErrorBox error={risk.error} />
+        ) : risk.isPending ? (
+          <Loading />
+        ) : (
+          <>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                save.mutate({ source, ...limits });
+              }}
+            >
+              <div className="risk-input-grid">
+                <Field label="Maximum order notional">
                   <input
                     required
                     type="number"
                     min="1"
-                    max="1000"
-                    value={limits.max_gross_exposure_pct}
-                    onChange={(e) =>
-                      patchLimits({ max_gross_exposure_pct: Number(e.target.value) })
-                    }
+                    step="0.01"
+                    value={limits.max_order_notional}
+                    onChange={(e) => patchLimits({ max_order_notional: e.target.value })}
                   />
-                  <span>%</span>
-                </div>
-              </Field>
-              <Field label="Maximum leverage">
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  max="50"
-                  value={limits.max_leverage}
-                  onChange={(e) => patchLimits({ max_leverage: Number(e.target.value) })}
-                />
-              </Field>
-              <Field label="Maximum daily loss">
-                <div className="input-suffix">
+                </Field>
+                <Field label="Maximum gross exposure">
+                  <div className="input-suffix">
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={limits.max_gross_exposure_pct}
+                      onChange={(e) =>
+                        patchLimits({ max_gross_exposure_pct: Number(e.target.value) })
+                      }
+                    />
+                    <span>%</span>
+                  </div>
+                </Field>
+                <Field label="Maximum leverage">
                   <input
                     required
                     type="number"
-                    min="0.1"
+                    min="1"
                     max="50"
-                    step="0.1"
-                    value={limits.max_daily_loss_pct}
-                    onChange={(e) => patchLimits({ max_daily_loss_pct: Number(e.target.value) })}
+                    value={limits.max_leverage}
+                    onChange={(e) => patchLimits({ max_leverage: Number(e.target.value) })}
                   />
-                  <span>%</span>
-                </div>
-              </Field>
-            </div>
-            <button className="button button-secondary" disabled={!canOperate || save.isPending}>
-              {t('Save limits')}
-            </button>
-            {save.isError && <ErrorBox error={save.error} />}
-          </form>
-          <form
-            className="halt-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              halt.mutate({ source, active: !risk.data?.halted, reason });
-            }}
-          >
-            <Field label="Reason">
-              <input
-                required
-                minLength={3}
-                maxLength={300}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-            </Field>
-            <button
-              className={`button ${risk.data.halted ? 'button-citrus' : 'button-danger'}`}
-              disabled={!canOperate || halt.isPending || reason.trim().length < 3}
+                </Field>
+                <Field label="Maximum daily loss">
+                  <div className="input-suffix">
+                    <input
+                      required
+                      type="number"
+                      min="0.1"
+                      max="50"
+                      step="0.1"
+                      value={limits.max_daily_loss_pct}
+                      onChange={(e) => patchLimits({ max_daily_loss_pct: Number(e.target.value) })}
+                    />
+                    <span>%</span>
+                  </div>
+                </Field>
+              </div>
+              <button className="button button-secondary" disabled={!canOperate || save.isPending}>
+                {t('Save limits')}
+              </button>
+              {save.isError && <ErrorBox error={save.error} />}
+            </form>
+            <form
+              className="halt-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                halt.mutate({ source, active: !risk.data?.halted, reason });
+              }}
             >
-              {risk.data.halted ? <Play size={13} /> : <Square size={13} />}{' '}
-              {t(risk.data.halted ? 'Resume execution' : 'Halt execution')}
-            </button>
-            {halt.isError && <ErrorBox error={halt.error} />}
-          </form>
-        </>
-      )}
-    </section>
+              <Field label="Reason">
+                <input
+                  required
+                  minLength={3}
+                  maxLength={300}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </Field>
+              <button
+                className={`button ${risk.data.halted ? 'button-citrus' : 'button-danger'}`}
+                disabled={!canOperate || halt.isPending || reason.trim().length < 3}
+              >
+                {risk.data.halted ? <Play size={13} /> : <Square size={13} />}{' '}
+                {t(risk.data.halted ? 'Resume execution' : 'Halt execution')}
+              </button>
+              {halt.isError && <ErrorBox error={halt.error} />}
+            </form>
+          </>
+        )}
+      </section>
+      {analytics && <PortfolioAnalytics source={source} />}
+    </>
   );
 }

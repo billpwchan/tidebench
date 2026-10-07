@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowDownToLine,
   Check,
@@ -14,7 +14,14 @@ import type { Source, Strategy } from '../api';
 import { useSession } from '../components/AuthGate';
 import { canResearch } from '../lib/permissions';
 import { proApi } from '../proApi';
-import type { Direction, ProResult, ProRun, RecordData, ResearchMode } from '../proApi';
+import type {
+  Direction,
+  ProResult,
+  ProRun,
+  RecordData,
+  ResearchInputs,
+  ResearchMode,
+} from '../proApi';
 import { useI18n } from '../lib/i18n';
 import { date, nameOf, number, percent, price, quantityText } from '../lib/format';
 import {
@@ -70,22 +77,23 @@ function AutoTable({ rows }: { rows: RecordData[] }) {
 }
 export default function ProResearch({
   source,
-  initialDatasetId,
+  initialInputs,
   onOpenData,
 }: {
   source: Source;
-  initialDatasetId?: string;
+  initialInputs?: ResearchInputs;
   onOpenData: () => void;
 }) {
   const { t } = useI18n();
   const canOperate = canResearch(useSession()?.user?.role);
   const qc = useQueryClient();
-  const [datasetId, setDatasetId] = useState(initialDatasetId ?? '');
-  const [windowStart, setWindowStart] = useState('');
-  const [windowEnd, setWindowEnd] = useState('');
+  const [datasetId, setDatasetId] = useState(initialInputs?.dataset_id ?? '');
+  const [windowStart, setWindowStart] = useState(utcInput(initialInputs?.start_ts));
+  const [windowEnd, setWindowEnd] = useState(utcInput(initialInputs?.end_ts));
   const [validation, setValidation] = useState<string | null>(null);
-  const [markId, setMarkId] = useState('');
-  const [fundingId, setFundingId] = useState('');
+  const [markId, setMarkId] = useState(initialInputs?.mark_dataset_id ?? '');
+  const [fundingId, setFundingId] = useState(initialInputs?.funding_dataset_id ?? '');
+  const [preparedInputs, setPreparedInputs] = useState(initialInputs);
   const [strategy, setStrategy] = useState<Strategy>({ ...defaultStrategy });
   const [direction, setDirection] = useState<Direction>('long_only');
   const [leverage, setLeverage] = useState(1);
@@ -115,9 +123,19 @@ export default function ProResearch({
   const [comparison, setComparison] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [exportError, setExportError] = useState(false);
-  const hydrated = useRef(!!initialDatasetId);
-  const datasets = useQuery({ queryKey: ['pro-datasets'], queryFn: proApi.datasets });
-  const runs = useQuery({ queryKey: ['pro-runs'], queryFn: proApi.runs, refetchInterval: 15000 });
+  const hydrated = useRef(!!initialInputs);
+  const datasets = useQuery({
+    queryKey: ['pro-datasets'],
+    queryFn: proApi.datasets,
+    refetchOnMount: 'always',
+  });
+  const runs = useInfiniteQuery({
+    queryKey: ['pro-runs', source, 'catalog'],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => proApi.runs(source, pageParam),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    refetchInterval: 15000,
+  });
   const catalog = datasets.data?.items.filter((d) => d.source === source) ?? [];
   const tradeDatasets = catalog.filter((d) => d.kind === 'trade');
   const dataset = tradeDatasets.find((d) => d.id === datasetId);
@@ -129,16 +147,26 @@ export default function ProResearch({
     }
   }, [dataset?.id, dataset?.start, dataset?.end]);
   const visibleRuns =
-    runs.data?.items.filter(
-      (r) =>
-        r.source === source || (!r.source && catalog.some((d) => d.id === r.config.dataset_id)),
-    ) ?? [];
+    runs.data?.pages
+      .flatMap((p) => p.items)
+      .filter(
+        (r) =>
+          r.source === source || (!r.source && catalog.some((d) => d.id === r.config.dataset_id)),
+      ) ?? [];
   useEffect(() => {
-    if (initialDatasetId && tradeDatasets.some((d) => d.id === initialDatasetId)) {
-      setDatasetId(initialDatasetId);
+    if (initialInputs) {
+      setDatasetId(initialInputs.dataset_id);
+      setMarkId(initialInputs.mark_dataset_id ?? '');
+      setFundingId(initialInputs.funding_dataset_id ?? '');
+      setWindowStart(utcInput(initialInputs.start_ts));
+      setWindowEnd(utcInput(initialInputs.end_ts));
+      setPreparedInputs(initialInputs);
       hydrated.current = true;
-    } else if (!datasetId && tradeDatasets.length) setDatasetId(tradeDatasets[0].id);
-  }, [initialDatasetId, datasets.data, source]);
+    }
+  }, [initialInputs]);
+  useEffect(() => {
+    if (!datasetId && tradeDatasets.length) setDatasetId(tradeDatasets[0].id);
+  }, [datasets.data, datasetId]);
   const activeId = selected ?? visibleRuns[0]?.id;
   const run = useQuery({
     queryKey: ['pro-run', source, activeId],
@@ -171,6 +199,19 @@ export default function ProResearch({
     setSelected(r.id);
     setVariantKey('');
     const c = r.config;
+    setPreparedInputs(
+      c.package_id
+        ? {
+            dataset_id: c.dataset_id,
+            mark_dataset_id: c.mark_dataset_id,
+            funding_dataset_id: c.funding_dataset_id,
+            start_ts: c.start_ts,
+            end_ts: c.end_ts,
+            package_id: c.package_id,
+            package_manifest_hash: c.package_manifest_hash,
+          }
+        : undefined,
+    );
     setDatasetId(c.dataset_id);
     const input = catalog.find((d) => d.id === c.dataset_id);
     setWindowStart(utcInput(c.start_ts ?? input?.start));
@@ -207,6 +248,13 @@ export default function ProResearch({
       hydrated.current = true;
     }
   }, [run.data?.id]);
+  const packageAttached =
+    !!preparedInputs?.package_id &&
+    preparedInputs.dataset_id === datasetId &&
+    (preparedInputs.mark_dataset_id ?? '') === markId &&
+    (preparedInputs.funding_dataset_id ?? '') === fundingId &&
+    preparedInputs.start_ts === Date.parse(`${windowStart}Z`) &&
+    preparedInputs.end_ts === Date.parse(`${windowEnd}Z`);
   const submit = () => {
     const startTs = Date.parse(`${windowStart}Z`),
       endTs = Date.parse(`${windowEnd}Z`);
@@ -260,7 +308,20 @@ export default function ProResearch({
       };
     if (mode === 'cost_stress')
       options = { fee_bps: candidates(feeGrid), slippage_bps: candidates(slipGrid) };
+    const matchesPackage =
+      preparedInputs?.package_id &&
+      preparedInputs.dataset_id === datasetId &&
+      (preparedInputs.mark_dataset_id ?? '') === markId &&
+      (preparedInputs.funding_dataset_id ?? '') === fundingId &&
+      preparedInputs.start_ts === startTs &&
+      preparedInputs.end_ts === endTs;
     create.mutate({
+      ...(matchesPackage
+        ? {
+            package_id: preparedInputs.package_id,
+            package_manifest_hash: preparedInputs.package_manifest_hash,
+          }
+        : {}),
       dataset_id: datasetId,
       start_ts: startTs,
       end_ts: endTs,
@@ -377,6 +438,21 @@ export default function ProResearch({
         </button>
       </PageHeading>
       <ActionNote text={notice} error={exportError} />
+      {preparedInputs?.package_id && (
+        <p className="prepared-input-note">
+          <span>
+            {t(packageAttached ? 'Prepared research package' : 'Package inputs modified')}
+          </span>
+          <code>{preparedInputs.package_id.slice(0, 12)}</code>
+          <span>
+            {t(
+              packageAttached
+                ? 'Exact dataset versions and the prepared UTC window are selected. Editing inputs detaches the package manifest.'
+                : 'Dataset or window changes have detached the package manifest. The run will use the explicitly selected raw versions.',
+            )}
+          </span>
+        </p>
+      )}
       <div className="pro-research-layout">
         <div className="pro-research-main">
           <section className="pro-panel pro-result-panel">
@@ -828,6 +904,18 @@ export default function ProResearch({
                   },
                 ]}
               />
+            )}
+            {runs.hasNextPage && (
+              <div className="catalog-more">
+                <button
+                  className="button button-secondary"
+                  disabled={runs.isFetchingNextPage}
+                  onClick={() => void runs.fetchNextPage()}
+                >
+                  {runs.isFetchingNextPage && <Loader2 size={13} className="spin" />}
+                  {t('Load older runs')}
+                </button>
+              </div>
             )}
           </section>
           {comparison.length >= 2 && (

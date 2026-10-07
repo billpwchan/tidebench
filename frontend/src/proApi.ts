@@ -71,8 +71,66 @@ export type ImportRequest = {
 };
 export type ResearchMode = 'single' | 'train_test' | 'walk_forward' | 'grid' | 'cost_stress';
 export type Direction = 'long_short' | 'long_only' | 'short_only';
+export type ResearchInputs = {
+  dataset_id: string;
+  mark_dataset_id?: string;
+  funding_dataset_id?: string;
+  start_ts?: number;
+  end_ts?: number;
+  package_id?: string;
+  package_manifest_hash?: string;
+};
+export type DataPackage = {
+  id: string;
+  source: Source;
+  inst_id: string;
+  bar: string;
+  start: number;
+  end: number;
+  status: 'queued' | 'running' | 'preparing' | 'blocked' | 'failed' | 'canceled' | 'ready';
+  ready: boolean;
+  progress?: number;
+  components: {
+    kind: string;
+    job_id?: string;
+    dataset_id?: string;
+    status: string;
+    progress?: number;
+    error?: string | null;
+  }[];
+  blockers: { code: string; kind?: string; message: string }[];
+  coverage?: { start: number; end: number; complete: boolean };
+  funding_marks?: RecordData;
+  manifest?: RecordData;
+  manifest_hash?: string;
+  research_inputs?: ResearchInputs;
+  created_at?: number;
+  updated_at?: number;
+  [key: string]: unknown;
+};
+export type PriceShock = {
+  name: string;
+  parallel_pct: string;
+  asset_pct?: Record<string, string>;
+  market_pct?: Record<string, string>;
+};
+export type PortfolioAnalytics = {
+  status: 'available' | 'partial' | 'unavailable';
+  as_of?: number;
+  as_of_ms?: number;
+  summary: RecordData;
+  assets: RecordData[];
+  markets: RecordData[];
+  positions: RecordData[];
+  scenarios: RecordData[];
+  issues: (string | RecordData)[];
+  assumptions?: RecordData;
+  [key: string]: unknown;
+};
 export type ProRunConfig = {
   dataset_id: string;
+  package_id?: string;
+  package_manifest_hash?: string;
   start_ts?: number;
   end_ts?: number;
   mark_dataset_id?: string;
@@ -198,6 +256,35 @@ const post = <T>(path: string, body?: unknown, headers?: HeadersInit) =>
     headers,
   });
 export const proApi = {
+  packages: (source: Source) =>
+    request<{ items: DataPackage[] }>(`/pro/catalog/packages?${q({ source })}`),
+  package: (id: string) => request<DataPackage>(`/pro/catalog/packages/${encodeURIComponent(id)}`),
+  preparePackage: (body: {
+    source: Source;
+    inst_id: string;
+    bar: string;
+    start: number;
+    end: number;
+    include_index?: boolean;
+    idempotency_key?: string;
+    dataset_ids?: Record<string, string>;
+  }) => post<DataPackage>('/pro/catalog/packages', body),
+  cancelPackage: (id: string) =>
+    post<DataPackage>(`/pro/catalog/packages/${encodeURIComponent(id)}/cancel`),
+  retryPackage: (id: string) =>
+    post<DataPackage>(`/pro/catalog/packages/${encodeURIComponent(id)}/retry`),
+  packageManifest: (id: string) =>
+    request<RecordData>(`/pro/catalog/packages/${encodeURIComponent(id)}/manifest`),
+  async packageInputs(id: string): Promise<ResearchInputs> {
+    const item = await request<DataPackage>(`/pro/catalog/packages/${encodeURIComponent(id)}`);
+    if (!item.ready || !item.research_inputs)
+      throw new Error('The package is not ready for research.');
+    return item.research_inputs;
+  },
+  analytics: (source: Source) =>
+    request<PortfolioAnalytics>(`/pro/execution/analytics?${q({ source })}`),
+  analyzeScenarios: (body: { source: Source; scenarios: PriceShock[] }) =>
+    post<PortfolioAnalytics>('/pro/execution/analytics', body),
   instruments: (source: Source, instType: 'SPOT' | 'SWAP') =>
     request<{ items: RecordData[] }>(
       `/pro/catalog/instruments?${q({ source, inst_type: instType })}`,
@@ -241,7 +328,10 @@ export const proApi = {
   cancelJob: (id: string) => post<Job>(`/pro/catalog/jobs/${encodeURIComponent(id)}/cancel`),
   market: (source: Source, inst_id: string) =>
     request<RecordData>(`/pro/market?${q({ source, inst_id })}`),
-  runs: () => request<{ items: ProRun[] }>('/pro/research/runs'),
+  runs: (source: Source, before?: string, limit = 100) =>
+    request<{ items: ProRun[]; next_cursor?: string | null }>(
+      `/pro/research/runs?${q({ source, limit, ...(before ? { before } : {}) })}`,
+    ),
   run: (id: string) => request<ProRun>(`/pro/research/runs/${encodeURIComponent(id)}`),
   createRun: (body: ProRunConfig) => post<ProRun>('/pro/research/runs', body),
   replay: (id: string) => post<ProRun>(`/pro/research/runs/${encodeURIComponent(id)}/replay`),

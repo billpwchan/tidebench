@@ -12,7 +12,8 @@ from tidebench.engine import Candle, StrategyConfig
 from tidebench.market import MarketService
 from tidebench.platform import PlatformError
 from tidebench.pro_service import ProfessionalRuntime
-from tidebench.store import Store
+from tidebench.provenance import research_identity, serialized_result
+from tidebench.store import Store, dumps
 
 D = Decimal
 HOUR = 3_600_000
@@ -474,3 +475,82 @@ async def test_simultaneous_research_claim_executes_only_one_compute(runtime, mo
     await asyncio.gather(runtime.perform_run(queued["id"]), runtime.perform_run(queued["id"]))
     assert calls == ["trade-version"]
     assert runtime.run(queued["id"])["status"] == "completed"
+
+
+async def test_replay_rejects_recomputed_results_that_differ_from_original(runtime, monkeypatch):
+    original_result = {"mode": "single", "result": {"metrics": {"final_equity": "10000"}}}
+    identifier = "e" * 32
+    config = research_config()
+    with runtime.store.write() as conn:
+        conn.execute(
+            "INSERT INTO pro_runs(id,source,status,config,snapshot,manifest,result,created_at,updated_at) VALUES(?,?,'queued',?,?,?,?,?,?)",
+            (
+                identifier,
+                "example",
+                dumps(config),
+                dumps({"trade": runtime.catalog.dataset, "instrument": runtime.catalog.quote["instrument"]}),
+                dumps(
+                    {"replay_of": "original", "expected_result_hash": serialized_result(original_result)[1]}
+                ),
+                None,
+                END,
+                END,
+            ),
+        )
+    monkeypatch.setattr(
+        runtime, "compute", lambda *args: {"mode": "single", "result": {"metrics": {"final_equity": "10001"}}}
+    )
+    await runtime.perform_run(identifier)
+    result = runtime.run(identifier)
+    assert result["status"] == "failed" and result["result"] is None
+    assert result["manifest"]["replay_verified"] is False
+    assert "differ" in result["error"]
+
+
+async def test_history_pages_never_decode_materialized_result_or_input_tables(runtime, monkeypatch):
+    config = {"mode": "single"}
+    with runtime.store.write() as conn:
+        for index in range(5):
+            conn.execute(
+                "INSERT INTO pro_runs(id,source,status,config,snapshot,result,summary,created_at,updated_at) VALUES(?,?,'completed',?,?,?,?,?,?)",
+                (
+                    f"{index:032x}",
+                    "example",
+                    dumps(config),
+                    '{"large_snapshot": "must_not_be_read"}',
+                    '{"large_financial_tables": "must_not_be_read"}',
+                    '{"final_equity":"10000"}',
+                    END,
+                    END,
+                ),
+            )
+    decode = json.loads
+
+    def guarded(value):
+        assert "must_not_be_read" not in value
+        return decode(value)
+
+    monkeypatch.setattr("tidebench.pro_service.json.loads", guarded)
+    first = runtime.runs("example", limit=2)
+    second = runtime.runs("example", limit=2, before=f"{first[-1]['created_at']}:{first[-1]['id']}")
+    third = runtime.runs("example", limit=2, before=f"{second[-1]['created_at']}:{second[-1]['id']}")
+    assert [row["id"] for row in first + second + third] == [f"{index:032x}" for index in reversed(range(5))]
+    assert all(row["summary"]["final_equity"] == "10000" for row in first + second + third)
+    assert runtime.runs("okx") == []
+
+
+def test_installed_research_identity_is_path_independent_and_content_sensitive(monkeypatch):
+    from pathlib import Path
+
+    identity = research_identity()
+    read = Path.read_bytes
+
+    def changed(path):
+        content = read(path)
+        return content + b"\n# changed implementation\n" if path.name == "pro_research.py" else content
+
+    monkeypatch.setattr(Path, "read_bytes", changed)
+    altered = research_identity()
+    assert identity["code_fingerprint"] != altered["code_fingerprint"]
+    assert identity["modules"]["engine.py"] == altered["modules"]["engine.py"]
+    assert all("/" not in name for name in identity["modules"])

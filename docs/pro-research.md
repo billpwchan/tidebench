@@ -4,6 +4,12 @@ Tidebench separates a saved experiment from its execution model. A result contai
 
 The implementation is a bar-level research model and a persistent local simulation book. Neither sends exchange orders. A reproducible result is evidence about the specified model, not proof of trading profitability or a replica of exchange matching.
 
+## Package handoff and replay evidence
+
+A ready [research package](data-packages.md) binds the complete trade/mark/funding version set, UTC window and captured settlement marks. The run API rejects a mismatched package hash, component ID or window. The full package manifest and enriched funding observations enter the run snapshot; research does not replace them with later downloaded marks. Raw version selection remains available for deliberate experiments.
+
+The manifest records installed research-module SHA-256 hashes, their combined code fingerprint, application/Python versions and the Decimal context. Every completed result receives a canonical full-result SHA-256. A replay captures the original expected hash before execution, computes from saved inputs and sets `replay_verified=true` only on exact equality; divergence fails the run and retains the expected/observed evidence. This is behavioral reproduction, not a signed attestation or a promise that a different engine version has identical semantics. Run history reads materialized summaries through stable keyset pagination, keeping full inputs and large result arrays on detail/export paths.
+
 ## Instruments and units
 
 - Spot research is long-only, USDT-quoted, without borrowing or leverage. Spot simulation sells require existing inventory.

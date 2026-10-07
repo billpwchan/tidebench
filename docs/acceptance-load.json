@@ -7,16 +7,29 @@
   "status_counts": {
     "200": 240
   },
-  "elapsed_seconds": 2.965,
-  "throughput_requests_second": 80.93,
+  "elapsed_seconds": 2.291,
+  "throughput_requests_second": 104.77,
   "latency_ms": {
-    "median": 78.71,
-    "p95": 456.34,
-    "maximum": 1098.8
+    "median": 63.39,
+    "p95": 226.17,
+    "maximum": 1114.77
+  },
+  "read_workload": {
+    "account_requests": 192,
+    "portfolio_analytics_requests": 48,
+    "open_positions": 4,
+    "assets": [
+      "BTC",
+      "ETH"
+    ],
+    "products": [
+      "SPOT",
+      "SWAP"
+    ]
   },
   "concurrent_work": "24 research grid cases x 1000 synthetic bars; two computation threads",
   "research_status": "completed",
   "research_experiments": 24,
   "interpretation": "Local acceptance workload; not a cloud capacity or availability guarantee.",
-  "measured_date_utc": "2026-10-07"
+  "observed_at_utc": "2026-10-07"
 }

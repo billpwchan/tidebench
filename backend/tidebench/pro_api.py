@@ -14,13 +14,28 @@ from pydantic import Field, model_validator
 
 from .engine import ACCOUNTING_CONTEXT
 from .platform import COOKIE, PlatformError
+from .portfolio_analytics import PriceShock, analyze_portfolio
 from .schemas import InputModel, KillInput, Money, Source, StrategyInput
-from .store import encode
+from .store import encode, now_ms
 
 MarketId = Annotated[str, Field(pattern=r"^[A-Z0-9]{1,24}-USDT(?:-SWAP)?$")]
 CatalogBar = Literal["1m", "5m", "15m", "1H", "4H", "1Dutc"]
 Direction = Literal["long_only", "long_short", "short_only"]
 Role = Literal["admin", "trader", "researcher", "viewer", "risk_operator"]
+ShockPercent = Annotated[Decimal, Field(gt=-100, le=1000)]
+AssetId = Annotated[str, Field(pattern=r"^[A-Z0-9]{1,24}$")]
+
+
+class ShockInput(InputModel):
+    name: str = Field(min_length=1, max_length=80)
+    parallel_pct: ShockPercent = Decimal(0)
+    asset_pct: dict[AssetId, ShockPercent] = Field(default_factory=dict, max_length=500)
+    market_pct: dict[MarketId, ShockPercent] = Field(default_factory=dict, max_length=500)
+
+
+class AnalyticsInput(InputModel):
+    source: Source = "okx"
+    scenarios: list[ShockInput] = Field(min_length=1, max_length=25)
 
 
 class LoginInput(InputModel):
@@ -64,10 +79,25 @@ class ImportInput(JobInput):
     provenance: dict
 
 
+class PackageInput(InputModel):
+    source: Source = "okx"
+    inst_id: MarketId
+    bar: CatalogBar = "1H"
+    start: int = Field(ge=1577836800000)
+    end: int = Field(ge=1577836800000)
+    include_index: bool = False
+    idempotency_key: str | None = Field(default=None, max_length=128)
+    dataset_ids: dict[Literal["trade", "mark", "funding", "index"], str] = Field(
+        default_factory=dict, max_length=4
+    )
+
+
 class ResearchInput(InputModel):
     dataset_id: str = Field(min_length=1, max_length=64)
     mark_dataset_id: str | None = Field(default=None, max_length=64)
     funding_dataset_id: str | None = Field(default=None, max_length=64)
+    package_id: str | None = Field(default=None, min_length=1, max_length=64)
+    package_manifest_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     strategy: StrategyInput = Field(default_factory=StrategyInput)
     direction: Direction = "long_only"
     initial_cash: Money = Decimal("10000")
@@ -79,6 +109,12 @@ class ResearchInput(InputModel):
     end_ts: int | None = None
     mode: Literal["single", "train_test", "walk_forward", "grid", "cost_stress"] = "single"
     options: dict = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def package_identity(self):
+        if bool(self.package_id) != bool(self.package_manifest_hash):
+            raise ValueError("Package ID and immutable manifest hash must be supplied together.")
+        return self
 
 
 class ProOrderInput(InputModel):
@@ -245,6 +281,53 @@ def professional_router(app, access, runtime, supervisor, settings):
     def datasets(source: Source | None = None):
         return {"items": runtime.catalog.list_datasets(source)}
 
+    @router.get("/pro/catalog/packages")
+    def packages(source: Source | None = None, limit: int = Query(default=100, ge=1, le=100)):
+        return {"items": [package_response(item) for item in runtime.packages.list_packages(source, limit)]}
+
+    def package_response(item):
+        item = {key: value for key, value in item.items() if key != "manifest"}
+        if item["ready"]:
+            inputs = {
+                "source": item["source"],
+                "start_ts": item["start"],
+                "end_ts": item["end"],
+                "package_id": item["id"],
+                "package_manifest_hash": item["manifest_hash"],
+            }
+            for component in item["components"]:
+                key = "dataset_id" if component["kind"] == "trade" else component["kind"] + "_dataset_id"
+                inputs[key] = component["dataset_id"]
+            item["research_inputs"] = inputs
+        return item
+
+    @router.post("/pro/catalog/packages", status_code=202)
+    def create_package(body: PackageInput):
+        result = runtime.packages.create_package(**body.model_dump())
+        runtime.wake.set()
+        return package_response(result)
+
+    @router.get("/pro/catalog/packages/{identifier}")
+    def package(identifier: str):
+        return package_response(runtime.packages.get_package(identifier, include_manifest=False))
+
+    @router.get("/pro/catalog/packages/{identifier}/manifest")
+    def package_manifest(identifier: str):
+        return JSONResponse(
+            encode(runtime.packages.get_manifest(identifier)),
+            headers={"Content-Disposition": f'attachment; filename="tidebench-package-{identifier}.json"'},
+        )
+
+    @router.post("/pro/catalog/packages/{identifier}/cancel")
+    def cancel_package(identifier: str):
+        return package_response(runtime.packages.cancel_package(identifier))
+
+    @router.post("/pro/catalog/packages/{identifier}/retry", status_code=202)
+    def retry_package(identifier: str):
+        result = runtime.packages.retry_package(identifier)
+        runtime.wake.set()
+        return package_response(result)
+
     @router.get("/pro/catalog/datasets/{identifier}")
     def dataset(identifier: str):
         return runtime.catalog.get_dataset(identifier)
@@ -284,8 +367,16 @@ def professional_router(app, access, runtime, supervisor, settings):
         return encode(snapshot)
 
     @router.get("/pro/research/runs")
-    def runs(source: Source | None = None):
-        return {"items": runtime.runs(source)}
+    def runs(
+        source: Source | None = None,
+        limit: int = Query(default=100, ge=1, le=100),
+        before: str | None = Query(default=None, max_length=64),
+    ):
+        items = runtime.runs(source, limit=limit, before=before)
+        return {
+            "items": items,
+            "next_cursor": f"{items[-1]['created_at']}:{items[-1]['id']}" if len(items) == limit else None,
+        }
 
     @router.post("/pro/research/runs", status_code=202)
     def create_run(body: ResearchInput):
@@ -328,17 +419,39 @@ def professional_router(app, access, runtime, supervisor, settings):
             "initial_cash",
             "direction",
             "leverage",
+            "fee_bps",
+            "slippage_bps",
+            "liquidation_fee_bps",
+            "mode",
+            "options",
         )
         differences = [
             key
             for key in fields
             if len({json.dumps(item["config"].get(key), sort_keys=True) for item in items}) > 1
         ]
+        for label, field in (
+            ("implementation", "research_implementation"),
+            ("model_version", "model_version"),
+            ("maintenance_tiers", "maintenance_tiers_hash"),
+            ("funding_observations", "funding_observations_hash"),
+        ):
+            values = [(item.get("manifest") or {}).get(field) for item in items]
+            if label == "implementation":
+                values = [value.get("code_fingerprint") if value else None for value in values]
+            if len({json.dumps(value, sort_keys=True) for value in values}) > 1:
+                differences.append(label)
+            elif (
+                label in {"maintenance_tiers", "funding_observations"}
+                and any(value is None for value in values)
+                and any(item["config"].get("mark_dataset_id") for item in items)
+            ):
+                differences.append(f"{label}_unavailable")
         return {
             "items": items,
             "comparable_inputs": not differences,
             "different_assumptions": differences,
-            "warning": "Different data, windows or capital assumptions require separate interpretation."
+            "warning": "Different or unverified data, windows, costs, maintenance, funding or implementation assumptions require separate interpretation."
             if differences
             else None,
         }
@@ -347,6 +460,31 @@ def professional_router(app, access, runtime, supervisor, settings):
     async def account(source: Source = "okx"):
         snapshots = await runtime.snapshots_for(source)
         return await runtime.offload(runtime.book.account, source, snapshots)
+
+    async def portfolio_analysis(source, scenarios=None):
+        snapshots = await runtime.snapshots_for(source)
+        account = await runtime.offload(runtime.book.account, source, snapshots)
+        risk = runtime.book.risk(source)
+        return await runtime.offload(
+            analyze_portfolio,
+            account,
+            snapshots,
+            scenarios=scenarios,
+            fee_bps=Decimal(risk["fee_bps"]),
+            liquidation_fee_bps=Decimal(risk["liquidation_fee_bps"]),
+            slippage_bps=Decimal(risk["slippage_bps"]),
+            as_of_ms=now_ms(),
+        )
+
+    @router.get("/pro/execution/analytics")
+    async def analytics(source: Source = "okx"):
+        return await portfolio_analysis(source)
+
+    @router.post("/pro/execution/analytics")
+    async def custom_analytics(body: AnalyticsInput):
+        return await portfolio_analysis(
+            body.source, [PriceShock(**scenario.model_dump()) for scenario in body.scenarios]
+        )
 
     @router.get("/pro/execution/orders")
     def orders(source: Source = "okx"):

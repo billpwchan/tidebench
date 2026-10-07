@@ -11,17 +11,18 @@ An open-source crypto research and execution workbench for OKX spot and linear U
 
 English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Research model](docs/pro-research.md) · [Operations](docs/operations.md)
 
-![Tidebench portfolio, using explicitly synthetic prices](docs/assets/workspace.png)
+![Tidebench trading overview, using explicitly synthetic prices](docs/assets/overview.png)
 
 ## A connected trading workflow
 
 | Workspace | What you can do |
 |---|---|
+| Overview | Monitor actual positions, pending orders, asset exposure, risk attention and active research from one desk |
 | Markets | Inspect confirmed candles and timestamped OKX quotes; switch explicitly to an isolated synthetic source |
-| Data library | Download trade, mark, index and settled funding history; resume interrupted jobs; inspect gaps, rules, provenance and content hashes; import attributed historical records |
+| Data library | Prepare a complete research package in one action: trade, mark, settled funding and exact-time settlement marks; inspect blockers, immutable versions and hashes; import attributed history |
 | Research | Single replay, parameter grid, cost stress, train/test and rolling walk-forward evaluation; independent out-of-sample results, fills, funding, liquidations and round trips |
 | Portfolio | Spot inventory and isolated perpetual positions in one account; order previews, market/limit/stop simulation, reservations, cancellation, leverage, margin and funding |
-| Risk | Transactional order, gross exposure, leverage and observed-day loss limits; a persistent halt that permits reducing exposure |
+| Risk | Asset and market gross/net exposure, concentration, isolated margin buffers and captured custom price shocks; transactional limits and a persistent halt |
 | Operations | Named users and roles, server-side sessions, audit records, feed age, durable job checkpoints, Prometheus metrics, verified backups and maintenance-mode recovery |
 
 The research engine makes time, costs and accounting visible. Signals use confirmed closes; historical fills occur at the next open. Walk-forward candidates are selected on training data only. Test folds start with independent accounts; the UI does not invent a continuous equity curve from overlapping experiments.
@@ -45,9 +46,9 @@ Open [localhost:5173](http://localhost:5173) and create your administrator. Pass
 
 For an offline walkthrough, choose **Example**:
 
-1. Open **Data library**, choose a market and date range, and download trade candles. For perpetuals, also download mark and funding datasets for the same range.
-2. Open a dataset in **Research**. Set a hypothesis, costs and evaluation mode; run it, inspect results, export the complete evidence or replay it.
-3. Open **Execution**. Preview an order, submit it and inspect the positions, orders and ledger. Test cancellation and the risk halt.
+1. Open **Data library → Research packages**, choose a spot or perpetual market and UTC range, then **Prepare research package**. A perpetual package gathers trade, mark, realized funding and settlement marks before becoming ready.
+2. Choose **Open in research**. The complete version set and window travel together. Set a hypothesis, costs and evaluation mode; inspect results, export the captured evidence or replay it with automatic result-hash verification.
+3. Open **Execution**. Preview an order, inspect positions and the ledger, then open **Exposure & scenarios** to test parallel, asset or market shocks. **Overview** brings the current book and work in progress together.
 4. Open **Operations**. Create and verify a backup. A restore replaces workspace state, revokes sessions, cancels pending orders and halts strategies.
 
 Example prices use a fixed synthetic clock and separate capital. OKX failures remain visible; the application never substitutes synthetic prices automatically.
@@ -95,7 +96,9 @@ flowchart LR
 
 | Contract | Read more |
 |---|---|
+| One-action research packages, funding marks and immutable handoff | [Data packages](docs/data-packages.md) |
 | Data identity, pagination, retention and imports | [Data operations](docs/data-operations.md) |
+| Exposure, isolated margin and captured stress scenarios | [Portfolio risk](docs/portfolio-risk.md) |
 | Signals, costs, funding, liquidation and OOS selection | [Professional research](docs/pro-research.md) |
 | Process boundaries, persistence and precision | [Architecture](docs/architecture.md) |
 | Authentication, roles, recovery and deployment | [Operations](docs/operations.md) |
@@ -103,9 +106,15 @@ flowchart LR
 | Public APIs and data rights | [OKX integration](docs/okx-integration.md) |
 
 <details>
-<summary>Research workspace</summary>
+<summary>Research and execution workspaces</summary>
 
 ![Research on a synthetic dataset; illustrative, not investment performance](docs/assets/research.png)
+
+![Versioned research packages with synthetic inputs](docs/assets/data-packages.png)
+
+![Actual local simulated spot and perpetual positions](docs/assets/workspace.png)
+
+![Captured custom price shocks on the synthetic book](docs/assets/portfolio-risk.png)
 
 </details>
 

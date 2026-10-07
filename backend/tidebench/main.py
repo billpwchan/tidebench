@@ -15,10 +15,12 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .config import Settings
+from .data_packages import DataPackageError
 from .engine import EngineError
 from .market import MarketError, MarketService
 from .paper import DeskError, PaperDesk, order_payload
 from .platform import AccessService, PlatformError
+from .portfolio_analytics import PortfolioAnalyticsError
 from .pro_api import professional_router
 from .pro_service import ProfessionalRuntime
 from .schemas import (
@@ -38,7 +40,15 @@ from .worker import Supervisor, dataset_hash
 
 def create_app(settings: Settings | None = None, market: MarketService | None = None):
     settings = settings or Settings()
-    store = Store(settings.database)
+    store = Store(settings.database, acquire_lock=True)
+    try:
+        return _build_app(settings, market, store)
+    except BaseException:
+        store.release_process_lock()
+        raise
+
+
+def _build_app(settings, market, store):
     market = market or MarketService(region=settings.region)
     desk = PaperDesk(store)
     supervisor = Supervisor(store, market, desk, settings)
@@ -55,6 +65,11 @@ def create_app(settings: Settings | None = None, market: MarketService | None = 
             (now_ms(),),
         )
         conn.execute("UPDATE schema_version SET version=2")
+        conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations VALUES(3,?,'Immutable research packages, materialized run summaries and verified result identities')",
+            (now_ms(),),
+        )
+        conn.execute("UPDATE schema_version SET version=3")
 
     @asynccontextmanager
     async def lifespan(app):
@@ -196,7 +211,9 @@ def create_app(settings: Settings | None = None, market: MarketService | None = 
                 ):
                     allowed = {"admin"}
                 elif unsafe:
-                    if "/risk" in path or path.endswith("/halt"):
+                    if path == "/api/v1/pro/execution/analytics":
+                        allowed = {"admin", "trader", "researcher", "viewer", "risk_operator"}
+                    elif "/risk" in path or path.endswith("/halt"):
                         allowed = {"admin", "trader", "risk_operator"}
                     elif "/execution/" in path or "/paper/" in path:
                         allowed = {"admin", "trader"}
@@ -240,6 +257,14 @@ def create_app(settings: Settings | None = None, market: MarketService | None = 
     @app.exception_handler(PlatformError)
     async def platform_error(request, exc):
         return error(request, exc.code, exc.message, exc.status)
+
+    @app.exception_handler(DataPackageError)
+    async def data_package_error(request, exc):
+        return error(request, exc.code, exc.message, exc.status)
+
+    @app.exception_handler(PortfolioAnalyticsError)
+    async def portfolio_analytics_error(request, exc):
+        return error(request, "invalid_portfolio_analysis", str(exc), 422)
 
     @app.exception_handler(DeskError)
     async def desk_error(request, exc):
@@ -350,6 +375,9 @@ def create_app(settings: Settings | None = None, market: MarketService | None = 
                 "native-asset-journal",
                 "session-rbac",
                 "verified-recovery",
+                "immutable-research-packages",
+                "captured-portfolio-stress",
+                "result-hash-verification",
             ],
         }
 
@@ -575,6 +603,3 @@ def create_app(settings: Settings | None = None, market: MarketService | None = 
             return FileResponse(frontend / "index.html")
 
     return app
-
-
-app = create_app()

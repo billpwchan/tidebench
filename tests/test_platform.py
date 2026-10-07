@@ -378,6 +378,15 @@ def test_metrics_histogram_is_measured_and_labels_are_escaped():
     assert 'route="/bad\\"label"' in output and 'le="+Inf"} 1' in output
 
 
+def test_metrics_bound_unknown_method_cardinality():
+    metrics = RuntimeMetrics()
+    for index in range(1000):
+        metrics.record(f"ARBITRARY{index}", "unmatched", 405, 0.001)
+    assert len(metrics.requests) == 1
+    assert metrics.snapshot()["requests"] == 1000
+    assert 'method="OTHER"' in metrics.prometheus()
+
+
 def test_change_password_cannot_bypass_credential_verification_throttle(access, monkeypatch):
     service, admin = access
     monkeypatch.setattr(platform, "verify_password", lambda *args: False)
@@ -433,9 +442,41 @@ def test_manifest_schema_must_match_database(workspace):
 def test_unknown_database_schema_cannot_be_backed_up(workspace):
     store, settings = workspace
     with store.write() as conn:
-        conn.execute("UPDATE schema_version SET version=3")
+        conn.execute("UPDATE schema_version SET version=999")
     backups = BackupService(store, settings)
     with pytest.raises(PlatformError) as unsupported:
         backups.create()
     assert unsupported.value.code == "backup_schema"
     assert list(backups.directory.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    "table", ["pro_ledger", "pro_funding", "pro_strategy_intents", "catalog_settlement_marks"]
+)
+@pytest.mark.parametrize("version", [2, 3])
+def test_backup_rejects_missing_financial_history_even_with_valid_checksum(access, table, version):
+    from tidebench.pro_service import ProfessionalRuntime
+
+    service, _ = access
+    store, settings = service.store, service.settings
+    ProfessionalRuntime(store, SimpleNamespace(region="global"), settings)
+    with store.write() as conn:
+        conn.execute(
+            "CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY,description TEXT NOT NULL,applied_at INTEGER NOT NULL)"
+        )
+        conn.execute("UPDATE schema_version SET version=?", (version,))
+    backups = BackupService(store, settings)
+    manifest = backups.create()
+    path = backups.directory / (manifest["id"] + ".sqlite3")
+    metadata = backups.directory / (manifest["id"] + ".json")
+    with sqlite3.connect(path) as conn:
+        conn.execute(f'DROP TABLE "{table}"')
+    manifest.update(sha256=backups._digest(path), size_bytes=path.stat().st_size)
+    metadata.write_text(json.dumps(manifest))
+    with pytest.raises(PlatformError) as error:
+        backups.verify(manifest["id"])
+    assert error.value.code == "backup_schema"
+    with pytest.raises(PlatformError) as error:
+        backups.restore(manifest["id"])
+    assert error.value.code == "backup_schema"
+    assert store.path.exists()
