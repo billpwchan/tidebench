@@ -59,6 +59,8 @@ make dev
 
 Example 使用可暂停、加速和向前步进的合成行情时钟与独立账户。OKX 连接失败会明确显示，不会自动换成假数据。
 
+![冻结最终评估如实拒绝未达到预定现金收益标准的组合，使用合成数据](docs/assets/portfolio-holdout-desktop.png)
+
 构建后的统一服务：
 
 ```bash

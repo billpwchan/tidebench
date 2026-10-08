@@ -258,6 +258,9 @@ export default function PortfolioResearch({
   );
   const plan = run.data?.result;
   const evaluationEvidence = plan?.evaluation as RecordData | undefined;
+  const sealedAssessment = String(
+    (evaluationEvidence?.rejection as RecordData)?.status ?? 'unavailable',
+  );
   const trainingMetrics = evaluationEvidence?.train_metrics as RecordData | undefined;
   return (
     <>
@@ -788,12 +791,22 @@ export default function PortfolioResearch({
                 )}
                 {evaluationEvidence?.mode === 'sealed_holdout' && (
                   <section className="sealed-evaluation">
-                    <span className="eyebrow">{t('One-use portfolio holdout')}</span>
+                    <div className="section-heading">
+                      <span className="eyebrow">{t('One-use portfolio holdout')}</span>
+                      <Status
+                        type={
+                          sealedAssessment === 'passed'
+                            ? 'good'
+                            : sealedAssessment === 'rejected'
+                              ? 'bad'
+                              : 'warning'
+                        }
+                      >
+                        {t(sealedAssessment)}
+                      </Status>
+                    </div>
                     <RecordGrid
                       value={{
-                        Assessment: t(
-                          String((evaluationEvidence.rejection as RecordData)?.status ?? '—'),
-                        ),
                         Benchmark: t('Cash · 0%'),
                         'Final window start': date(Number(evaluationEvidence.test_start), true),
                         'Final window end': date(Number(evaluationEvidence.test_end), true),
@@ -841,7 +854,11 @@ export default function PortfolioResearch({
                         {
                           key: 'passed',
                           label: 'Assessment',
-                          render: (r) => <Status>{t(r.passed ? 'passed' : 'rejected')}</Status>,
+                          render: (r) => (
+                            <Status type={r.passed === true ? 'good' : 'bad'}>
+                              {t(r.passed === true ? 'passed' : 'rejected')}
+                            </Status>
+                          ),
                         },
                       ]}
                     />

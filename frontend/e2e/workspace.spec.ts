@@ -886,8 +886,8 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
   await page
     .getByLabel('UTC final end', { exact: true })
     .fill(new Date(end).toISOString().slice(0, 16));
-  await page.getByLabel('Minimum return versus cash %', { exact: true }).fill('-100');
-  await page.getByLabel('Maximum accepted drawdown %', { exact: true }).fill('100');
+  await page.getByLabel('Minimum return versus cash %', { exact: true }).fill('0');
+  await page.getByLabel('Maximum accepted drawdown %', { exact: true }).fill('10');
   await page
     .getByLabel('Rejection plan', { exact: true })
     .fill(
@@ -922,6 +922,9 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
     )
     .toBe('completed');
   await expect(page.getByText('One-use portfolio holdout', { exact: true })).toBeVisible();
+  await expect(
+    page.locator('.sealed-evaluation .status-bad').getByText('rejected', { exact: true }).first(),
+  ).toBeVisible();
   if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1') {
     await mkdir('../docs/assets', { recursive: true });
     await page.screenshot({
@@ -953,6 +956,19 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
   expect(evidence.recorded_attempts).toBe(2);
   expect(evidence.primary_evaluations).toBe(1);
   expect(evidence.replay_attempts).toBe(1);
+  const releasePreview = page.waitForResponse(
+    (r) => r.url().endsWith('/portfolio-releases/preview') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Review portfolio release', exact: true }).click();
+  expect((await (await releasePreview).json()).required_acknowledgements).toContain(
+    'holdout_rejected',
+  );
+  const rejectionAcknowledgement = page.getByRole('checkbox', {
+    name: 'This final holdout failed its pre-registered criteria. Paper deployment does not turn it into positive evidence.',
+    exact: true,
+  });
+  await expect(rejectionAcknowledgement).toBeVisible();
+  await expect(rejectionAcknowledgement).not.toBeChecked();
   await expect(page.locator('.error-box')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
   expect(

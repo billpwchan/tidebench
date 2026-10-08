@@ -61,6 +61,8 @@ For an offline walkthrough, choose **Example**:
 
 Example time can be paused, accelerated or stepped forward, with separate capital. OKX failures remain visible; the application never substitutes synthetic prices automatically.
 
+![A captured final evaluation rejected against its pre-declared cash-return criterion; synthetic data](docs/assets/portfolio-holdout-desktop.png)
+
 ### Built application
 
 ```bash
