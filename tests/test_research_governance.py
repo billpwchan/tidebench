@@ -7,6 +7,7 @@ import pytest
 from tidebench.config import Settings
 from tidebench.market import MarketService
 from tidebench.platform import PlatformError
+from tidebench.portfolio_research import PortfolioInput
 from tidebench.pro_api import ResearchInput
 from tidebench.pro_service import ProfessionalRuntime
 from tidebench.store import Store, encode
@@ -141,3 +142,102 @@ async def test_seen_interval_cannot_be_relabelled_as_independent_holdout(setup):
         seal(runtime, version, dataset)
     trials = runtime.governance.trials(version["project_id"])
     assert trials["candidate_configurations"] == 2
+
+
+async def different_interval_dataset(runtime, bar, *, start=END - 200 * HOUR, end=END):
+    job = runtime.catalog.create_job("BTC-USDT", "trade", bar, start, end, "example")
+    completed = await runtime.catalog.run_job(job["id"])
+    assert completed["status"] == "completed", completed
+    return completed["dataset_id"]
+
+
+async def five_minute_portfolio(runtime, *, start=END - 120 * HOUR, end=END):
+    packages = []
+    for symbol in ("BTC-USDT", "ETH-USDT"):
+        package = runtime.packages.create_package(symbol, "5m", start, end, "example")
+        package = await runtime.packages.run_package(package["id"])
+        assert package["ready"], package
+        packages.append(package)
+    return encode(
+        PortfolioInput.model_validate(
+            {
+                "name": "Cross-interval portfolio",
+                "hypothesis": "Market-time protection must also cover a differently aggregated portfolio leg.",
+                "legs": [{"package_id": package["id"], "weight": ".5"} for package in packages],
+            }
+        ).model_dump()
+    )
+
+
+async def test_hourly_seal_blocks_five_minute_single_access_without_version_binding(setup):
+    runtime, version, dataset = setup
+    holdout = seal(runtime, version, dataset, end_ts=END - 50 * HOUR)
+    finer = await different_interval_dataset(runtime, "5m")
+    # Even a selected interval after the seal reads it through 2000 prior 5m bars.
+    config = encode(ResearchInput(dataset_id=finer, start_ts=END - 40 * HOUR, end_ts=END).model_dump())
+    with pytest.raises(PlatformError) as error:
+        runtime.create_run(config)
+    assert error.value.code == "holdout_reserved"
+    assert not runtime.runs()
+    assert runtime.governance.list()[0]["id"] == holdout["id"]
+    assert runtime.governance.list()[0]["status"] == "sealed"
+
+
+async def test_hourly_seal_blocks_five_minute_portfolio_leg(setup):
+    runtime, version, dataset = setup
+    seal(runtime, version, dataset)
+    config = await five_minute_portfolio(runtime)
+    with pytest.raises(PlatformError) as error:
+        runtime.portfolios.create(config, "researcher")
+    assert error.value.code == "holdout_reserved"
+    assert not runtime.portfolios.list("example")
+    assert runtime.governance.list()[0]["status"] == "sealed"
+
+
+@pytest.mark.parametrize("warmup_only", [False, True])
+async def test_prior_five_minute_access_prevents_hourly_relabelling(setup, warmup_only):
+    runtime, version, dataset = setup
+    finer = await different_interval_dataset(runtime, "5m")
+    start = END - (40 if warmup_only else 80) * HOUR
+    runtime.create_run(encode(ResearchInput(dataset_id=finer, start_ts=start, end_ts=END).model_dump()))
+    with pytest.raises(PlatformError) as error:
+        seal(runtime, version, dataset, end_ts=END - 50 * HOUR)
+    assert error.value.code == "holdout_exposed"
+    assert not runtime.governance.list()
+
+
+async def test_prior_portfolio_access_prevents_hourly_relabelling(setup):
+    runtime, version, dataset = setup
+    runtime.portfolios.create(await five_minute_portfolio(runtime), "researcher")
+    with pytest.raises(PlatformError) as error:
+        seal(runtime, version, dataset)
+    assert error.value.code == "holdout_exposed"
+    assert not runtime.governance.list()
+
+
+async def test_prior_warmup_uses_its_own_bar_and_does_not_overreserve(setup):
+    runtime, version, dataset = setup
+    finer = await different_interval_dataset(runtime, "5m", start=START)
+    runtime.create_run(
+        encode(ResearchInput(dataset_id=finer, start_ts=END - 10 * HOUR, end_ts=END).model_dump())
+    )
+    # The actual 2000 * 5m access starts about 177h before END. Using the new
+    # hourly seal's interval would incorrectly claim 2000h of prior exposure.
+    holdout = seal(runtime, version, dataset, start_ts=END - 500 * HOUR, end_ts=END - 450 * HOUR)
+    assert holdout["status"] == "sealed"
+
+
+async def test_existing_hourly_seal_cannot_be_reserved_again_at_five_minutes(setup):
+    runtime, version, dataset = setup
+    seal(runtime, version, dataset)
+    finer = await different_interval_dataset(runtime, "5m")
+    finer_version = runtime.registry.create_project(
+        "Finer final interval",
+        "Changing aggregation cannot create an independent final test on the same market and time.",
+        {"bar": "5m", "strategy": {"kind": "sma_cross", "fast": 5, "slow": 20}},
+        "researcher",
+    )["version"]
+    with pytest.raises(PlatformError) as error:
+        seal(runtime, finer_version, finer)
+    assert error.value.code == "holdout_overlap"
+    assert len(runtime.governance.list()) == 1

@@ -76,7 +76,7 @@ Historical replay and forward simulation have different fill observations. Neith
 
 `GET /pro/ops` returns measured health, feed ages, jobs, checkpoints, storage, backups, execution summary and request metrics. `GET /pro/ops/audit` returns audit events. Admin-only `GET /pro/ops/metrics` exposes Prometheus counters/histogram.
 
-Admin `POST /pro/ops/backups/create`, `GET /pro/ops/backups/{id}/verify` and `POST /pro/ops/restore {backup_id,confirmation:'RESTORE'}` implement verified recovery. Recovery rejects concurrent attempts and enters maintenance. It revokes all sessions, cancels pending orders, stops strategies and halts execution. See [recovery procedure](operations.md#backups-and-recovery).
+Admin `POST /pro/ops/backups/create`, `GET /pro/ops/backups/{id}/verify` and `POST /pro/ops/restore {backup_id,confirmation:'RESTORE'}` implement verified recovery. Recovery rejects concurrent attempts and enters maintenance. It revokes all sessions, cancels pending orders/commands, stops strategies and managed groups, halts execution and pauses synthetic time. Schema-5 target/command/contribution evidence and actual inventory remain preserved. See [recovery procedure](operations.md#backups-and-recovery).
 
 ## Strategy, governance and forward evidence (v0.4)
 
@@ -98,6 +98,34 @@ Admin `POST /pro/ops/backups/create`, `GET /pro/ops/backups/{id}/verify` and `PO
 | POST | `/pro/ops/incidents/{id}/acknowledge` | Admin `{reason}`; failing condition stays active |
 
 Research additionally accepts `strategy_version_id` and `holdout_id`. Detail `?variant=experiment-2` retains all candidate metrics but selected financial arrays; full export retains exact shared inputs. Programs/exits/sizing are specified in [strategy workflows](strategy-workflows.md). Portfolio `evaluation:'train_test'`, `train_pct` and `embargo_bars` fix construction and reset accounts; top-level financials cover test only, without test-score optimization.
+
+## Managed portfolios and contributions (v0.5)
+
+Portfolio definitions have `schema_version:1`, `bar`, `mode`, 2–10 ordered `legs`, `capital_pct`, `rebalance_bars`, `lookback`, `top_k`, `carry_threshold`, `max_residual_pct` and `failure_policy:'reduce_group'`. A leg contains `inst_id`, decimal `weight`/`leverage`, `direction` and typed `strategy`. Spot must be nonnegative, long-only and unlevered. Carry requires an ordered matching spot-long/swap-short pair with equal absolute weights. See [sizing and failure semantics](managed-portfolios.md).
+
+| Method | Path | Contract |
+|---|---|---|
+| GET / POST | `/pro/portfolio-strategies` | `{items}` or create `{name,hypothesis,definition}` with initial immutable version |
+| GET | `/pro/portfolio-strategies/{id}` | Project and verified immutable versions |
+| POST | `/pro/portfolio-strategies/{id}/versions` | `{hypothesis,definition,parent_id?}`; same content deduplicates, changed content creates revision |
+| GET | `/pro/portfolio-versions/{id}` | Hash-verified definition, hypothesis and implementation identity |
+| POST | `/pro/execution/portfolio-releases/preview` | `{run_id}`; exact bound version/result, current policy, cost/risk differences, acknowledgements, blockers and `preview_hash` |
+| GET / POST | `/pro/execution/portfolio-releases` | Source-filtered `{items}` or approval `{run_id,preview_hash,acknowledgements,review}` |
+| POST | `/pro/execution/portfolio-releases/{id}/activate` | Whole-group transaction revalidation; repeated deployed approval returns existing group identity |
+| GET | `/pro/execution/portfolios?source=...` | `{items}` of all active/compensating groups plus the latest 200 non-active groups, with hash-verified manifest |
+| GET | `/pro/execution/portfolios/{id}` | Group status, definition/leg ownership and latest decision/error state |
+| GET | `/pro/execution/portfolios/{id}/batches?limit=30&before=...` | `{items}` with frozen target/addition plans, residuals and actual command evidence; descending decision-bar keyset, maximum 100 |
+| POST | `/pro/execution/portfolios/{id}/stop` | Stops whole group and cancels unfinished commands; retains actual filled inventory |
+| GET | `/pro/execution/contributions?source=...` | One-snapshot account/owner monetary P&L, virtual quantities/costs and explicit reconciliation |
+| GET | `/pro/execution/contributions/events?source=...&owner=...&limit=100&before=...` | Hash-verified events with linked actual orders where present; descending integer event ID, maximum 100 |
+
+Portfolio research accepts `portfolio_version_id` and `capital_pct`. Bound markets/order, bar, hypothesis, construction and leg policies must match the immutable version; mismatches are rejected. A completed unbound or old-implementation study cannot be promoted. Activation requires flat, unowned legs without pending orders. Review text is trimmed and must contain 12–2,000 characters. Required acknowledgements include `sequential_leg_risk`, plus `execution_cost_difference`, `execution_risk_difference` or `no_oos_evidence` when displayed by preview.
+
+Definition/research mutations allow admin, trader and researcher. Group approval/activation/stop allow admin and trader. Reads allow all authenticated roles. Cookie mutations require CSRF, including previews. Stopping a deployment that belongs to a group stops that whole group. There is no group inventory-adoption, status-edit or automatic reactivation endpoint.
+
+Commands are internal durable identities; clients cannot overwrite frozen quantities. `compensating` means increases are canceled and reduce-only recovery may still be blocked with actual inventory. A compensated failed batch does not become a successful strategy result. Contribution quarantine returns an explicit conflict rather than false owner totals; valid economic reductions/funding can continue while new risk stays blocked. Clearing normal risk halt does not clear quarantine.
+
+Current one-use holdout/trial endpoints remain single-strategy governance; they are not portfolio-specific sealed evaluation. Group contribution is actual monetary accounting under shared capital, not an independent return series.
 
 ## Compatibility
 

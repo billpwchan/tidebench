@@ -508,7 +508,7 @@ class BackupService:
                 or manifest["size_bytes"] <= 0
                 or type(manifest.get("created_at")) is not int
                 or type(manifest.get("database_schema")) is not int
-                or manifest["database_schema"] not in (1, 2, 3, 4)
+                or manifest["database_schema"] not in (1, 2, 3, 4, 5)
             ):
                 raise ValueError
         except (OSError, ValueError, TypeError, UnicodeError):
@@ -530,7 +530,7 @@ class BackupService:
             versions = [row[0] for row in conn.execute("SELECT version FROM schema_version")]
         except sqlite3.Error:
             raise PlatformError("backup_schema", "Backup database schema is missing.", 409) from None
-        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4):
+        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4, 5):
             raise PlatformError("backup_schema", "Backup database schema is unsupported.", 409)
         return versions[0]
 
@@ -680,6 +680,72 @@ class BackupService:
                     "backup_schema", "Schema version 4 is missing strategy/release tables.", 409
                 )
             required_columns.update(lineage)
+        if version >= 5:
+            managed = {
+                "portfolio_projects": {"id", "name", "created_at"},
+                "portfolio_versions": {
+                    "id",
+                    "project_id",
+                    "revision",
+                    "definition",
+                    "implementation",
+                    "content_hash",
+                },
+                "portfolio_releases": {
+                    "id",
+                    "source",
+                    "run_id",
+                    "version_id",
+                    "approval",
+                    "approval_hash",
+                    "status",
+                    "group_id",
+                },
+                "managed_portfolios": {
+                    "id",
+                    "source",
+                    "version_id",
+                    "release_id",
+                    "manifest",
+                    "manifest_hash",
+                    "status",
+                    "last_bar",
+                    "anchor_bar",
+                },
+                "portfolio_batches": {
+                    "id",
+                    "group_id",
+                    "bar",
+                    "body",
+                    "content_hash",
+                    "status",
+                    "additions",
+                    "additions_hash",
+                    "residuals",
+                },
+                "portfolio_commands": {
+                    "id",
+                    "batch_id",
+                    "phase",
+                    "sequence",
+                    "key",
+                    "payload",
+                    "payload_hash",
+                    "status",
+                    "order_id",
+                },
+                "contribution_status": {"source", "reason", "first_seen", "last_seen"},
+                "contribution_accounts": {"source", "baseline", "baseline_hash", "initialized_at"},
+                "contribution_sleeves": {"source", "owner", "inst_id", "body", "content_hash"},
+                "contribution_events": {"id", "source", "reference", "body", "content_hash"},
+            }
+            if not set(managed).issubset(tables):
+                raise PlatformError(
+                    "backup_schema",
+                    "Schema version 5 is missing managed portfolio or contribution evidence.",
+                    409,
+                )
+            required_columns.update(managed)
         for table, required in required_columns.items():
             if table in tables and not required.issubset(
                 {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
@@ -833,6 +899,18 @@ class BackupService:
                         prepared.execute("UPDATE deployments SET status='stopped'")
                         if "pro_deployments" in tables:
                             prepared.execute("UPDATE pro_deployments SET status='stopped'")
+                        if "managed_portfolios" in tables:
+                            prepared.execute(
+                                "UPDATE managed_portfolios SET status='stopped',updated_at=?", (now_ms(),)
+                            )
+                            prepared.execute(
+                                "UPDATE portfolio_batches SET status='canceled',error='Workspace restored; portfolio stopped and inventory retained',updated_at=? WHERE status IN ('reducing','adding','compensating')",
+                                (now_ms(),),
+                            )
+                            prepared.execute(
+                                "UPDATE portfolio_commands SET status='canceled',updated_at=? WHERE status='pending'",
+                                (now_ms(),),
+                            )
                         if "simulation_clock" in tables:
                             prepared.execute(
                                 "UPDATE simulation_clock SET speed=0,wall_ts=?,revision=revision+1 WHERE id=1",

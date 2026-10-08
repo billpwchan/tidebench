@@ -1,5 +1,20 @@
 # Verification record
 
+## v0.5.0 · 2026-10-08
+
+- **647 backend/core/property/API tests passed** on macOS arm64 / Python 3.13.15. Ruff lint/format and the frozen offline Python lock check passed. The existing Starlette TestClient/HTTPX deprecation warning remains visible.
+- **14 desktop/mobile Chromium workflows passed** on the final build. They include the editable portfolio hypothesis → immutable version → chronological study → whole-group review/activation → completed targets/actual inventory → owner event/CSV → group stop flow, alongside the prior single-strategy/research/data/risk workflows. Keyboard skip navigation and viewport overflow are checked. Mobile emulation does not establish physical-device/Safari support.
+- TypeScript/Vite production build and Prettier passed; main application bundle is about 458 kB before transfer compression. The research/governance/registry pages remain deferred bundles. Desktop and mobile managed-group/contribution screenshots were inspected after the final interaction fixes.
+- The [standalone managed audit](audit/v0.5.0-managed-observations.json) uses real SQLite/economic services in a disposable synthetic workspace: hard child exit after the first committed fill, four unique fills after recovery, unchanged frozen targets/additions, blocked compensation followed by flattening, and actual schema-5 database replacement with stopped groups, preserved owner evidence, halted risk and paused clock.
+- Additional regressions cover 201 newer stopped groups without losing an older active/compensating/failed group; one corrupt group alongside a healthy executing group; hash/JSON/identity faults; auxiliary-attribution corruption during protective reduction/funding/liquidation; repeated mixed-owner exact-decimal closes; asymmetric carry loss budgets; complete-account valuation severity; cross-bar holdout access; and bounded scientific-notation input before persistence.
+- The existing offline red-team script also completed against this implementation. Its older archived observation file remains dated evidence; the [0.5 assessment](audit/red-team-0.5.0.zh-CN.md) describes the current contracts and remaining work. CI now runs and uploads the new managed recovery/attribution script as a separate artifact.
+
+The [0.5 loopback workload](acceptance-load-v0.5.0.json) completed 240 HTTP 200 reads at concurrency 12 with four spot/perpetual positions and a concurrent 24-case × 1,000-bar grid: 3.896 seconds, 61.61 requests/second, median 167.79 ms, P95 343.40 ms, maximum 620.22 ms. All 24 cases completed. This was a shared development host, not a controlled release comparison, long-running capacity test or availability guarantee.
+
+Before upgrading the existing local workspace, an online SQLite snapshot of application schema 4 passed integrity and foreign-key checks and was retained privately with mode 0600. No runtime database, backup or exchange credential is published.
+
+These observations establish specific local contracts. They do not establish portfolio one-use final-test governance, historical-universe completeness, order-book capacity, unlimited retained-owner scale or multi-week operations. Use the published commit's actual [CI/container result](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml) as independent Linux evidence.
+
 ## v0.4.0 · 2026-10-08
 
 - 532 backend/core/property/API tests passed on macOS arm64 / Python 3.13.15; Ruff and frozen offline lock checks passed.

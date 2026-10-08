@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, DecimalException, localcontext
 from functools import wraps
 
+from .contributions import ContributionBook
 from .derivatives import LinearContract, MarginTier, contract_base_quantity, select_margin_tier
 from .engine import ACCOUNTING_CONTEXT, EngineError, _decimal, _floor_lot, _round_to_step
 from .forward_performance import ForwardPerformance
@@ -109,7 +110,7 @@ def tier_for(metadata, quantity, tiers):
 
 
 class SimulationBook:
-    def __init__(self, store: Store, *, clock=None, order_id_factory=None):
+    def __init__(self, store: Store, *, clock=None, order_id_factory=None, capture_contributions=True):
         self.now = clock or now_ms
         self.order_id = order_id_factory or new_id
         self.store = store
@@ -147,6 +148,12 @@ class SimulationBook:
                     "INSERT OR IGNORE INTO pro_risk VALUES(?,?,0,?)",
                     (source, dumps(DEFAULT_RISK), self.now()),
                 )
+
+        self.contributions = ContributionBook(store) if capture_contributions else None
+
+    def contribution_report(self, source, snapshots):
+        with self.store.read() as conn:
+            return self.contributions.report(source, self.account(source, snapshots, conn), conn)
 
     @_accounted
     def post(self, conn, source, tx_id, memo, reference, entries):
@@ -324,7 +331,11 @@ class SimulationBook:
                     try:
                         _, _, mark = self.fresh(snapshot)
                     except PlatformError:
-                        status = "stale"
+                        # Aggregate severity must be monotonic across markets:
+                        # an incomplete book cannot regain a partial net value
+                        # just because a later quote is merely stale.
+                        if status != "unavailable":
+                            status = "stale"
                         try:
                             raw_mark = (
                                 snapshot.get("mark")
@@ -677,6 +688,47 @@ class SimulationBook:
                             "strategy_stopped", "The strategy no longer owns this market.", 409
                         )
                     config = json.loads(deployment["config"])
+                    if config.get("group_id"):
+                        group = conn.execute(
+                            "SELECT * FROM managed_portfolios WHERE id=?", (config["group_id"],)
+                        ).fetchone()
+                        if (
+                            not group
+                            or group["status"] not in {"running", "compensating"}
+                            or group["status"] == "compensating"
+                            and not order.get("reduce_only")
+                        ):
+                            raise PlatformError(
+                                "portfolio_stopped",
+                                "The portfolio cannot add risk in its current state.",
+                                409,
+                            )
+                        try:
+                            manifest = json.loads(group["manifest"])
+                            valid_group = (
+                                isinstance(manifest, dict)
+                                and hashlib.sha256(dumps(manifest).encode()).hexdigest()
+                                == group["manifest_hash"]
+                                and all(
+                                    manifest.get(field) == group[field]
+                                    for field in ("id", "source", "version_id", "release_id")
+                                )
+                                and isinstance(manifest.get("legs"), list)
+                                and all(isinstance(leg, dict) for leg in manifest["legs"])
+                                and any(
+                                    leg.get("deployment_id") == deployment_id
+                                    and leg.get("inst_id") == order["inst_id"]
+                                    for leg in manifest["legs"]
+                                )
+                            )
+                        except (TypeError, ValueError, KeyError, RecursionError):
+                            valid_group = False
+                        if not valid_group:
+                            raise PlatformError(
+                                "portfolio_ownership_integrity",
+                                "Portfolio market ownership failed its identity check.",
+                                409,
+                            )
                     expected_policy = config.get("risk_policy_hash")
                     if (
                         expected_policy
@@ -734,6 +786,11 @@ class SimulationBook:
                     "created_at": previous["created_at"] if previous else self.now(),
                     "updated_at": self.now(),
                     "actor": actor,
+                    "submitted_by": json.loads(previous["body"]).get(
+                        "submitted_by", json.loads(previous["body"]).get("actor", "legacy")
+                    )
+                    if previous
+                    else actor,
                     "instrument": meta,
                     "quote_ts": values["snapshot"]["ts"],
                     "risk_snapshot": values["risk"],
@@ -773,6 +830,14 @@ class SimulationBook:
                             )
                     source = order["source"]
                     account = conn.execute("SELECT * FROM pro_accounts WHERE source=?", (source,)).fetchone()
+                    contribution_before, contribution_error = None, None
+                    if self.contributions:
+                        try:
+                            contribution_before = self.contributions.before(conn, source)
+                        except PlatformError as exc:
+                            if not values["reducing"] and not liquidation:
+                                raise
+                            contribution_error = exc.message
                     realized, debt = number(account["realized"]), number(account["debt"])
                     cash_before = cash
                     old_margin, old_basis = (
@@ -912,6 +977,39 @@ class SimulationBook:
                             "insurance_debt": str(debt),
                         }
                     )
+                    if self.contributions:
+                        if contribution_error is None:
+                            conn.execute("SAVEPOINT contribution_fill")
+                            try:
+                                self.contributions.fill(
+                                    conn, result, contribution_before, row, result["submitted_by"]
+                                )
+                            except PlatformError as exc:
+                                conn.execute("ROLLBACK TO contribution_fill")
+                                if not values["reducing"] and not liquidation:
+                                    raise
+                                contribution_error = exc.message
+                            finally:
+                                conn.execute("RELEASE contribution_fill")
+                        if contribution_error is not None:
+                            self.contributions.quarantine(
+                                conn,
+                                source,
+                                result["id"],
+                                result["inst_id"],
+                                "quarantined_fill",
+                                {
+                                    "order": result,
+                                    "position_before": dict(row) if row else None,
+                                    "account_before": dict(account),
+                                    "account_after": dict(
+                                        conn.execute(
+                                            "SELECT * FROM pro_accounts WHERE source=?", (source,)
+                                        ).fetchone()
+                                    ),
+                                },
+                                contribution_error,
+                            )
                 if previous:
                     conn.execute(
                         "UPDATE pro_orders SET status=?,body=?,reservation=?,updated_at=? WHERE id=?",
@@ -1024,6 +1122,12 @@ class SimulationBook:
             if meta["inst_type"] != "SWAP":
                 return []
             account = conn.execute("SELECT * FROM pro_accounts WHERE source=?", (source,)).fetchone()
+            contribution_error = None
+            if self.contributions:
+                try:
+                    self.contributions.before(conn, source)
+                except PlatformError as exc:
+                    contribution_error = exc.message
             margin, total = number(row["margin"]), number(account["funding"])
             output, cursor = [], row["funding_cursor"]
             expected = meta.get("expected_funding_time")
@@ -1120,6 +1224,34 @@ class SimulationBook:
                 (str(margin), cursor, dumps(meta), source, symbol),
             )
             conn.execute("UPDATE pro_accounts SET funding=? WHERE source=?", (str(total), source))
+            if self.contributions and output:
+                if contribution_error is None:
+                    conn.execute("SAVEPOINT contribution_funding")
+                    try:
+                        self.contributions.funding(conn, source, symbol, output)
+                    except PlatformError as exc:
+                        conn.execute("ROLLBACK TO contribution_funding")
+                        contribution_error = exc.message
+                    finally:
+                        conn.execute("RELEASE contribution_funding")
+                if contribution_error is not None:
+                    self.contributions.quarantine(
+                        conn,
+                        source,
+                        f"funding:{symbol}:{output[0]['ts']}:{output[-1]['ts']}",
+                        symbol,
+                        "quarantined_funding",
+                        {
+                            "events": output,
+                            "account_before": dict(account),
+                            "account_after": dict(
+                                conn.execute(
+                                    "SELECT * FROM pro_accounts WHERE source=?", (source,)
+                                ).fetchone()
+                            ),
+                        },
+                        contribution_error,
+                    )
             for event in output:
                 self.store.audit(conn, source, "pro.funding", "Swap funding settled once", event)
             return output

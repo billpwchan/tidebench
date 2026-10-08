@@ -1,22 +1,25 @@
 # Red-team record
 
-The [v0.4.0 assessment](red-team-0.4.0.zh-CN.md) records the implemented strategy/research/release/forward evidence chain, fixes discovered in real workflows and remaining product gaps. The [v0.3.0 assessment](red-team-0.3.0.zh-CN.md) is retained unchanged as historical evidence.
+The [v0.5.0 assessment](red-team-0.5.0.zh-CN.md) examines managed multi-market execution, hard-interruption recovery, failed-leg compensation and contribution accounting. It records the discovered auxiliary-attribution safety and mixed-owner Decimal issues, their corrective contracts, and the remaining product work. The [v0.4.0 assessment](red-team-0.4.0.zh-CN.md) and [v0.3.0 assessment](red-team-0.3.0.zh-CN.md) remain historical evidence for those versions.
 
 ## Reproduce
 
 ```bash
+uv run python scripts/managed_portfolio_audit.py
 uv run python scripts/redteam_audit.py
 uv run pytest -q
 npm --prefix frontend run test:e2e
 uv run python scripts/acceptance_load.py
 ```
 
-The audit uses temporary databases and synthetic fault injection; venue requests are forbidden. A successful script exit is not a product acceptance verdict. Financial causality, recovery, concurrency and rendered workflows have separate tests.
+The standalone audits use temporary databases and synthetic fault injection; venue requests are forbidden. A successful script exit is not a product acceptance verdict. Financial causality, recovery, concurrency and rendered workflows have separate tests. A historical artifact retains its original version and environment rather than being relabeled as current verification.
 
-- [Original observations](v0.3.0-baseline.json)
-- [v0.3.1 corrections](post-fix-observations.json)
+- [v0.5.0 managed-portfolio observations](v0.5.0-managed-observations.json)
 - [v0.4.0 observations](v0.4.0-observations.json)
+- [v0.3.1 corrections](post-fix-observations.json)
+- [Original observations](v0.3.0-baseline.json)
 - [Verification and workload scope](../verification.md)
+- [Managed portfolio contract and operator guide](../managed-portfolios.md)
 - [Design and delivery record](../professional-platform-design.zh-CN.md)
 
-Test evidence does not establish investment edge, maximum capacity, multi-week reliability, tenant isolation or exchange matching fidelity. Managed multi-asset forward execution, strategy contribution accounting, historical listing/delisting coverage and portfolio-version governance remain distinct implementation work.
+Managed forward portfolios, immutable portfolio release identity and monetary contribution accounting are implemented. Portfolio-specific one-use holdout/trial governance, attributed historical listing/delisting and contract lifecycle events, order-book capacity models and long elapsed-time reliability evidence remain separate work. Tests do not establish investment edge, maximum production capacity, tenant isolation or exchange matching fidelity.

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0 · 2026-10-08
+
+- Immutable multi-market portfolio versions, exact research binding, whole-group cost/risk review and transactional release activation.
+- Managed spot/perpetual groups with shared-capital targets, causal exits, reduce-first execution, frozen common cash scaling, bounded child commands and residual evidence.
+- Hard-interruption recovery reconciles committed fills; rejected legs enter durable reduce-only compensation, retaining inventory and errors when compensation is blocked. Stopping any leg stops the whole group without silently flattening inventory.
+- Transactional virtual-owner contribution P&L reconciles quantities, entry costs, realized P&L, fees and funding to the economic account; legacy history remains explicitly unattributed.
+- Auxiliary attribution quarantine preserves valid protective reductions, funding and liquidation while halting new risk and retaining damaged evidence. Mixed-owner finite-precision full-close handling avoids phantom virtual inventory.
+- Four editable portfolio hypotheses with benchmark/failure criteria and chronological-test defaults; responsive managed-portfolio and contribution workflows, actual command/event drill-down, paginated history and exports.
+- Schema-5 backup validation and safe restore retain group/command/contribution evidence while stopping execution, halting risk and pausing synthetic time.
+
+See the [release note](docs/release-0.5.0.md) and [red-team assessment](docs/audit/red-team-0.5.0.zh-CN.md) for concrete evidence and remaining work.
+- Keep every active group visible and scheduled despite bounded historical lists; isolate corrupt group evidence, preserve independent safe stops, and prevent partial account net values.
+- Couple carry loss-budget sizing across both legs; guard holdout market-time across bar intervals; bound scientific-notation inputs before fixed-point expansion.
+
+
 ## 0.4.0 · 2026-10-08
 
 - Five reference signal families, a bounded declarative strategy program, causal exit policies, loss-budget sizing and editable research recipes with rejection criteria.
@@ -11,7 +26,7 @@
 - Persistent operational incidents, acknowledgement/recovery, supervisor progress, backup failure/age and low-disk conditions.
 - Desktop/mobile workflows, bilingual controls, deferred research page bundles and verified schema-4 recovery of the new evidence chain.
 
-See [verification](verification.md), [strategy workflows](strategy-workflows.md) and the [current red-team review](audit/README.md). Financial model assumptions and substantive remaining product gaps are explicit; the release does not claim investment edge, exchange matching fidelity or industry-leading maturity.
+See [verification](docs/verification.md), [strategy workflows](docs/strategy-workflows.md) and the [current red-team review](docs/audit/README.md). Financial model assumptions and substantive remaining product gaps are explicit; the release does not claim investment edge, exchange matching fidelity or industry-leading maturity.
 
 ## 0.3.1 · 2026-10-08
 

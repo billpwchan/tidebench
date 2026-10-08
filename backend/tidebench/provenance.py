@@ -15,6 +15,8 @@ def research_identity() -> dict:
     modules = {}
     for name in (
         "engine.py",
+        "schemas.py",
+        "pro_api.py",
         "derivatives.py",
         "pro_research.py",
         "pro_service.py",
@@ -24,8 +26,14 @@ def research_identity() -> dict:
         "research_process.py",
         "research_artifacts.py",
         "research_governance.py",
+        "portfolio_registry.py",
+        "portfolio_releases.py",
+        "managed_portfolios.py",
         "portfolio_research.py",
+        "portfolio_targets.py",
+        "portfolio_construction.py",
         "pro_execution.py",
+        "contributions.py",
         "strategy_program.py",
         "forward_history.py",
         "simulation_clock.py",

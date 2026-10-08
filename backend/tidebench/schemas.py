@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Source = Literal["okx", "example"]
 Bar = Literal["15m", "1H", "4H", "1Dutc"]
@@ -11,6 +11,28 @@ Money = Annotated[Decimal, Field(gt=0, le=Decimal("1000000000"), max_digits=28, 
 
 class InputModel(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False, validate_default=True)
+
+    @field_validator("*")
+    @classmethod
+    def decimal_domain(cls, value):
+        # Bound scientific-notation expansion before canonical definitions or
+        # accounting can render fixed-point strings. Nested models inherit
+        # this validation; ordinary strings are not coerced here.
+        if isinstance(value, Decimal):
+            parts = value.as_tuple()
+            significant = len(parts.digits)
+            while significant and parts.digits[significant - 1] == 0:
+                significant -= 1
+            if (
+                not value.is_finite()
+                or abs(parts.exponent) > 160
+                or significant > 50
+                or value.copy_abs() >= Decimal("1e30")
+                or value
+                and value.adjusted() < -80
+            ):
+                raise ValueError("Decimal exceeds the supported input precision or exponent domain.")
+        return value
 
 
 class StrategyInput(InputModel):

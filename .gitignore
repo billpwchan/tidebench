@@ -4,7 +4,7 @@ __pycache__/
 .pytest_cache/
 .hypothesis/
 .ruff_cache/
-node_modules/
+node_modules
 frontend/dist/
 *.tsbuildinfo
 frontend/test-results/

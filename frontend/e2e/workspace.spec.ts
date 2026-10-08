@@ -453,6 +453,199 @@ test('shared-capital portfolio study and one-use holdout governance', async ({
   ).toBeTruthy();
 });
 
+test('versioned portfolio release, managed execution and reconciled owner contribution', async ({
+  page,
+  request,
+}, testInfo) => {
+  test.setTimeout(90000);
+  const csrf = (await (await request.get('/api/v1/auth/status')).json()).csrf_token;
+  const headers = { 'X-CSRF-Token': csrf };
+  const cleanup = async () => {
+    const deployments = (
+      await (await request.get('/api/v1/pro/execution/deployments?source=example')).json()
+    ).items;
+    for (const d of deployments.filter(
+      (d: { status: string; inst_id: string }) =>
+        d.status === 'running' && ['BTC-USDT', 'ETH-USDT'].includes(d.inst_id),
+    ))
+      expect(
+        (await request.post(`/api/v1/pro/execution/deployments/${d.id}/stop`, { headers })).ok(),
+      ).toBeTruthy();
+    const account = await (
+      await request.get('/api/v1/pro/execution/account?source=example')
+    ).json();
+    for (const p of account.positions.filter((p: { inst_id: string }) =>
+      ['BTC-USDT', 'ETH-USDT'].includes(p.inst_id),
+    )) {
+      const response = await request.post('/api/v1/pro/execution/orders', {
+        headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
+        data: {
+          source: 'example',
+          inst_id: p.inst_id,
+          side: Number(p.quantity) > 0 ? 'sell' : 'buy',
+          quantity: String(Math.abs(Number(p.quantity))),
+          leverage: p.leverage,
+          reduce_only: true,
+          order_type: 'market',
+          margin_mode: 'isolated',
+        },
+      });
+      expect(response.ok(), await response.text()).toBeTruthy();
+    }
+  };
+  await cleanup();
+  const end = 1767225600000;
+  const packages = [];
+  for (const inst_id of ['BTC-USDT', 'ETH-USDT']) {
+    const response = await request.post('/api/v1/pro/catalog/packages', {
+      headers,
+      data: { source: 'example', inst_id, bar: '1H', start: end - 120 * 3600000, end },
+    });
+    expect(response.ok()).toBeTruthy();
+    const p = await response.json();
+    await expect
+      .poll(
+        async () =>
+          (await (await request.get(`/api/v1/pro/catalog/packages/${p.id}`)).json()).ready,
+      )
+      .toBeTruthy();
+    packages.push(p.id);
+  }
+  await navigate(page, 'Research');
+  await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
+  await page.getByRole('button', { name: 'New portfolio study', exact: true }).click();
+  await page.getByLabel('Portfolio starting point', { exact: true }).selectOption('basket');
+  await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(
+    'BTC / ETH reserve-aware basket',
+  );
+  const title = `Managed basket ${testInfo.project.name}`;
+  await page.getByLabel('Study name', { exact: true }).fill(title);
+  await page
+    .getByLabel('Economic hypothesis', { exact: true })
+    .fill(
+      'A small two-market sleeve shares actual cash and retains traceable failed-leg controls.',
+    );
+  await page.getByLabel('Package 1', { exact: true }).selectOption(packages[0]);
+  await page.getByLabel('Package 2', { exact: true }).selectOption(packages[1]);
+  await page.getByLabel('Capital allocation %', { exact: true }).fill('20');
+  await page.getByLabel('Evaluation', { exact: true }).selectOption('train_test');
+  const queued = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/research/portfolios') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Run portfolio research', exact: true }).click();
+  const run = await (await queued).json();
+  expect(run.config.portfolio_version_id).toBeTruthy();
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get(`/api/v1/pro/research/portfolios/${run.id}`)).json()).status,
+    )
+    .toBe('completed');
+  await page.getByRole('button', { name: 'Review portfolio release', exact: true }).click();
+  const review = page.locator('.portfolio-release-review');
+  await review
+    .getByLabel('Review note', { exact: true })
+    .fill(
+      'Reviewed shared account capital, residual limits, sequential fills and failed compensation.',
+    );
+  for (const checkbox of await review.getByRole('checkbox').all()) await checkbox.check();
+  await review.getByRole('button', { name: 'Approve portfolio release', exact: true }).click();
+  const activating = page.waitForResponse(
+    (r) => r.url().includes('/portfolio-releases/') && r.url().endsWith('/activate'),
+  );
+  await review
+    .getByRole('button', { name: 'Activate managed paper portfolio', exact: true })
+    .click();
+  const released = await (await activating).json();
+  expect(released.status).toBe('deployed');
+  await review.getByRole('button', { name: 'Open managed portfolios', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Managed portfolios', exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        const response = await (
+          await request.get(`/api/v1/pro/execution/portfolios/${released.group_id}/batches`)
+        ).json();
+        return response.items[0]?.status;
+      },
+      { timeout: 40000 },
+    )
+    .toBe('completed');
+  await expect(
+    page.getByRole('heading', { name: 'Persisted execution batches', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator('.managed-group-evidence')
+      .getByRole('cell', { name: 'BTC-USDT', exact: true })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('columnheader', { name: 'Frozen target', exact: true }),
+  ).toBeVisible();
+  const actualRow = page
+    .locator('.managed-group-evidence')
+    .getByRole('row')
+    .filter({ has: page.getByRole('cell', { name: 'BTC-USDT', exact: true }) })
+    .first();
+  await expect(actualRow.getByRole('cell').nth(3)).not.toHaveText('0');
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBeTruthy();
+  await page.screenshot({
+    path: `../docs/assets/managed-portfolios${testInfo.project.name === 'mobile' ? '-mobile' : ''}.png`,
+    fullPage: true,
+    animations: 'disabled',
+  });
+  await page.getByRole('tab', { name: 'Contribution', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Economic contribution', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText('Reconciled with account', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: title, exact: true })).toBeVisible();
+  await page.getByRole('button', { name: title, exact: true }).click();
+  await expect(
+    page.getByRole('columnheader', { name: 'Virtual quantity', exact: true }),
+  ).toBeVisible();
+  const downloading = page.waitForEvent('download');
+  await page
+    .locator('.contribution-workspace')
+    .getByRole('button', { name: 'Export CSV', exact: true })
+    .click();
+  expect((await downloading).suggestedFilename()).toContain('contributions');
+  await page.screenshot({
+    path: `../docs/assets/contributions${testInfo.project.name === 'mobile' ? '-mobile' : ''}.png`,
+    fullPage: true,
+    animations: 'disabled',
+  });
+  await page.getByRole('tab', { name: 'Managed portfolios', exact: true }).click();
+  await page.getByRole('button', { name: 'Stop whole portfolio', exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get(`/api/v1/pro/execution/portfolios/${released.group_id}`)).json())
+          .status,
+    )
+    .toBe('stopped');
+  const inventory = await (
+    await request.get('/api/v1/pro/execution/account?source=example')
+  ).json();
+  expect(
+    inventory.positions.filter((p: { inst_id: string }) =>
+      ['BTC-USDT', 'ETH-USDT'].includes(p.inst_id),
+    ).length,
+  ).toBe(2);
+  await cleanup();
+  await page.getByRole('tab', { name: 'Contribution', exact: true }).click();
+  await page.getByLabel('Interface language', { exact: true }).selectOption('zh-CN');
+  await expect(page.getByRole('heading', { name: '经济贡献', exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBeTruthy();
+});
+
 test('unified portfolio order preview, fill and persistent risk halt', async ({
   page,
   request,
@@ -517,6 +710,13 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
 });
 
 test('data download, operations, source failure and responsive layout', async ({ page }) => {
+  await page.goto('/');
+  const skip = page.getByRole('link', { name: 'Skip to content', exact: true });
+  await expect(skip).toBeAttached();
+  await page.keyboard.press('Tab');
+  await expect(skip).toBeFocused();
+  expect((await skip.boundingBox())!.y).toBeGreaterThanOrEqual(0);
+  await page.keyboard.press('Enter');
   await navigate(page, 'Data library');
   await expect(page.getByRole('heading', { name: 'Data library', exact: true })).toBeVisible();
   await navigate(page, 'Operations');

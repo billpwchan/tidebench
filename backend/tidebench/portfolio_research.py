@@ -18,6 +18,8 @@ from pydantic import Field, model_validator
 from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, EngineError, StrategyConfig
 from .platform import PlatformError
+from .portfolio_construction import apply_weight_caps, construction_weights
+from .portfolio_targets import addition_plan, reduction_quantities, target_quantities
 from .pro_execution import SimulationBook, base_size, number, tier_for
 from .pro_research import ResearchConfig, _DecisionState
 from .schemas import InputModel, Money
@@ -57,6 +59,8 @@ class PortfolioInput(InputModel):
     hypothesis: str = Field(min_length=12, max_length=4000)
     legs: list[PortfolioLeg] = Field(min_length=2, max_length=10)
     mode: Literal["fixed_weights", "independent_signals", "momentum", "funding_carry"] = "fixed_weights"
+    portfolio_version_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
+    capital_pct: Decimal = Field(default=100, gt=0, le=100)
     initial_cash: Money = D(10000)
     fee_bps: Decimal = Field(default=10, ge=0, le=100)
     slippage_bps: Decimal = Field(default=5, ge=0, le=100)
@@ -127,6 +131,7 @@ class PortfolioResearch:
                 "Use distinct markets with the same source, bar and exact UTC window.",
                 422,
             )
+        version = self.runtime.portfolio_registry.validate_binding(config, packages)
         bars = (packages[0]["end"] - packages[0]["start"]) // CATALOG_BARS[packages[0]["bar"]]
         if bars * len(packages) > 20000:
             raise PlatformError(
@@ -138,7 +143,9 @@ class PortfolioResearch:
                 raise PlatformError(
                     "portfolio_split", "Both independent evaluation windows need at least 20 bars.", 422
                 )
-        if sum((abs(D(leg["weight"])) for leg in config["legs"]), D(0)) * 100 > D(config["max_gross_pct"]):
+        if sum((abs(D(leg["weight"])) for leg in config["legs"]), D(0)) * D(config["capital_pct"]) > D(
+            config["max_gross_pct"]
+        ):
             raise PlatformError(
                 "portfolio_exposure", "Declared weights exceed the shared gross-exposure limit.", 422
             )
@@ -209,7 +216,7 @@ class PortfolioResearch:
                 or symbols[0].endswith("-SWAP")
                 or symbols[1] != symbols[0] + "-SWAP"
                 or D(config["legs"][0]["weight"]) <= 0
-                or D(config["legs"][1]["weight"]) != -D(config["legs"][0]["weight"])
+                or D(config["legs"][1]["weight"]) != D(config["legs"][0]["weight"]).copy_negate()
             ):
                 raise PlatformError(
                     "carry_legs",
@@ -227,6 +234,8 @@ class PortfolioResearch:
         inputs = [self.runtime.packages.research_inputs(p["id"]) for p in packages]
         manifest = {
             "schema_version": 1,
+            "portfolio_version_id": version["id"] if version else None,
+            "portfolio_content_hash": version["content_hash"] if version else None,
             "implementation": self.runtime.engine_identity,
             "resource_policy": {
                 "process_isolation": self.runtime.settings.research_process_isolation,
@@ -424,6 +433,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
         book = SimulationBook(
             Store(Path(directory) / "book.sqlite3"),
             clock=lambda: clock[0],
+            capture_contributions=False,
             order_id_factory=lambda: f"order-{next(order_sequence)}",
         )
         initial = D(config["initial_cash"])
@@ -584,15 +594,12 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             book.observe(source, quotes)
             if pending is not None:
                 weights, decision = pending
-                capital = D(book.account(source, quotes)["equity"] or 0)
-                targets = {}
-                for symbol, weight in weights.items():
-                    meta = quotes[symbol]["instrument"]
-                    lot = D(str(meta["lot_size"]))
-                    amount = (
-                        capital * abs(weight) / (base_size(meta) * D(str(quotes[symbol]["last"]))) / lot
-                    ).to_integral_value(rounding="ROUND_FLOOR") * lot
-                    targets[symbol] = amount if weight >= 0 else -amount
+                capital = (
+                    D(book.account(source, quotes)["equity"] or 0)
+                    * D(str(config.get("capital_pct", 100)))
+                    / 100
+                )
+                targets = target_quantities(weights, capital, quotes)
                 if decision.get("exit_only"):
                     current_positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
                     targets = {
@@ -601,73 +608,27 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                         else current_positions.get(symbol, D(0))
                         for symbol in targets
                     }
-                # Reductions release cash before one common budget scales additions.
-                for position in book.positions(source):
-                    symbol = position["inst_id"]
-                    old = D(position["quantity"])
-                    desired = targets[symbol]
-                    reduction = (
-                        -old if desired * old <= 0 else desired - old if abs(desired) < abs(old) else D(0)
-                    )
-                    submit(symbol, reduction, True, quotes, f"rebalance:{index}:reduce:{symbol}")
+                # Shared domain planning is also used by the managed controller.
                 positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
-                additions = {
-                    symbol: target - positions.get(symbol, D(0))
-                    for symbol, target in targets.items()
-                    if target
-                    and (
-                        not positions.get(symbol)
-                        or target * positions[symbol] > 0
-                        and abs(target) > abs(positions[symbol])
-                    )
-                }
-                required = D(0)
-                for symbol, quantity in additions.items():
-                    leg = symbol_legs[symbol]
-                    meta = quotes[symbol]["instrument"]
-                    price = D(str(quotes[symbol]["last"])) * (
-                        1 + D(config["slippage_bps"]) / 10000
-                        if quantity > 0
-                        else 1 - D(config["slippage_bps"]) / 10000
-                    )
-                    tick = D(str(meta["tick_size"]))
-                    price = (price / tick).to_integral_value(
-                        rounding="ROUND_CEILING" if quantity > 0 else "ROUND_FLOOR"
-                    ) * tick
-                    required += (
-                        abs(quantity)
-                        * base_size(meta)
-                        * price
-                        * (1 / D(leg["config"]["leverage"]) + D(config["fee_bps"]) / 10000)
-                    )
-                cash = D(book.account(source, quotes)["available_cash"])
-                scale = min(D(1), max(D(0), cash / required)) if required else D(1)
-                residual = {}
-                for symbol, quantity in sorted(additions.items()):
-                    lot = D(str(quotes[symbol]["instrument"]["lot_size"]))
-                    size = (abs(quantity) * scale / lot).to_integral_value(rounding="ROUND_FLOOR") * lot
-                    if size >= D(str(quotes[symbol]["instrument"]["min_size"])):
-                        submit(
-                            symbol,
-                            size if quantity > 0 else -size,
-                            False,
-                            quotes,
-                            f"rebalance:{index}:add:{symbol}",
-                        )
-                    else:
-                        errors.append(
-                            {
-                                "ts": clock[0],
-                                "inst_id": symbol,
-                                "key": f"rebalance:{index}:add:{symbol}",
-                                "code": "minimum_size",
-                                "message": "Common cash scaling and lot rounding leave this leg below minimum size.",
-                                "requested_quantity": str(abs(quantity)),
-                                "scaled_quantity": str(size),
-                                "cash_scale": str(scale),
-                                "minimum_size": str(quotes[symbol]["instrument"]["min_size"]),
-                            }
-                        )
+                for symbol, quantity in reduction_quantities(targets, positions).items():
+                    submit(symbol, quantity, True, quotes, f"rebalance:{index}:reduce:{symbol}")
+                positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
+                plan = addition_plan(
+                    targets,
+                    positions,
+                    quotes,
+                    book.account(source, quotes)["available_cash"],
+                    {s: leg["config"]["leverage"] for s, leg in symbol_legs.items()},
+                    config["fee_bps"],
+                    config["slippage_bps"],
+                )
+                scale = plan.cash_scale
+                for symbol, quantity in plan.quantities.items():
+                    submit(symbol, quantity, False, quotes, f"rebalance:{index}:add:{symbol}")
+                errors.extend(
+                    row | {"ts": clock[0], "key": f"rebalance:{index}:add:{row['inst_id']}"}
+                    for row in plan.skipped
+                )
                 positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
                 residual = {
                     symbol: str(target - positions.get(symbol, D(0))) for symbol, target in targets.items()
@@ -748,57 +709,44 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             rebalance_due = (index - first_trading_index) % config["rebalance_bars"] == 0
             if index == count - 1 or not rebalance_due and not risk_exits:
                 continue
-            weights = {leg["instrument"]["inst_id"]: D(leg["config"]["weight"]) for leg in legs}
-            if config["mode"] == "independent_signals":
-                positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
-                weights = {
-                    leg["instrument"]["inst_id"]: abs(D(leg["config"]["weight"])) * signal
-                    if signal is not None
-                    else abs(D(leg["config"]["weight"]))
-                    * (
-                        1
-                        if positions.get(leg["instrument"]["inst_id"], D(0)) > 0
-                        else -1
-                        if positions.get(leg["instrument"]["inst_id"], D(0)) < 0
-                        else 0
-                    )
+            past = (
+                [e for e in legs[1]["funding"] if int(e["ts"]) < ts]
+                if config["mode"] == "funding_carry"
+                else []
+            )
+            weights = construction_weights(
+                config,
+                [leg["config"] | {"inst_id": leg["instrument"]["inst_id"]} for leg in legs],
+                {
+                    leg["instrument"]["inst_id"]: signal
                     for leg, (signal, _) in zip(legs, signals, strict=True)
+                },
+                {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)},
+                {
+                    leg["instrument"]["inst_id"]: leg["candles"][index].close
+                    / leg["candles"][index - config["lookback"]].close
+                    - 1
+                    for leg in legs
                 }
-            elif config["mode"] == "momentum":
-                ranks = (
-                    sorted(
-                        (
-                            (
-                                leg["candles"][index].close / leg["candles"][index - config["lookback"]].close
-                                - 1,
-                                leg["instrument"]["inst_id"],
-                            )
-                            for leg in legs
-                        ),
-                        reverse=True,
-                    )
-                    if index >= config["lookback"]
-                    else []
+                if index >= config["lookback"]
+                else {},
+                past[-1]["rate"] if past else None,
+            )
+            if config["mode"] == "funding_carry" and risk_exits:
+                risk_exits = {leg["instrument"]["inst_id"]: "carry_group_exit" for leg in legs}
+            caps = {
+                leg["instrument"]["inst_id"]: risk_notional(
+                    D(account["equity"]), state.config.strategy, config["fee_bps"], config["slippage_bps"]
                 )
-                chosen = {symbol for momentum, symbol in ranks[: config["top_k"]] if momentum > 0}
-                weights = {s: w if s in chosen else D(0) for s, w in weights.items()}
-            elif config["mode"] == "funding_carry":
-                past = [e for e in legs[1]["funding"] if int(e["ts"]) < ts]
-                rate = D(str(past[-1]["rate"])) if past else None
-                if rate is None or rate < D(config["carry_threshold"]):
-                    weights = {s: D(0) for s in weights}
-            for leg, state in zip(legs, states, strict=True):
-                symbol = leg["instrument"]["inst_id"]
-                if symbol in risk_exits:
-                    weights[symbol] = D(0)
-                else:
-                    cap = risk_notional(
-                        D(account["equity"]), state.config.strategy, config["fee_bps"], config["slippage_bps"]
-                    )
-                    if cap is not None and D(account["equity"]) > 0:
-                        weights[symbol] = (1 if weights[symbol] >= 0 else -1) * min(
-                            abs(weights[symbol]), cap / D(account["equity"])
-                        )
+                for leg, state in zip(legs, states, strict=True)
+            }
+            weights = apply_weight_caps(
+                config["mode"],
+                weights,
+                caps,
+                max(D(0), D(account["equity"]) * D(str(config.get("capital_pct", 100))) / 100),
+                risk_exits,
+            )
             decision = {
                 "ts": clock[0],
                 "bar_ts": ts,

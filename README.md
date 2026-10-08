@@ -2,7 +2,7 @@
 
 **Evidence before execution.**
 
-An open-source crypto research and execution workbench for OKX spot and linear USDT perpetuals. Version your market data, test a hypothesis out of sample, and follow every simulated order through the account ledger.
+An open-source crypto research and paper trading workbench for OKX spot and linear USDT perpetuals. Version a hypothesis, study a shared-capital portfolio, review its deployment, and trace actual simulated fills through the account and contribution ledgers.
 
 [![CI](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml/badge.svg)](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -15,7 +15,7 @@ English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Re
 
 ## A connected trading workflow
 
-Go from an economic hypothesis to an immutable strategy version, reproducible research, reviewed paper release and an inspectable forward decision journal. Shared-capital historical portfolios, one-use holdouts and explicit costs make the evidence reviewable. See the [workflow guide](docs/strategy-workflows.md) and [current self-audit](docs/audit/README.md).
+Go from an economic hypothesis to an immutable strategy or portfolio version, reproducible research, reviewed paper release and inspectable forward decisions. Multi-market groups preserve targets and commands across interruption, expose failed-leg compensation, and reconcile actual monetary contribution to the shared account. See [strategy workflows](docs/strategy-workflows.md), [managed portfolios](docs/managed-portfolios.md) and the [self-audit](docs/audit/README.md).
 
 | Workspace | What you can do |
 |---|---|
@@ -23,8 +23,10 @@ Go from an economic hypothesis to an immutable strategy version, reproducible re
 | Markets | Inspect confirmed candles and timestamped OKX quotes; switch explicitly to an isolated synthetic source |
 | Data library | Prepare a complete research package in one action: trade, mark, settled funding and exact-time settlement marks; inspect blockers, immutable versions and hashes; import attributed history |
 | Strategies | Immutable hypotheses and definitions; five reference families, bounded declarative programs, exits, loss budgets and editable research recipes |
-| Research | Version-bound replay, grids, cost stress, train/test, walk-forward; one-use pre-registered holdouts and trial ledger |
-| Portfolio research | One cash budget across 2–10 aligned markets; fixed weights, independent signals, momentum and funding carry; independent chronological test windows |
+| Research | Version-bound replay, grids, cost stress, train/test, walk-forward; single-strategy one-use pre-registered holdouts and trial ledger |
+| Portfolio research | Immutable multi-market hypotheses; one cash budget across 2–10 aligned markets; fixed weights, independent signals, momentum and funding carry; editable hypotheses with rejection criteria and chronological tests |
+| Managed portfolios | Whole-group review and activation; durable targets/commands, common cash scaling, residual limits, group stops and recoverable failed-leg compensation |
+| Contributions | Actual owner quantities, entry cost, P&L, fees and funding reconciled to the account; linked fill/event evidence and exports |
 | Portfolio | Spot inventory and isolated perpetual positions in one account; order previews, market/limit/stop simulation, reservations, cancellation, leverage, margin and funding |
 | Risk | Asset and market gross/net exposure, concentration, isolated margin buffers and captured custom price shocks; transactional limits and a persistent halt |
 | Operations | Named users and roles, sessions, audit, feed age, progress health, disposable research processes, persistent incidents, verified backups and recovery |
@@ -52,9 +54,10 @@ For an offline walkthrough, choose **Example**:
 
 1. Open **Strategies**, load a reference hypothesis or define your own, and save a version. Choose **Research this version**.
 2. Open **Data library → Research packages**, choose a spot or perpetual market and UTC range, then **Prepare research package**. A perpetual package gathers trade, mark, realized funding and settlement marks before becoming ready.
-3. Prepare and select the exact data version in the bound study. Evaluate costs and independent test windows; export or replay the captured evidence. **Research governance** freezes a one-use final test before evaluation.
+3. Prepare and select the exact data version in the bound study. Evaluate costs and independent test windows; export or replay the captured evidence. Single-strategy **Research governance** freezes a one-use final test before evaluation.
 4. **Review paper release** from the result, inspect the selected configuration and current policy, approve and activate. In **Execution**, advance the synthetic clock and inspect actual decisions, orders, exits and observed account performance. Order previews and captured exposure scenarios remain available.
-5. Open **Operations**. Create and verify a backup. A restore replaces workspace state, revokes sessions, cancels pending orders and halts strategies.
+5. For a multi-market workflow, open **Portfolio research**, choose ready aligned packages and save a version-bound study. **Review portfolio release** approves the whole group. In **Execution → Managed portfolios**, inspect targets, cash scale, actual commands and residuals; **Contributions** reconciles its monetary P&L to the account. See the [full guide](docs/managed-portfolios.md).
+6. Open **Operations**. Create and verify a backup. A restore replaces workspace state, revokes sessions, cancels pending orders/commands, stops groups and halts accounts.
 
 Example time can be paused, accelerated or stepped forward, with separate capital. OKX failures remain visible; the application never substitutes synthetic prices automatically.
 
@@ -105,6 +108,7 @@ flowchart LR
 | Data identity, pagination, retention and imports | [Data operations](docs/data-operations.md) |
 | Exposure, isolated margin and captured stress scenarios | [Portfolio risk](docs/portfolio-risk.md) |
 | Strategy recipes, review, holdouts, portfolio models and forward evidence | [Strategy workflows](docs/strategy-workflows.md) |
+| Multi-market deployment, failed legs and actual contribution accounting | [Managed portfolios](docs/managed-portfolios.md) |
 | Signals, costs, funding, liquidation and OOS selection | [Professional research](docs/pro-research.md) |
 | Process boundaries, persistence and precision | [Architecture](docs/architecture.md) |
 | Authentication, roles, recovery and deployment | [Operations](docs/operations.md) |
@@ -115,6 +119,10 @@ flowchart LR
 <summary>Research and execution workspaces</summary>
 
 ![Observed paper-account performance on synthetic data; not investment returns](docs/assets/strategy-performance.png)
+
+![Managed multi-market paper group, frozen targets and actual synthetic fills](docs/assets/managed-portfolios.png)
+
+![Reconciled contribution P&L on the synthetic paper book](docs/assets/contributions.png)
 
 ![Shared-capital portfolio study on synthetic data](docs/assets/portfolio-research.png)
 
@@ -136,7 +144,7 @@ cd frontend && npx playwright install chromium && cd ..
 make browser-test
 ```
 
-Tests exercise causal replay, indicator state, cost sensitivity, train-only selection, margin tiers, funding deduplication, native asset accounting, concurrent idempotency, stop races, role/CSRF boundaries and actual backup recovery. Browser acceptance covers the rendered desktop and mobile workflows. The [verification record](docs/verification.md) identifies what was measured and the exact scope of that evidence.
+Tests exercise causal replay, indicator state, cost sensitivity, train-only selection, margin tiers, funding deduplication, native asset accounting, concurrent idempotency, group stop races, hard-exit command recovery, failed-leg compensation, mixed-owner contribution reconciliation, role/CSRF boundaries and actual backup recovery. Browser acceptance covers the rendered desktop and mobile workflows. The [verification record](docs/verification.md) identifies what was measured and the exact scope of that evidence.
 
 ## Model boundaries
 
@@ -144,7 +152,7 @@ Tests exercise causal replay, indicator state, cost sensitivity, train-only sele
 - Market, limit and stop orders use a local full-fill model. Historical bars cannot reconstruct queue position, partial fills, market impact or exact intrabar paths.
 - Public settled funding history has limited retention. Older research requires attributed imports with an explicit coverage declaration; missing history blocks derivative research.
 - Historical funding marks can be one-minute bar-open approximations. Captured current maintenance tiers are scenario inputs, not historical tier evidence.
-- Managed forward deployment is single-market. Historical portfolio construction does not provide managed multi-leg forward execution or strategy-level contribution attribution. Current-universe selection does not establish survivorship-free history.
+- Managed portfolios and monetary contribution attribution are implemented. Portfolio-specific one-use holdouts/trial governance remain separate from the single-strategy controls. An explicit current universe does not establish historical listing/delisting coverage or survivorship-free research.
 - One shared workspace with role-based users, one process and one SQLite writer. This deployment does not provide distributed failover or tenant isolation.
 - A short test run cannot prove months of availability or strategy profitability. Metrics state insufficient-sample and insolvent-account conditions explicitly.
 

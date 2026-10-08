@@ -15,6 +15,8 @@ from pydantic import Field, model_validator
 from .engine import ACCOUNTING_CONTEXT
 from .platform import COOKIE, PlatformError
 from .portfolio_analytics import PriceShock, analyze_portfolio
+from .portfolio_registry import PortfolioProjectInput, PortfolioVersionInput
+from .portfolio_releases import PortfolioReleaseInput, PortfolioReleasePreviewInput
 from .portfolio_research import PortfolioInput
 from .research_artifacts import project_result
 from .research_governance import HoldoutInput
@@ -559,6 +561,66 @@ def professional_router(app, access, runtime, supervisor, settings):
         runtime.registry.project(project_id)
         return runtime.governance.trials(project_id)
 
+    @router.get("/pro/portfolio-strategies")
+    def portfolio_projects():
+        return {"items": runtime.portfolio_registry.projects()}
+
+    @router.post("/pro/portfolio-strategies", status_code=201)
+    def create_portfolio_project(body: PortfolioProjectInput, request: Request):
+        return runtime.portfolio_registry.create_project(
+            body.name, body.hypothesis, body.definition.model_dump(), actor(request)
+        )
+
+    @router.get("/pro/portfolio-strategies/{identifier}")
+    def portfolio_project(identifier: str):
+        return runtime.portfolio_registry.project(identifier)
+
+    @router.post("/pro/portfolio-strategies/{identifier}/versions", status_code=201)
+    def create_portfolio_version(identifier: str, body: PortfolioVersionInput, request: Request):
+        return runtime.portfolio_registry.create_version(
+            identifier, body.hypothesis, body.definition.model_dump(), actor(request), body.parent_id
+        )
+
+    @router.get("/pro/portfolio-versions/{identifier}")
+    def portfolio_version(identifier: str):
+        return runtime.portfolio_registry.version(identifier)
+
+    @router.post("/pro/execution/portfolio-releases/preview")
+    def portfolio_release_preview(body: PortfolioReleasePreviewInput):
+        return runtime.portfolio_releases.preview(body.run_id)
+
+    @router.post("/pro/execution/portfolio-releases", status_code=201)
+    def approve_portfolio_release(body: PortfolioReleaseInput, request: Request):
+        return runtime.portfolio_releases.approve(body.model_dump(), actor(request))
+
+    @router.get("/pro/execution/portfolio-releases")
+    def portfolio_releases(source: Source = "okx"):
+        return {"items": runtime.portfolio_releases.list(source)}
+
+    @router.post("/pro/execution/portfolio-releases/{identifier}/activate")
+    def activate_portfolio_release(identifier: str, request: Request):
+        return runtime.portfolio_releases.activate(identifier, actor(request))
+
+    @router.get("/pro/execution/portfolios")
+    def managed_portfolios(source: Source = "okx"):
+        return {"items": runtime.managed_portfolios.list(source)}
+
+    @router.get("/pro/execution/portfolios/{identifier}")
+    def managed_portfolio(identifier: str):
+        return runtime.managed_portfolios.get(identifier)
+
+    @router.get("/pro/execution/portfolios/{identifier}/batches")
+    def portfolio_batches(
+        identifier: str,
+        limit: int = Query(default=30, ge=1, le=100),
+        before: int = Query(default=2**63 - 1, ge=0, le=2**63 - 1),
+    ):
+        return {"items": runtime.managed_portfolios.history(identifier, limit, before)}
+
+    @router.post("/pro/execution/portfolios/{identifier}/stop")
+    def stop_managed_portfolio(identifier: str, request: Request):
+        return runtime.managed_portfolios.stop(identifier, actor(request))
+
     @router.get("/pro/research/portfolios")
     def portfolios(source: Source = "okx"):
         return {"items": runtime.portfolios.list(source)}
@@ -589,6 +651,20 @@ def professional_router(app, access, runtime, supervisor, settings):
     @router.post("/pro/execution/clock")
     def clock_command(body: ClockInput, request: Request):
         return runtime.clock.change(**body.model_dump(), actor=actor(request))
+
+    @router.get("/pro/execution/contributions")
+    async def contributions(source: Source = "okx"):
+        snapshots = await runtime.snapshots_for(source)
+        return await runtime.offload(runtime.book.contribution_report, source, snapshots)
+
+    @router.get("/pro/execution/contributions/events")
+    def contribution_events(
+        source: Source = "okx",
+        owner: str | None = Query(default=None, max_length=128),
+        before: int = Query(default=2**63 - 1, ge=0, le=2**63 - 1),
+        limit: int = Query(default=100, ge=1, le=100),
+    ):
+        return {"items": runtime.book.contributions.events(source, owner=owner, before=before, limit=limit)}
 
     @router.get("/pro/execution/performance")
     def performance(
@@ -729,6 +805,17 @@ def professional_router(app, access, runtime, supervisor, settings):
                             conn.execute("UPDATE pro_risk SET halted=1")
                             conn.execute("UPDATE deployments SET status='stopped'")
                             conn.execute("UPDATE pro_deployments SET status='stopped'")
+                            conn.execute(
+                                "UPDATE managed_portfolios SET status='stopped',updated_at=?", (now_ms(),)
+                            )
+                            conn.execute(
+                                "UPDATE portfolio_batches SET status='canceled',error='Workspace maintenance; portfolio stopped',updated_at=? WHERE status IN ('reducing','adding','compensating')",
+                                (now_ms(),),
+                            )
+                            conn.execute(
+                                "UPDATE portfolio_commands SET status='canceled',updated_at=? WHERE status='pending'",
+                                (now_ms(),),
+                            )
                             runtime.store.audit(
                                 conn,
                                 "system",

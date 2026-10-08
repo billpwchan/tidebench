@@ -1,0 +1,303 @@
+[
+  {
+    "id": "basket",
+    "name": "BTC / ETH reserve-aware basket",
+    "hypothesis": "A fixed BTC/ETH basket is a transparent allocation benchmark, not a claimed trading edge. Keep half of account equity unallocated; rebalance daily using confirmed closes. Compare total return, drawdown and turnover with a non-rebalanced basket and cash on identical unseen dates. Reject active rebalancing if measured costs outweigh the drawdown or diversification benefit. Correlated crypto drawdowns remain the main failure regime.",
+    "definition": {
+      "schema_version": 1,
+      "bar": "1H",
+      "mode": "fixed_weights",
+      "legs": [
+        {
+          "inst_id": "BTC-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 20,
+            "slow": 80,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        },
+        {
+          "inst_id": "ETH-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 20,
+            "slow": 80,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        }
+      ],
+      "capital_pct": "50",
+      "rebalance_bars": 24,
+      "lookback": 168,
+      "top_k": 1,
+      "carry_threshold": "0",
+      "max_residual_pct": "2",
+      "failure_policy": "reduce_group"
+    }
+  },
+  {
+    "id": "ensemble",
+    "name": "Trend and reversion under one cash budget",
+    "hypothesis": "BTC trend and ETH reversion may produce different trade timing, but share one account and may fail together in a crypto-wide shock. Compare each sleeve and the jointly constrained portfolio on identical dates; reject if the apparent benefit comes from leverage, omitted costs or one episode. Double fees/slippage and vary neighboring parameters before freezing the test. Monetary owner contribution does not establish independent sleeve returns.",
+    "definition": {
+      "schema_version": 1,
+      "bar": "1H",
+      "mode": "independent_signals",
+      "legs": [
+        {
+          "inst_id": "BTC-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "sma_cross",
+            "fast": 20,
+            "slow": 80,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "5",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "8",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0.5",
+            "rules": []
+          }
+        },
+        {
+          "inst_id": "ETH-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "rsi_reversion",
+            "fast": 12,
+            "slow": 26,
+            "rsi_period": 14,
+            "entry": "25",
+            "exit": "55",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "4",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 48,
+            "risk_per_trade_pct": "0.5",
+            "rules": []
+          }
+        }
+      ],
+      "capital_pct": "40",
+      "rebalance_bars": 24,
+      "lookback": 168,
+      "top_k": 1,
+      "carry_threshold": "0",
+      "max_residual_pct": "2",
+      "failure_policy": "reduce_group"
+    }
+  },
+  {
+    "id": "rotation",
+    "name": "Seven-day positive momentum rotation",
+    "hypothesis": "Positive seven-day closing-price momentum may persist across BTC, ETH and SOL. Select at most two positive markets with stable symbol tie-breaking; each selected leg targets half the allocated capital and unused weight stays in cash. Reject if out-of-sample performance fails an identical static universe benchmark after doubled costs, or results depend on one asset or one lookback. This fixed three-market universe is not survivorship-bias-free historical selection.",
+    "definition": {
+      "schema_version": 1,
+      "bar": "1H",
+      "mode": "momentum",
+      "legs": [
+        {
+          "inst_id": "BTC-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 20,
+            "slow": 80,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        },
+        {
+          "inst_id": "ETH-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 20,
+            "slow": 80,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        },
+        {
+          "inst_id": "SOL-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 20,
+            "slow": 80,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        }
+      ],
+      "capital_pct": "40",
+      "rebalance_bars": 24,
+      "lookback": 168,
+      "top_k": 2,
+      "carry_threshold": "0",
+      "max_residual_pct": "2",
+      "failure_policy": "reduce_group"
+    }
+  },
+  {
+    "id": "carry",
+    "name": "BTC spot / perpetual lagged-funding study",
+    "hypothesis": "A BTC spot long and equal-notional USDT perpetual short may receive funding while prior realized funding exceeds one basis point per settlement. Prior settlement is a signal, not a forecast or a normalized annual yield. Reject if actual funding minus fees, slippage and hedge drift fails cash, or if basis widening, short-leg margin stress or failed sequential hedging breaches the loss budget. Leverage reduces short collateral, not target notional. Both legs reduce together on a leg exit; inspect failed compensation and residual evidence.",
+    "definition": {
+      "schema_version": 1,
+      "bar": "1H",
+      "mode": "funding_carry",
+      "legs": [
+        {
+          "inst_id": "BTC-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 20,
+            "slow": 80,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        },
+        {
+          "inst_id": "BTC-USDT-SWAP",
+          "weight": "-.5",
+          "leverage": "2",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 20,
+            "slow": 80,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.2",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        }
+      ],
+      "capital_pct": "40",
+      "rebalance_bars": 24,
+      "lookback": 168,
+      "top_k": 1,
+      "carry_threshold": ".0001",
+      "max_residual_pct": "2",
+      "failure_policy": "reduce_group"
+    }
+  }
+]

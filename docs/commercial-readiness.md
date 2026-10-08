@@ -1,27 +1,35 @@
 # Scope and release acceptance
 
-Tidebench supplies a self-hosted shared workspace for public OKX spot/linear-USDT data, versioned research, shared-capital historical portfolios and persistent local paper simulation. This records implemented behavior and checks; it does not certify an industry-leading or complete institutional platform.
+Tidebench supplies a self-hosted shared workspace for public OKX spot/linear-USDT data, versioned research, shared-capital portfolios and persistent local paper simulation. This records implemented contracts and evidence; it does not certify a complete institutional platform or formal commercial deployment.
 
 | Contract | Implemented behavior | Evidence |
 |---|---|---|
 | Data lineage | Immutable datasets/packages, funding marks, quality/attribution, resumable fenced downloads | Catalog/package tests; separate public-data acceptance |
 | Strategy definitions | Immutable hypotheses/versions; five families, bounded programs, sizing and close exits | Registry/program/risk tests; rendered recipe/version workflow |
 | Research | Next-open fills, train-only selection, replay hashes, cost stress, compressed shared-input artifacts | Research/storage/service tests; replay/export browser workflow |
-| Governance | Project trials, frozen one-use tests, alias/warmup/portfolio overlap guards | Governance concurrency/tamper tests; seal/evaluate browser workflow |
-| Historical portfolios | One cash book, 2–10 aligned markets, fixed/signal/momentum/carry, sequential fills/residuals, independent chronological tests | Portfolio tests; rendered two-market study/export |
-| Reviewed promotion | Candidate/cost/policy review, immutable approval, transactional activation revalidation | Registry drift/concurrency/ownership tests; version→research→approval→activation workflow |
-| Forward evidence | Incremental bars/checkpoints, decisions/intents/orders, observed equity/TWR pages and controllable time | Forward/fault tests; browser exit journal |
+| Single-strategy governance | Project trials, frozen one-use tests, alias/warmup/portfolio overlap guards | Governance concurrency/tamper tests; seal/evaluate workflow |
+| Historical portfolios | One cash book, 2–10 aligned markets, fixed/signal/momentum/carry, sequential fills/residuals, independent chronological tests | Portfolio tests; rendered studies/exports |
+| Portfolio identity/promotion | Immutable hypotheses/definitions, bound studies, exact cost/risk review and whole-group activation revalidation | Registry/release drift, ownership and role tests |
+| Managed forward portfolios | Same-bar evidence, shared capital, reduce-first/frozen additions, idempotent commands, residual limits, durable compensation and whole-group stop | Hard-exit and failure tests; standalone audit; rendered group workflow |
+| Contribution accounting | Actual quantity/cost/P&L/fee/funding ownership under the net book; explicit legacy; quarantine preserves protective reduction | Mixed-owner/full-close/funding/liquidation tests; account reconciliation and event history |
+| Forward evidence | Incremental bars/checkpoints, decisions/intents/orders, observed account equity/TWR pages and controllable time | Forward/fault tests; browser decision journal |
 | Accounting/risk | Spot/contract units, native-asset double entry, funding, tiers, isolated liquidation/debt, reservations/idempotency/halt | Domain/property/concurrency/replay tests |
-| Access | Named users, five roles, scrypt, sessions, CSRF, expiry/revocation | Platform/boundary tests; browser role/password workflows |
-| Resource/operations | Shared bounded queue, budgets, owned compute processes, deadlines/owner-death cleanup, progress health, incidents | Process/storage/operations tests; real HTTP mixed load |
-| Recovery | Checksummed backups, schema match, maintenance/drain, preserved new evidence chain, paused clock | Actual schema-4 restore; failure/cancellation regressions |
-| Interface/deployment | Responsive bilingual workflows, deferred bundles, locked build, non-root container, single-writer lease | Desktop/mobile Chromium; CI verify/container job |
+| Access | Named users, five roles, scrypt, sessions, CSRF, expiry/revocation | Platform/boundary tests; rendered role/password workflows |
+| Resource/operations | Shared bounded queue, budgets, owned compute processes, deadlines/owner-death cleanup, progress health, incidents | Process/storage/operations tests; scoped HTTP mixed load |
+| Recovery | Checksummed backups, schema match, maintenance/drain, preserved evidence, stopped groups and paused clock | Actual schema-5 restore; failure/cancellation regressions |
+| Interface/deployment | Responsive bilingual workflows, deferred bundles, locked build, non-root container, single-writer lease | Desktop/mobile browser checks and release-specific verification |
 
-See [verification](verification.md) for observed counts/environment and [current self-audit](audit/red-team-0.4.0.zh-CN.md) for remaining contracts: managed multi-asset forward execution, contribution attribution, historical universe/contract events and portfolio version/holdout governance. Account observations and historical portfolios do not substitute for them.
+[Verification](verification.md) identifies actual counts, environment and workload scope. The [v0.5 self-audit](audit/red-team-0.5.0.zh-CN.md) provides failure evidence and remaining contracts. Passing an isolated test or older CI run does not establish the state of a later release.
 
-Bar-level full fills cannot establish queue priority, partial fills, impact, capacity or investment edge. Current rules remain scenarios unless attributed historical rules are supplied. Workflow holdouts cannot detect outside experiments or prevent raw public-data access.
+## Substantive remaining work
 
-One process owns one SQLite workspace; there is no distributed failover or tenant isolation. Short runs do not establish months of uptime. Hosted operation also needs actual HTTPS/domain, protected off-host backups, host operations and applicable data permissions, configured using the [runbook](operations.md).
+- **Portfolio research governance:** portfolio versions and chronological test windows exist. The one-use holdout and cross-run candidate ledger are single-strategy controls; equivalent portfolio-specific sealed evaluation and leakage boundaries are not yet implemented. Workflow controls cannot detect outside experiments or prevent raw public-data access.
+- **Historical universe and contract events:** explicit selected markets and captured current rules reproduce a scenario; they do not prove historical tradability, listing/delisting completeness, contract conversions or survivorship-free history. Current margin tiers remain scenarios unless attributed history is supplied.
+- **Execution capacity:** full fills, bounded child orders and common cash scaling do not model queue priority, partial fills, impact, depth, cancellation latency or available market capacity. No investment edge or deployable strategy scale is established.
+- **Long-lived attribution capacity:** economic updates currently scan retained owner/sleeve history. Closed-source accumulation needs capacity optimization and target-environment measurements without weakening reconciliation.
+- **Elapsed-time operations:** short load tests, hard exits and accelerated synthetic time do not establish multi-week reliability. Representative target-host soak, resource/feed/recovery SLO evidence and off-host restoration remain acceptance work.
+
+One process owns one SQLite workspace; there is no distributed failover or tenant isolation. Hosted operation also requires actual HTTPS/domain, protected off-host backups, host operations and applicable data permissions, configured using the [runbook](operations.md). The repository supplies the controls and procedures, not those external deployment resources.
 
 ## Exchange execution boundary
 

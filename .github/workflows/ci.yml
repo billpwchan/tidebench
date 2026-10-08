@@ -41,6 +41,13 @@ jobs:
         run: uv run python scripts/acceptance_load.py > acceptance-load.json
       - name: Offline red-team observations
         run: uv run python scripts/redteam_audit.py > red-team-observations.json
+      - name: Managed portfolio recovery and attribution observations
+        run: uv run python scripts/managed_portfolio_audit.py > managed-portfolio-observations.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: managed-portfolio-observations
+          path: managed-portfolio-observations.json
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: red-team-observations

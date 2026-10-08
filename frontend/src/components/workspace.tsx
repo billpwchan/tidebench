@@ -329,47 +329,7 @@ export function StrategyFields({
       {professional && value.kind === 'program' && (
         <ProgramEditor value={value} onChange={onChange} />
       )}
-      {professional && (
-        <details className="strategy-exits">
-          <summary>{t('Exits & loss budget')}</summary>
-          <p className="field-hint">
-            {t(
-              'Close-based exits execute after the confirmed close. Gaps, slippage and funding can exceed the loss budget. Zero disables a rule.',
-            )}
-          </p>
-          <div className="form-grid">
-            {(
-              [
-                ['stop_loss_pct', 'Stop loss %', 100],
-                ['take_profit_pct', 'Take profit %', 1000],
-                ['trailing_stop_pct', 'Trailing stop %', 100],
-                ['risk_per_trade_pct', 'Equity loss budget %', 10],
-              ] as const
-            ).map(([key, label, max]) => (
-              <Field label={label} key={key}>
-                <input
-                  type="number"
-                  min={0}
-                  max={max}
-                  step="any"
-                  value={value[key] ?? '0'}
-                  onChange={(e) => patch(key, e.target.value)}
-                />
-              </Field>
-            ))}
-            <Field label="Maximum holding closes">
-              <input
-                type="number"
-                min={0}
-                max={100000}
-                step={1}
-                value={value.max_holding_bars ?? 0}
-                onChange={(e) => patch('max_holding_bars', Number(e.target.value))}
-              />
-            </Field>
-          </div>
-        </details>
-      )}
+      {professional && <StrategyExitFields value={value} onChange={onChange} />}
       {showAllocation && (
         <Field
           label="Capital allocation"
@@ -390,6 +350,57 @@ export function StrategyFields({
         </Field>
       )}
     </>
+  );
+}
+export function StrategyExitFields({
+  value,
+  onChange,
+}: {
+  value: Strategy;
+  onChange: (s: Strategy) => void;
+}) {
+  const { t } = useI18n();
+  const patch = (key: keyof Strategy, v: string | number) => onChange({ ...value, [key]: v });
+  return (
+    <details className="strategy-exits">
+      <summary>{t('Exits & loss budget')}</summary>
+      <p className="field-hint">
+        {t(
+          'Close-based exits execute after the confirmed close. Gaps, slippage and funding can exceed the loss budget. Zero disables a rule.',
+        )}
+      </p>
+      <div className="form-grid">
+        {(
+          [
+            ['stop_loss_pct', 'Stop loss %', 100],
+            ['take_profit_pct', 'Take profit %', 1000],
+            ['trailing_stop_pct', 'Trailing stop %', 100],
+            ['risk_per_trade_pct', 'Equity loss budget %', 10],
+          ] as const
+        ).map(([key, label, max]) => (
+          <Field label={label} key={key}>
+            <input
+              type="number"
+              min={0}
+              max={max}
+              step="any"
+              value={value[key] ?? '0'}
+              onChange={(e) => patch(key, e.target.value)}
+            />
+          </Field>
+        ))}
+        <Field label="Maximum holding closes">
+          <input
+            type="number"
+            min={0}
+            max={100000}
+            step={1}
+            value={value.max_holding_bars ?? 0}
+            onChange={(e) => patch('max_holding_bars', Number(e.target.value))}
+          />
+        </Field>
+      </div>
+    </details>
   );
 }
 export function PageHeading({

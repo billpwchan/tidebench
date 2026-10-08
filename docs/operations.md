@@ -47,8 +47,8 @@ To restore:
 1. Select **Verify backup**. A missing artifact, checksum mismatch, invalid schema or failed integrity check blocks recovery.
 2. Select **Restore backup** and explicitly enter the required confirmation in the UI.
 3. The server enters maintenance, drains active HTTP work, stops both legacy and professional workers and cancels/reaps owned research processes and drains tracked storage work.
-4. It creates a safety backup. Before replacement, a separate verified recovery image revokes all sessions, stops strategies, cancels pending simulated orders and halts accounts and pauses synthetic time.
-5. It restores that safe image, restarts workers and leaves execution halted. Sign in again, inspect balances, ledger, datasets and pending work, then resume risk deliberately.
+4. It creates a safety backup. Before replacement, a separate verified recovery image revokes all sessions, stops strategies and managed groups, cancels pending simulated orders and unfinished group batches/commands, halts accounts and pauses synthetic time. Actual inventory, target/command evidence and contribution ownership are preserved.
+5. It restores that safe image, restarts workers and leaves execution halted. Sign in again and inspect balances, ledger, datasets, groups, commands, contribution status and retained inventory. A restored group never resumes its unfinished batch automatically; manage exposure explicitly and review a new release when appropriate.
 
 The safety backup and selected target are protected from retention during this operation. Recovery is tested by modifying actual SQLite state and restoring it; it is not a file-copy-only health assertion.
 
@@ -80,3 +80,32 @@ For rollback, stop the new application and preserve its database and backups. Re
 Incidents retain feed/strategy errors, stopped/stalled workers, backup failure/age and low free disk (256 MiB). Administrator acknowledgement records a response without hiding failure. Recovery resolves it; recurrence reopens it. No external messages are sent. Connect private metrics/logs to an actual operator alert destination when hosting.
 
 Schema 4 adds registry/releases, governance, portfolio runs, compressed artifacts, forward state/equity, time and incidents. Real restore acceptance preserves this evidence while leaving execution stopped/halted and time paused. Keep a verified schema-3 database with v0.3.1 for rollback; in-app restore rejects cross-schema replacement.
+
+## Managed portfolio operation
+
+The whole-group workflow is described in [Managed portfolios](managed-portfolios.md). Before activation, every leg must be flat, without pending orders or another running owner. Approval captures the exact version/result and current costs/risk policy; a changed condition requires a fresh review. Capital percentage sizes targets from complete account equity and does not isolate cash from other activity.
+
+Inspect the latest frozen target, common cash scale, actual child fills and residual before treating a batch as successful. A missing leg's decision/history prevents a complete new target. An unfinished batch is reconciled before a newer bar is considered, using immutable command keys and current observed prices for unfilled commands.
+
+A leg failure enters `compensating`, cancels outstanding additions and attempts reduce-only orders. If compensation is blocked, the actual inventory and error persist; investigate the market quote, funding or storage problem. A successful retry marks the batch `compensated` and group `failed`. It does not refund fees or start a new strategy cycle.
+
+**Stop group** stops every leg and cancels unfinished commands, retaining filled positions. Stopping an individual managed leg has the same group-wide effect. If automatic compensation should cease, stop the group, inspect its inventory and use explicit reduce-only orders. New deployment requires a fresh approval and flat/unowned legs; database status edits and silent inventory adoption are unsupported.
+
+## Contribution quarantine
+
+The contribution report is monetary attribution under one economic net book. Retained closed-owner history currently participates in each economic reconciliation; monitor command latency and storage growth on long-lived workspaces rather than assuming short-run results are a capacity guarantee. It is not an independently funded strategy account. An upgrade captures unowned historical balances and positions as explicit legacy evidence.
+
+If contribution integrity or reconciliation fails, new risk is blocked. Eligible protective reductions, funding settlement and liquidation still complete their economic transactions; auxiliary changes roll back to their savepoint, original ownership records remain intact, and hash-bound quarantine events retain the actual economic evidence. The source account is halted and a persistent operational condition identifies the quarantine. Contribution reports fail explicitly with `contribution_quarantined` rather than displaying a false reconciliation.
+
+1. Preserve the database/WAL, relevant backup, order/journal identities, contribution events and incident. Do not delete ownership records or use a raw SQL balance reset.
+2. Inspect actual economic exposure. Use eligible reduce-only protection if necessary; a contribution report failure does not itself mean the economic ledger failed.
+3. Determine the authoritative financial and ownership evidence before a recovery. Restore only a verified suitable backup using the normal safe procedure, or perform a separately reviewed repair with retained before/after evidence. The product has no automatic attribution repair or quarantine-clear endpoint.
+4. Recheck account/journal/contribution integrity and current prices/funding before deliberately permitting new risk. Removing the ordinary risk halt alone does not bypass persistent attribution quarantine.
+
+## v0.5 upgrade and schema 5
+
+Schema 5 adds immutable portfolio projects/versions/releases, managed groups, target batches, immutable command payloads, contribution baselines/sleeves/events and persistent quarantine state. Migration preserves existing economic records. Historical ownership without evidence remains `legacy`; it is not guessed from prior deployment names.
+
+Before replacing v0.4, create and verify a schema-4 backup and keep the matching v0.4.0 source/image. Stop the old owner, install v0.5 and start exactly one process against the operational data directory. Inspect readiness, account balances, inventory, pending orders, version/release evidence and legacy attribution; create and verify a new schema-5 backup after acceptance.
+
+A schema-5 restore validates required portfolio/contribution evidence, preserves its captured commands and owners, stops groups, cancels unfinished batches/commands, revokes sessions, halts accounts and pauses the clock. Existing quarantine state is retained. In-app restore requires a matching schema; a schema-4 backup remains usable with matching v0.4 code in a separate rollback data directory. Never relabel a backup or point v0.4 at schema 5. See the [release upgrade procedure](release-0.5.0.md#upgrade-from-04).

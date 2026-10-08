@@ -7,7 +7,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { RecordData } from '../proApi';
 import { useI18n } from '../lib/i18n';
 import { Empty, ErrorBox } from './workspace';
-import { date, number } from '../lib/format';
+import { date, number, quantityText } from '../lib/format';
 export function valueText(value: unknown): string {
   if (value === undefined || value === null) return '—';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
@@ -59,8 +59,9 @@ export function RecordGrid({ value }: { value: RecordData | undefined | null }) 
               {(key.endsWith('_at') || key.endsWith('_ts') || key === 'as_of') &&
               typeof v === 'number'
                 ? date(v, true)
-                : typeof v === 'number' || (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v))
-                  ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 8 }).format(Number(v))
+                : typeof v === 'number' ||
+                    (typeof v === 'string' && /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(v))
+                  ? quantityText(v)
                   : valueText(v)}
             </dd>
           </div>

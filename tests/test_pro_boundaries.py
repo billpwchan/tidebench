@@ -134,6 +134,10 @@ async def test_every_role_has_explicit_read_and_command_permissions(app):
         ("/pro/catalog/jobs", ALL),
         ("/pro/catalog/packages", ALL),
         ("/pro/research/runs", ALL),
+        ("/pro/portfolio-strategies", ALL),
+        ("/pro/execution/portfolios?source=example", ALL),
+        ("/pro/execution/portfolio-releases?source=example", ALL),
+        ("/pro/execution/contributions?source=example", ALL),
         ("/pro/execution/orders", ALL),
         ("/pro/execution/ledger", ALL),
         ("/pro/execution/deployments", ALL),
@@ -149,6 +153,12 @@ async def test_every_role_has_explicit_read_and_command_permissions(app):
         ("POST", "/pro/catalog/packages", RESEARCH),
         ("POST", "/pro/catalog/import", RESEARCH),
         ("POST", "/pro/research/runs", RESEARCH),
+        ("POST", "/pro/portfolio-strategies", RESEARCH),
+        ("POST", "/pro/portfolio-strategies/missing/versions", RESEARCH),
+        ("POST", "/pro/execution/portfolio-releases/preview", TRADING),
+        ("POST", "/pro/execution/portfolio-releases", TRADING),
+        ("POST", "/pro/execution/portfolio-releases/missing/activate", TRADING),
+        ("POST", "/pro/execution/portfolios/missing/stop", TRADING),
         ("POST", "/backtests", RESEARCH),
         ("POST", "/pro/execution/orders/preview", TRADING),
         ("POST", "/pro/execution/analytics", ALL),
@@ -177,7 +187,12 @@ async def test_every_role_has_explicit_read_and_command_permissions(app):
                 response = await session.request(
                     method, "/api/v1" + path, content=b"{", headers={"Content-Type": "application/json"}
                 )
-                assert response.status_code == (422 if role in allowed else 403), (role, path, response.text)
+                valid_no_body = path in {
+                    "/pro/execution/portfolio-releases/missing/activate",
+                    "/pro/execution/portfolios/missing/stop",
+                }
+                expected = (404 if valid_no_body else 422) if role in allowed else 403
+                assert response.status_code == expected, (role, path, response.text)
                 if role not in allowed:
                     assert response.json()["error"]["code"] == "role_forbidden"
             # Logging out belongs to the user, independent of trading privileges.

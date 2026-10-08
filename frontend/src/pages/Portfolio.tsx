@@ -15,6 +15,8 @@ import { defaultStrategy, downloadCsv } from '../api';
 import type { Source, Strategy } from '../api';
 import { useSession } from '../components/AuthGate';
 import ForwardPerformance from '../components/ForwardPerformance';
+import ManagedPortfolios from '../components/ManagedPortfolios';
+import Contributions from '../components/Contributions';
 import SimulationClock from '../components/SimulationClock';
 import ReleaseHistory from '../components/ReleaseHistory';
 import PortfolioAnalytics from '../components/PortfolioAnalytics';
@@ -210,7 +212,9 @@ export default function Portfolio({
           <Metric label="Funding paid" value={number(a?.funding_paid)} unit="USDT" />
         </div>
       )}
-      <div className="execution-layout">
+      <div
+        className={`execution-layout${['managed', 'contributions'].includes(table) ? ' execution-evidence-layout' : ''}`}
+      >
         <div className="execution-main">
           <section className="pro-panel account-book-panel">
             <div className="section-heading">
@@ -231,6 +235,8 @@ export default function Portfolio({
               items={[
                 { key: 'positions', label: 'Positions' },
                 { key: 'performance', label: 'Forward performance' },
+                { key: 'contributions', label: 'Contribution' },
+                { key: 'managed', label: 'Managed portfolios' },
                 { key: 'analytics', label: 'Exposure & scenarios' },
                 { key: 'orders', label: 'Orders' },
                 { key: 'ledger', label: 'Ledger' },
@@ -239,6 +245,8 @@ export default function Portfolio({
               ]}
             />
             {table === 'performance' && <ForwardPerformance source={source} />}
+            {table === 'managed' && <ManagedPortfolios source={source} />}
+            {table === 'contributions' && <Contributions source={source} />}
             {table === 'releases' && <ReleaseHistory source={source} />}
             {table === 'analytics' && <PortfolioAnalytics source={source} />}
             {table === 'positions' &&
@@ -500,207 +508,211 @@ export default function Portfolio({
           </section>
           <ExecutionRisk source={source} />
         </div>
-        <aside className="pro-panel execution-ticket">
-          <div className="section-heading">
-            <h2>{t('Submit order')}</h2>
-            <Activity size={17} />
-          </div>
-          {market.data && (
-            <div className="ticket-quotes">
-              <div>
-                <span>{t('Last price')}</span>
-                <strong>{price(market.data.last)}</strong>
-              </div>
-              <div>
-                <span>
-                  {t('Bid')} / {t('Ask')}
-                </span>
-                <strong>
-                  {price(market.data.bid)} / {price(market.data.ask)}
-                </strong>
-              </div>
-              {product === 'SWAP' && (
-                <>
-                  <div>
-                    <span>{t('Mark price')}</span>
-                    <strong>{price(market.data.mark)}</strong>
-                  </div>
-                  <div>
-                    <span>{t('Funding rate')}</span>
-                    <strong>
-                      {market.data.funding_rate == null
-                        ? '—'
-                        : `${number(Number(market.data.funding_rate) * 100, 4)}%`}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>{t('Next funding')}</span>
-                    <strong>{date(Number(market.data.next_funding_time))}</strong>
-                  </div>
-                </>
-              )}
-              <small>
-                {date(Number(market.data.ts))} ·{' '}
-                {source === 'example' ? t('Example · synthetic') : 'OKX REST'}
-              </small>
+        {!['managed', 'contributions'].includes(table) && (
+          <aside className="pro-panel execution-ticket">
+            <div className="section-heading">
+              <h2>{t('Submit order')}</h2>
+              <Activity size={17} />
             </div>
-          )}
-          {source === 'okx' && market.data && now - Number(market.data.ts) >= 15000 && (
-            <p className="inline-warning dataset-warning">
-              {t('Quote is stale. New risk may be rejected.')}
-            </p>
-          )}
-          {market.isPending && <Loading label="Loading market snapshot…" />}
-          {!canOperate && <p className="read-only-note">{t('Your role has read-only access.')}</p>}
-          <form
-            className="compact-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              preview.mutate(body);
-            }}
-          >
-            <ProductSymbol
-              source={source}
-              value={symbol}
-              onChange={setSymbol}
-              product={product}
-              onProductChange={setProduct}
-            />
-            <div className="side-switch">
-              <button
-                type="button"
-                className={side === 'buy' ? 'active buy' : ''}
-                onClick={() => setSide('buy')}
-              >
-                {t('Buy')}
-              </button>
-              <button
-                type="button"
-                className={side === 'sell' ? 'active sell' : ''}
-                onClick={() => setSide('sell')}
-              >
-                {t('Sell')}
-              </button>
-            </div>
-            <Field label="Order type">
-              <select
-                value={orderType}
-                onChange={(e) => setOrderType(e.target.value as OrderRequest['order_type'])}
-              >
-                <option value="market">{t('Market order')}</option>
-                <option value="limit">{t('Limit order')}</option>
-                <option value="stop_market">{t('Stop market order')}</option>
-              </select>
-            </Field>
-            <Field label="Quantity" hint={product === 'SWAP' ? t('Contracts') : t('Base units')}>
-              <input
-                required
-                type="number"
-                min={String(instrument.min_size ?? '0.00000001')}
-                step={String(instrument.lot_size ?? 'any')}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+            {market.data && (
+              <div className="ticket-quotes">
+                <div>
+                  <span>{t('Last price')}</span>
+                  <strong>{price(market.data.last)}</strong>
+                </div>
+                <div>
+                  <span>
+                    {t('Bid')} / {t('Ask')}
+                  </span>
+                  <strong>
+                    {price(market.data.bid)} / {price(market.data.ask)}
+                  </strong>
+                </div>
+                {product === 'SWAP' && (
+                  <>
+                    <div>
+                      <span>{t('Mark price')}</span>
+                      <strong>{price(market.data.mark)}</strong>
+                    </div>
+                    <div>
+                      <span>{t('Funding rate')}</span>
+                      <strong>
+                        {market.data.funding_rate == null
+                          ? '—'
+                          : `${number(Number(market.data.funding_rate) * 100, 4)}%`}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>{t('Next funding')}</span>
+                      <strong>{date(Number(market.data.next_funding_time))}</strong>
+                    </div>
+                  </>
+                )}
+                <small>
+                  {date(Number(market.data.ts))} ·{' '}
+                  {source === 'example' ? t('Example · synthetic') : 'OKX REST'}
+                </small>
+              </div>
+            )}
+            {source === 'okx' && market.data && now - Number(market.data.ts) >= 15000 && (
+              <p className="inline-warning dataset-warning">
+                {t('Quote is stale. New risk may be rejected.')}
+              </p>
+            )}
+            {market.isPending && <Loading label="Loading market snapshot…" />}
+            {!canOperate && (
+              <p className="read-only-note">{t('Your role has read-only access.')}</p>
+            )}
+            <form
+              className="compact-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                preview.mutate(body);
+              }}
+            >
+              <ProductSymbol
+                source={source}
+                value={symbol}
+                onChange={setSymbol}
+                product={product}
+                onProductChange={setProduct}
               />
-            </Field>
-            {orderType === 'limit' && (
-              <Field label="Limit price">
+              <div className="side-switch">
+                <button
+                  type="button"
+                  className={side === 'buy' ? 'active buy' : ''}
+                  onClick={() => setSide('buy')}
+                >
+                  {t('Buy')}
+                </button>
+                <button
+                  type="button"
+                  className={side === 'sell' ? 'active sell' : ''}
+                  onClick={() => setSide('sell')}
+                >
+                  {t('Sell')}
+                </button>
+              </div>
+              <Field label="Order type">
+                <select
+                  value={orderType}
+                  onChange={(e) => setOrderType(e.target.value as OrderRequest['order_type'])}
+                >
+                  <option value="market">{t('Market order')}</option>
+                  <option value="limit">{t('Limit order')}</option>
+                  <option value="stop_market">{t('Stop market order')}</option>
+                </select>
+              </Field>
+              <Field label="Quantity" hint={product === 'SWAP' ? t('Contracts') : t('Base units')}>
                 <input
                   required
                   type="number"
-                  min="0.00000001"
-                  step="any"
-                  value={limitPrice}
-                  onChange={(e) => setLimitPrice(e.target.value)}
+                  min={String(instrument.min_size ?? '0.00000001')}
+                  step={String(instrument.lot_size ?? 'any')}
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
                 />
               </Field>
-            )}
-            {orderType === 'stop_market' && (
-              <Field label="Stop price">
-                <input
-                  required
-                  type="number"
-                  min="0.00000001"
-                  step="any"
-                  value={stopPrice}
-                  onChange={(e) => setStopPrice(e.target.value)}
-                />
-              </Field>
-            )}
-            {product === 'SWAP' && (
-              <>
-                <Field label="Leverage">
+              {orderType === 'limit' && (
+                <Field label="Limit price">
                   <input
                     required
                     type="number"
-                    min="1"
-                    max={risk.data?.max_leverage ?? 50}
-                    value={leverage}
-                    onChange={(e) => setLeverage(Number(e.target.value))}
+                    min="0.00000001"
+                    step="any"
+                    value={limitPrice}
+                    onChange={(e) => setLimitPrice(e.target.value)}
                   />
                 </Field>
-                <label className="checkbox-field">
+              )}
+              {orderType === 'stop_market' && (
+                <Field label="Stop price">
                   <input
-                    type="checkbox"
-                    checked={reduceOnly}
-                    onChange={(e) => setReduceOnly(e.target.checked)}
+                    required
+                    type="number"
+                    min="0.00000001"
+                    step="any"
+                    value={stopPrice}
+                    onChange={(e) => setStopPrice(e.target.value)}
                   />
-                  <span>{t('Reduce only')}</span>
-                </label>
-                <div className="ticket-mode">
-                  {t('Margin mode')}: {t('Isolated')}
-                </div>
-              </>
-            )}
-            {market.isError && <ErrorBox error={market.error} />}
-            <JsonDetails value={market.data} label="Instrument rules" />
-            {preview.isError && <ErrorBox error={preview.error} />}
-            <button
-              className="button button-secondary full-width"
-              disabled={!canOperate || !quantity || preview.isPending || riskBlocksOrder}
-            >
-              {preview.isPending ? <Loader2 size={14} className="spin" /> : <Check size={14} />}{' '}
-              {t('Preview order')}
-            </button>
-          </form>
-          {previewMatches && (
-            <div className="order-preview">
-              <h3>{t('Order preview')}</h3>
-              <p className="preview-asof">
-                {t('Market snapshot')}: {date(Number(preview.data.market_snapshot?.ts))}
-              </p>
-              <RecordGrid
-                value={{
-                  estimated_price: preview.data.estimated_price,
-                  notional: preview.data.notional,
-                  fee: preview.data.fee,
-                  required_margin: preview.data.required_margin,
-                  estimated_cash_after: preview.data.estimated_cash_after,
-                }}
-              />
-              {preview.data.warnings?.map((w, i) => (
-                <p className="inline-warning" key={i}>
-                  <CircleAlert size={13} />
-                  {w}
-                </p>
-              ))}
+                </Field>
+              )}
+              {product === 'SWAP' && (
+                <>
+                  <Field label="Leverage">
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      max={risk.data?.max_leverage ?? 50}
+                      value={leverage}
+                      onChange={(e) => setLeverage(Number(e.target.value))}
+                    />
+                  </Field>
+                  <label className="checkbox-field">
+                    <input
+                      type="checkbox"
+                      checked={reduceOnly}
+                      onChange={(e) => setReduceOnly(e.target.checked)}
+                    />
+                    <span>{t('Reduce only')}</span>
+                  </label>
+                  <div className="ticket-mode">
+                    {t('Margin mode')}: {t('Isolated')}
+                  </div>
+                </>
+              )}
+              {market.isError && <ErrorBox error={market.error} />}
+              <JsonDetails value={market.data} label="Instrument rules" />
+              {preview.isError && <ErrorBox error={preview.error} />}
               <button
-                type="button"
-                className="button button-citrus full-width"
-                disabled={!canOperate || order.isPending || riskBlocksOrder}
-                onClick={submit}
+                className="button button-secondary full-width"
+                disabled={!canOperate || !quantity || preview.isPending || riskBlocksOrder}
               >
-                {order.isPending ? <Loader2 size={14} className="spin" /> : <Plus size={14} />}{' '}
-                {t('Submit order')}
+                {preview.isPending ? <Loader2 size={14} className="spin" /> : <Check size={14} />}{' '}
+                {t('Preview order')}
               </button>
-            </div>
-          )}
-          {order.isError && <ErrorBox error={order.error} />}
-          <p className="form-footnote pro-form-note">
-            {t('Account and execution mode are reported by the server.')}{' '}
-            {a?.execution_mode === 'local-paper' &&
-              t('Local simulated execution. No real funds are traded.')}
-          </p>
-        </aside>
+            </form>
+            {previewMatches && (
+              <div className="order-preview">
+                <h3>{t('Order preview')}</h3>
+                <p className="preview-asof">
+                  {t('Market snapshot')}: {date(Number(preview.data.market_snapshot?.ts))}
+                </p>
+                <RecordGrid
+                  value={{
+                    estimated_price: preview.data.estimated_price,
+                    notional: preview.data.notional,
+                    fee: preview.data.fee,
+                    required_margin: preview.data.required_margin,
+                    estimated_cash_after: preview.data.estimated_cash_after,
+                  }}
+                />
+                {preview.data.warnings?.map((w, i) => (
+                  <p className="inline-warning" key={i}>
+                    <CircleAlert size={13} />
+                    {w}
+                  </p>
+                ))}
+                <button
+                  type="button"
+                  className="button button-citrus full-width"
+                  disabled={!canOperate || order.isPending || riskBlocksOrder}
+                  onClick={submit}
+                >
+                  {order.isPending ? <Loader2 size={14} className="spin" /> : <Plus size={14} />}{' '}
+                  {t('Submit order')}
+                </button>
+              </div>
+            )}
+            {order.isError && <ErrorBox error={order.error} />}
+            <p className="form-footnote pro-form-note">
+              {t('Account and execution mode are reported by the server.')}{' '}
+              {a?.execution_mode === 'local-paper' &&
+                t('Local simulated execution. No real funds are traded.')}
+            </p>
+          </aside>
+        )}
       </div>
       {deployOpen && (
         <div className="modal-backdrop" onClick={() => setDeployOpen(false)}>

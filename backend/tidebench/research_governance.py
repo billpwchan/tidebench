@@ -58,9 +58,10 @@ class ResearchGovernance:
         return [self.row(row) for row in rows]
 
     def overlap(self, conn, dataset, start, end):
+        # Bar aggregation and dataset identity cannot reset market-time exposure.
         return conn.execute(
-            "SELECT * FROM research_holdouts WHERE source=? AND inst_id=? AND bar=? AND start_ts<? AND end_ts>?",
-            (dataset["source"], dataset["inst_id"], dataset["bar"], end, start),
+            "SELECT * FROM research_holdouts WHERE source=? AND inst_id=? AND start_ts<? AND end_ts>?",
+            (dataset["source"], dataset["inst_id"], end, start),
         ).fetchall()
 
     def create(self, body, actor):
@@ -131,14 +132,15 @@ class ResearchGovernance:
                     "holdout_overlap", "An existing holdout already reserves this market interval.", 409
                 )
             # Dataset aliases do not reset exposure history: market/time identity
-            # is checked across all saved runs and portfolio packages.
+            # is checked across all saved runs and portfolio packages, regardless
+            # of aggregation. Each prior run owns its own 2000-bar access window.
             previous = conn.execute(
-                "SELECT 1 FROM pro_runs r JOIN catalog_datasets d ON d.id=json_extract(r.config,'$.dataset_id') WHERE d.source=? AND d.inst_id=? AND d.bar=? AND MAX(json_extract(d.manifest,'$.start'),COALESCE(json_extract(r.config,'$.start_ts'),json_extract(d.manifest,'$.start'))-2000*?)<? AND COALESCE(json_extract(r.config,'$.end_ts'),json_extract(d.manifest,'$.end'))>? LIMIT 1",
-                (dataset["source"], dataset["inst_id"], dataset["bar"], interval, end, start),
+                "SELECT 1 FROM pro_runs r JOIN catalog_datasets d ON d.id=json_extract(r.config,'$.dataset_id') JOIN json_each(?) intervals ON intervals.key=d.bar WHERE d.source=? AND d.inst_id=? AND MAX(json_extract(d.manifest,'$.start'),COALESCE(json_extract(r.config,'$.start_ts'),json_extract(d.manifest,'$.start'))-2000*intervals.value)<? AND COALESCE(json_extract(r.config,'$.end_ts'),json_extract(d.manifest,'$.end'))>? LIMIT 1",
+                (dumps(CATALOG_BARS), dataset["source"], dataset["inst_id"], end, start),
             ).fetchone()
             portfolios = conn.execute(
-                "SELECT 1 FROM portfolio_runs p,json_each(p.manifest,'$.packages') market WHERE p.source=? AND json_extract(market.value,'$.inst_id')=? AND json_extract(p.manifest,'$.bar')=? AND json_extract(p.manifest,'$.start')<? AND json_extract(p.manifest,'$.end')>? LIMIT 1",
-                (dataset["source"], dataset["inst_id"], dataset["bar"], end, start),
+                "SELECT 1 FROM portfolio_runs p,json_each(p.manifest,'$.packages') market WHERE p.source=? AND json_extract(market.value,'$.inst_id')=? AND json_extract(p.manifest,'$.start')<? AND json_extract(p.manifest,'$.end')>? LIMIT 1",
+                (dataset["source"], dataset["inst_id"], end, start),
             ).fetchone()
             if previous or portfolios:
                 raise PlatformError(

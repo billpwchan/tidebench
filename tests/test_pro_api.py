@@ -253,7 +253,7 @@ def test_verified_restore_revokes_session_and_halts_execution(client):
     backup = client.post("/api/v1/pro/ops/backups/create")
     assert backup.status_code == 201, backup.text
     identifier = backup.json()["id"]
-    assert backup.json()["database_schema"] == 4
+    assert backup.json()["database_schema"] == 5
     assert client.get(f"/api/v1/pro/ops/backups/{identifier}/verify").json()["verified"]
     runtime.clock.change(step_ms=3600000, expected_revision=saved_clock["revision"], actor="operator")
     restore = client.post(
@@ -291,7 +291,7 @@ def test_additive_upgrade_is_repeatable_and_preserves_legacy_state(tmp_path):
         assert first.app.state.professional.book.account("example", {})["cash"] == "10000"
     with TestClient(create_app(configuration)) as second:
         with second.app.state.store.read() as conn:
-            assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 4
+            assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 5
             assert conn.execute("SELECT COUNT(*) FROM schema_migrations WHERE version=2").fetchone()[0] == 1
             assert conn.execute("SELECT COUNT(*) FROM schema_migrations WHERE version=3").fetchone()[0] == 1
             assert conn.execute("SELECT cash FROM accounts WHERE source='example'").fetchone()[0] == "9876.54"
@@ -546,3 +546,34 @@ def test_database_hard_link_cannot_create_an_independent_writer(tmp_path):
         os.link(configuration.database, alias.database)
         with pytest.raises(RuntimeError, match="Database hard links are unsupported"):
             create_app(alias)
+
+
+def test_verified_restore_preserves_managed_commands_contributions_and_stops_group(client):
+    from test_managed_portfolios import approve, research
+
+    runtime = client.app.state.professional
+    run = client.portal.call(research, runtime)
+    release = approve(runtime, run)
+    group = runtime.portfolio_releases.activate(release["id"], "operator")["group_id"]
+    client.portal.call(runtime.managed_portfolios.evaluate, group)
+    batch = runtime.managed_portfolios.history(group)[0]
+    assert batch["status"] == "completed"
+    before = client.get("/api/v1/pro/execution/contributions?source=example").json()
+    assert before["reconciled"] and before["owners"]
+    backup = client.post("/api/v1/pro/ops/backups/create").json()
+    assert client.get(f"/api/v1/pro/ops/backups/{backup['id']}/verify").json()["database_schema"] == 5
+    response = client.post(
+        "/api/v1/pro/ops/restore", json={"backup_id": backup["id"], "confirmation": "RESTORE"}
+    )
+    assert response.status_code == 200, response.text
+    login = client.post(
+        "/api/v1/auth/login", json={"username": "operator", "password": "test-only-password-123"}
+    )
+    assert login.status_code == 200
+    after = client.get("/api/v1/pro/execution/contributions?source=example").json()
+    assert after["owners"] == before["owners"] and after["reconciled"]
+    assert runtime.managed_portfolios.get(group)["status"] == "stopped"
+    assert all(row["status"] == "stopped" for row in runtime.deployments())
+    assert runtime.managed_portfolios.history(group)[0]["body"] == batch["body"]
+    assert len(runtime.managed_portfolios.history(group)[0]["commands"]) == len(batch["commands"])
+    assert client.get("/api/v1/pro/execution/risk?source=example").json()["halted"]

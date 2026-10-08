@@ -313,6 +313,140 @@ const post = <T>(path: string, body?: unknown, headers?: HeadersInit) =>
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     headers,
   });
+export type PortfolioLegDefinition = {
+  inst_id: string;
+  weight: string;
+  leverage: string;
+  direction: string;
+  strategy: Strategy;
+};
+export type PortfolioDefinition = {
+  schema_version?: number;
+  bar: string;
+  mode: string;
+  legs: PortfolioLegDefinition[];
+  capital_pct: string;
+  rebalance_bars: number;
+  lookback: number;
+  top_k: number;
+  carry_threshold: string;
+  max_residual_pct: string;
+  failure_policy: 'reduce_group';
+};
+export type PortfolioVersion = {
+  id: string;
+  project_id: string;
+  revision: number;
+  parent_id?: string;
+  hypothesis: string;
+  definition: PortfolioDefinition;
+  content_hash: string;
+  created_at: number;
+};
+export type PortfolioProject = {
+  id: string;
+  name: string;
+  latest_revision: number;
+  version_count: number;
+  versions?: PortfolioVersion[];
+  version?: PortfolioVersion;
+};
+export type PortfolioReleasePreview = {
+  name: string;
+  run_id: string;
+  version_id: string;
+  source: Source;
+  definition: PortfolioDefinition;
+  hypothesis: string;
+  result_hash: string;
+  portfolio_content_hash: string;
+  preview_hash: string;
+  risk_policy: RecordData;
+  cost_differences: RecordData[];
+  risk_differences: RecordData[];
+  required_acknowledgements: string[];
+  blockers: string[];
+  metrics: RecordData;
+  capital_basis: string;
+  execution_model: string;
+};
+export type PortfolioRelease = {
+  id: string;
+  status: string;
+  source: Source;
+  group_id?: string;
+  created_at: number;
+  approval: {
+    preview: PortfolioReleasePreview;
+    review: string;
+    actor: string;
+    approved_at: number;
+  };
+};
+export type ManagedPortfolio = {
+  id: string;
+  source: Source;
+  status: string;
+  version_id: string;
+  release_id: string;
+  last_bar?: number;
+  last_error?: string;
+  created_at: number;
+  integrity_error?: { code: string; message: string };
+  manifest: {
+    name: string;
+    version_revision: number;
+    definition: PortfolioDefinition;
+    legs: (PortfolioLegDefinition & { deployment_id: string })[];
+    result_hash: string;
+  } | null;
+};
+export type PortfolioCommand = {
+  id: string;
+  phase: string;
+  sequence: number;
+  status: string;
+  key: string;
+  error?: string;
+  payload: RecordData;
+  order?: RecordData;
+};
+export type PortfolioBatch = {
+  id: string;
+  bar: number;
+  status: string;
+  error?: string;
+  body: RecordData & {
+    targets: Record<string, string>;
+    weights: Record<string, string>;
+    capital: string;
+    available_at: number;
+    rebalance_due: boolean;
+  };
+  additions?: RecordData;
+  residuals?: { quantities: Record<string, string>; capital_pct: string; notional: string };
+  commands: PortfolioCommand[];
+};
+export type ContributionOwner = {
+  owner: string;
+  realized_pnl: string;
+  unrealized_pnl: string | null;
+  fees_paid: string;
+  funding_paid: string;
+  net_pnl: string | null;
+  markets: RecordData[];
+};
+export type Contributions = {
+  owners: ContributionOwner[];
+  totals: RecordData;
+  account_net_pnl: string | null;
+  reconciliation_delta: string | null;
+  reconciled: boolean;
+  valuation_status: string;
+  policy: string;
+  legacy_policy: string;
+  as_of: number;
+};
 export type PortfolioResearchRun = {
   id: string;
   source: Source;
@@ -361,6 +495,46 @@ export const proApi = {
   evaluateHoldout: (holdout: Holdout) =>
     post<ProRun>('/pro/research/runs', { ...holdout.plan.test_config, holdout_id: holdout.id }),
   governance: (project: string) => request<RecordData>('/pro/research/governance/' + project),
+  portfolioProjects: () => request<{ items: PortfolioProject[] }>('/pro/portfolio-strategies'),
+  portfolioProject: (id: string) =>
+    request<PortfolioProject>(`/pro/portfolio-strategies/${encodeURIComponent(id)}`),
+  portfolioVersion: (id: string) =>
+    request<PortfolioVersion>(`/pro/portfolio-versions/${encodeURIComponent(id)}`),
+  createPortfolioProject: (body: {
+    name: string;
+    hypothesis: string;
+    definition: PortfolioDefinition;
+  }) => post<PortfolioProject>('/pro/portfolio-strategies', body),
+  createPortfolioVersion: (
+    id: string,
+    body: { hypothesis: string; definition: PortfolioDefinition; parent_id?: string },
+  ) => post<PortfolioVersion>(`/pro/portfolio-strategies/${encodeURIComponent(id)}/versions`, body),
+  previewPortfolioRelease: (run_id: string) =>
+    post<PortfolioReleasePreview>('/pro/execution/portfolio-releases/preview', { run_id }),
+  approvePortfolioRelease: (body: {
+    run_id: string;
+    preview_hash: string;
+    review: string;
+    acknowledgements: string[];
+  }) => post<PortfolioRelease>('/pro/execution/portfolio-releases', body),
+  activatePortfolioRelease: (id: string) =>
+    post<PortfolioRelease>(`/pro/execution/portfolio-releases/${encodeURIComponent(id)}/activate`),
+  portfolioReleases: (source: Source) =>
+    request<{ items: PortfolioRelease[] }>(`/pro/execution/portfolio-releases?${q({ source })}`),
+  managedPortfolios: (source: Source) =>
+    request<{ items: ManagedPortfolio[] }>(`/pro/execution/portfolios?${q({ source })}`),
+  portfolioBatches: (id: string, before?: number) =>
+    request<{ items: PortfolioBatch[] }>(
+      `/pro/execution/portfolios/${encodeURIComponent(id)}/batches?${q(before === undefined ? {} : { before })}`,
+    ),
+  stopPortfolio: (id: string) =>
+    post<ManagedPortfolio>(`/pro/execution/portfolios/${encodeURIComponent(id)}/stop`),
+  contributionEvents: (source: Source, owner: string, before?: number) =>
+    request<{ items: (RecordData & { id: number; body: RecordData; order?: RecordData })[] }>(
+      `/pro/execution/contributions/events?${q({ source, owner, ...(before === undefined ? {} : { before }) })}`,
+    ),
+  contributions: (source: Source) =>
+    request<Contributions>(`/pro/execution/contributions?${q({ source })}`),
   portfolioRuns: (source: Source) =>
     request<{ items: PortfolioResearchRun[] }>('/pro/research/portfolios?source=' + source),
   portfolioRun: (id: string) => request<PortfolioResearchRun>('/pro/research/portfolios/' + id),

@@ -15,11 +15,22 @@ import {
   PageHeading,
   Status,
   StrategyFields,
+  StrategyExitFields,
 } from '../components/workspace';
 import { date, number } from '../lib/format';
 import type { RecordData } from '../proApi';
 import { useI18n } from '../lib/i18n';
 import { canResearch } from '../lib/permissions';
+import PortfolioReleaseReview from '../components/PortfolioReleaseReview';
+import type { PortfolioDefinition, PortfolioVersion } from '../proApi';
+import portfolioRecipeData from '../../../examples/portfolios.json';
+
+const recipes = portfolioRecipeData as unknown as {
+  id: string;
+  name: string;
+  hypothesis: string;
+  definition: PortfolioDefinition;
+}[];
 
 type Leg = {
   package_id: string;
@@ -38,9 +49,11 @@ const newLeg = (): Leg => ({
 export default function PortfolioResearch({
   source,
   onData,
+  onExecution,
 }: {
   source: Source;
   onData: () => void;
+  onExecution: () => void;
 }) {
   const { t } = useI18n();
   const qc = useQueryClient();
@@ -74,6 +87,16 @@ export default function PortfolioResearch({
   const [hypothesis, setHypothesis] = useState('');
   const [mode, setMode] = useState('fixed_weights');
   const [legs, setLegs] = useState<Leg[]>([newLeg(), newLeg()]);
+  const [projectId, setProjectId] = useState('');
+  const [recipeId, setRecipeId] = useState('');
+  const [parentId, setParentId] = useState('');
+  const [capitalPct, setCapitalPct] = useState('100');
+  const [residualPct, setResidualPct] = useState('2');
+  const [carryThreshold, setCarryThreshold] = useState('0');
+  const projects = useQuery({
+    queryKey: ['portfolio-projects'],
+    queryFn: proApi.portfolioProjects,
+  });
   const [cash, setCash] = useState('10000');
   const [fee, setFee] = useState('10');
   const [slip, setSlip] = useState('5');
@@ -87,28 +110,130 @@ export default function PortfolioResearch({
   const [embargo, setEmbargo] = useState(1);
   const [tab, setTab] = useState('overview');
   const create = useMutation({
-    mutationFn: () =>
-      proApi.createPortfolioRun({
+    mutationFn: async () => {
+      const selected = legs.map((leg) => packages.data?.items.find((p) => p.id === leg.package_id));
+      if (selected.some((p) => !p))
+        throw new Error(t('Select a ready package for every portfolio leg.'));
+      const definition: PortfolioDefinition = {
+        bar: selected[0]!.bar,
+        mode,
+        capital_pct: capitalPct,
+        rebalance_bars: rebalance,
+        lookback,
+        top_k: topK,
+        carry_threshold: carryThreshold,
+        max_residual_pct: residualPct,
+        failure_policy: 'reduce_group',
+        legs: legs.map((leg, i) => ({
+          inst_id: selected[i]!.inst_id,
+          weight: leg.weight,
+          leverage: leg.leverage,
+          direction: leg.direction,
+          strategy: leg.strategy,
+        })),
+      };
+      let version: PortfolioVersion;
+      if (projectId)
+        version = await proApi.createPortfolioVersion(projectId, {
+          hypothesis,
+          definition,
+          ...(parentId ? { parent_id: parentId } : {}),
+        });
+      else {
+        const saved = await proApi.createPortfolioProject({ name, hypothesis, definition });
+        setProjectId(saved.id);
+        version = saved.version!;
+      }
+      setParentId(version.id);
+      void qc.invalidateQueries({ queryKey: ['portfolio-projects'] });
+      return proApi.createPortfolioRun({
         name,
         hypothesis,
         mode,
         legs,
+        capital_pct: capitalPct,
+        portfolio_version_id: version.id,
         initial_cash: cash,
         fee_bps: fee,
         slippage_bps: slip,
         rebalance_bars: rebalance,
         lookback,
         top_k: topK,
+        carry_threshold: carryThreshold,
         max_gross_pct: gross,
         max_daily_loss_pct: daily,
         evaluation,
         train_pct: trainPct,
         embargo_bars: embargo,
-      }),
+      });
+    },
     onSuccess: (r) => {
       setActive(r.id);
       setEditing(false);
       void qc.invalidateQueries({ queryKey: ['portfolio-runs', source] });
+    },
+  });
+  const loadProject = useMutation({
+    mutationFn: async (id: string) => {
+      const project = await proApi.portfolioProject(id);
+      const version = project.versions![0];
+      const d = version.definition;
+      setProjectId(project.id);
+      setParentId(version.id);
+      setName(project.name);
+      setHypothesis(version.hypothesis);
+      setMode(d.mode);
+      setCapitalPct(d.capital_pct);
+      setResidualPct(d.max_residual_pct);
+      setCarryThreshold(d.carry_threshold);
+      setRebalance(d.rebalance_bars);
+      setLookback(d.lookback);
+      setTopK(d.top_k);
+      const ready = packages.data?.items.filter((p) => p.ready && p.bar === d.bar) ?? [];
+      const first = ready.find((p) => p.inst_id === d.legs[0].inst_id);
+      setLegs(
+        d.legs.map((leg) => ({
+          ...leg,
+          package_id:
+            ready.find(
+              (p) => p.inst_id === leg.inst_id && p.start === first?.start && p.end === first?.end,
+            )?.id ?? '',
+        })),
+      );
+    },
+  });
+  const revise = useMutation({
+    mutationFn: async () => {
+      const config = run.data!.config;
+      const versionId = config.portfolio_version_id as string | undefined;
+      if (versionId) {
+        const v = await proApi.portfolioVersion(versionId);
+        setProjectId(v.project_id);
+        setParentId(v.id);
+        setResidualPct(v.definition.max_residual_pct);
+      } else {
+        setProjectId('');
+        setParentId('');
+      }
+      setName(String(config.name));
+      setHypothesis(String(config.hypothesis));
+      setMode(String(config.mode));
+      setLegs(config.legs as Leg[]);
+      setCapitalPct(String(config.capital_pct ?? 100));
+      setCarryThreshold(String(config.carry_threshold));
+      setCash(String(config.initial_cash));
+      setFee(String(config.fee_bps));
+      setSlip(String(config.slippage_bps));
+      setRebalance(Number(config.rebalance_bars));
+      setLookback(Number(config.lookback));
+      setTopK(Number(config.top_k));
+      setGross(Number(config.max_gross_pct));
+      setDaily(Number(config.max_daily_loss_pct));
+      setEvaluation(String(config.evaluation));
+      setTrainPct(Number(config.train_pct));
+      setEmbargo(Number(config.embargo_bars));
+      create.reset();
+      setEditing(true);
     },
   });
   const patch = (i: number, value: Partial<Leg>) =>
@@ -136,6 +261,9 @@ export default function PortfolioResearch({
           disabled={!canOperate}
           onClick={() => {
             create.reset();
+            setProjectId('');
+            setParentId('');
+            setRecipeId('');
             setEditing(true);
           }}
         >
@@ -162,7 +290,84 @@ export default function PortfolioResearch({
                 <X size={18} />
               </button>
             </div>
+            {!projectId && (
+              <Field
+                label="Portfolio starting point"
+                hint="Reference hypotheses with failure criteria; no investment edge is claimed."
+              >
+                <select
+                  value={recipeId}
+                  onChange={(e) => {
+                    setRecipeId(e.target.value);
+                    const recipe = recipes.find((r) => r.id === e.target.value);
+                    if (!recipe) return;
+                    const d = recipe.definition;
+                    setName(recipe.name);
+                    setHypothesis(recipe.hypothesis);
+                    setMode(d.mode);
+                    setCapitalPct(d.capital_pct);
+                    setResidualPct(d.max_residual_pct);
+                    setCarryThreshold(d.carry_threshold);
+                    setRebalance(d.rebalance_bars);
+                    setLookback(d.lookback);
+                    setTopK(d.top_k);
+                    setEvaluation('train_test');
+                    const matching = ready.filter((p) => p.bar === d.bar);
+                    const anchor = matching.find((p) => p.inst_id === d.legs[0].inst_id);
+                    setLegs(
+                      d.legs.map((leg) => ({
+                        weight: leg.weight,
+                        leverage: leg.leverage,
+                        direction: leg.direction,
+                        strategy: { ...leg.strategy },
+                        package_id:
+                          matching.find(
+                            (p) =>
+                              p.inst_id === leg.inst_id &&
+                              p.start === anchor?.start &&
+                              p.end === anchor?.end,
+                          )?.id ?? '',
+                      })),
+                    );
+                  }}
+                >
+                  <option value="">{t('Custom hypothesis')}</option>
+                  {recipes.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {t(r.name)}
+                    </option>
+                  ))}
+                </select>
+                {recipeId && (
+                  <p className="quiet-copy">
+                    {recipes
+                      .find((r) => r.id === recipeId)
+                      ?.definition.legs.map((l) => l.inst_id)
+                      .join(' · ')}{' '}
+                    · 1H
+                  </p>
+                )}
+              </Field>
+            )}
             <div className="form-grid">
+              <Field label="Saved portfolio">
+                <select
+                  value={projectId}
+                  disabled={loadProject.isPending}
+                  onChange={(e) =>
+                    e.target.value
+                      ? loadProject.mutate(e.target.value)
+                      : (setProjectId(''), setParentId(''))
+                  }
+                >
+                  <option value="">{t('New portfolio definition')}</option>
+                  {projects.data?.items.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} · v{p.latest_revision}
+                    </option>
+                  ))}
+                </select>
+              </Field>
               <Field label="Study name">
                 <input
                   required
@@ -258,6 +463,12 @@ export default function PortfolioResearch({
                     />
                   </Field>
                 </div>
+                {mode !== 'independent_signals' && (
+                  <StrategyExitFields
+                    value={leg.strategy}
+                    onChange={(strategy) => patch(i, { strategy })}
+                  />
+                )}
                 {mode === 'independent_signals' && (
                   <details>
                     <summary>{t('Signal policy')}</summary>
@@ -327,6 +538,41 @@ export default function PortfolioResearch({
                     />
                   </Field>
                 </>
+              )}
+              <Field label="Capital allocation %">
+                <input
+                  required
+                  type="number"
+                  min={0.01}
+                  max={100}
+                  step="any"
+                  value={capitalPct}
+                  onChange={(e) => setCapitalPct(e.target.value)}
+                />
+              </Field>
+              <Field label="Maximum execution residual %">
+                <input
+                  required
+                  type="number"
+                  min={0.01}
+                  max={100}
+                  step="any"
+                  value={residualPct}
+                  onChange={(e) => setResidualPct(e.target.value)}
+                />
+              </Field>
+              {mode === 'funding_carry' && (
+                <Field label="Prior funding threshold">
+                  <input
+                    required
+                    type="number"
+                    min={-0.01}
+                    max={0.01}
+                    step="any"
+                    value={carryThreshold}
+                    onChange={(e) => setCarryThreshold(e.target.value)}
+                  />
+                </Field>
               )}
               <Field label="Initial capital">
                 <input
@@ -421,6 +667,12 @@ export default function PortfolioResearch({
                 'This form captures current instrument rules. Attributed point-in-time rule events are supported through the API. The chosen universe is explicit; no historical listing coverage is inferred. Multi-leg fills are sequential, with residuals and rejections reported.',
               )}
             </p>
+            {loadProject.isError && <ErrorBox error={loadProject.error} />}
+            <p className="quiet-copy">
+              {t(
+                'Running research first saves an immutable portfolio version. Changes create a revision; identical definitions reuse the saved version.',
+              )}
+            </p>
             {create.isError && <ErrorBox error={create.error} />}
             <button
               className="button button-citrus"
@@ -485,6 +737,30 @@ export default function PortfolioResearch({
                   </Status>
                 </div>
                 <p className="strategy-hypothesis">{String(run.data?.config.hypothesis)}</p>
+                <div className="portfolio-release-actions">
+                  <button
+                    className="button button-secondary"
+                    disabled={!canOperate || revise.isPending}
+                    onClick={() => revise.mutate()}
+                  >
+                    {t('Revise & research')}
+                  </button>
+                  {run.data?.config.portfolio_version_id ? (
+                    <span className="quiet-copy">
+                      {t('Immutable portfolio version')} ·{' '}
+                      {String(run.data.config.portfolio_version_id).slice(0, 8)}
+                    </span>
+                  ) : null}
+                </div>
+                {revise.isError && <ErrorBox error={revise.error} />}
+                {run.data?.status === 'completed' && (
+                  <PortfolioReleaseReview
+                    key={run.data.id}
+                    runId={run.data.id}
+                    bound={!!run.data.config.portfolio_version_id}
+                    onExecution={onExecution}
+                  />
+                )}
                 {run.data?.error && <ErrorBox error={new Error(run.data.error)} />}
                 {['queued', 'running'].includes(run.data?.status ?? '') && (
                   <p className="quiet-copy">

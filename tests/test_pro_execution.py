@@ -592,3 +592,28 @@ def test_pending_admission_cap_and_cancelled_order_cannot_fill(book):
         )
     assert not book.positions("example")
     assert_ledger(book)
+
+
+@pytest.mark.parametrize("defect", ["missing", "tiers"])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_incomplete_account_cannot_be_downgraded_by_later_stale_quote(book, defect, reverse):
+    first = "BTC-USDT" if defect == "missing" else SYMBOL
+    markets = [first, "ETH-USDT"]
+    if reverse:
+        markets.reverse()
+    quotes = {s: snapshot(s, source="okx", ts=now_ms(), mark_ts=now_ms()) for s in markets}
+    for index, symbol in enumerate(markets):
+        book.submit(
+            order(symbol, source="okx", quantity="1", leverage=1),
+            f"mixed-valuation-{index}",
+            quotes,
+        )
+    observed = {"ETH-USDT": snapshot("ETH-USDT", source="okx", ts=0, mark_ts=0)}
+    if defect == "tiers":
+        observed[first] = snapshot(first, source="okx", ts=now_ms(), mark_ts=now_ms(), margin_tiers=[])
+    account = book.account("okx", observed)
+    assert account["valuation_status"] == "unavailable"
+    assert account["equity"] is None
+    assert account["unrealized_pnl"] is None
+    assert account["maintenance_margin"] is None
+    assert len(account["positions"]) == 2

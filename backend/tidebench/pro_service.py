@@ -19,8 +19,11 @@ from .data_packages import DataPackageService
 from .derivatives import FundingEvent, LinearContract, MarginTier
 from .engine import ACCOUNTING_CONTEXT, EngineError, Instrument, StrategyConfig
 from .forward_history import ForwardHistory
+from .managed_portfolios import ManagedPortfolios
 from .operations import IncidentStore
 from .platform import BackupService, PlatformError, RuntimeMetrics
+from .portfolio_registry import PortfolioRegistry
+from .portfolio_releases import PortfolioReleases
 from .portfolio_research import PortfolioResearch
 from .pro_execution import SimulationBook, base_size, number
 from .provenance import research_identity, serialized_result
@@ -52,7 +55,10 @@ class ProfessionalRuntime:
         self.artifacts = ResearchArtifacts(store)
         self.engine_identity = research_identity()
         self.registry = StrategyRegistry(store, self.engine_identity)
+        self.portfolio_registry = PortfolioRegistry(store, self.engine_identity)
         self.portfolios = PortfolioResearch(self)
+        self.portfolio_releases = PortfolioReleases(self)
+        self.managed_portfolios = ManagedPortfolios(self)
         self.governance = ResearchGovernance(store, self.catalog, self.registry)
         self.tasks, self.inflight = [], set()
         self.snapshots, self.market_errors = {}, {}
@@ -831,6 +837,11 @@ class ProfessionalRuntime:
             row = conn.execute("SELECT * FROM pro_deployments WHERE id=?", (identifier,)).fetchone()
             if not row:
                 raise PlatformError("not_found", "Strategy not found.", 404)
+            group_id = json.loads(row["config"]).get("group_id")
+            if group_id:
+                self.managed_portfolios.stop(group_id, actor, conn)
+                stopped = conn.execute("SELECT * FROM pro_deployments WHERE id=?", (identifier,)).fetchone()
+                return dict(stopped) | {"config": json.loads(stopped["config"])}
             conn.execute(
                 "UPDATE pro_deployments SET status='stopped',updated_at=? WHERE id=?", (now_ms(), identifier)
             )
@@ -847,6 +858,15 @@ class ProfessionalRuntime:
         with localcontext(ACCOUNTING_CONTEXT):
             config = deployment["config"]
             source, identifier = config["source"], deployment["id"]
+            if (
+                config.get("research_implementation")
+                and config["research_implementation"] != self.engine_identity["code_fingerprint"]
+            ):
+                raise PlatformError(
+                    "strategy_implementation_changed",
+                    "The installed strategy implementation changed; stop and review a new research release.",
+                    409,
+                )
             # History transport must never hold the economic market lock. A
             # separate deployment lock still serializes retries of one signal.
             async with self.strategy_locks[identifier]:
@@ -1138,7 +1158,10 @@ class ProfessionalRuntime:
             async with slots:
                 try:
                     async with asyncio.timeout(60):
-                        await self.evaluate(deployment)
+                        if deployment.get("managed_group"):
+                            await self.managed_portfolios.evaluate(deployment["id"])
+                        else:
+                            await self.evaluate(deployment)
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:
@@ -1147,9 +1170,15 @@ class ProfessionalRuntime:
                         if isinstance(exc, TimeoutError)
                         else str(exc)
                     )
+                    if (
+                        deployment.get("managed_group")
+                        and getattr(exc, "code", None) == "portfolio_evidence_integrity"
+                    ):
+                        message = "Portfolio evidence integrity: " + message
                     with self.store.write() as conn:
+                        table = "managed_portfolios" if deployment.get("managed_group") else "pro_deployments"
                         conn.execute(
-                            "UPDATE pro_deployments SET last_error=?,updated_at=? WHERE id=? AND status='running'",
+                            f"UPDATE {table} SET last_error=?,updated_at=? WHERE id=? AND status IN ('running','compensating')",
                             (message[:500], now_ms(), deployment["id"]),
                         )
 
@@ -1161,7 +1190,14 @@ class ProfessionalRuntime:
                         if not task.cancelled():
                             await task
                         del pending[identifier]
-                running = {row["id"]: row for row in self.deployments() if row["status"] == "running"}
+                running = {
+                    row["id"]: row
+                    for row in self.deployments()
+                    if row["status"] == "running" and not row["config"].get("group_id")
+                }
+                running.update(
+                    {row["id"]: row | {"managed_group": True} for row in self.managed_portfolios.active()}
+                )
                 for identifier, task in pending.items():
                     if identifier not in running:
                         task.cancel()
@@ -1274,6 +1310,28 @@ class ProfessionalRuntime:
                         },
                     }
                 )
+        for group in self.managed_portfolios.attention():
+            if (
+                group["status"] in {"compensating", "failed"}
+                or group["status"] == "running"
+                and group["last_error"]
+                or (group["last_error"] or "").startswith("Portfolio evidence integrity:")
+            ):
+                conditions.append(
+                    {
+                        "kind": "managed_portfolio",
+                        "subject": group["id"],
+                        "details": {
+                            "source": group["source"],
+                            "status": group["status"],
+                            "error": group["last_error"],
+                        },
+                    }
+                )
+        for status in self.book.contributions.statuses():
+            conditions.append(
+                {"kind": "contribution_quarantined", "subject": status["source"], "details": status}
+            )
         self.incidents.reconcile(conditions)
 
     async def backup_loop(self):

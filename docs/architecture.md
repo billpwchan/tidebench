@@ -1,22 +1,26 @@
 # Architecture
 
-Tidebench is a single-workspace modular monolith for public market ingestion, reproducible research and local spot / linear USDT perpetual execution. Named users share a workspace with role-based permissions. One process owns a SQLite WAL database; a file lease enforces this boundary.
+Tidebench is a single-workspace modular monolith for public market ingestion, reproducible research and local spot / linear USDT perpetual paper execution. Named users share the account and research library under role-based permissions. One process owns one SQLite WAL database; a canonical file lease enforces that boundary. Current workspace schema is 5.
 
 ```mermaid
 flowchart TD
-    UI[React workbench] --> API[FastAPI / host and origin checks]
-    API --> Access[Session / CSRF / role enforcement]
-    Access --> Catalog[Versioned catalog + durable downloads]
+    UI[React / TypeScript workbench] --> API[FastAPI / sessions / CSRF / roles]
+    API --> Catalog[Immutable catalog and research packages]
     Catalog --> OKX[Fixed regional public endpoints]
-    Access --> Plans[Bounded research queue]
-    Plans --> Engine[Pure causal Decimal engines]
-    Access --> Commands[Idempotent simulation commands]
-    Forward[Durable strategy intents] --> Commands
-    Commands --> Risk[Transactional risk + journal]
+    API --> Registry[Immutable strategy and portfolio versions]
+    Registry --> Plans[Shared bounded research queue]
+    Plans --> Compute[Owned disposable compute processes]
+    Compute --> Results[Hash-verified research artifacts]
+    Results --> Release[Reviewed release / transactional activation]
+    Release --> Forward[Single strategies / managed portfolio targets]
+    Forward --> Commands[Durable idempotent paper commands]
+    Commands --> Book[Shared economic book / transactional risk]
+    Book --> Contributions[Virtual ownership and reconciliation]
     Catalog --> DB[(SQLite WAL / synchronous FULL)]
-    Engine --> DB
-    Risk --> DB
-    DB --> Backups[Checksummed online backups / safe restore]
+    Results --> DB
+    Book --> DB
+    Contributions --> DB
+    DB --> Recovery[Verified backups / safe restore]
 ```
 
 ## Ownership
@@ -24,55 +28,63 @@ flowchart TD
 | Module | Owns |
 |---|---|
 | `market.py` | Regional HTTP transport, throttling, retries, validated spot quotes and legacy candles |
-| `data_packages.py` | Atomic multi-dataset research packages, exact funding marks, cancellation fencing and immutable handoff |
+| `catalog.py`, `data_packages.py` | Rules/history, immutable datasets, attributed imports, funding marks, fenced downloads and verified multi-dataset handoff |
+| `engine.py`, `derivatives.py`, `pro_research.py` | Indicators, causal finite-Decimal replay, margin/funding/liquidation and bounded single-market plans |
+| `strategy_registry.py`, `research_governance.py` | Immutable single-strategy definitions/releases, project trials and one-use holdout access |
+| `strategy_program.py`, `strategy_risk.py` | Typed bounded programs, causal close exits and loss-budget sizing |
+| `portfolio_registry.py`, `portfolio_releases.py` | Immutable multi-market definitions, exact research binding, whole-group review and activation |
+| `portfolio_construction.py`, `portfolio_targets.py` | Pure construction weights, lot-rounded quantities, reductions and common-cash addition plans shared by history and forward control |
+| `portfolio_research.py` | Shared-capital historical portfolios and independent chronological test accounts |
+| `managed_portfolios.py` | Group ownership, target batches, frozen commands, interruption recovery, residual limits and reduce-only compensation |
+| `pro_execution.py` | Authoritative economic account, spot/margin inventory, native-asset journal, reservations, funding, risk and atomic orders |
+| `contributions.py` | Transactional virtual owner quantities/cost/P&L, exact finite sums, explicit reconciliation and auxiliary-data quarantine |
 | `portfolio_analytics.py` | Read-only captured exposure, isolated maintenance and price-shock settlement |
-| `provenance.py` | Installed source-content identity and canonical result hashes |
-| `catalog.py` | Spot/linear contract rules, history pagination, immutable datasets, import attribution, funding marks and feed health |
-| `engine.py`, `derivatives.py`, `pro_research.py` | Indicators, causality, finite Decimal accounting, margin/funding/liquidation and bounded research plans |
-| `pro_execution.py` | Unified accounts, inventory/margin, native asset journal, risk, reservations, funding deduplication and atomic orders |
-| `pro_service.py` | Separate catalog/research tasks, forward supervision, durable reversal intents and tracked CPU work |
-| `strategy_registry.py`, `research_governance.py` | Immutable definitions, reviewed releases, trial records and one-use holdout access |
-| `strategy_program.py`, `strategy_risk.py` | Typed programs, close exits and loss-budget sizing |
-| `portfolio_research.py` | Shared-capital history and independent test windows |
-| `research_artifacts.py`, `research_budget.py`, `research_process.py` | Compressed/shared evidence, admission and disposable computation |
-| `forward_history.py`, `forward_performance.py`, `simulation_clock.py` | Incremental state, decision/orders, observed equity and time |
-| `operations.py` | Durable incidents, acknowledgements and recovery |
-| `platform.py` | Passwords, sessions, users, measured request metrics and verified safe recovery |
-| `pro_api.py`, `main.py` | Typed contracts, role/CSRF boundaries, maintenance admission, request IDs and static application |
-| `paper.py`, `worker.py` | v0.1 API compatibility; legacy records remain distinct from professional capital |
+| `forward_history.py`, `forward_performance.py`, `simulation_clock.py` | Incremental bar state, verified decisions, actual account equity observations and durable synthetic time |
+| `research_artifacts.py`, `research_budget.py`, `research_process.py`, `provenance.py` | Shared compressed evidence, bounded admission, disposable computation and installed source/result identity |
+| `pro_service.py`, `operations.py` | Five supervised loops, owned/drained work, progress health, persistent incidents and backups |
+| `platform.py`, `pro_api.py`, `main.py` | Users/sessions, API boundaries, request metrics, lease/migrations, maintenance and verified recovery |
+| `paper.py`, `worker.py` | v0.1 compatibility; legacy paper records remain separate from professional capital |
 
-Money is transmitted and persisted as decimal strings. Chart coordinates and display formatting can use JavaScript numbers. Core financial operations use an explicit 50-significant-digit half-even context with a finite supported domain. Any rounding adjustment in the journal is explicit; material imbalance fails closed. Contract quantities are contracts, spot quantities are base units, and prices are USDT per base asset.
+Money is transmitted and persisted as decimal strings. Core financial operations use an explicit 50-significant-digit half-even context and finite supported domain. Chart coordinates/display formatting may use JavaScript numbers. Spot quantity is base units, perpetual quantity is contracts, and prices are USDT per base asset. Native-asset journal adjustments are explicit; material imbalance fails closed.
 
-## Persistence and work
+## Persistence and financial authority
 
-Mutations use `BEGIN IMMEDIATE`, foreign keys and `synchronous=FULL`. Orders, risk checks, reservations, balances, positions, journal entries, strategy cursor and audit records commit atomically. A durable source-scoped command key deduplicates retries even during data outages; a different payload with that key is rejected. Per-market async locks serialize funding reconciliation before position changes, while transaction checks remain the economic authority.
+Mutations use `BEGIN IMMEDIATE`, foreign keys and `synchronous=FULL`. Economic orders, risk checks, reservations, balances, positions, journal entries, strategy cursor and audit records commit atomically. A source-scoped command key deduplicates retries, including during data outages; a different payload under the same key conflicts. Per-market async locks serialize funding reconciliation and position changes, while the fill transaction remains the authority for current ownership, stop and risk conditions.
 
-Catalog pages commit records and cursors together. Worker tokens fence cancellation/restart races. Research captures instrument rules, dataset manifests, enriched settlement observations and tier scenarios before CPU work; replay reuses captured evidence. The engine's exported input snapshot includes the normalized inputs needed for offline reproduction. Each run records installed research-module content hashes, Python/version and Decimal context, plus a canonical result SHA-256. Replay compares the full economic result to the original result hash and fails explicitly on divergence. Research history uses materialized summaries and stable keyset pagination without decoding full result or input payloads.
+Contribution ownership is auxiliary to this net book. Actual fills and settlements update virtual sleeves and hash-bound events in the same transaction. Mixed owners retain their own entry costs and receive proportional reductions/funding; exact finite remainder handling prevents hidden virtual inventory on full close. The contribution report reads economic and ownership state in the same SQLite snapshot. It exposes monetary contribution, not independent sleeve capital or returns. Reconciliation currently scans retained sleeve history per economic update; long-lived closed-owner accumulation remains a capacity optimization target.
 
-Research packages allocate owned downloads in one transaction, capture missing exact-time funding marks in bounded rotating batches, and publish only after complete integrity/identity checks. A run must match the package IDs, window and manifest hash exactly; it captures the package manifest and enriched funding events for offline replay. Workspace database schema 3 adds package tables and materialized run summaries without rewriting schema-2 economic records.
+Corrupt contribution state blocks new risk. Valid protection/settlement can commit while a savepoint rolls back only failed auxiliary changes, captures economic evidence, persists attribution quarantine and halts increases. Damaged sleeves remain unchanged for investigation; reports cannot claim reconciliation until an explicit recovery. This avoids making auxiliary corruption a barrier to de-risking.
 
-Professional snapshots share a bounded, source/instrument-scoped 1.5-second single-flight cache. Cached observations keep their original trade/mark timestamps and return independent copies; the 15-second execution freshness checks still apply. Failures are never cached as synthetic data.
+## Data and research identity
 
-Catalog and research have separate background tasks, so a large download does not hold the research queue. CPU work runs in tracked threads with bounded plans; shutdown drains it before releasing the process lease. Resource limits include a research queue of ten, at most 64 cases / 20 folds / two million bar-cases, one hundred pending orders and twenty active forward strategies. Individual research windows are bounded to 98,000 selected bars plus warmup. These are explicit capacity boundaries, not a distributed scheduler.
+Catalog records and page cursors commit together; worker tokens fence cancellation/restart races. Research packages own their component downloads, collect settlement marks in bounded batches and publish only after identity/coverage checks. A bound run must match the exact package, window and manifest hash. Dataset gaps, transport errors and unavailable funding remain explicit.
 
-## Execution model
+Research captures instrument rules, dataset manifests, enriched settlement observations and margin-tier scenarios before computation. Input snapshots retain normalized evidence for offline reproduction. Manifests record installed module hashes, Python/version and Decimal context; completed results have a canonical SHA-256. Replay uses captured inputs and fails on full-result divergence. History summaries/keyset pagination do not decode every financial array. Selected detail omits unselected arrays; full exports preserve reconstructible evidence.
 
-The portfolio combines spot inventory and isolated linear perpetual positions. Spot trades cannot borrow or short. Perpetual P&L and funding use contract base size; margin is isolated and tiers are checked against absolute contract exposure. A shortfall becomes a recorded liability and halts new risk. Historical and forward models share signal directions but use different observations: historical next-open bars versus post-close bid/ask polling.
+Portfolio versions pin hypothesis, construction, ordered markets and leg policies independently of their data packages. Approval pins a completed current-implementation result, immutable version, execution policy and acknowledgements. Activation revalidates all reviewed conditions and creates group/leg ownership in one transaction. Existing inventory is never silently adopted. Portfolio-specific sealed holdouts and trial governance remain separate from the existing single-strategy controls.
 
-A reversal has durable close/open command identities under one persisted signal intent. A restart can resume an unfinished phase without duplicating a committed fill. Old intents are superseded when a newer confirmed bar is observed; historical catch-up fills are not invented. Stops are checked in each economic transaction. Limit and stop orders reserve cash and are evaluated from observed prices; matching, queue priority and partial fills are outside this local model.
+## Supervised work and resources
 
-The red-team fixes separate strategy supervision from risk/order polling. Historical preparation uses a deployment lock rather than holding the economic market lock. Up to four evaluations run concurrently, each with a 60-second deadline; the strategy supervisor owns and drains its children at shutdown/restore. Economic execution rechecks deployment status, and fill transactions retain their own stop checks. Readiness now expects five supervisors; it still checks task liveness rather than a complete progress/deadline SLO. Quote and funding I/O inside the economic path remain a hardening target.
+Five professional loops own research, catalog, risk/order execution, strategies and backups. Readiness checks database access, expected supervisors and recent progress; operational conditions become persistent incidents. Acknowledgement does not hide a failing condition. These controls are observable local health contracts, not a demonstrated production SLO.
 
-Starting a deployment transactionally requires no existing position or pending order for its source/market. Inventory adoption is unsupported; users must explicitly close and cancel first. A username never grants pending-order or liquidation authority. The shared net book still supports only one running strategy per source/market, with no multi-strategy virtual capital attribution. See the [audit](audit/README.md) for limits of these fixes.
+Single-market and portfolio computation share a bounded queue and plan budgets. Default limits include ten queued runs, 64 cases, 20 folds and two million bar-cases. Individual research windows allow at most 98,000 selected bars plus warmup. Owned disposable interpreters use fixed entrypoints and private JSON files, no workspace database or inherited workspace credentials. Parent deadlines, maintenance cancellation, a portable owner watcher and Linux parent-death signal kill/reap children. Linux CPU/additional-address-space limits supplement input/output caps; they are not total RSS enforcement. Apply host/container limits as well.
+
+Storage offloads are tracked and drained before releasing the process lease or replacing the database. Strategy evaluation allows up to four concurrent children with 60-second deadlines. Managed groups consume the same supervision budget; their member legs are not independently evaluated. Active scheduling and unresolved attention queries are independent of the UI history limit; the UI retains all active groups plus up to 200 recent non-active groups. Active leg ownership is bounded to twenty deployments and pending local orders to one hundred. These are admission boundaries rather than distributed capacity claims.
+
+Professional market snapshots share a bounded source/instrument single-flight cache. Cached quotes keep their original timestamps and return independent copies. Execution freshness checks still apply. Managed commands reject a failed market transport even when a cached snapshot exists; failures never become synthetic data. Example is a separately selected source/account with durable controlled time.
+
+## Managed execution lifecycle
+
+A group requires same-bar verified decisions and complete fresh valuation before capturing a new target. History preparation happens outside economic locks. Shared pure helpers derive weights and quantities; current capital is complete account equity times the declared percentage. This sizing basis does not reserve or isolate cash.
+
+The group persists targets, valuation/quote evidence and reduce commands, executes actual reductions, then freezes a common-cash addition plan before any increase. Lot-compatible bounded child commands alternate across legs. Each command uses current observed quotes and transactional policy checks; the group does not promise atomic multi-leg fills. A crash reconciles committed keys before continuing an unfinished batch, retaining its frozen quantities.
+
+A rejected leg, minimum-size failure or excessive residual stops additions and enters durable reduce-only compensation. Compensation can remain blocked with inventory and an error. Protective changes can supersede an old compensation command and create a new immutable remainder command. Successful compensation ends the group as failed/flattened; a stop cancels future commands and retains filled inventory. Stopping any managed leg stops the whole group.
+
+Historical portfolios use next-open bar observations; forward simulation uses post-close observed bid/ask. Limit/stop orders use local triggers and full fills. Queue position, partial fills, depth/impact and exact intrabar execution remain outside this model. See [managed portfolios](managed-portfolios.md) for economic semantics and operator actions.
 
 ## Recovery and security
 
-Password/session controls and role checks apply to every API route. Cookie mutations require CSRF; exact hosts/origins and bounded request bodies apply before dispatch. No arbitrary provider URLs or user code are accepted. Exchange secrets are outside this product's API and storage boundary.
+Named-user authentication, role enforcement, cookie CSRF, exact hosts/origins and request-size limits apply before route dispatch. No arbitrary provider URLs or executable user code are accepted. Exchange secrets are outside the API/storage boundary.
 
-Recovery enters maintenance, drains requests and workers, verifies the backup, creates a safety copy and prepares a safe restored image with revoked sessions, canceled orders and halted execution before replacing workspace state. See [operations](operations.md) and [scope/evidence](commercial-readiness.md).
-
-## Research process boundary
-
-Research uses owned disposable interpreters with fixed entrypoints and JSON input/output. Children have no workspace database or inherited workspace credentials; temporary files are private. Parent deadlines and maintenance cancellation kill/reap workers. A portable owner watcher and Linux parent-death signal stop orphans. Linux CPU/additional-address-space limits supplement input/output caps; they are not total RSS enforcement. Apply deployment OS/container limits. Running-thread cancellation alone cannot supply this boundary. Durable progress updates do not enter financial identity.
-
-Candidate inputs are shared by content hash; results are compressed/verified and selected-detail projections omit unselected financial arrays. Full exports retain reconstructible evidence. Normal reads verify completed result identity. The queue is shared across single-market and portfolio studies.
+Recovery persists a halt/stop latch, drains requests/workers/owned computation, verifies a matching-schema backup and creates a safety copy. Its prepared recovery image revokes sessions, cancels pending orders/commands, stops groups and strategies, halts risk and pauses synthetic time before database replacement. Financial and contribution evidence remains inspectable; an interruption cannot silently reactivate a group. Schema 5 validates the new portfolio/contribution tables as well as prior financial evidence. See [operations](operations.md) and [scope/acceptance](commercial-readiness.md).

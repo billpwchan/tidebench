@@ -192,7 +192,12 @@ function Workspace() {
                     }}
                   />
                 ) : researchTab === 'portfolio' ? (
-                  <PortfolioResearch key={source} source={source} onData={() => navigate('data')} />
+                  <PortfolioResearch
+                    key={source}
+                    source={source}
+                    onData={() => navigate('data')}
+                    onExecution={() => navigate('execution', 'managed')}
+                  />
                 ) : researchTab === 'advanced' ? (
                   <ProResearch
                     key={source}
