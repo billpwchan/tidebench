@@ -55,7 +55,18 @@ class ResearchGovernance:
                 "SELECT * FROM research_holdouts WHERE (? IS NULL OR project_id=?) ORDER BY created_at DESC LIMIT 100",
                 (project_id, project_id),
             ).fetchall()
-        return [self.row(row) for row in rows]
+        output = [self.row(row) for row in rows]
+        if hasattr(self, "facts"):
+            with self.store.read() as conn:
+                for item in output:
+                    fact = self.facts.consumption(conn, "single", item["id"])
+                    if fact:
+                        item.update(status="consumed", run_id=fact["run_id"], consumed_at=fact["created_at"])
+                        if not conn.execute(
+                            "SELECT 1 FROM pro_runs WHERE id=?", (item["run_id"],)
+                        ).fetchone():
+                            item["status"] = "consumed_unavailable"
+        return output
 
     def overlap(self, conn, dataset, start, end):
         # Bar aggregation and dataset identity cannot reset market-time exposure.
@@ -126,7 +137,10 @@ class ResearchGovernance:
             "scope": "research_api_workflow_seal; does not guarantee blindness to public or externally inspected data",
         }
         identifier = new_id()
+        timestamp = now_ms()
         with self.store.write() as conn:
+            if hasattr(self, "facts"):
+                self.facts.unseen(conn, dataset["source"], [dataset["inst_id"]], start, end)
             if self.overlap(conn, dataset, start, end):
                 raise PlatformError(
                     "holdout_overlap", "An existing holdout already reserves this market interval.", 409
@@ -162,9 +176,13 @@ class ResearchGovernance:
                     dumps(plan),
                     digest(plan),
                     actor,
-                    now_ms(),
+                    timestamp,
                 ),
             )
+            if hasattr(self, "facts"):
+                self.facts.reserve(
+                    conn, identifier, "single", dataset["source"], [dataset["inst_id"]], start, end, timestamp
+                )
             self.store.audit(
                 conn,
                 dataset["source"],
@@ -184,6 +202,19 @@ class ResearchGovernance:
             # Only the existing replay endpoint supplies this server argument;
             # the body cannot grant a replay exemption.
             return
+        if hasattr(self, "facts"):
+            self.facts.guard(
+                conn,
+                dataset["source"],
+                [(dataset["inst_id"], access_start, end)],
+                allowed=("single", requested) if requested else None,
+            )
+            if requested and self.facts.consumption(conn, "single", requested):
+                raise PlatformError(
+                    "holdout_consumed",
+                    "The holdout was already evaluated; restoring older state cannot reset it.",
+                    409,
+                )
         if not overlaps and not requested:
             return
         if len(overlaps) != 1 or overlaps[0]["id"] != requested:
@@ -215,9 +246,12 @@ class ResearchGovernance:
             or dataset["content_hash"] != holdout["plan"]["dataset_hash"]
         ):
             raise PlatformError("holdout_identity", "Holdout input identity changed.", 409)
+        consumed_at = now_ms()
+        if hasattr(self, "facts"):
+            self.facts.consume(conn, "single", requested, identifier, holdout["plan_hash"], consumed_at)
         conn.execute(
             "UPDATE research_holdouts SET status='consumed',run_id=?,consumed_at=? WHERE id=?",
-            (identifier, now_ms(), requested),
+            (identifier, consumed_at, requested),
         )
         self.store.audit(
             conn,
@@ -228,6 +262,11 @@ class ResearchGovernance:
         )
 
     def guard_portfolio(self, conn, packages):
+        if hasattr(self, "facts"):
+            for package in packages:
+                self.facts.guard(
+                    conn, package["source"], [(package["inst_id"], package["start"], package["end"])]
+                )
         for package in packages:
             if self.overlap(conn, package, package["start"], package["end"]):
                 raise PlatformError(

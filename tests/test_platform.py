@@ -480,3 +480,18 @@ def test_backup_rejects_missing_financial_history_even_with_valid_checksum(acces
         backups.restore(manifest["id"])
     assert error.value.code == "backup_schema"
     assert store.path.exists()
+
+
+def test_storage_wal_disappearance_is_a_zero_size_observation(workspace, monkeypatch):
+    store, settings = workspace
+    backups = BackupService(store, settings)
+    original = Path.stat
+    wal = store.path.with_name(store.path.name + "-wal")
+
+    def disappearing(path, *args, **kwargs):
+        if path == wal:
+            raise FileNotFoundError("SQLite completed its checkpoint")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", disappearing)
+    assert backups.storage()["wal_bytes"] == 0

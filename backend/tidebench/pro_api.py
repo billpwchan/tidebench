@@ -20,6 +20,7 @@ from .portfolio_releases import PortfolioReleaseInput, PortfolioReleasePreviewIn
 from .portfolio_research import PortfolioInput
 from .research_artifacts import project_result
 from .research_governance import HoldoutInput
+from .research_protocol import EvaluatePortfolioInput, PortfolioHoldoutInput, SealPortfolioInput
 from .schemas import InputModel, KillInput, Money, Source
 from .store import encode, now_ms
 from .strategy_program import ProStrategyInput
@@ -620,6 +621,43 @@ def professional_router(app, access, runtime, supervisor, settings):
     @router.post("/pro/execution/portfolios/{identifier}/stop")
     def stop_managed_portfolio(identifier: str, request: Request):
         return runtime.managed_portfolios.stop(identifier, actor(request))
+
+    @router.post("/pro/research/portfolio-holdouts/preview")
+    async def preview_portfolio_holdout(body: PortfolioHoldoutInput, request: Request):
+        tiers = {}
+        for identifier in body.package_ids:
+            package = runtime.packages.get_package(identifier)
+            if package["inst_id"].endswith("-SWAP"):
+                tiers[package["inst_id"]] = await runtime.catalog.get_margin_tiers(
+                    package["inst_id"], package["source"]
+                )
+        return await runtime.offload(
+            runtime.protocol.preview, encode(body.model_dump()), actor(request), tiers
+        )
+
+    @router.post("/pro/research/portfolio-holdouts", status_code=201)
+    def seal_portfolio_holdout(body: SealPortfolioInput, request: Request):
+        return runtime.protocol.seal(body.model_dump(), actor(request))
+
+    @router.get("/pro/research/portfolio-holdouts")
+    def portfolio_holdouts(source: Source | None = None, project_id: str | None = None):
+        return {"items": runtime.protocol.list(source, project_id)}
+
+    @router.get("/pro/research/portfolio-holdouts/{identifier}")
+    def portfolio_holdout(identifier: str):
+        return runtime.protocol.get(identifier)
+
+    @router.post("/pro/research/portfolio-holdouts/{identifier}/evaluate", status_code=202)
+    def evaluate_portfolio_holdout(identifier: str, body: EvaluatePortfolioInput, request: Request):
+        return runtime.protocol.evaluate(identifier, body.plan_hash, actor(request))
+
+    @router.get("/pro/research/portfolio-governance/{identifier}")
+    def portfolio_governance(identifier: str):
+        return runtime.protocol.trials(identifier)
+
+    @router.post("/pro/research/portfolios/{identifier}/replay", status_code=202)
+    def replay_portfolio(identifier: str, request: Request):
+        return runtime.portfolios.replay(identifier, actor(request))
 
     @router.get("/pro/research/portfolios")
     def portfolios(source: Source = "okx"):

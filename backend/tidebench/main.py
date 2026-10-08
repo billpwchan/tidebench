@@ -80,6 +80,11 @@ def _build_app(settings, market, store):
             (now_ms(),),
         )
         conn.execute("UPDATE schema_version SET version=5")
+        conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations VALUES(6,?,'Captured portfolio holdouts, one-use consumption and restore-retained market-time research evidence')",
+            (now_ms(),),
+        )
+        conn.execute("UPDATE schema_version SET version=6")
 
     @asynccontextmanager
     async def lifespan(app):

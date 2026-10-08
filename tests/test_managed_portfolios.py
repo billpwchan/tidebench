@@ -642,3 +642,45 @@ async def test_carry_asymmetric_loss_budget_scales_both_hedge_targets(runtime):
         assert D(170) < notional < D(200)
     assert len(r.book.positions("example")) == 2
     assert r.book.contribution_report("example", await r.snapshots_for("example"))["reconciled"]
+
+
+async def test_other_market_opened_after_quote_enumeration_retries_without_compensation(runtime, monkeypatch):
+    r = runtime
+    group = await activate(r, capital_pct="20")
+    outside = await r.quote_snapshot("example", "SOL-USDT")
+    submit = r.book.submit
+    injected = []
+
+    def interleave(payload, key, quotes, actor, **kwargs):
+        if not injected and not payload["reduce_only"] and key.startswith("portfolio:"):
+            injected.append(key)
+            # This independent economic mutation occurs after the managed command's
+            # quote enumeration, exactly the concurrent-start race observed in soak.
+            submit(
+                {
+                    "source": "example",
+                    "inst_id": "SOL-USDT",
+                    "side": "buy",
+                    "quantity": "1",
+                    "leverage": "1",
+                    "reduce_only": False,
+                    "order_type": "market",
+                    "margin_mode": "isolated",
+                },
+                "concurrent-outside-market",
+                {**quotes, "SOL-USDT": outside},
+                "manual:other-trader",
+            )
+            assert "SOL-USDT" not in quotes
+        return submit(payload, key, quotes, actor, **kwargs)
+
+    monkeypatch.setattr(r.book, "submit", interleave)
+    await r.managed_portfolios.evaluate(group["id"])
+    batch = r.managed_portfolios.history(group["id"])[0]
+    assert injected
+    assert batch["status"] == "completed", batch["error"]
+    assert r.managed_portfolios.get(group["id"])["status"] == "running"
+    assert all(c["phase"] != "compensate" for c in batch["commands"])
+    commands = [c for c in batch["commands"] if c["phase"] == "add"]
+    assert len(commands) == len({c["order_id"] for c in commands})
+    assert any(o["status"] == "filled" and o["inst_id"] == "SOL-USDT" for o in r.book.orders("example"))

@@ -1,5 +1,13 @@
 # Verification record
 
+## v0.6.0 candidate · 2026-10-08
+
+- Full local backend regression: **662 passed**, followed by the new frozen-perpetual funding/tier/settlement-mark test (**1 passed**). Ruff lint/format, frozen offline Python sync, TypeScript/Vite and Prettier passed. The existing Starlette/HTTPX deprecation remains visible.
+- **16 desktop/mobile Chromium workflows passed** on the final build (2.1 minutes). New coverage includes exact portfolio capture → review → seal → primary evaluation → verified replay, plus preserving a newly edited order draft when a previous submission responds late. Desktop/mobile screenshots were inspected and long-decimal criteria formatted with exact hover values.
+- Real SQLite counterexamples verify concurrent single-primary admission, queue rollback, committed-failure consumption, cross-bar/alias/unbound access rejection, indicator warmup exposure, schema-6 recovery retaining consumption/exposure/trials, missing primary artifacts and conflicting/corrupt retained facts. A real independent market fill between quote enumeration and managed-command admission now retries without duplicate fills or compensation.
+- Current standalone managed/recovery and offline red-team audit scripts passed against this implementation. Earlier failed v0.5 lifecycle trials are preserved; see [audit method](audit/soak-method.md). The final committed elapsed-time run and independent Linux/container workflow are recorded separately when completed, not inferred here.
+- Main application bundle: about 465 kB before transfer compression; research/governance pages remain deferred bundles. This shared-host size and verification record do not establish a capacity or availability SLA.
+
 ## v0.5.0 · 2026-10-08
 
 - **647 backend/core/property/API tests passed** on macOS arm64 / Python 3.13.15. Ruff lint/format and the frozen offline Python lock check passed. The existing Starlette TestClient/HTTPX deprecation warning remains visible.

@@ -21,7 +21,7 @@ from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights
 from .portfolio_targets import addition_plan, reduction_quantities, target_quantities
 from .pro_execution import SimulationBook, base_size, number, tier_for
-from .pro_research import ResearchConfig, _DecisionState
+from .pro_research import ResearchConfig, _DecisionState, json_safe
 from .schemas import InputModel, Money
 from .store import Store, dumps, encode, new_id, now_ms
 from .strategy_program import ProStrategyInput
@@ -117,6 +117,10 @@ class PortfolioResearch:
         return [self.get(identifier, result=False) for identifier in ids]
 
     def create(self, config, actor, margin_snapshots=None):
+        config, manifest, bundle = self.prepare(config, actor, margin_snapshots)
+        return self.enqueue(config, manifest, bundle, actor)
+
+    def prepare(self, config, actor, margin_snapshots=None, *, capture_window=None):
         config = encode(PortfolioInput.model_validate(config).model_dump())
         packages = [self.runtime.packages.get_package(leg["package_id"]) for leg in config["legs"]]
         if any(not p["ready"] for p in packages):
@@ -132,7 +136,17 @@ class PortfolioResearch:
                 422,
             )
         version = self.runtime.portfolio_registry.validate_binding(config, packages)
-        bars = (packages[0]["end"] - packages[0]["start"]) // CATALOG_BARS[packages[0]["bar"]]
+        start, end = capture_window or (packages[0]["start"], packages[0]["end"])
+        interval = CATALOG_BARS[packages[0]["bar"]]
+        if (
+            not packages[0]["start"] <= start < end <= packages[0]["end"]
+            or start % interval
+            or end % interval
+        ):
+            raise PlatformError(
+                "portfolio_window", "The complete warmup and test window must fit every aligned package.", 422
+            )
+        bars = (end - start) // interval
         if bars * len(packages) > 20000:
             raise PlatformError(
                 "portfolio_budget", "Portfolio research is limited to 20000 bar-leg observations.", 422
@@ -201,9 +215,7 @@ class PortfolioResearch:
                 raise PlatformError(
                     "portfolio_rules", "Rule events must be ordered, unique and market-matched.", 422
                 )
-            if config["rules_mode"] == "point_in_time" and (
-                not events or events[0]["effective_ts"] > package["start"]
-            ):
+            if config["rules_mode"] == "point_in_time" and (not events or events[0]["effective_ts"] > start):
                 raise PlatformError(
                     "portfolio_rules",
                     "Point-in-time mode requires attributed instrument rules covering the initial boundary of every leg.",
@@ -251,39 +263,166 @@ class PortfolioResearch:
             "inputs": inputs,
             "source": packages[0]["source"],
             "bar": packages[0]["bar"],
-            "start": packages[0]["start"],
-            "end": packages[0]["end"],
+            "start": start,
+            "end": end,
             "margin_tiers": margin_snapshots or {},
             "config_hash": digest(config),
             "created_by": actor,
             "rules_mode": config["rules_mode"],
             "universe_scope": "explicit_research_universe; no survivorship-bias-free listing history is inferred",
         }
-        identifier, timestamp = new_id(), now_ms()
-        with self.store.write() as conn:
-            self.runtime.governance.guard_portfolio(conn, packages)
-            active = (
-                conn.execute(
-                    "SELECT COUNT(*) FROM portfolio_runs WHERE status IN ('queued','running')"
-                ).fetchone()[0]
-                + conn.execute(
-                    "SELECT COUNT(*) FROM pro_runs WHERE status IN ('queued','running')"
-                ).fetchone()[0]
+        bundle = {"config": config, "manifest": manifest, "legs": self.capture(config, manifest)}
+        return config, manifest, bundle
+
+    def capture(self, config, manifest):
+        legs = []
+        for leg, captured in zip(config["legs"], manifest["inputs"], strict=True):
+            current = self.runtime.packages.research_inputs(leg["package_id"])
+            if current != captured:
+                raise PlatformError("portfolio_inputs", "An input package identity changed.", 409)
+            trade = self.runtime.catalog.get_dataset(captured["dataset_id"])
+            for key in ("dataset_id", "mark_dataset_id", "funding_dataset_id"):
+                if captured.get(key):
+                    self.runtime.catalog.verify_dataset(captured[key])
+            candles = self.runtime.catalog.load_candles(
+                captured["dataset_id"], start=manifest["start"], end=manifest["end"]
             )
+            marks = (
+                self.runtime.catalog.load_candles(
+                    captured["mark_dataset_id"], start=manifest["start"], end=manifest["end"]
+                )
+                if captured.get("mark_dataset_id")
+                else candles
+            )
+            package = self.runtime.packages.get_package(leg["package_id"])
+            funding = [
+                event
+                for event in package["manifest"]["funding_events"]
+                if manifest["start"] <= int(event["ts"]) < manifest["end"]
+            ]
+            tiers = (manifest["margin_tiers"].get(package["inst_id"]) or {}).get("tiers", [])
+            legs.append(
+                dict(
+                    config=leg,
+                    instrument=trade["metadata"],
+                    candles=candles,
+                    marks=marks,
+                    funding=funding,
+                    tiers=tiers,
+                )
+            )
+        return json_safe(legs)
+
+    def enqueue(self, config, manifest, bundle, actor, *, holdout=None, replay_of=None):
+        r = self.runtime
+        identifier, timestamp = new_id(), now_ms()
+        manifest = dict(manifest)
+        with self.store.write() as conn:
+            if holdout:
+                # Idempotent admission precedes queue capacity: retrieving an existing
+                # committed primary run is always possible even when the queue is full.
+                current = r.protocol.get(holdout["id"], conn, private=True)
+                if current["status"] == "consumed_unavailable":
+                    raise PlatformError(
+                        "holdout_consumed_unavailable", "Consumed evidence is absent after recovery.", 409
+                    )
+                if current["status"] == "consumed":
+                    return self.get(current["run_id"])
+            if not replay_of:
+                r.research_facts.guard(
+                    conn,
+                    manifest["source"],
+                    [(p["inst_id"], manifest["start"], manifest["end"]) for p in manifest["packages"]],
+                    allowed=("portfolio", holdout["id"]) if holdout else None,
+                )
+            active = conn.execute(
+                "SELECT (SELECT COUNT(*) FROM portfolio_runs WHERE status IN ('queued','running')) + (SELECT COUNT(*) FROM pro_runs WHERE status IN ('queued','running'))"
+            ).fetchone()[0]
             if active >= 10:
                 raise PlatformError("research_queue_full", "The shared research queue is full.", 429)
+            if holdout:
+                existing = r.protocol.admit(conn, holdout, identifier, timestamp)
+                if existing:
+                    return self.get(existing)
+                manifest["governance"] = dict(
+                    protocol_version=2,
+                    kind="portfolio",
+                    holdout_id=holdout["id"],
+                    plan_hash=holdout["plan_hash"],
+                    input_hash=holdout["input_hash"],
+                    primary_run_id=identifier,
+                    scope="research_api_workflow_seal",
+                )
+            pointer = r.artifacts.put(conn, dumps(bundle))
+            manifest.update(input_artifact=pointer, input_hash=digest(bundle))
             conn.execute(
                 "INSERT INTO portfolio_runs VALUES(?,?,'queued',?,?,NULL,NULL,0,?,?)",
                 (identifier, manifest["source"], dumps(config), dumps(manifest), timestamp, timestamp),
+            )
+            version = (
+                r.portfolio_registry.version(config["portfolio_version_id"])
+                if config.get("portfolio_version_id")
+                else None
+            )
+            r.research_facts.record(
+                conn,
+                "portfolio",
+                identifier,
+                config,
+                manifest["source"],
+                [(p["inst_id"], manifest["start"], manifest["end"]) for p in manifest["packages"]],
+                timestamp,
+                project_id=version["project_id"] if version else None,
+                version_id=version["id"] if version else None,
+                replay_of=replay_of,
+                root_run_id=manifest.get("root_run_id") or identifier,
             )
             self.store.audit(
                 conn,
                 manifest["source"],
                 "pro.portfolio_queued",
-                "Shared-capital portfolio research queued",
-                {"run_id": identifier, "actor": actor, "manifest_hash": digest(manifest)},
+                "Captured shared-capital portfolio research queued",
+                {
+                    "run_id": identifier,
+                    "actor": actor,
+                    "manifest_hash": digest(manifest),
+                    "replay_of": replay_of,
+                },
             )
+        r.wake.set()
         return self.get(identifier)
+
+    def replay(self, identifier, actor):
+        run = self.get(identifier)
+        manifest = run["manifest"]
+        if run["status"] != "completed" or not manifest.get("input_artifact"):
+            raise PlatformError(
+                "portfolio_replay_unavailable",
+                "Replay requires a completed captured-input portfolio run. Legacy runs must be researched again.",
+                409,
+            )
+        if manifest["implementation"]["code_fingerprint"] != self.runtime.engine_identity["code_fingerprint"]:
+            raise PlatformError(
+                "portfolio_replay_implementation",
+                "Install the recorded implementation before replaying its evidence.",
+                409,
+            )
+        bundle = self.runtime.artifacts.resolve(manifest["input_artifact"])
+        if digest(bundle) != manifest["input_hash"]:
+            raise PlatformError(
+                "portfolio_input_integrity", "Captured portfolio inputs failed their hash check.", 409
+            )
+        copied = {
+            k: v
+            for k, v in manifest.items()
+            if k not in {"result_hash", "completed_at", "replay_verified", "input_artifact"}
+        }
+        copied.update(
+            replay_of=identifier,
+            root_run_id=manifest.get("root_run_id") or identifier,
+            expected_result_hash=manifest["result_hash"],
+        )
+        return self.enqueue(run["config"], copied, bundle, actor, replay_of=identifier)
 
     def compute(self, identifier):
         run = self.get(identifier)
@@ -304,34 +443,23 @@ class PortfolioResearch:
                 raise PlatformError(
                     "portfolio_identity", "Captured configuration or installed implementation changed.", 409
                 )
-            legs = []
-            for leg, captured in zip(config["legs"], manifest["inputs"], strict=True):
-                current = self.runtime.packages.research_inputs(leg["package_id"])
-                if current != captured:
-                    raise PlatformError("portfolio_inputs", "An input package identity changed.", 409)
-                trade = self.runtime.catalog.get_dataset(captured["dataset_id"])
-                for key in ("dataset_id", "mark_dataset_id", "funding_dataset_id"):
-                    if captured.get(key):
-                        self.runtime.catalog.verify_dataset(captured[key])
-                candles = self.runtime.catalog.load_candles(captured["dataset_id"])
-                marks = (
-                    self.runtime.catalog.load_candles(captured["mark_dataset_id"])
-                    if captured.get("mark_dataset_id")
-                    else candles
-                )
-                package = self.runtime.packages.get_package(leg["package_id"])
-                funding = package["manifest"]["funding_events"]
-                tiers = (manifest["margin_tiers"].get(package["inst_id"]) or {}).get("tiers", [])
-                legs.append(
-                    {
-                        "config": leg,
-                        "instrument": trade["metadata"],
-                        "candles": candles,
-                        "marks": marks,
-                        "funding": funding,
-                        "tiers": tiers,
-                    }
-                )
+            from .research_protocol import decode_legs
+
+            if manifest.get("input_artifact"):
+                bundle = self.runtime.artifacts.resolve(manifest["input_artifact"])
+                if (
+                    digest(bundle) != manifest["input_hash"]
+                    or digest(bundle["config"]) != manifest["config_hash"]
+                ):
+                    raise PlatformError(
+                        "portfolio_input_integrity",
+                        "Captured computation bundle failed its identity check.",
+                        409,
+                    )
+            else:
+                # Preserve the observable legacy path for pre-upgrade queued work.
+                bundle = {"legs": self.capture(config, manifest)}
+            legs = decode_legs(bundle)
 
             def progress(fraction):
                 with self.store.write() as conn:
@@ -342,7 +470,6 @@ class PortfolioResearch:
 
             with localcontext(ACCOUNTING_CONTEXT):
                 if self.runtime.settings.research_process_isolation:
-                    from .pro_research import json_safe
                     from .research_process import run_isolated
 
                     result = run_isolated(
@@ -354,7 +481,20 @@ class PortfolioResearch:
                         cancelled=self.runtime.research_cancelled,
                     )
                 else:
-                    result = simulate_portfolio(config, manifest, legs, progress)
+                    if manifest.get("evaluation_plan"):
+                        from .research_protocol import evaluate_frozen_portfolio
+
+                        result = evaluate_frozen_portfolio(config, manifest, legs, progress)
+                    else:
+                        result = simulate_portfolio(config, manifest, legs, progress)
+            if manifest.get("replay_of"):
+                manifest["replay_verified"] = digest(result) == manifest["expected_result_hash"]
+                if not manifest["replay_verified"]:
+                    raise PlatformError(
+                        "portfolio_replay_mismatch",
+                        "Recomputed results differ from the captured original; replay is not verified.",
+                        409,
+                    )
             manifest = manifest | {"result_hash": digest(result), "completed_at": now_ms()}
             with self.store.write() as conn:
                 pointer = self.runtime.artifacts.put(conn, dumps(result))
@@ -821,5 +961,5 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 "rules": config["rules_mode"],
                 "no_history_inference": "No missing bars are forward-filled; current captured rules are not historical point-in-time rules.",
             },
-            "input_hash": digest({"config": config, "manifest": manifest}),
+            "input_hash": manifest.get("input_hash") or digest({"config": config, "manifest": manifest}),
         }

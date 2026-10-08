@@ -76,6 +76,13 @@ class ProfessionalRuntime:
             if "summary" not in {row[1] for row in conn.execute("PRAGMA table_info(pro_runs)")}:
                 conn.execute("ALTER TABLE pro_runs ADD COLUMN summary TEXT")
 
+        from .research_protocol import ResearchProtocol
+
+        self.protocol = ResearchProtocol(self)
+        self.research_facts = self.protocol.facts
+        self.governance.facts = self.research_facts
+        self.research_facts.backfill(self.registry)
+
     async def offload(self, function, *args, **kwargs):
         task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
         self.inflight.add(task)
@@ -295,6 +302,24 @@ class ProfessionalRuntime:
                     now,
                     now,
                 ),
+            )
+            version = (
+                self.registry.version(config["strategy_version_id"], conn=conn)
+                if config.get("strategy_version_id")
+                else None
+            )
+            self.research_facts.record(
+                conn,
+                "single",
+                identifier,
+                config,
+                dataset["source"],
+                [(dataset["inst_id"], max(dataset["start"], start - 2000 * interval), end)],
+                now,
+                project_id=version["project_id"] if version else None,
+                version_id=version["id"] if version else None,
+                replay_of=replay_of,
+                root_run_id=replay_of or identifier,
             )
             self.store.audit(
                 conn,

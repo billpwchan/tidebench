@@ -508,7 +508,7 @@ class BackupService:
                 or manifest["size_bytes"] <= 0
                 or type(manifest.get("created_at")) is not int
                 or type(manifest.get("database_schema")) is not int
-                or manifest["database_schema"] not in (1, 2, 3, 4, 5)
+                or manifest["database_schema"] not in (1, 2, 3, 4, 5, 6)
             ):
                 raise ValueError
         except (OSError, ValueError, TypeError, UnicodeError):
@@ -530,7 +530,7 @@ class BackupService:
             versions = [row[0] for row in conn.execute("SELECT version FROM schema_version")]
         except sqlite3.Error:
             raise PlatformError("backup_schema", "Backup database schema is missing.", 409) from None
-        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4, 5):
+        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4, 5, 6):
             raise PlatformError("backup_schema", "Backup database schema is unsupported.", 409)
         return versions[0]
 
@@ -746,6 +746,79 @@ class BackupService:
                     409,
                 )
             required_columns.update(managed)
+        if version >= 6:
+            governance = {
+                "portfolio_holdouts": {
+                    "id",
+                    "project_id",
+                    "version_id",
+                    "source",
+                    "plan",
+                    "plan_hash",
+                    "input_artifact",
+                    "input_hash",
+                    "status",
+                    "run_id",
+                    "created_by",
+                    "created_at",
+                    "consumed_at",
+                },
+                "research_reservations": {
+                    "id",
+                    "holdout_id",
+                    "kind",
+                    "source",
+                    "inst_id",
+                    "start_ts",
+                    "end_ts",
+                    "body",
+                    "content_hash",
+                    "created_at",
+                },
+                "research_exposures": {
+                    "id",
+                    "run_id",
+                    "kind",
+                    "source",
+                    "inst_id",
+                    "start_ts",
+                    "end_ts",
+                    "body",
+                    "content_hash",
+                    "created_at",
+                },
+                "research_consumptions": {
+                    "id",
+                    "holdout_id",
+                    "kind",
+                    "run_id",
+                    "plan_hash",
+                    "body",
+                    "content_hash",
+                    "created_at",
+                },
+                "research_trials": {
+                    "id",
+                    "run_id",
+                    "kind",
+                    "project_id",
+                    "version_id",
+                    "attempt_type",
+                    "config_hash",
+                    "config",
+                    "candidate_count",
+                    "replay_of",
+                    "root_run_id",
+                    "created_at",
+                    "body",
+                    "content_hash",
+                },
+            }
+            if not set(governance).issubset(tables):
+                raise PlatformError(
+                    "backup_schema", "Schema version 6 is missing research governance evidence.", 409
+                )
+            required_columns.update(governance)
         for table, required in required_columns.items():
             if table in tables and not required.issubset(
                 {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
@@ -753,7 +826,45 @@ class BackupService:
                 raise PlatformError(
                     "backup_schema", "Backup table columns are incompatible with safe recovery.", 409
                 )
+        if version >= 6:
+            cls._validate_research_facts(conn)
         return tables
+
+    @staticmethod
+    def _validate_research_facts(conn):
+        from .research_protocol import ResearchFacts
+
+        for table in (
+            "research_reservations",
+            "research_exposures",
+            "research_consumptions",
+            "research_trials",
+        ):
+            cursor = conn.execute(f"SELECT * FROM {table}")
+            columns = [column[0] for column in cursor.description]
+            for row in cursor:
+                ResearchFacts.checked(dict(zip(columns, row, strict=True)))
+
+    def _retain_research_facts(self, prepared):
+        """Union non-financial evidence; an old backup cannot make an interval unseen."""
+        from .research_protocol import ResearchFacts
+
+        counts = {}
+        with closing(self.store.connect()) as current:
+            current.execute("BEGIN")
+            for table in (
+                "research_reservations",
+                "research_exposures",
+                "research_consumptions",
+                "research_trials",
+            ):
+                count = 0
+                for row in current.execute(f"SELECT * FROM {table}"):
+                    body = ResearchFacts.checked(row)
+                    ResearchFacts.insert(prepared, table, body)
+                    count += 1
+                counts[table] = count
+        return counts
 
     @staticmethod
     def _readonly(path):
@@ -862,7 +973,7 @@ class BackupService:
                 **manifest,
                 "verified": True,
                 "tables": counts,
-                "restore_effect": "Replace workspace state; invalidate cookie sessions; halt simulated execution; cancel pending simulation orders.",
+                "restore_effect": "Replace financial workspace state; retain newer research reservation, exposure, consumption and trial facts; invalidate cookie sessions; halt simulated execution; cancel pending simulation orders.",
             }
 
     def restore(self, identifier):
@@ -893,6 +1004,9 @@ class BackupService:
                     tables = self._check_connection(prepared)
                     prepared.execute("BEGIN IMMEDIATE")
                     try:
+                        retained_research = (
+                            self._retain_research_facts(prepared) if manifest["database_schema"] >= 6 else {}
+                        )
                         if "workspace_sessions" in tables:
                             prepared.execute("DELETE FROM workspace_sessions")
                         prepared.execute("UPDATE risk SET kill_switch=1")
@@ -938,7 +1052,11 @@ class BackupService:
                             "system",
                             "backup.restored",
                             "Workspace restored; sessions revoked and execution halted",
-                            {"backup_id": identifier, "safety_backup_id": safety["id"]},
+                            {
+                                "backup_id": identifier,
+                                "safety_backup_id": safety["id"],
+                                "retained_research_facts": retained_research,
+                            },
                         )
                         prepared.commit()
                     except BaseException:
@@ -964,15 +1082,21 @@ class BackupService:
                 "sessions_revoked": True,
                 "execution_halted": True,
                 "pending_orders_canceled": True,
+                "retained_research_facts": retained_research,
                 "manifest": manifest,
             }
 
     def storage(self):
         free = shutil.disk_usage(self.settings.data_dir)
         wal = self.store.path.with_name(self.store.path.name + "-wal")
+        try:
+            wal_bytes = wal.stat().st_size
+        except FileNotFoundError:
+            # SQLite may remove the WAL after its last connection checkpoints.
+            wal_bytes = 0
         return {
             "database_bytes": self.store.path.stat().st_size,
-            "wal_bytes": wal.stat().st_size if wal.exists() else 0,
+            "wal_bytes": wal_bytes,
             "disk_free_bytes": free.free,
             "backup_count": len(self.list()),
             "backup_retention": self.settings.backup_retention,

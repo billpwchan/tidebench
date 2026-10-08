@@ -640,32 +640,51 @@ class ManagedPortfolios:
                                     and c["key"] not in {old["key"] for old in commands}
                                 )
                                 continue
-                    quotes = await r.snapshots_for(group["source"], [payload["inst_id"]])
-                    if (group["source"], payload["inst_id"]) in r.market_errors:
-                        raise PlatformError(
-                            "portfolio_market_unavailable",
-                            "The command requires a successfully observed quote; cached transport fallback is not used.",
-                            409,
-                        )
-                    if payload["inst_id"] not in quotes:
-                        raise PlatformError(
-                            "portfolio_quote_missing",
-                            "A command needs a fresh quote for its own market.",
-                            409,
-                        )
-                    r.book.fresh(quotes[payload["inst_id"]])
-                    if int(quotes[payload["inst_id"]]["ts"]) < batch["body"]["available_at"]:
-                        raise PlatformError(
-                            "portfolio_quote_before_signal",
-                            "A post-close quote is required for the command.",
-                            409,
-                        )
-                    await r.sync_funding(group["source"], payload["inst_id"], quotes)
-                    # Fresh reduce-only commands may proceed despite unrelated
-                    # unavailable markets. The book blocks incomplete new risk.
-                    order = await r.offload(
-                        r.book.submit, payload, command["key"], quotes, "strategy:" + command["deployment_id"]
-                    )
+                    for quote_attempt in range(3):
+                        quotes = await r.snapshots_for(group["source"], [payload["inst_id"]])
+                        if (group["source"], payload["inst_id"]) in r.market_errors:
+                            raise PlatformError(
+                                "portfolio_market_unavailable",
+                                "The command requires a successfully observed quote; cached transport fallback is not used.",
+                                409,
+                            )
+                        if payload["inst_id"] not in quotes:
+                            raise PlatformError(
+                                "portfolio_quote_missing",
+                                "A command needs a fresh quote for its own market.",
+                                409,
+                            )
+                        r.book.fresh(quotes[payload["inst_id"]])
+                        if int(quotes[payload["inst_id"]]["ts"]) < batch["body"]["available_at"]:
+                            raise PlatformError(
+                                "portfolio_quote_before_signal",
+                                "A post-close quote is required for the command.",
+                                409,
+                            )
+                        await r.sync_funding(group["source"], payload["inst_id"], quotes)
+                        # Fresh reduce-only commands may proceed despite unrelated
+                        # unavailable markets. The book blocks incomplete new risk.
+                        try:
+                            order = await r.offload(
+                                r.book.submit,
+                                payload,
+                                command["key"],
+                                quotes,
+                                "strategy:" + command["deployment_id"],
+                            )
+                            break
+                        except PlatformError as exc:
+                            # Another market can open after snapshots_for enumerates inventory.
+                            # No order is committed when admission rejects incomplete valuation.
+                            missing = {p["inst_id"] for p in r.book.positions(group["source"])} - set(quotes)
+                            if exc.code != "valuation_unavailable" or not missing:
+                                raise
+                            if quote_attempt == 2:
+                                raise PlatformError(
+                                    "portfolio_valuation_retry",
+                                    "Concurrent inventory changed the valuation inputs; the frozen command remains pending for retry.",
+                                    409,
+                                ) from None
             with self.store.write() as conn:
                 conn.execute(
                     "UPDATE portfolio_commands SET status='completed',order_id=?,error=NULL,updated_at=? WHERE id=?",
@@ -765,6 +784,21 @@ class ManagedPortfolios:
             # reconcile any fill that committed while cancellation propagated.
             raise
         except Exception as exc:
+            if isinstance(exc, PlatformError) and exc.code == "portfolio_valuation_retry":
+                with self.store.write() as conn:
+                    self._active(group["id"], conn)
+                    conn.execute(
+                        "UPDATE managed_portfolios SET last_error=?,updated_at=? WHERE id=?",
+                        (exc.message, now_ms(), group["id"]),
+                    )
+                    self.store.audit(
+                        conn,
+                        group["source"],
+                        "portfolio.valuation_retry",
+                        "Frozen portfolio command deferred after concurrent inventory changes",
+                        {"group_id": group["id"], "batch_id": batch["id"]},
+                    )
+                return
             with self.store.write() as conn:
                 active = self.get(group["id"], conn)
                 if active["status"] not in ACTIVE:

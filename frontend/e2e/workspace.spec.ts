@@ -654,7 +654,32 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
   await page.getByLabel('Quantity', { exact: false }).fill('0.001');
   await page.getByRole('button', { name: 'Preview order', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Order preview', exact: true })).toBeVisible();
+  let releaseSubmit!: () => void;
+  let submitted!: () => void;
+  const submissionStarted = new Promise<void>((resolve) => {
+    submitted = resolve;
+  });
+  const submissionGate = new Promise<void>((resolve) => {
+    releaseSubmit = resolve;
+  });
+  await page.route('**/pro/execution/orders', async (route) => {
+    if (route.request().method() === 'POST') {
+      submitted();
+      await submissionGate;
+    }
+    await route.continue();
+  });
+  const spotSubmission = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/execution/orders') && r.request().method() === 'POST',
+  );
   await page.getByRole('button', { name: 'Submit order', exact: true }).click();
+  await submissionStarted;
+  await page.getByLabel('Quantity', { exact: false }).fill('0.002');
+  releaseSubmit();
+  expect((await spotSubmission).ok()).toBeTruthy();
+  await expect(page.getByRole('status').filter({ hasText: 'Order submitted' })).toBeVisible();
+  await expect(page.getByLabel('Quantity', { exact: false })).toHaveValue('0.002');
+  await page.unroute('**/pro/execution/orders');
   await expect
     .poll(async () =>
       Number(
@@ -794,4 +819,143 @@ test('one-click perpetual research package preserves all input versions', async 
       async () => (await (await request.get(`/api/v1/pro/research/runs/${run.id}`)).json()).status,
     )
     .toBe('completed');
+});
+
+test('portfolio holdout captures a final contract, evaluates once and replays frozen evidence', async ({
+  page,
+  request,
+}, testInfo) => {
+  test.setTimeout(90000);
+  const csrf = (await (await request.get('/api/v1/auth/status')).json()).csrf_token;
+  const headers = { 'X-CSRF-Token': csrf };
+  const end = Date.parse(
+    testInfo.project.name === 'desktop' ? '2026-05-01T00:00:00Z' : '2026-06-01T00:00:00Z',
+  );
+  const HOUR = 3600000;
+  const packages: Record<string, string> = {};
+  for (const inst_id of ['BTC-USDT', 'ETH-USDT']) {
+    const response = await request.post('/api/v1/pro/catalog/packages', {
+      headers,
+      data: { source: 'example', inst_id, bar: '1H', start: end - 100 * HOUR, end },
+    });
+    expect(response.ok()).toBeTruthy();
+    const p = await response.json();
+    packages[inst_id] = p.id;
+    await expect
+      .poll(
+        async () =>
+          (await (await request.get(`/api/v1/pro/catalog/packages/${p.id}`)).json()).ready,
+      )
+      .toBeTruthy();
+  }
+  const projectResponse = await request.post('/api/v1/pro/portfolio-strategies', {
+    headers,
+    data: {
+      name: `Frozen basket ${testInfo.project.name}`,
+      hypothesis:
+        'Shared cash and measured costs must survive a final chronological interval without retuning.',
+      definition: {
+        capital_pct: '20',
+        rebalance_bars: 4,
+        legs: ['BTC-USDT', 'ETH-USDT'].map((inst_id) => ({
+          inst_id,
+          weight: '.5',
+          strategy: { kind: 'buy_hold' },
+        })),
+      },
+    },
+  });
+  expect(projectResponse.ok()).toBeTruthy();
+  const project = await projectResponse.json();
+  const pageErrors: string[] = [];
+  page.on('pageerror', (e) => pageErrors.push(e.message));
+  await navigate(page, 'Research');
+  await page.getByRole('tab', { name: 'Research governance', exact: true }).click();
+  await page.getByRole('tab', { name: 'Portfolios', exact: true }).click();
+  await page.getByLabel('Portfolio project', { exact: true }).selectOption(project.id);
+  await page.getByRole('button', { name: 'Register portfolio holdout', exact: true }).click();
+  await page
+    .getByLabel('Holdout name', { exact: true })
+    .fill(`Final basket ${testInfo.project.name}`);
+  await page.getByLabel('Portfolio version', { exact: true }).selectOption(project.version.id);
+  for (const symbol of ['BTC-USDT', 'ETH-USDT'])
+    await page.getByLabel(`Package · ${symbol}`, { exact: true }).selectOption(packages[symbol]);
+  await page
+    .getByLabel('UTC final start', { exact: true })
+    .fill(new Date(end - 40 * HOUR).toISOString().slice(0, 16));
+  await page
+    .getByLabel('UTC final end', { exact: true })
+    .fill(new Date(end).toISOString().slice(0, 16));
+  await page.getByLabel('Minimum return versus cash %', { exact: true }).fill('-100');
+  await page.getByLabel('Maximum accepted drawdown %', { exact: true }).fill('100');
+  await page
+    .getByLabel('Rejection plan', { exact: true })
+    .fill(
+      'Reject when fixed return, drawdown or debt criteria fail. Do not tune the portfolio on this final window.',
+    );
+  const previewPromise = page.waitForResponse(
+    (r) => r.url().endsWith('/portfolio-holdouts/preview') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Capture evaluation preview', exact: true }).click();
+  const previewResponse = await previewPromise;
+  expect(previewResponse.ok()).toBeTruthy();
+  const preview = await previewResponse.json();
+  expect(preview.plan.warmup_bars).toBe(20);
+  expect(preview.input_hash).toMatch(/^[a-f0-9]{64}$/);
+  await expect(
+    page.getByRole('heading', { name: 'Review the captured contract', exact: true }),
+  ).toBeVisible();
+  const sealPromise = page.waitForResponse(
+    (r) => r.url().endsWith('/portfolio-holdouts') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Seal captured portfolio', exact: true }).click();
+  expect((await sealPromise).ok()).toBeTruthy();
+  const evaluationPromise = page.waitForResponse(
+    (r) => r.url().endsWith(`/${preview.id}/evaluate`) && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Evaluate sealed portfolio', exact: true }).click();
+  const run = await (await evaluationPromise).json();
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get(`/api/v1/pro/research/portfolios/${run.id}`)).json()).status,
+    )
+    .toBe('completed');
+  await expect(page.getByText('One-use portfolio holdout', { exact: true })).toBeVisible();
+  if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1') {
+    await mkdir('../docs/assets', { recursive: true });
+    await page.screenshot({
+      path: `../docs/assets/portfolio-holdout-${testInfo.project.name}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  const repeat = await request.post(
+    `/api/v1/pro/research/portfolio-holdouts/${preview.id}/evaluate`,
+    { headers, data: { plan_hash: preview.plan_hash } },
+  );
+  expect((await repeat.json()).id).toBe(run.id);
+  const replayPromise = page.waitForResponse(
+    (r) => r.url().endsWith(`/${run.id}/replay`) && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Replay frozen inputs', exact: true }).click();
+  const replay = await (await replayPromise).json();
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get(`/api/v1/pro/research/portfolios/${replay.id}`)).json()).manifest
+          .replay_verified,
+    )
+    .toBe(true);
+  const evidence = await (
+    await request.get(`/api/v1/pro/research/portfolio-governance/${project.id}`)
+  ).json();
+  expect(evidence.recorded_attempts).toBe(2);
+  expect(evidence.primary_evaluations).toBe(1);
+  expect(evidence.replay_attempts).toBe(1);
+  await expect(page.locator('.error-box')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBe(true);
 });

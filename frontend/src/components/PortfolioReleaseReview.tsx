@@ -10,6 +10,10 @@ import { canTrade } from '../lib/permissions';
 import { number } from '../lib/format';
 
 const acknowledgement: Record<string, string> = {
+  holdout_rejected:
+    'This final holdout failed its pre-registered criteria. Paper deployment does not turn it into positive evidence.',
+  holdout_inconclusive:
+    'This final holdout has insufficient observations or fills for its pre-registered assessment.',
   sequential_leg_risk:
     'Legs fill sequentially. A failed leg triggers group reduction, which can also fail and retain inventory.',
   execution_risk_difference: 'Account exposure and loss limits differ from this research scenario.',
@@ -105,6 +109,8 @@ export default function PortfolioReleaseReview({
               bar: p.definition.bar,
             }}
           />
+          <h3>{t('Research evidence')}</h3>
+          <RecordGrid value={p.research_evidence} />
           <h3>{t('Account risk policy')}</h3>
           <RecordGrid value={p.risk_policy} />
           <DataTable

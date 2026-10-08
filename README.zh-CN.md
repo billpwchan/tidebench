@@ -52,7 +52,7 @@ make dev
 
 1. 在 Strategies 载入参考假设或自定义策略，保存不可变版本，点击 Research this version。
 2. 在 Data library → Research packages 选择现货或永续及 UTC 日期，一键准备研究数据包。永续会收集交易价、标记价、实际资金费与结算时点价格，全部校验后才就绪。
-3. 在绑定版本的研究中选择已校验数据，设置成本和独立测试窗口，导出或重放证据。单策略 Research governance 可在评估前冻结一次性保留集。
+3. 在绑定版本的研究中选择已校验数据，设置成本和独立测试窗口，导出或重放证据。Research governance 可在评估前冻结一次性保留集；组合协议捕获完整输入、固定现金基准与拒绝判据，支持哈希一致的冻结重放。[协议与恢复指南](docs/research-governance.md)。
 4. 从研究结果 Review paper release，核对候选、成本和当前风险政策，批准并激活。在 Execution 推进合成时钟，查看实际决策、订单、退出、净值与压力情景。
 5. 多市场流程在 Portfolio research 选择同步就绪数据包并保存绑定版本的研究。Review portfolio release 审查整组；Execution → Managed portfolios 显示冻结目标、共同现金缩放、实际命令及残差；Contributions 核对该组货币 P&L。详见[指南](docs/managed-portfolios.md)。
 6. 在 Operations 创建、校验备份。恢复会撤销所有会话、取消待执行订单／命令、停止全组并暂停账户新增风险。

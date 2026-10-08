@@ -23,7 +23,7 @@ Go from an economic hypothesis to an immutable strategy or portfolio version, re
 | Markets | Inspect confirmed candles and timestamped OKX quotes; switch explicitly to an isolated synthetic source |
 | Data library | Prepare a complete research package in one action: trade, mark, settled funding and exact-time settlement marks; inspect blockers, immutable versions and hashes; import attributed history |
 | Strategies | Immutable hypotheses and definitions; five reference families, bounded declarative programs, exits, loss budgets and editable research recipes |
-| Research | Version-bound replay, grids, cost stress, train/test, walk-forward; single-strategy one-use pre-registered holdouts and trial ledger |
+| Research | Version-bound replay, grids, cost stress, train/test, walk-forward; single-strategy and captured-input portfolio final evaluations, shared one-use governance and retained trial ledger |
 | Portfolio research | Immutable multi-market hypotheses; one cash budget across 2–10 aligned markets; fixed weights, independent signals, momentum and funding carry; editable hypotheses with rejection criteria and chronological tests |
 | Managed portfolios | Whole-group review and activation; durable targets/commands, common cash scaling, residual limits, group stops and recoverable failed-leg compensation |
 | Contributions | Actual owner quantities, entry cost, P&L, fees and funding reconciled to the account; linked fill/event evidence and exports |
@@ -54,7 +54,7 @@ For an offline walkthrough, choose **Example**:
 
 1. Open **Strategies**, load a reference hypothesis or define your own, and save a version. Choose **Research this version**.
 2. Open **Data library → Research packages**, choose a spot or perpetual market and UTC range, then **Prepare research package**. A perpetual package gathers trade, mark, realized funding and settlement marks before becoming ready.
-3. Prepare and select the exact data version in the bound study. Evaluate costs and independent test windows; export or replay the captured evidence. Single-strategy **Research governance** freezes a one-use final test before evaluation.
+3. Prepare and select the exact data version in the bound study. Evaluate costs and independent test windows; export or replay the captured evidence. **Research governance** freezes a one-use final test before evaluation. The portfolio protocol also captures complete inputs, displays fixed cash-benchmark rejection criteria and verifies frozen replay. [Protocol and recovery guide](docs/research-governance.md).
 4. **Review paper release** from the result, inspect the selected configuration and current policy, approve and activate. In **Execution**, advance the synthetic clock and inspect actual decisions, orders, exits and observed account performance. Order previews and captured exposure scenarios remain available.
 5. For a multi-market workflow, open **Portfolio research**, choose ready aligned packages and save a version-bound study. **Review portfolio release** approves the whole group. In **Execution → Managed portfolios**, inspect targets, cash scale, actual commands and residuals; **Contributions** reconciles its monetary P&L to the account. See the [full guide](docs/managed-portfolios.md).
 6. Open **Operations**. Create and verify a backup. A restore replaces workspace state, revokes sessions, cancels pending orders/commands, stops groups and halts accounts.
@@ -152,7 +152,7 @@ Tests exercise causal replay, indicator state, cost sensitivity, train-only sele
 - Market, limit and stop orders use a local full-fill model. Historical bars cannot reconstruct queue position, partial fills, market impact or exact intrabar paths.
 - Public settled funding history has limited retention. Older research requires attributed imports with an explicit coverage declaration; missing history blocks derivative research.
 - Historical funding marks can be one-minute bar-open approximations. Captured current maintenance tiers are scenario inputs, not historical tier evidence.
-- Managed portfolios and monetary contribution attribution are implemented. Portfolio-specific one-use holdouts/trial governance remain separate from the single-strategy controls. An explicit current universe does not establish historical listing/delisting coverage or survivorship-free research.
+- Managed portfolios and monetary contribution attribution are implemented. Captured portfolio holdouts and trial governance share market-time reservations with single strategies; recovery retains newer consumption/exposure/trial facts. Public data and external experiments are not statistically blinded. An explicit current universe does not establish historical listing/delisting coverage or survivorship-free research.
 - One shared workspace with role-based users, one process and one SQLite writer. This deployment does not provide distributed failover or tenant isolation.
 - A short test run cannot prove months of availability or strategy profitability. Metrics state insufficient-sample and insolvent-account conditions explicitly.
 

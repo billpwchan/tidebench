@@ -224,7 +224,16 @@ def worker(directory, parent_pid=None):
                             )
                             for row in leg[name]
                         ]
-                result = simulate_portfolio(payload["config"], payload["manifest"], payload["legs"], progress)
+                if payload["manifest"].get("evaluation_plan"):
+                    from .research_protocol import evaluate_frozen_portfolio
+
+                    result = evaluate_frozen_portfolio(
+                        payload["config"], payload["manifest"], payload["legs"], progress
+                    )
+                else:
+                    result = simulate_portfolio(
+                        payload["config"], payload["manifest"], payload["legs"], progress
+                    )
             else:
                 raise ValueError("Unsupported research operation")
         raw = dumps(result).encode()

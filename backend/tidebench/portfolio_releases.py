@@ -22,9 +22,14 @@ class PortfolioReleaseInput(PortfolioReleasePreviewInput):
     review: str = Field(min_length=12, max_length=2000)
     acknowledgements: list[
         Literal[
-            "execution_cost_difference", "execution_risk_difference", "no_oos_evidence", "sequential_leg_risk"
+            "execution_cost_difference",
+            "execution_risk_difference",
+            "no_oos_evidence",
+            "sequential_leg_risk",
+            "holdout_rejected",
+            "holdout_inconclusive",
         ]
-    ] = Field(default_factory=list, max_length=4)
+    ] = Field(default_factory=list, max_length=6)
 
 
 class PortfolioReleases:
@@ -138,11 +143,14 @@ class PortfolioReleases:
             )
             if Decimal(str(config[ckey])) != Decimal(str(risk[rkey]))
         ]
+        evidence = r.protocol.verify_run(run)
         required = (
             ["sequential_leg_risk"]
             + (["execution_risk_difference"] if risk_differences else [])
             + (["execution_cost_difference"] if differences else [])
-            + (["no_oos_evidence"] if config["evaluation"] == "full" else [])
+            + (["no_oos_evidence"] if config["evaluation"] == "full" and not evidence["one_use"] else [])
+            + (["holdout_rejected"] if evidence.get("rejection_status") == "rejected" else [])
+            + (["holdout_inconclusive"] if evidence.get("rejection_status") == "inconclusive" else [])
         )
         blockers = (
             (["execution_halted"] if risk["halted"] else [])
@@ -179,6 +187,7 @@ class PortfolioReleases:
             "inventory": inventory,
             "pending_order_ids": pending,
             "owner_ids": owners,
+            "research_evidence": evidence,
             "evaluation": run["result"].get("evaluation", {"mode": config["evaluation"]}),
             "metrics": run["result"]["metrics"],
             "capital_basis": "current complete account equity × declared capital percentage; cash and risk are shared with the whole account",

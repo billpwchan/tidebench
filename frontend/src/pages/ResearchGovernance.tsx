@@ -4,14 +4,15 @@ import { useState } from 'react';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
 import { useSession } from '../components/AuthGate';
-import { DataTable, JsonDetails, RecordGrid } from '../components/ProWorkspace';
+import PortfolioGovernance from '../components/PortfolioGovernance';
+import { DataTable, JsonDetails, RecordGrid, WorkspaceTabs } from '../components/ProWorkspace';
 import { ErrorBox, Field, Loading, PageHeading, Status } from '../components/workspace';
 import { useI18n } from '../lib/i18n';
 import { date } from '../lib/format';
 import { canResearch } from '../lib/permissions';
 
 const utc = (ts?: number) => (ts ? new Date(ts).toISOString().slice(0, 16) : '');
-export default function ResearchGovernance({
+function SingleResearchGovernance({
   source,
   onRun,
 }: {
@@ -400,6 +401,35 @@ export default function ResearchGovernance({
           />
         )}
       </section>
+    </>
+  );
+}
+
+export default function ResearchGovernance({
+  source,
+  onRun,
+  onPortfolioRun,
+}: {
+  source: Source;
+  onRun: (id: string) => void;
+  onPortfolioRun: (id: string) => void;
+}) {
+  const [scope, setScope] = useState('single');
+  return (
+    <>
+      <WorkspaceTabs
+        value={scope}
+        onChange={setScope}
+        items={[
+          { key: 'single', label: 'Single strategy' },
+          { key: 'portfolio', label: 'Portfolios' },
+        ]}
+      />
+      {scope === 'portfolio' ? (
+        <PortfolioGovernance key={source} source={source} onRun={onPortfolioRun} />
+      ) : (
+        <SingleResearchGovernance key={source} source={source} onRun={onRun} />
+      )}
     </>
   );
 }

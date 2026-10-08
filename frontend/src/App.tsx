@@ -56,6 +56,7 @@ function Workspace() {
   const [bar, setBar] = useState<Bar>('1H');
   const [researchTab, setResearchTab] = useState('advanced');
   const [selectedRunId, setSelectedRunId] = useState<string>();
+  const [selectedPortfolioRun, setSelectedPortfolioRun] = useState<string>();
   const [selectedInputs, setSelectedInputs] = useState<ResearchInputs | undefined>();
   const [selectedVersion, setSelectedVersion] = useState<StrategyVersion | undefined>();
   const [executionView, setExecutionView] = useState('positions');
@@ -78,6 +79,7 @@ function Workspace() {
     setSelectedInputs(undefined);
     setSelectedVersion(undefined);
     setSelectedRunId(undefined);
+    setSelectedPortfolioRun(undefined);
     localStorage.setItem('tidebench:source', s);
   };
   const navigate = (p: Page, view?: string) => {
@@ -184,6 +186,10 @@ function Workspace() {
                 {researchTab === 'governance' ? (
                   <ResearchGovernance
                     source={source}
+                    onPortfolioRun={(id) => {
+                      setSelectedPortfolioRun(id);
+                      setResearchTab('portfolio');
+                    }}
                     onRun={(id) => {
                       setSelectedVersion(undefined);
                       setSelectedInputs(undefined);
@@ -195,6 +201,7 @@ function Workspace() {
                   <PortfolioResearch
                     key={source}
                     source={source}
+                    initialRunId={selectedPortfolioRun}
                     onData={() => navigate('data')}
                     onExecution={() => navigate('execution', 'managed')}
                   />

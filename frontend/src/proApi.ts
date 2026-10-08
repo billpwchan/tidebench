@@ -369,6 +369,7 @@ export type PortfolioReleasePreview = {
   metrics: RecordData;
   capital_basis: string;
   execution_model: string;
+  research_evidence: RecordData;
 };
 export type PortfolioRelease = {
   id: string;
@@ -489,7 +490,72 @@ export type Holdout = {
   plan_hash: string;
   created_at: number;
 };
+export type PortfolioHoldout = {
+  id: string;
+  project_id: string;
+  version_id: string;
+  source: Source;
+  status: 'draft' | 'sealed' | 'consumed' | 'consumed_unavailable';
+  run_id?: string | null;
+  plan_hash: string;
+  input_hash: string;
+  created_at: number;
+  plan: {
+    name: string;
+    definition: PortfolioDefinition;
+    hypothesis: string;
+    test_config: RecordData;
+    test_start: number;
+    test_end: number;
+    access_start: number;
+    warmup_bars: number;
+    benchmark: 'cash';
+    criteria: RecordData;
+    rejection_plan: string;
+    packages: { id: string; inst_id: string; manifest_hash: string }[];
+    scope: string;
+    [key: string]: unknown;
+  };
+};
+export type PortfolioHoldoutPreview = PortfolioHoldout & {
+  preview_id: string;
+  preview_hash: string;
+  blockers: string[];
+};
+export type PortfolioGovernanceReport = {
+  project_id: string;
+  recorded_attempts: number;
+  primary_evaluations: number;
+  replay_attempts: number;
+  candidate_configurations: number;
+  distinct_configurations: number;
+  items: RecordData[];
+  holdouts: PortfolioHoldout[];
+  scope: string;
+};
 export const proApi = {
+  portfolioHoldouts: (source: Source, project_id: string) =>
+    request<{ items: PortfolioHoldout[] }>(
+      `/pro/research/portfolio-holdouts?${q({ source, project_id })}`,
+    ),
+  previewPortfolioHoldout: (body: RecordData) =>
+    post<PortfolioHoldoutPreview>('/pro/research/portfolio-holdouts/preview', body),
+  sealPortfolioHoldout: (preview: PortfolioHoldoutPreview) =>
+    post<PortfolioHoldout>('/pro/research/portfolio-holdouts', {
+      preview_id: preview.preview_id,
+      preview_hash: preview.preview_hash,
+    }),
+  evaluatePortfolioHoldout: (holdout: PortfolioHoldout) =>
+    post<PortfolioResearchRun>(
+      `/pro/research/portfolio-holdouts/${encodeURIComponent(holdout.id)}/evaluate`,
+      { plan_hash: holdout.plan_hash },
+    ),
+  portfolioGovernance: (id: string) =>
+    request<PortfolioGovernanceReport>(
+      `/pro/research/portfolio-governance/${encodeURIComponent(id)}`,
+    ),
+  replayPortfolio: (id: string) =>
+    post<PortfolioResearchRun>(`/pro/research/portfolios/${encodeURIComponent(id)}/replay`),
   holdouts: () => request<{ items: Holdout[] }>('/pro/research/holdouts'),
   sealHoldout: (body: RecordData) => post<Holdout>('/pro/research/holdouts', body),
   evaluateHoldout: (holdout: Holdout) =>

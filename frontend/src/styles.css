@@ -6274,3 +6274,42 @@ tbody tr:hover {
 .contribution-events {
   margin-top: 24px;
 }
+
+.governance-statistics {
+  margin: 20px 0 28px;
+}
+.portfolio-holdout-editor .section-heading {
+  align-items: center;
+}
+.portfolio-holdout-editor h3,
+.frozen-portfolio-plan h4 {
+  margin: 24px 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.holdout-package-selection {
+  margin: 12px 0 24px;
+}
+.portfolio-holdout-row {
+  padding: 22px 0;
+}
+.portfolio-holdout-row + .portfolio-holdout-row {
+  border-top: 1px solid var(--line);
+}
+.portfolio-holdout-row h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.frozen-portfolio-plan {
+  margin: 20px 0;
+}
+.sealed-evaluation {
+  margin: 24px 0;
+}
+.portfolio-holdout-row .section-heading {
+  flex-wrap: wrap;
+}
+.portfolio-holdout-editor textarea {
+  width: 100%;
+  font: inherit;
+}

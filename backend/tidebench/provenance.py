@@ -26,6 +26,7 @@ def research_identity() -> dict:
         "research_process.py",
         "research_artifacts.py",
         "research_governance.py",
+        "research_protocol.py",
         "portfolio_registry.py",
         "portfolio_releases.py",
         "managed_portfolios.py",

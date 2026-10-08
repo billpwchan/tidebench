@@ -50,10 +50,12 @@ export default function PortfolioResearch({
   source,
   onData,
   onExecution,
+  initialRunId,
 }: {
   source: Source;
   onData: () => void;
   onExecution: () => void;
+  initialRunId?: string;
 }) {
   const { t } = useI18n();
   const qc = useQueryClient();
@@ -69,7 +71,10 @@ export default function PortfolioResearch({
     queryFn: () => proApi.portfolioRuns(source),
     refetchInterval: 5000,
   });
-  const [active, setActive] = useState('');
+  const [active, setActive] = useState(initialRunId ?? '');
+  useEffect(() => {
+    if (initialRunId) setActive(initialRunId);
+  }, [initialRunId]);
   const id = active || runs.data?.items[0]?.id;
   const run = useQuery({
     queryKey: ['portfolio-run', id],
@@ -171,6 +176,14 @@ export default function PortfolioResearch({
       setActive(r.id);
       setEditing(false);
       void qc.invalidateQueries({ queryKey: ['portfolio-runs', source] });
+    },
+  });
+  const replay = useMutation({
+    mutationFn: () => proApi.replayPortfolio(id!),
+    onSuccess: (r) => {
+      setActive(r.id);
+      void qc.invalidateQueries({ queryKey: ['portfolio-runs', source] });
+      void qc.invalidateQueries({ queryKey: ['portfolio-governance'] });
     },
   });
   const loadProject = useMutation({
@@ -753,6 +766,89 @@ export default function PortfolioResearch({
                   ) : null}
                 </div>
                 {revise.isError && <ErrorBox error={revise.error} />}
+                {replay.isError && <ErrorBox error={replay.error} />}
+                {run.data?.status === 'completed' && !!run.data.manifest.input_artifact && (
+                  <div className="toolbar">
+                    <button
+                      className="text-button"
+                      disabled={!canOperate || replay.isPending}
+                      onClick={() => replay.mutate()}
+                    >
+                      {t('Replay frozen inputs')}
+                    </button>
+                    {run.data.manifest.replay_verified === true && (
+                      <Status type="good">{t('verified')}</Status>
+                    )}
+                    {!!run.data.manifest.replay_of && (
+                      <span className="quiet-copy">
+                        {t('Reproduction · not independent evidence')}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {evaluationEvidence?.mode === 'sealed_holdout' && (
+                  <section className="sealed-evaluation">
+                    <span className="eyebrow">{t('One-use portfolio holdout')}</span>
+                    <RecordGrid
+                      value={{
+                        Assessment: t(
+                          String((evaluationEvidence.rejection as RecordData)?.status ?? '—'),
+                        ),
+                        Benchmark: t('Cash · 0%'),
+                        'Final window start': date(Number(evaluationEvidence.test_start), true),
+                        'Final window end': date(Number(evaluationEvidence.test_end), true),
+                        warmup_bars: evaluationEvidence.warmup_bars,
+                      }}
+                    />
+                    <p className="quiet-copy">
+                      {t(
+                        'Warmup initializes indicators only. Financial records cover the final window from flat inventory. Replay reproduces the same primary evaluation.',
+                      )}
+                    </p>
+                    <DataTable
+                      rows={
+                        ((evaluationEvidence.rejection as RecordData)?.checks ?? []) as RecordData[]
+                      }
+                      columns={[
+                        {
+                          key: 'metric',
+                          label: 'Criterion',
+                          render: (r) =>
+                            t(
+                              (
+                                {
+                                  return_vs_cash_pct: 'Return above cash (%)',
+                                  max_drawdown_pct: 'Maximum drawdown (%)',
+                                  zero_debt: 'Insurance debt (USDT)',
+                                } as Record<string, string>
+                              )[String(r.metric)] ?? String(r.metric),
+                            ),
+                        },
+                        {
+                          key: 'actual',
+                          label: 'Actual',
+                          render: (r) => (
+                            <span title={String(r.actual)}>{number(r.actual, 4)}</span>
+                          ),
+                        },
+                        {
+                          key: 'threshold',
+                          label: 'Threshold',
+                          render: (r) => (
+                            <span title={String(r.threshold)}>{number(r.threshold, 4)}</span>
+                          ),
+                        },
+                        {
+                          key: 'passed',
+                          label: 'Assessment',
+                          render: (r) => <Status>{t(r.passed ? 'passed' : 'rejected')}</Status>,
+                        },
+                      ]}
+                    />
+                    <JsonDetails value={evaluationEvidence} label="Evaluation contract" />
+                  </section>
+                )}
+
                 {run.data?.status === 'completed' && (
                   <PortfolioReleaseReview
                     key={run.data.id}
@@ -787,7 +883,7 @@ export default function PortfolioResearch({
                       <JsonDetails value={run.data?.manifest} label="Input manifest" />
                     </div>
                     <RecordGrid value={plan.metrics} />
-                    {!!evaluationEvidence && (
+                    {evaluationEvidence?.mode === 'train_test' && (
                       <>
                         <p className="quiet-copy">
                           {t(
@@ -854,7 +950,7 @@ export default function PortfolioResearch({
                     {tab === 'overview' && (
                       <>
                         <ResearchChart rows={plan.equity} />
-                        <JsonDetails value={plan.assumptions} label="Model assumptions" open />
+                        <JsonDetails value={plan.assumptions} label="Model assumptions" />
                       </>
                     )}
                     {tab === 'decisions' && (

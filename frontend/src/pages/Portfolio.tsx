@@ -118,6 +118,8 @@ export default function Portfolio({
   };
   const riskBlocksOrder = !!risk.data?.halted && !body.reduce_only;
   const payload = JSON.stringify(body);
+  const currentDraft = useRef(payload);
+  currentDraft.current = payload;
   const refresh = () => {
     for (const key of [
       'pro-account',
@@ -134,11 +136,15 @@ export default function Portfolio({
   const previewMatches = !!preview.data && JSON.stringify(preview.variables) === payload;
   const order = useMutation({
     mutationFn: ({ data, key }: { data: OrderRequest; key: string }) => proApi.order(data, key),
-    onSuccess: (r) => {
+    onSuccess: (r, submitted) => {
       setNotice(`${t('Order submitted')} · ${r.id} · ${r.status}`);
-      idempotency.current = null;
-      setQuantity('');
-      preview.reset();
+      const submittedPayload = JSON.stringify(submitted.data);
+      if (idempotency.current?.payload === submittedPayload) idempotency.current = null;
+      // A response for a previous order must not erase the trader's next draft.
+      if (currentDraft.current === submittedPayload) {
+        setQuantity('');
+        preview.reset();
+      }
       refresh();
     },
   });
