@@ -13,6 +13,8 @@ English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Re
 
 ![Tidebench trading overview, using explicitly synthetic prices](docs/assets/overview.png)
 
+Instrument evidence preserves full forward REST data-array observations, including unavailable preopen rows. Compare responses, inspect missing rules, review information known by a UTC time and export exact hashes; older listing timestamps do not manufacture historical coverage. [Observation and recovery guide](docs/instrument-evidence.md).
+
 ## A connected trading workflow
 
 Go from an economic hypothesis to an immutable strategy or portfolio version, reproducible research, reviewed paper release and inspectable forward decisions. Multi-market groups preserve targets and commands across interruption, expose failed-leg compensation, and reconcile actual monetary contribution to the shared account. See [strategy workflows](docs/strategy-workflows.md), [managed portfolios](docs/managed-portfolios.md) and the [self-audit](docs/audit/README.md).

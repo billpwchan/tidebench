@@ -117,3 +117,8 @@ Create and verify a schema-5 backup with v0.5, preserving its matching source/im
 In-app restore requires the same schema. Schema-6 restore checks and retains newer independently hashed research facts before replacing financial state; a missing consumed primary remains unavailable rather than reopening the final test. Conflicting or invalid retained facts reject replacement. Financial accounts are restored, not unioned. Sessions are revoked, groups stopped, pending commands canceled, risk halted and synthetic time paused. See [research recovery](research-governance.md).
 
 For rollback, use v0.5 against a separately preserved schema-5 copy. Do not point old code at schema 6. External filesystem rollback must preserve newer research evidence separately; deleting every copy of newer facts cannot be repaired by the application.
+
+
+## v0.7 / schema 7 upgrade
+
+Use v0.6 to create and verify a schema-6 backup before stopping its single writer. Deploy v0.7, verify schema 7, readiness and unchanged financial/user rows, then create and verify a schema-7 backup. Same-schema restore retains newer independently hashed instrument observations as well as schema-6 research facts; conflicts abort financial replacement. A rollback uses v0.6 code against the preserved schema-6 copy. Mutable legacy instrument rows are not backfilled as historical observations. See [instrument evidence](instrument-evidence.md).

@@ -1,0 +1,63 @@
+{
+  "status": "passed",
+  "python": "3.13.15",
+  "platform": "macOS-15.8.1-arm64-arm-64bit-Mach-O",
+  "scope": "two public forward REST data-array observations; no private API or execution",
+  "historical_completeness": false,
+  "implementation_sha256": {
+    "backend/tidebench/catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+    "backend/tidebench/instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90"
+  },
+  "observations": [
+    {
+      "id": "83e1ce20c34b460a9d4eba2d837bb13f",
+      "source": "okx",
+      "region": "global",
+      "inst_type": "SPOT",
+      "received_at": 1791454612653,
+      "received_ns": "1791454612653101000",
+      "row_count": 1144,
+      "supported_count": 403,
+      "counts": {
+        "unknown": 741,
+        "eligible": 403
+      },
+      "payload_hash": "916ac2bb482ac98615bdd79a2fa369eb571a8fddb5df0e833c437c32cdc8dcd6",
+      "content_hash": "4c335a28b3a6ecb09622547d0e775edae42bea3371956e56bb6b659b59eec768",
+      "parser_version": 1,
+      "transport": "rest_data_array",
+      "persisted_export_hash_verified": true,
+      "raw_rows_retained": true,
+      "btc_metadata_observation_verified": true,
+      "prior_coverage_unknown": true,
+      "unavailable_reasons": {
+        "outside_supported_usdt_scope": 741
+      }
+    },
+    {
+      "id": "959e22c58f29456a85f999c97a132658",
+      "source": "okx",
+      "region": "global",
+      "inst_type": "SWAP",
+      "received_at": 1791454613031,
+      "received_ns": "1791454613031689000",
+      "row_count": 500,
+      "supported_count": 485,
+      "counts": {
+        "unknown": 15,
+        "eligible": 485
+      },
+      "payload_hash": "2f8c577371f5827a4a3df9507024b002786664cae8f3aa63fbd0f37ff01047b6",
+      "content_hash": "cbe6e5fb06f993965e56a2a0691f01762106d18b2b5ca8aee7f162b97c1c4e2a",
+      "parser_version": 1,
+      "transport": "rest_data_array",
+      "persisted_export_hash_verified": true,
+      "raw_rows_retained": true,
+      "btc_metadata_observation_verified": true,
+      "prior_coverage_unknown": true,
+      "unavailable_reasons": {
+        "outside_supported_usdt_scope": 15
+      }
+    }
+  ]
+}

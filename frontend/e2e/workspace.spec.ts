@@ -997,3 +997,64 @@ test('a failed view download preserves navigation and recovers after explicit re
   await expect(page.getByRole('button', { name: 'New strategy', exact: true })).toBeVisible();
   await expect(page.locator('.workspace-view-failure')).toHaveCount(0);
 });
+
+test('instrument observations expose causal coverage, exact exports and current-product scope', async ({
+  page,
+}) => {
+  await navigate(page, 'Data library');
+  await page.getByRole('tab', { name: 'Instrument evidence', exact: true }).click();
+  const desk = page.getByRole('region', { name: 'Instrument evidence', exact: true });
+  const captured = page.waitForResponse(
+    (r) => r.url().includes('/catalog/instrument-observations?') && r.request().method() === 'POST',
+  );
+  await desk.getByRole('button', { name: 'Capture current observation', exact: true }).click();
+  const response = await captured;
+  expect(response.status()).toBe(201);
+  const first = await response.json();
+  await expect(desk.getByLabel('Stored observation', { exact: true })).toHaveValue(first.id);
+  await expect(desk.getByText('Observed at this time', { exact: true })).toBeVisible();
+  await desk.getByLabel('Filter observed instruments', { exact: true }).fill('BTC-USDT');
+  await expect(desk.getByRole('cell', { name: 'BTC-USDT', exact: true })).toBeVisible();
+  await desk.getByRole('button', { name: 'Inspect raw row', exact: true }).click();
+  await expect(
+    desk.getByRole('button', { name: 'Raw instrument row', exact: true }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  const downloaded = page.waitForEvent('download');
+  await desk.getByRole('button', { name: 'Export original observation', exact: true }).click();
+  expect((await downloaded).suggestedFilename()).toBe(`instrument-observation-${first.id}.json`);
+  await desk.getByLabel('Filter observed instruments', { exact: true }).fill('');
+  await desk.getByLabel('Review time (UTC)', { exact: true }).fill('2020-01-01T00:00');
+  await desk.getByRole('button', { name: 'Review known information', exact: true }).click();
+  await expect(desk.getByText('No prior observation', { exact: true })).toBeVisible();
+  await desk
+    .getByLabel('Review time (UTC)', { exact: true })
+    .fill(new Date(first.received_at + 7200000).toISOString().slice(0, 16));
+  await desk.getByRole('button', { name: 'Review known information', exact: true }).click();
+  await expect(desk.getByText('Unknown coverage', { exact: true })).toBeVisible();
+  await expect(
+    desk.getByText(
+      'The last observation is older than the allowed age. Every member remains unknown.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(desk.getByRole('cell', { name: 'Unknown', exact: true })).toHaveCount(5);
+  await desk.getByRole('button', { name: 'Return to stored observation', exact: true }).click();
+  await desk.getByLabel('Instrument product', { exact: true }).selectOption('SWAP');
+  const swapCaptured = page.waitForResponse(
+    (r) => r.url().includes('/catalog/instrument-observations?') && r.request().method() === 'POST',
+  );
+  await desk.getByRole('button', { name: 'Capture current observation', exact: true }).click();
+  const swap = await (await swapCaptured).json();
+  await expect(desk.getByLabel('Stored observation', { exact: true })).toHaveValue(swap.id);
+  await expect(desk.getByRole('cell', { name: 'BTC-USDT-SWAP', exact: true })).toBeVisible();
+  await expect(desk.getByRole('cell', { name: 'BTC-USDT', exact: true })).toHaveCount(0);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBeTruthy();
+  if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1')
+    await page.screenshot({
+      path: `../docs/assets/instrument-evidence-${test.info().project.name}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+});

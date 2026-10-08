@@ -88,3 +88,8 @@ Historical portfolios use next-open bar observations; forward simulation uses po
 Named-user authentication, role enforcement, cookie CSRF, exact hosts/origins and request-size limits apply before route dispatch. No arbitrary provider URLs or executable user code are accepted. Exchange secrets are outside the API/storage boundary.
 
 Recovery persists a halt/stop latch, drains requests/workers/owned computation, verifies a matching-schema backup and creates a safety copy. Its prepared recovery image revokes sessions, cancels pending orders/commands, stops groups and strategies, halts risk and pauses synthetic time before database replacement. Financial and contribution evidence remains inspectable; an interruption cannot silently reactivate a group. Schema 5 validates the new portfolio/contribution tables as well as prior financial evidence. See [operations](operations.md) and [scope/acceptance](commercial-readiness.md).
+
+
+## Instrument observations (v0.7 / schema 7)
+
+`InstrumentObservations` stores immutable canonical REST data arrays independently of the latest economic metadata cache. It retains receipt ordering, unavailable rows and parser identity; current instrument lookup binds the newest response rather than falling back to an omitted old member. Time review uses only already received observations under an explicit age policy. Backup verification validates complete identities/hashes; same-schema recovery unions newer observations before financial replacement. This is forward evidence, not historical universe reconstruction. See [instrument evidence](instrument-evidence.md).

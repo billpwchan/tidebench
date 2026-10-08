@@ -95,6 +95,8 @@ def test_auth_csrf_roles_and_password_storage(client):
         == 403
     )
     assert client.get("/api/v1/auth/users").status_code == 403
+    assert client.get("/api/v1/pro/catalog/instrument-observations?source=example").status_code == 200
+    assert client.post("/api/v1/pro/catalog/instrument-observations?source=example").status_code == 403
 
 
 def test_versioned_spot_research_replay_export_and_walk_forward(client):
@@ -253,7 +255,7 @@ def test_verified_restore_revokes_session_and_halts_execution(client):
     backup = client.post("/api/v1/pro/ops/backups/create")
     assert backup.status_code == 201, backup.text
     identifier = backup.json()["id"]
-    assert backup.json()["database_schema"] == 6
+    assert backup.json()["database_schema"] == 7
     assert client.get(f"/api/v1/pro/ops/backups/{identifier}/verify").json()["verified"]
     runtime.clock.change(step_ms=3600000, expected_revision=saved_clock["revision"], actor="operator")
     restore = client.post(
@@ -291,7 +293,7 @@ def test_additive_upgrade_is_repeatable_and_preserves_legacy_state(tmp_path):
         assert first.app.state.professional.book.account("example", {})["cash"] == "10000"
     with TestClient(create_app(configuration)) as second:
         with second.app.state.store.read() as conn:
-            assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 6
+            assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 7
             assert conn.execute("SELECT COUNT(*) FROM schema_migrations WHERE version=2").fetchone()[0] == 1
             assert conn.execute("SELECT COUNT(*) FROM schema_migrations WHERE version=3").fetchone()[0] == 1
             assert conn.execute("SELECT cash FROM accounts WHERE source='example'").fetchone()[0] == "9876.54"
@@ -561,7 +563,7 @@ def test_verified_restore_preserves_managed_commands_contributions_and_stops_gro
     before = client.get("/api/v1/pro/execution/contributions?source=example").json()
     assert before["reconciled"] and before["owners"]
     backup = client.post("/api/v1/pro/ops/backups/create").json()
-    assert client.get(f"/api/v1/pro/ops/backups/{backup['id']}/verify").json()["database_schema"] == 6
+    assert client.get(f"/api/v1/pro/ops/backups/{backup['id']}/verify").json()["database_schema"] == 7
     response = client.post(
         "/api/v1/pro/ops/restore", json={"backup_id": backup["id"], "confirmation": "RESTORE"}
     )
@@ -577,3 +579,81 @@ def test_verified_restore_preserves_managed_commands_contributions_and_stops_gro
     assert runtime.managed_portfolios.history(group)[0]["body"] == batch["body"]
     assert len(runtime.managed_portfolios.history(group)[0]["commands"]) == len(batch["commands"])
     assert client.get("/api/v1/pro/execution/risk?source=example").json()["halted"]
+
+
+def test_instrument_evidence_api_and_restore_retain_newer_observations(client):
+    import hashlib
+    import json
+
+    from tidebench.store import dumps
+
+    path = "/api/v1/pro/catalog/instrument-observations"
+    first = client.post(path + "?source=example&inst_type=SPOT")
+    assert first.status_code == 201, first.text
+    first = first.json()
+    assert first["row_count"] == 5 and first["counts"] == {"eligible": 5}
+    assert client.get(path + "/00000000000000000000000000000000").status_code == 404
+    exported = client.get(path + f"/{first['id']}/export").json()
+    assert isinstance(exported["observation"]["received_ns"], str)
+    assert hashlib.sha256(dumps(exported["observation"]).encode()).hexdigest() == exported["content_hash"]
+    assert json.loads(json.dumps(exported)) == exported
+    unknown = client.get("/api/v1/pro/catalog/instrument-universe?source=example&as_of=1577836800000").json()
+    assert unknown["reason"] == "no_prior_observation" and not unknown["members"]
+    assert (
+        client.get("/api/v1/pro/catalog/instrument-universe?as_of=999999999999999999999999").status_code
+        == 422
+    )
+    backup = client.post("/api/v1/pro/ops/backups/create").json()
+    second = client.post(path + "?source=example&inst_type=SPOT").json()
+    assert second["id"] != first["id"] and second["payload_hash"] == first["payload_hash"]
+    response = client.post(
+        "/api/v1/pro/ops/restore", json={"backup_id": backup["id"], "confirmation": "RESTORE"}
+    )
+    assert response.status_code == 200, response.text
+    assert client.get(path + "?source=example").status_code == 401
+    login = client.post(
+        "/api/v1/auth/login", json={"username": "operator", "password": "test-only-password-123"}
+    )
+    client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
+    retained = client.get(path + "?source=example").json()["items"]
+    assert [r["id"] for r in retained] == [second["id"], first["id"]]
+    assert client.get(path + f"/{second['id']}/export").json()["content_hash"] == second["content_hash"]
+    assert client.get(path + f"/{second['id']}/diff?previous={first['id']}").json()["changes"] == []
+    assert client.get(path + "?source=example&inst_type=SWAP").json()["items"] == []
+
+
+def test_restore_rejects_conflicting_instrument_evidence_before_replacement(client):
+    import json
+
+    from tidebench.instrument_observations import digest
+    from tidebench.store import dumps
+
+    path = "/api/v1/pro/catalog/instrument-observations"
+    original = client.post(path + "?source=example").json()
+    backup = client.post("/api/v1/pro/ops/backups/create").json()
+    with client.app.state.store.write() as conn:
+        body = json.loads(
+            conn.execute("SELECT body FROM instrument_observations WHERE id=?", (original["id"],)).fetchone()[
+                0
+            ]
+        )
+        body["rows"][0]["tickSz"] = "0.2"
+        body["payload_hash"] = digest(body["rows"])
+        conn.execute("DROP TRIGGER instrument_observations_no_update")
+        conn.execute(
+            "UPDATE instrument_observations SET body=?,content_hash=? WHERE id=?",
+            (dumps(body), digest(body), original["id"]),
+        )
+        conn.execute("UPDATE workspace_users SET display_name='Later retained identity'")
+    result = client.post(
+        "/api/v1/pro/ops/restore", json={"backup_id": backup["id"], "confirmation": "RESTORE"}
+    )
+    assert result.status_code == 409 and result.json()["error"]["code"] == "backup_integrity", result.text
+    with client.app.state.store.read() as conn:
+        assert (
+            conn.execute("SELECT display_name FROM workspace_users").fetchone()[0]
+            == "Later retained identity"
+        )
+        assert conn.execute(
+            "SELECT content_hash FROM instrument_observations WHERE id=?", (original["id"],)
+        ).fetchone()[0] == digest(body)

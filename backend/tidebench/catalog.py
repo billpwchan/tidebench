@@ -12,6 +12,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from .engine import Candle
+from .instrument_observations import InstrumentObservations
 from .market import (
     BAR_MS,
     EXAMPLE_ANCHOR,
@@ -208,6 +209,7 @@ class CatalogService:
     def __init__(self, store: Store, market: MarketService):
         self.store, self.market = store, market
         self.clock = SimulationClock(store)
+        self.observations = InstrumentObservations(store)
         self._instrument_lock = asyncio.Lock()
         self._poll_task: asyncio.Task | None = None
         self._poll_stop = asyncio.Event()
@@ -281,75 +283,46 @@ class CatalogService:
                 )
                 conn.execute("DROP TABLE catalog_watches_legacy")
 
-    async def refresh_instruments(self, inst_type: str = "SPOT", source: str = "okx") -> list[dict[str, Any]]:
+    async def observe_instruments(self, inst_type: str = "SPOT", source: str = "okx") -> dict[str, Any]:
         _source(source)
         if inst_type not in ("SPOT", "SWAP"):
             raise MarketError("invalid_instrument_type", "Instrument type must be SPOT or SWAP.")
         async with self._instrument_lock:
+            requested_at = now_ms()
             if source == "example":
-                items = [_example_instrument(s + ("-SWAP" if inst_type == "SWAP" else "")) for s in SYMBOLS]
+                rows = []
+                for symbol in SYMBOLS:
+                    item = _example_instrument(symbol + ("-SWAP" if inst_type == "SWAP" else ""))
+                    rows.append(
+                        {
+                            "instId": item["inst_id"],
+                            "instType": inst_type,
+                            "baseCcy": item["base"],
+                            "quoteCcy": item["quote"],
+                            "ctType": item["ct_type"],
+                            "settleCcy": item["settle_ccy"],
+                            "ctVal": item["ct_val"],
+                            "ctMult": item["ct_mult"],
+                            "ctValCcy": item["ct_val_ccy"],
+                            "tickSz": item["tick_size"],
+                            "lotSz": item["lot_size"],
+                            "minSz": item["min_size"],
+                            "state": item["state"],
+                            "listTime": "",
+                            "expTime": "",
+                        }
+                    )
+                rows = json.loads(dumps(rows))
             else:
                 rows = await self.market._get("/api/v5/public/instruments", {"instType": inst_type})
-                items = []
-                for row in rows:
-                    if not isinstance(row, dict):
-                        raise MarketError("invalid_upstream_data", "Invalid instrument definition.")
-                    symbol = row.get("instId", "")
-                    if not _SYMBOL.fullmatch(symbol) or _symbol(symbol) != inst_type:
-                        continue
-                    if inst_type == "SWAP" and (
-                        row.get("ctType") != "linear" or row.get("settleCcy") != "USDT"
-                    ):
-                        continue
-                    family = row.get("instFamily") or row.get("uly") or symbol.removesuffix("-SWAP")
-                    base, quote = family.rsplit("-", 1)
-                    ct_val = (
-                        _decimal(row.get("ctVal"), "ctVal", positive=True) if inst_type == "SWAP" else None
-                    )
-                    ct_mult = (
-                        _decimal(row.get("ctMult"), "ctMult", positive=True) if inst_type == "SWAP" else None
-                    )
-                    if ct_mult is not None and ct_mult != 1:
-                        # The public API defines ctVal as face value. Non-unit
-                        # multipliers require a venue-specific sizing review.
-                        continue
-                    item = {
-                        "inst_id": symbol,
-                        "inst_type": inst_type,
-                        "inst_family": family,
-                        "base": base,
-                        "quote": quote,
-                        "settle_ccy": row.get("settleCcy") or quote,
-                        "ct_type": row.get("ctType") or None,
-                        "ct_val": ct_val,
-                        "ct_mult": ct_mult,
-                        "ct_val_ccy": row.get("ctValCcy") or None,
-                        "contract_size_base": ct_val * ct_mult if ct_val is not None else None,
-                        "tick_size": _decimal(row.get("tickSz"), "tickSz", positive=True),
-                        "lot_size": _decimal(row.get("lotSz"), "lotSz", positive=True),
-                        "min_size": _decimal(row.get("minSz"), "minSz", positive=True),
-                        "state": row.get("state", "unknown"),
-                        "quantity_unit": "contracts" if inst_type == "SWAP" else "base",
-                        "source": source,
-                        "synthetic": False,
-                        "observed_at": now_ms(),
-                        "list_time": int(row["listTime"]) if row.get("listTime") else None,
-                    }
-                    if inst_type == "SWAP" and item["ct_val_ccy"] != base:
-                        raise MarketError(
-                            "unsupported_contract",
-                            "Linear contract face-value currency does not match base currency.",
-                        )
-                    item["instrument_version"] = _hash({k: v for k, v in item.items() if k != "observed_at"})
-                    items.append(item)
-                if not items:
-                    raise MarketError(
-                        "no_market_data", "The selected OKX region returned no supported instruments."
-                    )
+            observation = self.observations.capture(rows, source, self.market.region, inst_type, requested_at)
             with self.store.write() as conn:
-                for item in items:
+                for member in observation["members"]:
+                    if not member["metadata"]:
+                        continue
+                    item = member["metadata"]
                     conn.execute(
-                        "INSERT INTO catalog_instruments VALUES(?,?,?,?,?,?) ON CONFLICT(source,region,inst_id,version) DO UPDATE SET observed_at=excluded.observed_at",
+                        "INSERT INTO catalog_instruments VALUES(?,?,?,?,?,?) ON CONFLICT(source,region,inst_id,version) DO UPDATE SET observed_at=excluded.observed_at,body=excluded.body",
                         (
                             source,
                             self.market.region,
@@ -359,25 +332,42 @@ class CatalogService:
                             dumps(item),
                         ),
                     )
-            return items
+            return observation
+
+    async def refresh_instruments(self, inst_type: str = "SPOT", source: str = "okx") -> list[dict[str, Any]]:
+        observation = await self.observe_instruments(inst_type, source)
+        return [
+            self._instrument_decimals(dict(m["metadata"])) for m in observation["members"] if m["metadata"]
+        ]
 
     async def get_instrument(self, inst_id: str, source: str = "okx") -> dict[str, Any]:
         _source(source)
         inst_type = _symbol(inst_id)
-        with self.store.read() as conn:
-            row = conn.execute(
-                "SELECT body,observed_at FROM catalog_instruments WHERE source=? AND region=? AND inst_id=? ORDER BY observed_at DESC LIMIT 1",
-                (source, self.market.region, inst_id),
-            ).fetchone()
-        if row and (source == "example" or now_ms() - row["observed_at"] < 3_600_000):
-            return self._instrument_decimals(json.loads(row["body"]))
-        items = await self.refresh_instruments(inst_type, source)
-        for item in items:
-            if item["inst_id"] == inst_id:
-                return item
+        snapshot = self.observations.latest(source, self.market.region, inst_type, now_ms())
+        if snapshot is None or (source != "example" and now_ms() - snapshot["received_at"] >= 3_600_000):
+            snapshot = await self.observe_instruments(inst_type, source)
+        for member in snapshot["members"]:
+            if member["inst_id"] != inst_id:
+                continue
+            expired = (
+                member["metadata"]
+                and member["metadata"].get("expiry_time")
+                and member["metadata"]["expiry_time"] <= now_ms()
+            )
+            if member["eligibility"] != "eligible" or not member["metadata"] or expired:
+                raise MarketError(
+                    "instrument_unavailable",
+                    "Instrument rules or current eligibility are unavailable; inspect the captured observation.",
+                )
+            item = self._instrument_decimals(dict(member["metadata"]))
+            return item | {
+                "observation_id": snapshot["id"],
+                "metadata_known_at": snapshot["received_at"],
+                "evidence_scope": "forward_observation",
+            }
         raise MarketError(
             "instrument_unavailable",
-            "Instrument is unavailable in the configured region or has unsupported contract sizing.",
+            "Instrument was not present in the latest complete endpoint observation; no delisting or settlement is inferred.",
         )
 
     @staticmethod

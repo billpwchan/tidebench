@@ -5,6 +5,7 @@ Tidebench supplies a self-hosted shared workspace for public OKX spot/linear-USD
 | Contract | Implemented behavior | Evidence |
 |---|---|---|
 | Data lineage | Immutable datasets/packages, funding marks, quality/attribution, resumable fenced downloads | Catalog/package tests; separate public-data acceptance |
+| Instrument evidence | Immutable raw forward observations, unavailable-row isolation, causal time/age review and restore-retained evidence | Preopen/expiry/omission/time/precision/conflict tests; public response audit and rendered workflow |
 | Strategy definitions | Immutable hypotheses/versions; five families, bounded programs, sizing and close exits | Registry/program/risk tests; rendered recipe/version workflow |
 | Research | Next-open fills, train-only selection, replay hashes, cost stress, compressed shared-input artifacts | Research/storage/service tests; replay/export browser workflow |
 | Research governance | Single and captured portfolio final evaluations, shared reservations/exposure, retained trials and consumption | Concurrent primary admission, frozen replay, tamper/cross-bar/warmup/restore counterexamples; rendered capture/seal/evaluate workflow |

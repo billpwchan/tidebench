@@ -508,7 +508,7 @@ class BackupService:
                 or manifest["size_bytes"] <= 0
                 or type(manifest.get("created_at")) is not int
                 or type(manifest.get("database_schema")) is not int
-                or manifest["database_schema"] not in (1, 2, 3, 4, 5, 6)
+                or manifest["database_schema"] not in (1, 2, 3, 4, 5, 6, 7)
             ):
                 raise ValueError
         except (OSError, ValueError, TypeError, UnicodeError):
@@ -530,7 +530,7 @@ class BackupService:
             versions = [row[0] for row in conn.execute("SELECT version FROM schema_version")]
         except sqlite3.Error:
             raise PlatformError("backup_schema", "Backup database schema is missing.", 409) from None
-        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4, 5, 6):
+        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4, 5, 6, 7):
             raise PlatformError("backup_schema", "Backup database schema is unsupported.", 409)
         return versions[0]
 
@@ -819,6 +819,21 @@ class BackupService:
                     "backup_schema", "Schema version 6 is missing research governance evidence.", 409
                 )
             required_columns.update(governance)
+        if version >= 7:
+            if "instrument_observations" not in tables:
+                raise PlatformError(
+                    "backup_schema", "Schema version 7 is missing instrument observations.", 409
+                )
+            required_columns["instrument_observations"] = {
+                "id",
+                "source",
+                "region",
+                "inst_type",
+                "received_at",
+                "received_ns",
+                "content_hash",
+                "body",
+            }
         for table, required in required_columns.items():
             if table in tables and not required.issubset(
                 {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
@@ -828,7 +843,32 @@ class BackupService:
                 )
         if version >= 6:
             cls._validate_research_facts(conn)
+        if version >= 7:
+            from .instrument_observations import InstrumentObservations
+            from .market import MarketError
+
+            try:
+                cursor = conn.execute("SELECT * FROM instrument_observations")
+                columns = [c[0] for c in cursor.description]
+                for row in cursor:
+                    InstrumentObservations.checked(dict(zip(columns, row, strict=True)))
+            except MarketError as exc:
+                raise PlatformError("backup_integrity", exc.message, 409) from None
         return tables
+
+    def _retain_instrument_observations(self, prepared):
+        from .instrument_observations import InstrumentObservations
+        from .market import MarketError
+
+        count = 0
+        try:
+            with self.store.read() as current:
+                for row in current.execute("SELECT * FROM instrument_observations"):
+                    InstrumentObservations.insert(prepared, InstrumentObservations.checked(row))
+                    count += 1
+        except MarketError as exc:
+            raise PlatformError("backup_integrity", exc.message, 409) from None
+        return count
 
     @staticmethod
     def _validate_research_facts(conn):
@@ -1007,6 +1047,11 @@ class BackupService:
                         retained_research = (
                             self._retain_research_facts(prepared) if manifest["database_schema"] >= 6 else {}
                         )
+                        retained_observations = (
+                            self._retain_instrument_observations(prepared)
+                            if manifest["database_schema"] >= 7
+                            else 0
+                        )
                         if "workspace_sessions" in tables:
                             prepared.execute("DELETE FROM workspace_sessions")
                         prepared.execute("UPDATE risk SET kill_switch=1")
@@ -1056,6 +1101,7 @@ class BackupService:
                                 "backup_id": identifier,
                                 "safety_backup_id": safety["id"],
                                 "retained_research_facts": retained_research,
+                                "retained_instrument_observations": retained_observations,
                             },
                         )
                         prepared.commit()

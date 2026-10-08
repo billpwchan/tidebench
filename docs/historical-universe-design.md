@@ -1,6 +1,6 @@
 # Historical universe and contract lifecycle — design under review
 
-Status: **design, not implemented by v0.6**. This document defines the next research/data contract. Current explicit instrument selection and optional historical rule events do not establish a survivorship-free universe.
+Status: **first forward-observation stage implemented in v0.7; historical/dynamic stages remain design**. See [instrument evidence](instrument-evidence.md). This document defines the next research/data contract. Current explicit instrument selection and optional historical rule events do not establish a survivorship-free universe.
 
 ## Source findings, checked 2026-10-08
 

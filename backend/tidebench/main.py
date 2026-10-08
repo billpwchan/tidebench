@@ -85,6 +85,11 @@ def _build_app(settings, market, store):
             (now_ms(),),
         )
         conn.execute("UPDATE schema_version SET version=6")
+        conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations VALUES(7,?,'Immutable forward instrument observations and explicit temporal coverage')",
+            (now_ms(),),
+        )
+        conn.execute("UPDATE schema_version SET version=7")
 
     @asynccontextmanager
     async def lifespan(app):
@@ -292,11 +297,24 @@ def _build_app(settings, market, store):
     @app.exception_handler(MarketError)
     async def market_error(request, exc):
         code = getattr(exc, "code", "market_unavailable")
-        if code in {"dataset_not_found", "job_not_found", "instrument_unavailable"}:
+        if code in {
+            "dataset_not_found",
+            "job_not_found",
+            "instrument_unavailable",
+            "instrument_observation_not_found",
+        }:
             status = 404
         elif code == "catalog_queue_full":
             status = 429
-        elif code in {"catalog_running", "dataset_integrity_error", "region_mismatch", "conflicting_history"}:
+        elif code in {
+            "catalog_running",
+            "dataset_integrity_error",
+            "region_mismatch",
+            "conflicting_history",
+            "instrument_evidence_integrity",
+            "instrument_evidence_conflict",
+            "instrument_observation_scope",
+        }:
             status = 409
         elif (
             code.startswith("invalid_")

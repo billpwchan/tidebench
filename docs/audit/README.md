@@ -1,5 +1,7 @@
 # Red-team record
 
+Latest: [v0.7 instrument evidence self-audit](red-team-0.7.0.zh-CN.md) and [real public observation counts/hashes](v0.7.0-public-instrument-observations.json).
+
 The [v0.6.0 assessment](red-team-0.6.0.zh-CN.md) examines captured portfolio evaluation, recovery-retained research facts and real lifecycle failures. The [v0.5.0 assessment](red-team-0.5.0.zh-CN.md) examines managed multi-market execution, hard-interruption recovery, failed-leg compensation and contribution accounting. It records the discovered auxiliary-attribution safety and mixed-owner Decimal issues, their corrective contracts, and the remaining product work. The [v0.4.0 assessment](red-team-0.4.0.zh-CN.md) and [v0.3.0 assessment](red-team-0.3.0.zh-CN.md) remain historical evidence for those versions.
 
 ## Reproduce

@@ -337,6 +337,52 @@ def professional_router(app, access, runtime, supervisor, settings):
     async def instruments(source: Source = "okx", inst_type: Literal["SPOT", "SWAP"] = "SPOT"):
         return {"items": encode(await runtime.catalog.refresh_instruments(inst_type, source))}
 
+    @router.post("/pro/catalog/instrument-observations", status_code=201)
+    async def capture_instruments(source: Source = "okx", inst_type: Literal["SPOT", "SWAP"] = "SPOT"):
+        observation = await runtime.catalog.observe_instruments(inst_type, source)
+        return encode({k: v for k, v in observation.items() if k != "rows"})
+
+    @router.get("/pro/catalog/instrument-observations")
+    def instrument_observations(
+        source: Source = "okx",
+        inst_type: Literal["SPOT", "SWAP"] = "SPOT",
+        limit: int = Query(default=100, ge=1, le=100),
+    ):
+        return {
+            "items": runtime.catalog.observations.list(
+                source, runtime.catalog.market.region, inst_type, limit
+            )
+        }
+
+    @router.get("/pro/catalog/instrument-universe")
+    def instrument_universe(
+        source: Source = "okx",
+        inst_type: Literal["SPOT", "SWAP"] = "SPOT",
+        as_of: int | None = Query(default=None, ge=1, le=32_503_680_000_000),
+        max_age_ms: int = Query(default=3_600_000, ge=0, le=86_400_000),
+    ):
+        return encode(
+            runtime.catalog.observations.universe(
+                source,
+                runtime.catalog.market.region,
+                inst_type,
+                as_of if as_of is not None else now_ms(),
+                max_age_ms,
+            )
+        )
+
+    @router.get("/pro/catalog/instrument-observations/{identifier}/diff")
+    def instrument_diff(identifier: str, previous: str):
+        return runtime.catalog.observations.diff(identifier, previous)
+
+    @router.get("/pro/catalog/instrument-observations/{identifier}/export")
+    def export_instrument_observation(identifier: str):
+        return runtime.catalog.observations.export(identifier)
+
+    @router.get("/pro/catalog/instrument-observations/{identifier}")
+    def instrument_observation(identifier: str):
+        return encode(runtime.catalog.observations.get(identifier))
+
     @router.get("/pro/catalog/datasets")
     def datasets(source: Source | None = None):
         return {"items": runtime.catalog.list_datasets(source)}

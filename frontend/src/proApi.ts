@@ -1,6 +1,41 @@
 import { ApiError, downloadBlob, request, setCsrfToken, readToken } from './api';
 import type { Source, Strategy } from './api';
 export type RecordData = Record<string, unknown>;
+export type InstrumentMember = RecordData & {
+  row: number;
+  inst_id: string | null;
+  scope: string;
+  eligibility: string;
+  reasons: string[];
+  state: string | null;
+  list_time: number | null;
+  expiry_time: number | null;
+  metadata: RecordData | null;
+};
+export type InstrumentObservation = RecordData & {
+  id: string;
+  source: Source;
+  region: string;
+  inst_type: 'SPOT' | 'SWAP';
+  received_at: number;
+  received_ns: string;
+  content_hash: string;
+  payload_hash: string;
+  row_count: number;
+  counts: Record<string, number>;
+  supported_count: number;
+  members?: InstrumentMember[];
+  rows?: unknown[];
+};
+export type InstrumentUniverse = {
+  as_of: number;
+  coverage: string;
+  reason: string | null;
+  age_ms?: number;
+  max_age_ms: number;
+  observation: InstrumentObservation | null;
+  members: InstrumentMember[];
+};
 export type StrategyDefinition = {
   schema_version: 1;
   product: 'SPOT' | 'SWAP';
@@ -685,6 +720,30 @@ export const proApi = {
   instruments: (source: Source, instType: 'SPOT' | 'SWAP') =>
     request<{ items: RecordData[] }>(
       `/pro/catalog/instruments?${q({ source, inst_type: instType })}`,
+    ),
+  instrumentObservations: (source: Source, instType: 'SPOT' | 'SWAP') =>
+    request<{ items: InstrumentObservation[] }>(
+      `/pro/catalog/instrument-observations?${q({ source, inst_type: instType })}`,
+    ),
+  captureInstruments: (source: Source, instType: 'SPOT' | 'SWAP') =>
+    post<InstrumentObservation>(
+      `/pro/catalog/instrument-observations?${q({ source, inst_type: instType })}`,
+    ),
+  instrumentObservation: (id: string) =>
+    request<InstrumentObservation>(
+      `/pro/catalog/instrument-observations/${encodeURIComponent(id)}`,
+    ),
+  exportInstrumentObservation: (id: string) =>
+    request<{ content_hash: string; observation: RecordData }>(
+      `/pro/catalog/instrument-observations/${encodeURIComponent(id)}/export`,
+    ),
+  instrumentUniverse: (source: Source, instType: 'SPOT' | 'SWAP', asOf: number, maxAge: number) =>
+    request<InstrumentUniverse>(
+      `/pro/catalog/instrument-universe?${q({ source, inst_type: instType, as_of: asOf, max_age_ms: maxAge })}`,
+    ),
+  instrumentDiff: (id: string, previous: string) =>
+    request<{ changes: RecordData[] }>(
+      `/pro/catalog/instrument-observations/${encodeURIComponent(id)}/diff?${q({ previous })}`,
     ),
   async authStatus() {
     const status = await request<AuthStatus>('/auth/status');

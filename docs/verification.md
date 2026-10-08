@@ -1,5 +1,15 @@
 # Verification record
 
+## v0.7.0 instrument evidence
+
+Local final-source validation passed **684 backend tests** (111.62 seconds), **20 desktop/mobile Chromium workflows** (2.1 minutes), Ruff, Prettier, TypeScript and the production build. The two new browser paths exercise actual capture, raw inspection/download, prior-time unknown coverage, age expiry and source-product separation. The final parser review additionally passed all 17 instrument counterexamples, including contract-family conflicts and invalid/oversized source arrays. One existing Starlette/HTTPX deprecation warning remains visible.
+
+The [public instrument audit](audit/v0.7.0-public-instrument-observations.json) captured 1,144 spot and 500 perpetual data-array rows, checked persistent canonical hashes and BTC metadata observation links, and confirmed a later response cannot supply earlier-time evidence. Its implementation-file hashes match the final tested parser/catalog. No raw venue response or private credential is published.
+
+Schema-7 recovery tests perform an actual backup/restore while preserving newer observations and reject hash-valid conflicting identities before replacement. Cached announced expiry, preopen blanks, malformed units, duplicate rows, A → B → A and omission counterexamples are covered. See [evidence contract](instrument-evidence.md) and [v0.7 self-audit](audit/red-team-0.7.0.zh-CN.md). The exact published commit's CI independently runs the complete suite, offline load/recovery audits and container smoke.
+
+The 608-second lifecycle soak below applies to its recorded v0.6 backend commit. It is not relabeled as a new v0.7 soak or a long-term service guarantee. Historical/dynamic universe stages and execution-capacity acceptance remain open.
+
 ## v0.6.0 · 2026-10-08
 
 - Full local backend regression on the corrected planner: **666 passed** (123.99 seconds), followed by the additional strict-residual/minimum-deferral counterexample (**1 passed**). Ruff lint/format, frozen offline Python sync, TypeScript/Vite and Prettier passed. The existing Starlette/HTTPX deprecation remains visible.

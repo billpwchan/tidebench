@@ -8,6 +8,7 @@ import { useSession } from '../components/AuthGate';
 import { canResearch } from '../lib/permissions';
 import DatasetImport from '../components/DatasetImport';
 import ResearchPackages from '../components/ResearchPackages';
+import InstrumentEvidence from '../components/InstrumentEvidence';
 import { useI18n } from '../lib/i18n';
 import { bars } from '../lib/config';
 import { useDialogFocus } from '../lib/hooks';
@@ -128,6 +129,7 @@ export default function DataLibrary({
         items={[
           { key: 'packages', label: 'Research packages' },
           { key: 'raw', label: 'Raw datasets & imports' },
+          { key: 'instruments', label: 'Instrument evidence' },
         ]}
       />
       {catalogTab === 'packages' && (
@@ -137,6 +139,7 @@ export default function DataLibrary({
           onOpenRaw={() => setCatalogTab('raw')}
         />
       )}
+      {catalogTab === 'instruments' && <InstrumentEvidence key={source} source={source} />}
       {catalogTab === 'raw' && (
         <>
           <ActionNote text={notice} />
