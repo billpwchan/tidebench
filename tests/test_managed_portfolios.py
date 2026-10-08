@@ -725,3 +725,32 @@ async def test_small_carry_rebalances_accumulate_visible_residuals_over_sixty_st
     assert all(row["status"] == "completed" for row in r.managed_portfolios.history(group["id"], limit=100))
     report = r.book.contribution_report("example", await r.snapshots_for("example"))
     assert report["reconciled"] and D(report["totals"]["funding_paid"]) != 0
+
+
+async def test_deferred_minimum_rebalance_cannot_bypass_reviewed_residual_limit(runtime):
+    r = runtime
+    group = await activate(
+        r,
+        mode="funding_carry",
+        capital_pct="8",
+        carry_threshold="-.01",
+        rebalance_bars=2,
+        max_residual_pct=".01",
+        legs=[
+            {"inst_id": "BTC-USDT", "weight": ".5"},
+            {"inst_id": "BTC-USDT-SWAP", "weight": "-.5", "leverage": "2", "direction": "short_only"},
+        ],
+    )
+    for index in range(61):
+        if index:
+            r.clock.change(step_ms=4 * HOUR, expected_revision=r.clock.status()["revision"], actor="trader")
+        await r.managed_portfolios.evaluate(group["id"])
+        if r.managed_portfolios.get(group["id"])["status"] != "running":
+            break
+    batch = r.managed_portfolios.history(group["id"], limit=1)[0]
+    assert batch["status"] == "compensated", batch
+    assert "reviewed residual limit" in batch["error"]
+    assert D(batch["residuals"]["capital_pct"]) > D(".01")
+    assert batch["body"]["reduction_skips"] or batch["additions"]["skipped"]
+    assert not r.book.positions("example")
+    assert r.book.contribution_report("example", {})["reconciled"]

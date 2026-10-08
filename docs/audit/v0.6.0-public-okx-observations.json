@@ -1,0 +1,43 @@
+{
+  "region": "global",
+  "range": {
+    "start": 1791277200000,
+    "end": 1791450000000
+  },
+  "instrument": "BTC-USDT-SWAP",
+  "contract_rules_validated": true,
+  "current_margin_tiers": 99,
+  "datasets": [
+    {
+      "kind": "trade",
+      "rows": 48,
+      "complete": true,
+      "hash_verified": true
+    },
+    {
+      "kind": "mark",
+      "rows": 48,
+      "complete": true,
+      "hash_verified": true
+    },
+    {
+      "kind": "index",
+      "rows": 48,
+      "complete": true,
+      "hash_verified": true
+    },
+    {
+      "kind": "funding",
+      "rows": 6,
+      "complete": true,
+      "hash_verified": true
+    }
+  ],
+  "settled_funding_events_with_timestamp_matched_marks": 6,
+  "settlement_mark_model": "historical_mark_1m_open_approximation",
+  "audited_version": "0.6.0",
+  "source_revision": "5e687fd716dfe4f7ef7b224c082ba656a613e828",
+  "recorded_at_utc": "2026-10-08T09:26:18.506542+00:00",
+  "command": "uv run python scripts/smoke_okx.py --hours 48",
+  "scope": "Read-only current public OKX integration in a temporary workspace; current tiers are scenario inputs. No private credentials, venue orders or raw price history published. This does not establish historical universe coverage, trading profitability or order-book capacity."
+}

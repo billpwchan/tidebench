@@ -4,7 +4,7 @@
   "research_implementation": {
     "schema_version": 1,
     "application_version": "0.6.0",
-    "code_fingerprint": "2d0cae19bad9ae583c3145730db6ce8bef55856384ed7b61a69368040ed420bb",
+    "code_fingerprint": "74a1f28a91539cf9fe70b1d31e2d15f05a23749e51beed6efdb4916243a4d545",
     "modules": {
       "engine.py": "677074a95991000ba7fd5593d2de9fea39da203c884fd8df0ae09d1f80140217",
       "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
@@ -21,9 +21,9 @@
       "research_protocol.py": "3b097632fb8a0b3c5b9a022b1df982419d36df516bd81638cc1f3c2ba8080560",
       "portfolio_registry.py": "83a46d29bd5fa67801904b2165a27eba0d9e24577093f6d5f35cc96555bd624d",
       "portfolio_releases.py": "8ca1762ae73057a491a323bdd2436329940d176fea3df5940d62dc61b35191df",
-      "managed_portfolios.py": "ad2b8f61f533730203b36e86889fc42b6d0b5f1e826244d2964a7523c73c3a73",
-      "portfolio_research.py": "9d7ffa8f3c9499e4bac0384ef5aace0d5693653d56596c670d3636688e8636d6",
-      "portfolio_targets.py": "5118a7afae9b807d23d1f03417f68b0448b091332a1dc6e84ba05977f00df601",
+      "managed_portfolios.py": "0c1c9e4fdcaac38ea6f2aec1e396415ee501aaac3936f5038cb622164aaa7f1d",
+      "portfolio_research.py": "b4356f5641c227a76b22003ba9957f56ed396d192e9401a36a3cce868d0b2324",
+      "portfolio_targets.py": "7bd70c03d88b575d40beb44110f2dd16f01f17f314838c63cc61184f84eea055",
       "portfolio_construction.py": "7eb2bb2993939e044ba59d9ff81807a4c85ed18448de6e10713260523146c295",
       "pro_execution.py": "9b5b4c75d62769454f80028a177dd6de7762277daaed47c7675f04663b9b873f",
       "contributions.py": "2516c7d1e6308952d46792000e25a4d18bfe228b9ccb4831be5c4b1df69bf4d2",
@@ -94,7 +94,7 @@
     {
       "id": "RT-01",
       "observation": "strategy_history_wait_blocks_pending_order_and_risk_polling",
-      "injected_wait_ms": 6002,
+      "injected_wait_ms": 6000,
       "quote_reads_during_wait": 1,
       "stop_order_status_during_triggered_price": "filled",
       "task_alive": true

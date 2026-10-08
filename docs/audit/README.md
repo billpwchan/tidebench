@@ -1,6 +1,6 @@
 # Red-team record
 
-The [v0.5.0 assessment](red-team-0.5.0.zh-CN.md) examines managed multi-market execution, hard-interruption recovery, failed-leg compensation and contribution accounting. It records the discovered auxiliary-attribution safety and mixed-owner Decimal issues, their corrective contracts, and the remaining product work. The [v0.4.0 assessment](red-team-0.4.0.zh-CN.md) and [v0.3.0 assessment](red-team-0.3.0.zh-CN.md) remain historical evidence for those versions.
+The [v0.6.0 assessment](red-team-0.6.0.zh-CN.md) examines captured portfolio evaluation, recovery-retained research facts and real lifecycle failures. The [v0.5.0 assessment](red-team-0.5.0.zh-CN.md) examines managed multi-market execution, hard-interruption recovery, failed-leg compensation and contribution accounting. It records the discovered auxiliary-attribution safety and mixed-owner Decimal issues, their corrective contracts, and the remaining product work. The [v0.4.0 assessment](red-team-0.4.0.zh-CN.md) and [v0.3.0 assessment](red-team-0.3.0.zh-CN.md) remain historical evidence for those versions.
 
 ## Reproduce
 
@@ -14,6 +14,11 @@ uv run python scripts/acceptance_load.py
 
 The standalone audits use temporary databases and synthetic fault injection; venue requests are forbidden. A successful script exit is not a product acceptance verdict. Financial causality, recovery, concurrency and rendered workflows have separate tests. A historical artifact retains its original version and environment rather than being relabeled as current verification.
 
+- [v0.6.0 passed elapsed lifecycle observations](v0.6.0-soak-observations.json)
+- [v0.6.0 failed minimum-rebalance observations](v0.6.0-soak-minimum-rebalance-failure.json)
+- [v0.6.0 managed-portfolio observations](v0.6.0-managed-observations.json)
+- [v0.6.0 public OKX acceptance](v0.6.0-public-okx-observations.json)
+- [v0.6.0 offline red-team observations](v0.6.0-redteam-observations.json)
 - [v0.5.0 managed-portfolio observations](v0.5.0-managed-observations.json)
 - [v0.4.0 observations](v0.4.0-observations.json)
 - [v0.3.1 corrections](post-fix-observations.json)
@@ -22,4 +27,4 @@ The standalone audits use temporary databases and synthetic fault injection; ven
 - [Managed portfolio contract and operator guide](../managed-portfolios.md)
 - [Design and delivery record](../professional-platform-design.zh-CN.md)
 
-Managed forward portfolios, immutable portfolio release identity and monetary contribution accounting are implemented. Portfolio-specific one-use holdout/trial governance, attributed historical listing/delisting and contract lifecycle events, order-book capacity models and long elapsed-time reliability evidence remain separate work. Tests do not establish investment edge, maximum production capacity, tenant isolation or exchange matching fidelity.
+Managed forward portfolios, immutable release identity, monetary contribution accounting and captured one-use portfolio evaluations are implemented. Recovery retains newer research reservation, exposure, consumption and trial facts. Attributed historical listing/delisting, contract lifecycle events, order-book capacity and longer external operations remain substantive work. The bounded elapsed-time audit has its own [method and scope](soak-method.md). Tests do not establish investment edge, maximum production capacity, tenant isolation or exchange matching fidelity.

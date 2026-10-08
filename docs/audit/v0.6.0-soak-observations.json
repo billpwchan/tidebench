@@ -1,0 +1,2176 @@
+{
+  "audited_version": "0.6.0",
+  "source_revision": "5e687fd716dfe4f7ef7b224c082ba656a613e828",
+  "started_at_utc": "2026-10-08T09:16:22.619837+00:00",
+  "environment": {
+    "python": "3.13.15",
+    "system": "Darwin",
+    "machine": "arm64"
+  },
+  "configuration": {
+    "duration": 600.0,
+    "interval": 10,
+    "sample_interval": 5,
+    "step_hours": 4,
+    "research_interval": 90,
+    "read_clients": 2,
+    "http_timeout": 15
+  },
+  "scope": "Offline loopback HTTP, sequentially admitted three small-capital Example groups (concurrent-start capability excluded), real SQLite/fills/funding/owners, concurrent readers and research, one real SIGTERM restart. Synthetic market time does not count as wall time. This bounded single-host run is not a weeks-long soak, venue or availability/capacity SLA.",
+  "passed": true,
+  "monotonic_elapsed_seconds": 608.323,
+  "clock_steps": 60,
+  "synthetic_elapsed_hours": 240.0,
+  "acceptance": {
+    "requested_monotonic_duration_reached": true,
+    "three_groups_running_before_audit_stop": true,
+    "actual_confirmed_decisions_and_fills": true,
+    "actual_funding_settled": true,
+    "all_batches_completed": true,
+    "all_owner_observations_reconciled": true,
+    "final_owner_and_account_reconciled": true,
+    "graceful_restart_preserved_prior_economics": true,
+    "no_duplicate_keys_or_missing_filled_command_orders": true,
+    "no_unexpected_http_failures": true,
+    "database_integrity_and_foreign_keys": true,
+    "no_external_network_attempts": true,
+    "concurrent_short_research_completed": true
+  },
+  "groups": [
+    {
+      "id": "b690509209fd4066be8df893a43771a6",
+      "name": "BTC basis carry",
+      "definition": {
+        "bar": "1H",
+        "capital_pct": "8",
+        "carry_threshold": "-0.01",
+        "failure_policy": "reduce_group",
+        "legs": [
+          {
+            "direction": "long_only",
+            "inst_id": "BTC-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_holding_bars": 0,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.5"
+          },
+          {
+            "direction": "short_only",
+            "inst_id": "BTC-USDT-SWAP",
+            "leverage": "2",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_holding_bars": 0,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "-0.5"
+          }
+        ],
+        "lookback": 20,
+        "max_residual_pct": "2",
+        "mode": "funding_carry",
+        "rebalance_bars": 2,
+        "schema_version": 1,
+        "top_k": 1
+      }
+    },
+    {
+      "id": "16b409bbf2d14781a0492780cc8979c8",
+      "name": "ETH SOL cash basket",
+      "definition": {
+        "bar": "1H",
+        "capital_pct": "8",
+        "carry_threshold": "0",
+        "failure_policy": "reduce_group",
+        "legs": [
+          {
+            "direction": "long_only",
+            "inst_id": "ETH-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_holding_bars": 0,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.5"
+          },
+          {
+            "direction": "long_only",
+            "inst_id": "SOL-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_holding_bars": 0,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.5"
+          }
+        ],
+        "lookback": 20,
+        "max_residual_pct": "2",
+        "mode": "fixed_weights",
+        "rebalance_bars": 2,
+        "schema_version": 1,
+        "top_k": 1
+      }
+    },
+    {
+      "id": "b83ecc26847445ffaa79ec3620167f39",
+      "name": "Independent swap exposure",
+      "definition": {
+        "bar": "1H",
+        "capital_pct": "8",
+        "carry_threshold": "0",
+        "failure_policy": "reduce_group",
+        "legs": [
+          {
+            "direction": "long_only",
+            "inst_id": "OKB-USDT-SWAP",
+            "leverage": "2",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_holding_bars": 0,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.25"
+          },
+          {
+            "direction": "short_only",
+            "inst_id": "DOGE-USDT-SWAP",
+            "leverage": "2",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_holding_bars": 0,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "-0.25"
+          }
+        ],
+        "lookback": 20,
+        "max_residual_pct": "2",
+        "mode": "fixed_weights",
+        "rebalance_bars": 2,
+        "schema_version": 1,
+        "top_k": 1
+      }
+    }
+  ],
+  "economic_counts": {
+    "orders": 154,
+    "decisions": 186,
+    "batches": 93,
+    "commands": 154,
+    "funding_settlements": 120,
+    "contribution_events": 274
+  },
+  "batch_status_counts": {
+    "completed": 93
+  },
+  "duplicate_key_count": 0,
+  "missing_filled_order_count": 0,
+  "restart": [
+    {
+      "at_elapsed_seconds": 300.066,
+      "sigterm_to_ready_ms": 764.41,
+      "orders_before": 77,
+      "orders_at_ready": 78,
+      "prior_order_ids_and_bodies_preserved": true,
+      "exit_code": -15,
+      "forced_kill": false,
+      "lifespan_shutdown_completed": true
+    }
+  ],
+  "research_jobs": [
+    {
+      "id": "b98137fcb7fa42a4aaf43ba35681e8a9",
+      "phase": "initial",
+      "status": "completed",
+      "elapsed_ms": 1228.612,
+      "result_hash": "b317f6708b45a22c17655fda6493607407916c3e046b010152d230763f2f6547"
+    },
+    {
+      "id": "90bca29246cf494aa2b1f16e0fc85176",
+      "phase": "initial",
+      "status": "completed",
+      "elapsed_ms": 936.287,
+      "result_hash": "bd297e007aadaf358ba5fc740ef49d2cb30749902ef08a34ad38376e88ede0d8"
+    },
+    {
+      "id": "d99efa07f5804f79815f050c1e96dddd",
+      "phase": "initial",
+      "status": "completed",
+      "elapsed_ms": 1175.362,
+      "result_hash": "54979519df1b110a6e629a8a75ac58dc2559554569d2173a1e65526b607c92b2"
+    },
+    {
+      "id": "b97cc45ca34c4c5aac2056009029dc69",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 1176.824,
+      "result_hash": "bd297e007aadaf358ba5fc740ef49d2cb30749902ef08a34ad38376e88ede0d8"
+    },
+    {
+      "id": "6cb413f280db436796419fbc632f12a7",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 1124.064,
+      "result_hash": "bd297e007aadaf358ba5fc740ef49d2cb30749902ef08a34ad38376e88ede0d8"
+    },
+    {
+      "id": "a9d6dcc160394e578525478b78b4ac66",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 1020.674,
+      "result_hash": "bd297e007aadaf358ba5fc740ef49d2cb30749902ef08a34ad38376e88ede0d8"
+    },
+    {
+      "id": "9e3a2944e6ef46e5b4526f042ab32827",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 1198.905,
+      "result_hash": "bd297e007aadaf358ba5fc740ef49d2cb30749902ef08a34ad38376e88ede0d8"
+    },
+    {
+      "id": "e94bee6396df47f7b4fc3aec505b8060",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 1134.834,
+      "result_hash": "bd297e007aadaf358ba5fc740ef49d2cb30749902ef08a34ad38376e88ede0d8"
+    },
+    {
+      "id": "6383cb9adbcb4ff9ad8e753cdd657ea7",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 1177.231,
+      "result_hash": "bd297e007aadaf358ba5fc740ef49d2cb30749902ef08a34ad38376e88ede0d8"
+    }
+  ],
+  "concurrent_reads": 720,
+  "http_status_counts": {
+    "202": 15,
+    "200": 1207,
+    "201": 6
+  },
+  "http_latency": {
+    "POST /api/v1/pro/catalog/packages": {
+      "count": 6,
+      "min_ms": 11.038,
+      "median_ms": 11.632,
+      "p95_ms": 26.507,
+      "p99_ms": 26.507,
+      "max_ms": 26.507
+    },
+    "GET /api/v1/pro/catalog/packages/bcca7c49d94345828c045c38303bcf21": {
+      "count": 2,
+      "min_ms": 6.21,
+      "median_ms": 6.307,
+      "p95_ms": 6.403,
+      "p99_ms": 6.403,
+      "max_ms": 6.403
+    },
+    "GET /api/v1/pro/catalog/packages/cc83092293764583b6872086508e628c": {
+      "count": 3,
+      "min_ms": 4.507,
+      "median_ms": 7.033,
+      "p95_ms": 53.956,
+      "p99_ms": 53.956,
+      "max_ms": 53.956
+    },
+    "GET /api/v1/pro/catalog/packages/747f34aafa3a4e4a8c1623055cf2a90c": {
+      "count": 2,
+      "min_ms": 5.5,
+      "median_ms": 5.653,
+      "p95_ms": 5.806,
+      "p99_ms": 5.806,
+      "max_ms": 5.806
+    },
+    "GET /api/v1/pro/catalog/packages/b0a9156ce30343c283186f04f9da99ae": {
+      "count": 2,
+      "min_ms": 6.058,
+      "median_ms": 6.784,
+      "p95_ms": 7.51,
+      "p99_ms": 7.51,
+      "max_ms": 7.51
+    },
+    "GET /api/v1/pro/catalog/packages/b27c216368ae4c81bbba6bfeb74f7fea": {
+      "count": 3,
+      "min_ms": 5.287,
+      "median_ms": 7.061,
+      "p95_ms": 69.257,
+      "p99_ms": 69.257,
+      "max_ms": 69.257
+    },
+    "GET /api/v1/pro/catalog/packages/8fc2f6e5500f48a7aa06d3a61df38aa0": {
+      "count": 3,
+      "min_ms": 5.886,
+      "median_ms": 6.545,
+      "p95_ms": 55.869,
+      "p99_ms": 55.869,
+      "max_ms": 55.869
+    },
+    "POST /api/v1/pro/portfolio-strategies": {
+      "count": 3,
+      "min_ms": 5.675,
+      "median_ms": 9.193,
+      "p95_ms": 13.663,
+      "p99_ms": 13.663,
+      "max_ms": 13.663
+    },
+    "POST /api/v1/pro/research/portfolios": {
+      "count": 9,
+      "min_ms": 46.607,
+      "median_ms": 67.258,
+      "p95_ms": 232.869,
+      "p99_ms": 232.869,
+      "max_ms": 232.869
+    },
+    "GET /api/v1/pro/research/portfolios/b98137fcb7fa42a4aaf43ba35681e8a9": {
+      "count": 6,
+      "min_ms": 6.874,
+      "median_ms": 22.539,
+      "p95_ms": 35.557,
+      "p99_ms": 35.557,
+      "max_ms": 35.557
+    },
+    "POST /api/v1/pro/execution/portfolio-releases/preview": {
+      "count": 3,
+      "min_ms": 21.813,
+      "median_ms": 22.49,
+      "p95_ms": 23.989,
+      "p99_ms": 23.989,
+      "max_ms": 23.989
+    },
+    "POST /api/v1/pro/execution/portfolio-releases": {
+      "count": 3,
+      "min_ms": 17.533,
+      "median_ms": 20.279,
+      "p95_ms": 28.111,
+      "p99_ms": 28.111,
+      "max_ms": 28.111
+    },
+    "POST /api/v1/pro/execution/portfolio-releases/50bbe2af4ab243c4ad5b97f13cb030d5/activate": {
+      "count": 1,
+      "min_ms": 25.882,
+      "median_ms": 25.882,
+      "p95_ms": 25.882,
+      "p99_ms": 25.882,
+      "max_ms": 25.882
+    },
+    "GET /api/v1/pro/execution/clock": {
+      "count": 86,
+      "min_ms": 2.771,
+      "median_ms": 7.108,
+      "p95_ms": 66.332,
+      "p99_ms": 451.437,
+      "max_ms": 451.437
+    },
+    "GET /api/v1/pro/execution/portfolios": {
+      "count": 25,
+      "min_ms": 5.358,
+      "median_ms": 6.887,
+      "p95_ms": 58.891,
+      "p99_ms": 233.21,
+      "max_ms": 233.21
+    },
+    "GET /api/v1/pro/research/portfolios/90bca29246cf494aa2b1f16e0fc85176": {
+      "count": 5,
+      "min_ms": 6.724,
+      "median_ms": 10.566,
+      "p95_ms": 33.778,
+      "p99_ms": 33.778,
+      "max_ms": 33.778
+    },
+    "POST /api/v1/pro/execution/portfolio-releases/1c796ae49c034e6984e6d5201d58d84d/activate": {
+      "count": 1,
+      "min_ms": 24.449,
+      "median_ms": 24.449,
+      "p95_ms": 24.449,
+      "p99_ms": 24.449,
+      "max_ms": 24.449
+    },
+    "GET /api/v1/pro/research/portfolios/d99efa07f5804f79815f050c1e96dddd": {
+      "count": 6,
+      "min_ms": 4.675,
+      "median_ms": 8.111,
+      "p95_ms": 33.198,
+      "p99_ms": 33.198,
+      "max_ms": 33.198
+    },
+    "POST /api/v1/pro/execution/portfolio-releases/303eacced1dd4660bc4dff1ebdcfe9e3/activate": {
+      "count": 1,
+      "min_ms": 24.884,
+      "median_ms": 24.884,
+      "p95_ms": 24.884,
+      "p99_ms": 24.884,
+      "max_ms": 24.884
+    },
+    "POST /api/v1/pro/execution/clock": {
+      "count": 60,
+      "min_ms": 3.18,
+      "median_ms": 7.3,
+      "p95_ms": 32.834,
+      "p99_ms": 57.482,
+      "max_ms": 57.482
+    },
+    "GET /api/v1/pro/execution/account": {
+      "count": 241,
+      "min_ms": 28.395,
+      "median_ms": 111.086,
+      "p95_ms": 200.04,
+      "p99_ms": 243.445,
+      "max_ms": 592.481
+    },
+    "GET /api/v1/pro/execution/contributions": {
+      "count": 241,
+      "min_ms": 22.818,
+      "median_ms": 126.524,
+      "p95_ms": 201.982,
+      "p99_ms": 241.2,
+      "max_ms": 591.001
+    },
+    "GET /api/v1/pro/execution/analytics": {
+      "count": 240,
+      "min_ms": 94.713,
+      "median_ms": 128.819,
+      "p95_ms": 226.232,
+      "p99_ms": 264.795,
+      "max_ms": 618.397
+    },
+    "GET /readyz": {
+      "count": 120,
+      "min_ms": 3.386,
+      "median_ms": 11.178,
+      "p95_ms": 41.454,
+      "p99_ms": 106.658,
+      "max_ms": 142.691
+    },
+    "GET /api/v1/pro/ops": {
+      "count": 120,
+      "min_ms": 18.567,
+      "median_ms": 30.427,
+      "p95_ms": 74.635,
+      "p99_ms": 113.466,
+      "max_ms": 202.9
+    },
+    "GET /api/v1/pro/research/portfolios/b97cc45ca34c4c5aac2056009029dc69": {
+      "count": 6,
+      "min_ms": 7.61,
+      "median_ms": 12.02,
+      "p95_ms": 39.741,
+      "p99_ms": 39.741,
+      "max_ms": 39.741
+    },
+    "GET /api/v1/pro/research/portfolios/6cb413f280db436796419fbc632f12a7": {
+      "count": 5,
+      "min_ms": 7.06,
+      "median_ms": 8.573,
+      "p95_ms": 31.587,
+      "p99_ms": 31.587,
+      "max_ms": 31.587
+    },
+    "GET /api/v1/pro/research/portfolios/a9d6dcc160394e578525478b78b4ac66": {
+      "count": 5,
+      "min_ms": 8.238,
+      "median_ms": 12.798,
+      "p95_ms": 112.429,
+      "p99_ms": 112.429,
+      "max_ms": 112.429
+    },
+    "GET /api/v1/pro/research/portfolios/9e3a2944e6ef46e5b4526f042ab32827": {
+      "count": 5,
+      "min_ms": 7.02,
+      "median_ms": 12.708,
+      "p95_ms": 209.554,
+      "p99_ms": 209.554,
+      "max_ms": 209.554
+    },
+    "GET /api/v1/pro/research/portfolios/e94bee6396df47f7b4fc3aec505b8060": {
+      "count": 6,
+      "min_ms": 2.911,
+      "median_ms": 6.24,
+      "p95_ms": 34.321,
+      "p99_ms": 34.321,
+      "max_ms": 34.321
+    },
+    "GET /api/v1/pro/research/portfolios/6383cb9adbcb4ff9ad8e753cdd657ea7": {
+      "count": 6,
+      "min_ms": 5.248,
+      "median_ms": 15.829,
+      "p95_ms": 35.03,
+      "p99_ms": 35.03,
+      "max_ms": 35.03
+    },
+    "POST /api/v1/pro/execution/portfolios/b690509209fd4066be8df893a43771a6/stop": {
+      "count": 1,
+      "min_ms": 12.515,
+      "median_ms": 12.515,
+      "p95_ms": 12.515,
+      "p99_ms": 12.515,
+      "max_ms": 12.515
+    },
+    "POST /api/v1/pro/execution/portfolios/16b409bbf2d14781a0492780cc8979c8/stop": {
+      "count": 1,
+      "min_ms": 8.24,
+      "median_ms": 8.24,
+      "p95_ms": 8.24,
+      "p99_ms": 8.24,
+      "max_ms": 8.24
+    },
+    "POST /api/v1/pro/execution/portfolios/b83ecc26847445ffaa79ec3620167f39/stop": {
+      "count": 1,
+      "min_ms": 9.404,
+      "median_ms": 9.404,
+      "p95_ms": 9.404,
+      "p99_ms": 9.404,
+      "max_ms": 9.404
+    }
+  },
+  "owner_observations": {
+    "reconciled": 240
+  },
+  "health_and_rss_samples": [
+    {
+      "elapsed_seconds": 0.23,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 147888,
+      "tree_rss_kib": 147888,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 5.292,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 141520,
+      "tree_rss_kib": 141520,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 10.371,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 141536,
+      "tree_rss_kib": 141536,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 15.192,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 136000,
+      "tree_rss_kib": 136000,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 20.255,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 135696,
+      "tree_rss_kib": 135696,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 25.281,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 135824,
+      "tree_rss_kib": 135824,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 30.343,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 133376,
+      "tree_rss_kib": 133376,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 35.376,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 133440,
+      "tree_rss_kib": 133440,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 40.228,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 128720,
+      "tree_rss_kib": 128720,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 45.239,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 123248,
+      "tree_rss_kib": 123248,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 50.32,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 116784,
+      "tree_rss_kib": 116784,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 55.343,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 116784,
+      "tree_rss_kib": 116784,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 60.408,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 115248,
+      "tree_rss_kib": 115248,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 65.313,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 115520,
+      "tree_rss_kib": 115520,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 70.418,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 55520,
+      "tree_rss_kib": 55520,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 75.337,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 55408,
+      "tree_rss_kib": 55408,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 80.422,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 57392,
+      "tree_rss_kib": 57392,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 85.298,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 56864,
+      "tree_rss_kib": 56864,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 90.501,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 55808,
+      "tree_rss_kib": 55808,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 95.376,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 62416,
+      "tree_rss_kib": 62416,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 100.463,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 62800,
+      "tree_rss_kib": 62800,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 105.326,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 63088,
+      "tree_rss_kib": 63088,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 110.38,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 62496,
+      "tree_rss_kib": 62496,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 115.171,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 63040,
+      "tree_rss_kib": 63040,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 120.299,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 63456,
+      "tree_rss_kib": 63456,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 125.3,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 63600,
+      "tree_rss_kib": 63600,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 130.313,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 63808,
+      "tree_rss_kib": 63808,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 135.316,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 64160,
+      "tree_rss_kib": 64160,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 140.457,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 64864,
+      "tree_rss_kib": 64864,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 145.269,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 65136,
+      "tree_rss_kib": 65136,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 150.335,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 65264,
+      "tree_rss_kib": 65264,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 155.355,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 65424,
+      "tree_rss_kib": 65424,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 160.517,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 66096,
+      "tree_rss_kib": 66096,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 165.323,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 66112,
+      "tree_rss_kib": 66112,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 170.347,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 66128,
+      "tree_rss_kib": 66128,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 175.349,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 66176,
+      "tree_rss_kib": 66176,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 180.374,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 66480,
+      "tree_rss_kib": 66480,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 185.402,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 71264,
+      "tree_rss_kib": 71264,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 190.243,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 71344,
+      "tree_rss_kib": 71344,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 195.267,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 71472,
+      "tree_rss_kib": 71472,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 200.289,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 71808,
+      "tree_rss_kib": 71808,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 205.292,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 72032,
+      "tree_rss_kib": 72032,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 210.453,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 72432,
+      "tree_rss_kib": 72432,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 215.455,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 72560,
+      "tree_rss_kib": 72560,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 220.277,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 72784,
+      "tree_rss_kib": 72784,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 225.31,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 72960,
+      "tree_rss_kib": 72960,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 230.297,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73008,
+      "tree_rss_kib": 73008,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 235.274,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73040,
+      "tree_rss_kib": 73040,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 240.292,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73200,
+      "tree_rss_kib": 73200,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 245.337,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73344,
+      "tree_rss_kib": 73344,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 250.369,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73344,
+      "tree_rss_kib": 73344,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 255.409,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73424,
+      "tree_rss_kib": 73424,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 260.236,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73552,
+      "tree_rss_kib": 73552,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 265.267,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73696,
+      "tree_rss_kib": 73696,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 270.301,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 73712,
+      "tree_rss_kib": 73712,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 275.289,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 77232,
+      "tree_rss_kib": 77232,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 280.317,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 77312,
+      "tree_rss_kib": 77312,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 285.625,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 77456,
+      "tree_rss_kib": 77456,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 290.232,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 77472,
+      "tree_rss_kib": 77472,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 295.239,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 77568,
+      "tree_rss_kib": 77568,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 301.068,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 122000,
+      "tree_rss_kib": 122000,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 305.27,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 123904,
+      "tree_rss_kib": 123904,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 310.251,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 124736,
+      "tree_rss_kib": 124736,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 315.24,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 125232,
+      "tree_rss_kib": 125232,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 320.239,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 125424,
+      "tree_rss_kib": 125424,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 325.259,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 126512,
+      "tree_rss_kib": 126512,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 330.293,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 126560,
+      "tree_rss_kib": 126560,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 335.316,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 126704,
+      "tree_rss_kib": 126704,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 340.355,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 126800,
+      "tree_rss_kib": 126800,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 345.353,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 127376,
+      "tree_rss_kib": 127376,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 350.394,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 127392,
+      "tree_rss_kib": 127392,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 355.197,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 127808,
+      "tree_rss_kib": 127808,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 360.239,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 127824,
+      "tree_rss_kib": 127824,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 365.267,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134080,
+      "tree_rss_kib": 134080,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 370.313,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134080,
+      "tree_rss_kib": 134080,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 375.32,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134128,
+      "tree_rss_kib": 134128,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 380.318,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134384,
+      "tree_rss_kib": 134384,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 385.344,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134560,
+      "tree_rss_kib": 134560,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 390.375,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134576,
+      "tree_rss_kib": 134576,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 395.209,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134608,
+      "tree_rss_kib": 134608,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 400.231,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134608,
+      "tree_rss_kib": 134608,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 405.244,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134896,
+      "tree_rss_kib": 134896,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 410.295,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 134928,
+      "tree_rss_kib": 134928,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 415.309,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 135040,
+      "tree_rss_kib": 135040,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 420.316,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 135072,
+      "tree_rss_kib": 135072,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 425.327,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 135136,
+      "tree_rss_kib": 135136,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 430.368,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 135248,
+      "tree_rss_kib": 135248,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 435.384,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 135248,
+      "tree_rss_kib": 135248,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 440.537,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 135008,
+      "tree_rss_kib": 135008,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 445.38,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 59952,
+      "tree_rss_kib": 59952,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 450.387,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 55232,
+      "tree_rss_kib": 55232,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 455.196,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 67216,
+      "tree_rss_kib": 67216,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 460.238,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 64800,
+      "tree_rss_kib": 64800,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 465.36,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 60576,
+      "tree_rss_kib": 60576,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 470.414,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 61504,
+      "tree_rss_kib": 61504,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 475.193,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 62992,
+      "tree_rss_kib": 62992,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 480.197,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 62912,
+      "tree_rss_kib": 62912,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 485.215,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 65392,
+      "tree_rss_kib": 65392,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 490.234,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 65648,
+      "tree_rss_kib": 65648,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 495.25,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 66032,
+      "tree_rss_kib": 66032,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 500.29,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 66192,
+      "tree_rss_kib": 66192,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 505.291,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 67536,
+      "tree_rss_kib": 67536,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 510.513,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 68256,
+      "tree_rss_kib": 68256,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 515.354,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 68304,
+      "tree_rss_kib": 68304,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 520.424,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 68384,
+      "tree_rss_kib": 68384,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 525.515,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 62272,
+      "tree_rss_kib": 62272,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 530.481,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 53680,
+      "tree_rss_kib": 53680,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 535.348,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 57616,
+      "tree_rss_kib": 57616,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 541.001,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 54384,
+      "tree_rss_kib": 54384,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 545.261,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 70960,
+      "tree_rss_kib": 70960,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 550.295,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 71280,
+      "tree_rss_kib": 71280,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 555.345,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 59728,
+      "tree_rss_kib": 59728,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 560.429,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 58992,
+      "tree_rss_kib": 58992,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 565.264,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 62928,
+      "tree_rss_kib": 62928,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 570.348,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 63120,
+      "tree_rss_kib": 63120,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 575.388,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 65360,
+      "tree_rss_kib": 65360,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 580.23,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 65888,
+      "tree_rss_kib": 65888,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 585.264,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 67584,
+      "tree_rss_kib": 67584,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 590.289,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 67792,
+      "tree_rss_kib": 67792,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 595.31,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 67904,
+      "tree_rss_kib": 67904,
+      "descendant_count": 0
+    }
+  ],
+  "final": {
+    "equity": "10003.999019456949688914242800000000000000000000000",
+    "initial_cash": "10000",
+    "account_equity_net_pnl": "3.999019456949688914242800000000000000000000000",
+    "owner_net_pnl": "3.9990194569496889142427999999999999999999999999812",
+    "owner_minus_equity_net_delta": "-1.88E-47",
+    "contribution_reconciliation_delta": "-2E-49",
+    "funding_paid": "0.0155448459325439857572",
+    "fees_paid": "2.6021362851749",
+    "open_position_count": 6,
+    "valuation_status": "example",
+    "owners": [
+      {
+        "owner": "portfolio:16b409bbf2d14781a0492780cc8979c8",
+        "realized_pnl": "1.64394659450427634751388828164336342719678899563391",
+        "unrealized_pnl": "10.91435965078819665248611171835663657280321100437000",
+        "fees_paid": "1.0405123037749",
+        "funding_paid": "0",
+        "net_pnl": "12.558306245292473000000000000000000000000000000004"
+      },
+      {
+        "owner": "portfolio:b690509209fd4066be8df893a43771a6",
+        "realized_pnl": "-0.53746541874457571081356366433851883895373836332890",
+        "unrealized_pnl": "-1.1555124613656643891864363356614811610462616366700",
+        "fees_paid": "1.041670151400",
+        "funding_paid": "0.0155950611157756590772",
+        "net_pnl": "-1.7085729412260157590771999999999999999999999999989"
+      },
+      {
+        "owner": "portfolio:b83ecc26847445ffaa79ec3620167f39",
+        "realized_pnl": "-0.93762679123792948774282399315816914164907063398393",
+        "unrealized_pnl": "-5.9131372710620705122571760068418308583509293660400",
+        "fees_paid": "0.51995383",
+        "funding_paid": "-0.00005021518323167332",
+        "net_pnl": "-6.8507138471167683266800000000000000000000000000239"
+      }
+    ]
+  },
+  "external_network_attempts": 0,
+  "final_process_shutdown": {
+    "exit_code": -15,
+    "forced_kill": false,
+    "lifespan_shutdown_completed": true
+  },
+  "terminal_diagnostics": {
+    "groups": [
+      {
+        "id": "b690509209fd4066be8df893a43771a6",
+        "status": "stopped",
+        "last_bar": 1768086000000,
+        "last_error": null
+      },
+      {
+        "id": "16b409bbf2d14781a0492780cc8979c8",
+        "status": "stopped",
+        "last_bar": 1768086000000,
+        "last_error": null
+      },
+      {
+        "id": "b83ecc26847445ffaa79ec3620167f39",
+        "status": "stopped",
+        "last_bar": 1768086000000,
+        "last_error": null
+      }
+    ],
+    "recent_batches": [
+      {
+        "id": "2953a36f7dc7425b8971510aa0804c08",
+        "group_id": "b690509209fd4066be8df893a43771a6",
+        "bar": 1768086000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "8abf902d9f6e4633a639d564dbd4c7f2",
+        "group_id": "16b409bbf2d14781a0492780cc8979c8",
+        "bar": 1768086000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"ETH-USDT\":\"0E-8\",\"SOL-USDT\":\"0.000000\"}}"
+      },
+      {
+        "id": "7e654831cb154296818b657b43c13742",
+        "group_id": "b83ecc26847445ffaa79ec3620167f39",
+        "bar": 1768086000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "f4703ed51ef248a58d633ac167b547a3",
+        "group_id": "b690509209fd4066be8df893a43771a6",
+        "bar": 1768071600000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "e894b3bddcd047f38b76451c6a3286d0",
+        "group_id": "16b409bbf2d14781a0492780cc8979c8",
+        "bar": 1768071600000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"ETH-USDT\":\"0E-8\",\"SOL-USDT\":\"0.000000\"}}"
+      },
+      {
+        "id": "a0b866d5e6614476a9d2a5f609b4c327",
+        "group_id": "b83ecc26847445ffaa79ec3620167f39",
+        "bar": 1768071600000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "452aa830095e40e98f443cd098caafaf",
+        "group_id": "b690509209fd4066be8df893a43771a6",
+        "bar": 1768042800000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "4dbbafffe12b4a6e813ecd8653fc4510",
+        "group_id": "16b409bbf2d14781a0492780cc8979c8",
+        "bar": 1768042800000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"ETH-USDT\":\"0E-8\",\"SOL-USDT\":\"0.000000\"}}"
+      },
+      {
+        "id": "e083ad23c12a4ff99d7199e7f3ac9db6",
+        "group_id": "b83ecc26847445ffaa79ec3620167f39",
+        "bar": 1768042800000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "881671b9b84e4d3395d7bbceb67fee4b",
+        "group_id": "16b409bbf2d14781a0492780cc8979c8",
+        "bar": 1768014000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"ETH-USDT\":\"0E-8\",\"SOL-USDT\":\"0.000000\"}}"
+      },
+      {
+        "id": "4ccf521fe1904e738a6c10d3f2636b95",
+        "group_id": "b83ecc26847445ffaa79ec3620167f39",
+        "bar": 1768014000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "2b72704e9ef948579bb43de3c2249b17",
+        "group_id": "b690509209fd4066be8df893a43771a6",
+        "bar": 1768014000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      }
+    ],
+    "uncompleted_commands": [],
+    "positions": [
+      {
+        "inst_id": "BTC-USDT",
+        "quantity": "0.00675433"
+      },
+      {
+        "inst_id": "BTC-USDT-SWAP",
+        "quantity": "-0.67"
+      },
+      {
+        "inst_id": "DOGE-USDT-SWAP",
+        "quantity": "-1.61"
+      },
+      {
+        "inst_id": "ETH-USDT",
+        "quantity": "0.12923302"
+      },
+      {
+        "inst_id": "OKB-USDT-SWAP",
+        "quantity": "4.41"
+      },
+      {
+        "inst_id": "SOL-USDT",
+        "quantity": "2.918173"
+      }
+    ]
+  },
+  "runtime_identity": {
+    "schema_version": 1,
+    "application_version": "0.6.0",
+    "code_fingerprint": "74a1f28a91539cf9fe70b1d31e2d15f05a23749e51beed6efdb4916243a4d545",
+    "modules": {
+      "engine.py": "677074a95991000ba7fd5593d2de9fea39da203c884fd8df0ae09d1f80140217",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "pro_api.py": "379716c1bc8465d233ad009e6cebcae5c80fa6c7fc2068b3854816e43d07b67a",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "93eba4400c8233c3c997de48b4533d9119397c3b0ce1945f0eb222a81facbacb",
+      "pro_service.py": "93ee35c18fa5c4bb7a0576e247429e39dd262cb4f38bb49c7e8ff5f389a79a52",
+      "strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+      "research_protocol.py": "3b097632fb8a0b3c5b9a022b1df982419d36df516bd81638cc1f3c2ba8080560",
+      "portfolio_registry.py": "83a46d29bd5fa67801904b2165a27eba0d9e24577093f6d5f35cc96555bd624d",
+      "portfolio_releases.py": "8ca1762ae73057a491a323bdd2436329940d176fea3df5940d62dc61b35191df",
+      "managed_portfolios.py": "0c1c9e4fdcaac38ea6f2aec1e396415ee501aaac3936f5038cb622164aaa7f1d",
+      "portfolio_research.py": "b4356f5641c227a76b22003ba9957f56ed396d192e9401a36a3cce868d0b2324",
+      "portfolio_targets.py": "7bd70c03d88b575d40beb44110f2dd16f01f17f314838c63cc61184f84eea055",
+      "portfolio_construction.py": "7eb2bb2993939e044ba59d9ff81807a4c85ed18448de6e10713260523146c295",
+      "pro_execution.py": "9b5b4c75d62769454f80028a177dd6de7762277daaed47c7675f04663b9b873f",
+      "contributions.py": "2516c7d1e6308952d46792000e25a4d18bfe228b9ccb4831be5c4b1df69bf4d2",
+      "strategy_program.py": "2bf8d4eaf17515cb6c3dd85e868172ad7cfac8a2c28769c3b8d184131e0a042a",
+      "forward_history.py": "7b47314130e1e5b88608db328894e153fb953f0d585422e42f09042046b98e47",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "77389e03d72fb3b6c97d57628231411fa8d1a5fd1e05cf1bcd3b0afe0e888bc7"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "errors": [],
+  "finished_at_utc": "2026-10-08T09:26:40.415642+00:00",
+  "server_log_tails": [
+    "",
+    ""
+  ],
+  "temporary_workspace_removed_on_exit": true
+}

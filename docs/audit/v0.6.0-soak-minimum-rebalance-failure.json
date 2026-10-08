@@ -1,0 +1,77 @@
+{
+  "audited_version": "0.6.0",
+  "source_revision": "5f5224af882c8caaf800ee64a71e05d54cb5907e",
+  "started_at_utc": "2026-10-08T09:01:13.330925+00:00",
+  "environment": {
+    "python": "3.13.15",
+    "system": "Darwin",
+    "machine": "arm64"
+  },
+  "configuration": {
+    "duration": 600.0,
+    "interval": 10,
+    "sample_interval": 5,
+    "step_hours": 4,
+    "research_interval": 90,
+    "read_clients": 2,
+    "http_timeout": 15
+  },
+  "scope": "Offline loopback HTTP, sequentially admitted three small-capital Example groups (concurrent-start capability excluded), real SQLite/fills/funding/owners, concurrent readers and research, one real SIGTERM restart. Synthetic market time does not count as wall time. This bounded single-host run is not a weeks-long soak, venue or availability/capacity SLA.",
+  "passed": false,
+  "monotonic_elapsed_seconds": 600.015,
+  "final_process_shutdown": {
+    "exit_code": -15,
+    "forced_kill": false,
+    "lifespan_shutdown_completed": true
+  },
+  "runtime_identity": {
+    "schema_version": 1,
+    "application_version": "0.6.0",
+    "code_fingerprint": "2d0cae19bad9ae583c3145730db6ce8bef55856384ed7b61a69368040ed420bb",
+    "modules": {
+      "engine.py": "677074a95991000ba7fd5593d2de9fea39da203c884fd8df0ae09d1f80140217",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "pro_api.py": "379716c1bc8465d233ad009e6cebcae5c80fa6c7fc2068b3854816e43d07b67a",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "93eba4400c8233c3c997de48b4533d9119397c3b0ce1945f0eb222a81facbacb",
+      "pro_service.py": "93ee35c18fa5c4bb7a0576e247429e39dd262cb4f38bb49c7e8ff5f389a79a52",
+      "strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+      "research_protocol.py": "3b097632fb8a0b3c5b9a022b1df982419d36df516bd81638cc1f3c2ba8080560",
+      "portfolio_registry.py": "83a46d29bd5fa67801904b2165a27eba0d9e24577093f6d5f35cc96555bd624d",
+      "portfolio_releases.py": "8ca1762ae73057a491a323bdd2436329940d176fea3df5940d62dc61b35191df",
+      "managed_portfolios.py": "ad2b8f61f533730203b36e86889fc42b6d0b5f1e826244d2964a7523c73c3a73",
+      "portfolio_research.py": "9d7ffa8f3c9499e4bac0384ef5aace0d5693653d56596c670d3636688e8636d6",
+      "portfolio_targets.py": "5118a7afae9b807d23d1f03417f68b0448b091332a1dc6e84ba05977f00df601",
+      "portfolio_construction.py": "7eb2bb2993939e044ba59d9ff81807a4c85ed18448de6e10713260523146c295",
+      "pro_execution.py": "9b5b4c75d62769454f80028a177dd6de7762277daaed47c7675f04663b9b873f",
+      "contributions.py": "2516c7d1e6308952d46792000e25a4d18bfe228b9ccb4831be5c4b1df69bf4d2",
+      "strategy_program.py": "2bf8d4eaf17515cb6c3dd85e868172ad7cfac8a2c28769c3b8d184131e0a042a",
+      "forward_history.py": "7b47314130e1e5b88608db328894e153fb953f0d585422e42f09042046b98e47",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "77389e03d72fb3b6c97d57628231411fa8d1a5fd1e05cf1bcd3b0afe0e888bc7"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "errors": [
+    {
+      "phase": "audit_aborted",
+      "detail": "Managed group BTC basis carry became failed: Quantity must respect the current instrument lot and minimum size."
+    }
+  ],
+  "finished_at_utc": "2026-10-08T09:11:22.641273+00:00",
+  "server_log_tails": [
+    "",
+    ""
+  ],
+  "temporary_workspace_removed_on_exit": true
+}

@@ -109,3 +109,11 @@ Schema 5 adds immutable portfolio projects/versions/releases, managed groups, ta
 Before replacing v0.4, create and verify a schema-4 backup and keep the matching v0.4.0 source/image. Stop the old owner, install v0.5 and start exactly one process against the operational data directory. Inspect readiness, account balances, inventory, pending orders, version/release evidence and legacy attribution; create and verify a new schema-5 backup after acceptance.
 
 A schema-5 restore validates required portfolio/contribution evidence, preserves its captured commands and owners, stops groups, cancels unfinished batches/commands, revokes sessions, halts accounts and pauses the clock. Existing quarantine state is retained. In-app restore requires a matching schema; a schema-4 backup remains usable with matching v0.4 code in a separate rollback data directory. Never relabel a backup or point v0.4 at schema 5. See the [release upgrade procedure](release-0.5.0.md#upgrade-from-04).
+
+## v0.6 upgrade and schema 6
+
+Create and verify a schema-5 backup with v0.5, preserving its matching source/image. Stop the single writer, install v0.6 and inspect readiness, authoritative account balances, inventory, orders and existing release evidence. Schema 6 creates captured portfolio holdouts and independent reservation, exposure, consumption and trial facts; startup backfills recorded legacy research without fabricating independent evaluations. Create and verify a new schema-6 backup after inspection.
+
+In-app restore requires the same schema. Schema-6 restore checks and retains newer independently hashed research facts before replacing financial state; a missing consumed primary remains unavailable rather than reopening the final test. Conflicting or invalid retained facts reject replacement. Financial accounts are restored, not unioned. Sessions are revoked, groups stopped, pending commands canceled, risk halted and synthetic time paused. See [research recovery](research-governance.md).
+
+For rollback, use v0.5 against a separately preserved schema-5 copy. Do not point old code at schema 6. External filesystem rollback must preserve newer research evidence separately; deleting every copy of newer facts cannot be repaired by the application.

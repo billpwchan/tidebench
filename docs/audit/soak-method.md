@@ -11,6 +11,8 @@ The v0.5 trials are retained honestly:
 - [Concurrent startup preflight](v0.5.0-concurrent-start-failure.json) failed because another group opened inventory after quote enumeration. An incomplete mark set was safely rejected, but the group incorrectly treated the pre-commit race as permanent leg failure. v0.6 re-fetches only this diagnosed missing-market valuation case, up to three times per cycle, retaining the immutable command and its idempotency key. Persistent contention defers the frozen command with an audited warning; it does not turn an admission rejection into a fill.
 - [Elapsed trial interrupted at about 430 seconds](v0.5.0-soak-interrupted.json) found the operations endpoint's WAL `exists()`/`stat()` race during SQLite checkpoint removal. v0.6 observes WAL size with a single `stat()` and treats disappearance as zero. This trial also classified Uvicorn's expected `-15` too broadly as shutdown failure; the new lifecycle marker resolves that measurement limitation. The original failed record is not rewritten as a pass.
 
+The [first v0.6 elapsed run](v0.6.0-soak-minimum-rebalance-failure.json) reached 600 real seconds, but final group inspection found an undersized same-side rebalance had entered compensation. It is a failed run, not a passing soak. The corrected shared planner retains such adjustments as visible residuals, preserves exits and side changes, and still enforces the reviewed residual limit. Subsequent audit outputs also capture terminal group, batch, command and inventory diagnostics before removing the temporary workspace.
+
 The elapsed run admits groups sequentially, then exercises concurrent ongoing operation. It explicitly excludes simultaneous activation capacity; that race has a separate real-book regression. A successful 600-second single-host synthetic run is bounded lifecycle evidence, not weeks of uptime, venue execution, a distributed failover drill, a latency SLO or a production capacity guarantee. RSS observations on the shared development host are not a controlled benchmark.
 
 Example invocation (use an actual committed revision):
@@ -21,3 +23,7 @@ uv run python scripts/lifecycle_soak.py --source-root . --revision HEAD \
 ```
 
 The output includes the audited version/revision/fingerprint, actual monotonic elapsed time, restarts, acceptance predicates, counts and errors. The default 600-second duration cannot be satisfied by advancing the synthetic market clock.
+
+## Corrected v0.6 observation
+
+The [committed-source run](v0.6.0-soak-observations.json) passed after 608.323 monotonic seconds. It recorded 154 actual simulated orders, 93 completed batches, 120 funding settlements and 9 completed research jobs. All 240 contribution observations reconciled. The halfway SIGTERM restart preserved 77 prior order identities/bodies and a fresh completed lifespan marker; an additional order completed after restart readiness. Both normal shutdowns completed without forced kill. The raw observations include acceptance predicates, per-route latency, RSS, terminal group/batch diagnostics and finite-precision reconciliation differences. They are scoped observations, not controlled performance benchmarks.
