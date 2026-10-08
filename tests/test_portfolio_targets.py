@@ -84,3 +84,30 @@ def test_small_legs_are_explained_and_opposite_inventory_must_be_reduced_first()
         target_quantities({"MISSING-USDT": 1}, 10000, q)
     with pytest.raises(PlatformError, match="negative"):
         target_quantities({"BTC-USDT": -1}, 10000, q)
+
+
+@pytest.mark.parametrize("sign", [D(1), D(-1)])
+def test_minimum_rebalances_defer_without_suppressing_exits_or_funding_units(sign):
+    from tidebench.portfolio_targets import reduction_plan
+
+    q = quotes()
+    symbol = "ETH-USDT-SWAP"
+    q[symbol]["instrument"]["min_size"] = "1"
+    old = 10 * sign
+    smaller, larger = D("9.5") * sign, D("10.5") * sign
+    reductions = reduction_plan({symbol: smaller}, {symbol: old}, q)
+    assert not reductions.quantities
+    assert reductions.skipped[0]["code"] == "rebalance_minimum"
+    additions = addition_plan({symbol: larger}, {symbol: old}, q, 1000, {symbol: 2}, 10, 5)
+    assert not additions.quantities and not additions.requested and additions.required_cash == 0
+    assert additions.skipped[0]["code"] == "rebalance_minimum"
+    assert reduction_plan({symbol: 0}, {symbol: old}, q).quantities == {symbol: -old}
+    assert reduction_plan({symbol: -old}, {symbol: old}, q).quantities == {symbol: -old}
+    # A valid decrease must not leave dust that a later exit cannot submit.
+    assert not reduction_plan({symbol: D(".5") * sign}, {symbol: old}, q).quantities
+    assert reduction_plan({symbol: 9 * sign}, {symbol: old}, q).quantities == {symbol: -sign}
+    # Initial undersized exposure and cash-scaled shortfalls remain hard failures.
+    initial = addition_plan({symbol: D(".5") * sign}, {}, q, 1000, {symbol: 2}, 10, 5)
+    assert initial.skipped[0]["code"] == "minimum_size"
+    shortfall = addition_plan({symbol: 12 * sign}, {symbol: old}, q, 0, {symbol: 2}, 10, 5)
+    assert shortfall.skipped[0]["code"] == "minimum_size"

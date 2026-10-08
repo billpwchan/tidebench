@@ -53,6 +53,40 @@ def reduction_quantities(targets, positions):
 
 
 @dataclass(frozen=True)
+class ReductionPlan:
+    quantities: dict[str, Decimal]
+    skipped: list[dict]
+
+
+def reduction_plan(targets, positions, quotes):
+    """Keep undersized same-side adjustments as visible target residuals.
+
+    Full exits and side changes still close the actual inventory. Do not create
+    a remainder smaller than the current minimum that a later exit cannot close.
+    The caller's unchanged target/residual limit remains authoritative.
+    """
+    with localcontext(ACCOUNTING_CONTEXT):
+        quantities, skipped = {}, []
+        for symbol, quantity in reduction_quantities(targets, positions).items():
+            _, meta = _quote(quotes, symbol)
+            old, desired = number(positions.get(symbol, 0)), number(targets[symbol])
+            minimum = number(meta["min_size"])
+            if old * desired > 0 and (abs(quantity) < minimum or abs(desired) < minimum):
+                skipped.append(
+                    {
+                        "inst_id": symbol,
+                        "code": "rebalance_minimum",
+                        "requested_quantity": str(abs(quantity)),
+                        "minimum_size": str(minimum),
+                        "message": "Same-side reduction is below minimum or would leave an uncloseable remainder; inventory is retained within the reviewed residual limit.",
+                    }
+                )
+            else:
+                quantities[symbol] = quantity
+        return ReductionPlan(quantities, skipped)
+
+
+@dataclass(frozen=True)
 class AdditionPlan:
     cash_scale: Decimal
     required_cash: Decimal
@@ -72,13 +106,24 @@ def addition_plan(targets, positions, quotes, available_cash, leverage, fee_bps,
         fee, slip = number(fee_bps) / 10000, number(slippage_bps) / 10000
         if not 0 <= fee <= D(".01") or not 0 <= slip <= D(".01"):
             raise PlatformError("portfolio_costs", "Costs must be within 0–100 bps.", 422)
-        requested, required = {}, D(0)
+        requested, required, skipped = {}, D(0), []
         for symbol, desired in sorted(targets.items()):
             old, desired = number(positions.get(symbol, 0)), number(desired)
             if not desired or old and (old * desired < 0 or abs(desired) <= abs(old)):
                 continue
             quantity = desired - old
             quote, meta = _quote(quotes, symbol)
+            if old * desired > 0 and abs(quantity) < number(meta["min_size"]):
+                skipped.append(
+                    {
+                        "inst_id": symbol,
+                        "code": "rebalance_minimum",
+                        "requested_quantity": str(abs(quantity)),
+                        "minimum_size": str(meta["min_size"]),
+                        "message": "Same-side increase is below minimum; inventory is retained within the reviewed residual limit.",
+                    }
+                )
+                continue
             lev = number(leverage[symbol])
             if lev < 1 or lev > 50 or meta["inst_type"] == "SPOT" and lev != 1:
                 raise PlatformError("portfolio_leverage", "Unsupported leg leverage.", 422)
@@ -96,7 +141,7 @@ def addition_plan(targets, positions, quotes, available_cash, leverage, fee_bps,
             requested[symbol] = quantity
             required += abs(quantity) * base_size(meta) * price * (1 / lev + fee)
         scale = min(D(1), max(D(0), number(available_cash) / required)) if required else D(1)
-        quantities, skipped = {}, []
+        quantities = {}
         for symbol, quantity in requested.items():
             _, meta = _quote(quotes, symbol)
             lot = number(meta["lot_size"])

@@ -412,6 +412,13 @@ export type PortfolioCommand = {
   payload: RecordData;
   order?: RecordData;
 };
+export type PortfolioAdjustment = {
+  inst_id: string;
+  code: string;
+  requested_quantity: string;
+  minimum_size: string;
+  message: string;
+};
 export type PortfolioBatch = {
   id: string;
   bar: number;
@@ -423,8 +430,9 @@ export type PortfolioBatch = {
     capital: string;
     available_at: number;
     rebalance_due: boolean;
+    reduction_skips?: PortfolioAdjustment[];
   };
-  additions?: RecordData;
+  additions?: RecordData & { skipped?: PortfolioAdjustment[] };
   residuals?: { quantities: Record<string, string>; capital_pct: string; notional: string };
   commands: PortfolioCommand[];
 };

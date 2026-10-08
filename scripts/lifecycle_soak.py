@@ -765,6 +765,33 @@ async def audit(args):
             )
         finally:
             report["final_process_shutdown"] = await runner.stop()
+            with contextlib.suppress(Exception), contextlib.closing(runner.database()) as conn:
+                report["terminal_diagnostics"] = {
+                    "groups": [
+                        dict(row)
+                        for row in conn.execute(
+                            "SELECT id,status,last_bar,last_error FROM managed_portfolios ORDER BY created_at"
+                        )
+                    ],
+                    "recent_batches": [
+                        dict(row)
+                        for row in conn.execute(
+                            "SELECT id,group_id,bar,status,error,residuals FROM portfolio_batches ORDER BY bar DESC LIMIT 12"
+                        )
+                    ],
+                    "uncompleted_commands": [
+                        dict(row)
+                        for row in conn.execute(
+                            "SELECT phase,status,error,payload FROM portfolio_commands WHERE status!='completed' ORDER BY updated_at DESC LIMIT 20"
+                        )
+                    ],
+                    "positions": [
+                        dict(row)
+                        for row in conn.execute(
+                            "SELECT inst_id,quantity FROM pro_positions WHERE source='example'"
+                        )
+                    ],
+                }
             report["runtime_identity"] = runner.identity
             report["audited_version"] = runner.identity["application_version"] if runner.identity else None
             report["errors"] = runner.errors

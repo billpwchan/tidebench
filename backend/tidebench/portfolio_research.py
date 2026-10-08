@@ -19,7 +19,7 @@ from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, EngineError, StrategyConfig
 from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights
-from .portfolio_targets import addition_plan, reduction_quantities, target_quantities
+from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import SimulationBook, base_size, number, tier_for
 from .pro_research import ResearchConfig, _DecisionState, json_safe
 from .schemas import InputModel, Money
@@ -750,7 +750,8 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                     }
                 # Shared domain planning is also used by the managed controller.
                 positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
-                for symbol, quantity in reduction_quantities(targets, positions).items():
+                reductions = reduction_plan(targets, positions, quotes)
+                for symbol, quantity in reductions.quantities.items():
                     submit(symbol, quantity, True, quotes, f"rebalance:{index}:reduce:{symbol}")
                 positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
                 plan = addition_plan(
@@ -767,7 +768,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                     submit(symbol, quantity, False, quotes, f"rebalance:{index}:add:{symbol}")
                 errors.extend(
                     row | {"ts": clock[0], "key": f"rebalance:{index}:add:{row['inst_id']}"}
-                    for row in plan.skipped
+                    for row in [*reductions.skipped, *plan.skipped]
                 )
                 positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
                 residual = {
@@ -778,6 +779,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                     cash_scale=str(scale),
                     quantity_targets={s: str(q) for s, q in targets.items()},
                     quantity_residuals=residual,
+                    rebalance_skips=[*reductions.skipped, *plan.skipped],
                 )
             pending = None
             for event in events:

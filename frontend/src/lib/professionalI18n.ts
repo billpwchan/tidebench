@@ -1,4 +1,9 @@
 export const professionalZh: Record<string, string> = {
+  'Small adjustments remain as visible residuals within the reviewed limit. Full exits and side changes still reduce inventory.':
+    '小幅调仓保留为可见残差，继续受已审查的偏离限额约束。完整退出及方向转换仍会减仓。',
+  'Deferred adjustment': '暂缓调仓数量',
+  'Minimum order size': '最小下单数量',
+
   'Return above cash (%)': '相对现金收益率（%）',
   'Maximum drawdown (%)': '最大回撤（%）',
   'Insurance debt (USDT)': '保险债务（USDT）',

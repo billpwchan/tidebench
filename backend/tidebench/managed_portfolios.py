@@ -14,7 +14,7 @@ from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, StrategyConfig
 from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights
-from .portfolio_targets import addition_plan, reduction_quantities, target_quantities
+from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import base_size, number
 from .store import dumps, encode, new_id, now_ms
 from .strategy_program import ProStrategyInput
@@ -494,6 +494,7 @@ class ManagedPortfolios:
                         if due
                         else {s: D(0) if s in exits else positions.get(s, D(0)) for s in symbols}
                     )
+                    reductions = reduction_plan(targets, positions, quotes)
                     batch_id, timestamp = new_id(), now_ms()
                     body = encode(
                         {
@@ -511,6 +512,7 @@ class ManagedPortfolios:
                             "account_equity": account["equity"],
                             "positions_before": {s: positions.get(s, D(0)) for s in symbols},
                             "targets": targets,
+                            "reduction_skips": reductions.skipped,
                             "quotes": {s: quotes[s] for s in symbols},
                             "policy_hash": digest(policy),
                         }
@@ -522,7 +524,7 @@ class ManagedPortfolios:
                             (batch_id, identifier, latest, dumps(body), digest(body), timestamp, timestamp),
                         )
                         batch = {"id": batch_id, "bar": latest}
-                        self._commands(conn, batch, group, "reduce", reduction_quantities(targets, positions))
+                        self._commands(conn, batch, group, "reduce", reductions.quantities)
                         conn.execute(
                             "UPDATE managed_portfolios SET anchor_bar=COALESCE(anchor_bar,?),updated_at=? WHERE id=?",
                             (latest, timestamp, identifier),
@@ -743,7 +745,7 @@ class ManagedPortfolios:
             if not batch["additions"]:
                 await self._freeze_additions(group, batch)
                 batch = self.batch(batch["id"])
-            if batch["additions"]["skipped"]:
+            if any(row["code"] != "rebalance_minimum" for row in batch["additions"]["skipped"]):
                 raise PlatformError(
                     "portfolio_minimum_leg",
                     "Common cash scaling leaves a portfolio leg below minimum size.",

@@ -213,6 +213,10 @@ function VerifiedGroupEvidence({
     refetchInterval: 5000,
   });
   const batch = history.data?.items.find((b) => b.id === selectedBatch) ?? history.data?.items[0];
+  const adjustments = [
+    ...(batch?.body.reduction_skips ?? []),
+    ...(batch?.additions?.skipped ?? []),
+  ].filter((row) => row.code === 'rebalance_minimum');
   const stop = useMutation({
     mutationFn: () => proApi.stopPortfolio(group.id),
     onSuccess: onChange,
@@ -356,6 +360,31 @@ function VerifiedGroupEvidence({
               },
             ]}
           />
+          {adjustments.length > 0 && (
+            <>
+              <p className="quiet-copy">
+                {t(
+                  'Small adjustments remain as visible residuals within the reviewed limit. Full exits and side changes still reduce inventory.',
+                )}
+              </p>
+              <DataTable
+                rows={adjustments}
+                columns={[
+                  { key: 'inst_id', label: 'Market' },
+                  {
+                    key: 'requested_quantity',
+                    label: 'Deferred adjustment',
+                    render: (r) => quantityText(r.requested_quantity),
+                  },
+                  {
+                    key: 'minimum_size',
+                    label: 'Minimum order size',
+                    render: (r) => quantityText(r.minimum_size),
+                  },
+                ]}
+              />
+            </>
+          )}
           <DataTable
             rows={batch.commands}
             columns={[

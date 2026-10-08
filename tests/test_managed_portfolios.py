@@ -692,3 +692,36 @@ async def test_other_market_opened_after_quote_enumeration_retries_without_compe
     commands = [c for c in batch["commands"] if c["phase"] == "add"]
     assert len(commands) == len({c["order_id"] for c in commands})
     assert any(o["status"] == "filled" and o["inst_id"] == "SOL-USDT" for o in r.book.orders("example"))
+
+
+async def test_small_carry_rebalances_accumulate_visible_residuals_over_sixty_steps(runtime):
+    r = runtime
+    group = await activate(
+        r,
+        mode="funding_carry",
+        capital_pct="8",
+        carry_threshold="-.01",
+        rebalance_bars=2,
+        legs=[
+            {"inst_id": "BTC-USDT", "weight": ".5"},
+            {"inst_id": "BTC-USDT-SWAP", "weight": "-.5", "leverage": "2", "direction": "short_only"},
+        ],
+    )
+    skips = []
+    for index in range(61):
+        if index:
+            r.clock.change(step_ms=4 * HOUR, expected_revision=r.clock.status()["revision"], actor="trader")
+        await r.managed_portfolios.evaluate(group["id"])
+        batch = r.managed_portfolios.history(group["id"], limit=1)[0]
+        assert batch["status"] == "completed", (index, batch["error"], batch["commands"])
+        assert r.managed_portfolios.get(group["id"])["status"] == "running"
+        assert D(batch["residuals"]["capital_pct"]) <= D("2")
+        skips.extend(batch["body"].get("reduction_skips", []))
+        skips.extend(batch["additions"]["skipped"])
+        for command in batch["commands"]:
+            meta = batch["body"]["quotes"][command["payload"]["inst_id"]]["instrument"]
+            assert D(command["payload"]["quantity"]) >= D(meta["min_size"])
+    assert skips and all(row["code"] == "rebalance_minimum" for row in skips)
+    assert all(row["status"] == "completed" for row in r.managed_portfolios.history(group["id"], limit=100))
+    report = r.book.contribution_report("example", await r.snapshots_for("example"))
+    assert report["reconciled"] and D(report["totals"]["funding_paid"]) != 0
