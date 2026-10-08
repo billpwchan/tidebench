@@ -1,4 +1,9 @@
 export const professionalZh: Record<string, string> = {
+  'This view could not be loaded': '当前页面未能加载',
+  'Reload the workspace to try again, or choose another section.':
+    '可以重新加载工作区重试，或选择其他页面。',
+  'Reload workspace': '重新加载工作区',
+
   'Small adjustments remain as visible residuals within the reviewed limit. Full exits and side changes still reduce inventory.':
     '小幅调仓保留为可见残差，继续受已审查的偏离限额约束。完整退出及方向转换仍会减仓。',
   'Deferred adjustment': '暂缓调仓数量',

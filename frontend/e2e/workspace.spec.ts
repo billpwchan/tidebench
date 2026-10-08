@@ -975,3 +975,25 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
 });
+
+test('a failed view download preserves navigation and recovers after explicit reload', async ({
+  page,
+  request,
+}) => {
+  expect((await request.get('/')).headers()['cache-control']).toBe('no-cache');
+  const chunk = '**/assets/Strategies-*.js';
+  await page.route(chunk, (route) => route.abort('failed'));
+  await navigate(page, 'Strategies');
+  await expect(
+    page.getByRole('heading', { name: 'This view could not be loaded', exact: true }),
+  ).toBeVisible();
+  await navigate(page, 'Overview');
+  await expect(page.getByRole('heading', { name: 'Trading overview', exact: true })).toBeVisible();
+  await expect(page.locator('.workspace-view-failure')).toHaveCount(0);
+  await navigate(page, 'Strategies');
+  await expect(page.getByRole('button', { name: 'Reload workspace', exact: true })).toBeVisible();
+  await page.unroute(chunk);
+  await page.getByRole('button', { name: 'Reload workspace', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'New strategy', exact: true })).toBeVisible();
+  await expect(page.locator('.workspace-view-failure')).toHaveCount(0);
+});

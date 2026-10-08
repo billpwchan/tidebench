@@ -166,6 +166,8 @@ def _build_app(settings, market, store):
                     response.headers["Strict-Transport-Security"] = "max-age=31536000"
                 if request.url.path.startswith("/api/"):
                     response.headers["Cache-Control"] = "no-store"
+                elif "text/html" in response.headers.get("Content-Type", ""):
+                    response.headers["Cache-Control"] = "no-cache"
 
     async def enforce_boundaries(request, call_next):
         path = request.url.path

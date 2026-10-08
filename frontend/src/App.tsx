@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import type { Bar, Source } from './api';
 import { api } from './api';
 import AuthGate from './components/AuthGate';
+import WorkspaceViewBoundary from './components/WorkspaceViewBoundary';
 import { WorkspaceTabs } from './components/ProWorkspace';
 import { Loading, PageHeading, SourceBadge } from './components/workspace';
 import { MarketSearch, Sidebar, Topbar } from './components/WorkspaceShell';
@@ -161,136 +162,138 @@ function Workspace() {
               </span>
             </div>
           )}
-          <Suspense fallback={<Loading />}>
-            {page === 'overview' && (
-              <Overview
-                key={source}
-                source={source}
-                symbol={symbol}
-                setSymbol={setSymbol}
-                navigate={navigate}
-              />
-            )}
-            {page === 'research' && (
-              <>
-                <WorkspaceTabs
-                  value={researchTab}
-                  onChange={setResearchTab}
-                  items={[
-                    { key: 'advanced', label: 'Advanced' },
-                    { key: 'portfolio', label: 'Portfolio research' },
-                    { key: 'governance', label: 'Research governance' },
-                    { key: 'classic', label: 'Classic' },
-                  ]}
+          <WorkspaceViewBoundary key={`${page}:${researchTab}:${source}`}>
+            <Suspense fallback={<Loading />}>
+              {page === 'overview' && (
+                <Overview
+                  key={source}
+                  source={source}
+                  symbol={symbol}
+                  setSymbol={setSymbol}
+                  navigate={navigate}
                 />
-                {researchTab === 'governance' ? (
-                  <ResearchGovernance
-                    source={source}
-                    onPortfolioRun={(id) => {
-                      setSelectedPortfolioRun(id);
-                      setResearchTab('portfolio');
-                    }}
-                    onRun={(id) => {
-                      setSelectedVersion(undefined);
-                      setSelectedInputs(undefined);
-                      setSelectedRunId(id);
-                      setResearchTab('advanced');
-                    }}
+              )}
+              {page === 'research' && (
+                <>
+                  <WorkspaceTabs
+                    value={researchTab}
+                    onChange={setResearchTab}
+                    items={[
+                      { key: 'advanced', label: 'Advanced' },
+                      { key: 'portfolio', label: 'Portfolio research' },
+                      { key: 'governance', label: 'Research governance' },
+                      { key: 'classic', label: 'Classic' },
+                    ]}
                   />
-                ) : researchTab === 'portfolio' ? (
-                  <PortfolioResearch
-                    key={source}
-                    source={source}
-                    initialRunId={selectedPortfolioRun}
-                    onData={() => navigate('data')}
-                    onExecution={() => navigate('execution', 'managed')}
-                  />
-                ) : researchTab === 'advanced' ? (
-                  <ProResearch
-                    key={source}
-                    source={source}
-                    initialRunId={selectedRunId}
-                    initialInputs={selectedInputs}
-                    initialStrategyVersion={selectedVersion}
-                    onClearStrategyVersion={() => setSelectedVersion(undefined)}
-                    onOpenData={() => navigate('data')}
-                    onOpenExecution={() => navigate('execution', 'strategies')}
-                  />
-                ) : (
-                  <ClassicResearch
-                    key={source}
-                    source={source}
-                    symbol={symbol}
-                    setSymbol={setSymbol}
-                    bar={bar}
-                    setBar={setBar}
-                    onExample={() => setSource('example')}
-                  />
-                )}
-              </>
-            )}
-            {page === 'strategies' && (
-              <Strategies
-                onResearch={(version) => {
-                  setSelectedRunId(undefined);
-                  setSelectedVersion(version);
-                  setResearchTab('advanced');
-                  navigate('research');
-                }}
-              />
-            )}
-            {execution && (
-              <>
-                <WorkspaceTabs
-                  value={page === 'risk' ? 'risk' : 'portfolio'}
-                  onChange={(value) => navigate(value === 'risk' ? 'risk' : 'execution')}
-                  items={[
-                    { key: 'portfolio', label: 'Portfolio' },
-                    { key: 'risk', label: 'Risk' },
-                  ]}
-                />
-                {page === 'execution' && (
-                  <Portfolio key={source} source={source} initialView={executionView} />
-                )}
-                {page === 'paper' && (
-                  <ClassicPaper
-                    key={source}
-                    source={source}
-                    symbol={symbol}
-                    setSymbol={setSymbol}
-                    ticker={selectedTicker}
-                  />
-                )}
-                {page === 'risk' && (
-                  <>
-                    <PageHeading
-                      eyebrow="EXECUTION"
-                      title="Risk"
-                      description="Portfolio limits and durable execution controls."
+                  {researchTab === 'governance' ? (
+                    <ResearchGovernance
+                      source={source}
+                      onPortfolioRun={(id) => {
+                        setSelectedPortfolioRun(id);
+                        setResearchTab('portfolio');
+                      }}
+                      onRun={(id) => {
+                        setSelectedVersion(undefined);
+                        setSelectedInputs(undefined);
+                        setSelectedRunId(id);
+                        setResearchTab('advanced');
+                      }}
                     />
-                    <ExecutionRisk key={source} source={source} analytics />
-                  </>
-                )}
-              </>
-            )}
-            {page === 'data' && (
-              <DataLibrary
-                key={source}
-                source={source}
-                onResearch={(inputs) => {
-                  setSelectedRunId(undefined);
-                  setSelectedVersion(undefined);
-                  setSelectedInputs(inputs);
-                  setResearchTab('advanced');
-                  navigate('research');
-                }}
-              />
-            )}
-            {page === 'operations' && <Operations />}
-            {page === 'settings' && (
-              <SettingsPage system={system.data} source={source} setSource={setSource} />
-            )}
-          </Suspense>
+                  ) : researchTab === 'portfolio' ? (
+                    <PortfolioResearch
+                      key={source}
+                      source={source}
+                      initialRunId={selectedPortfolioRun}
+                      onData={() => navigate('data')}
+                      onExecution={() => navigate('execution', 'managed')}
+                    />
+                  ) : researchTab === 'advanced' ? (
+                    <ProResearch
+                      key={source}
+                      source={source}
+                      initialRunId={selectedRunId}
+                      initialInputs={selectedInputs}
+                      initialStrategyVersion={selectedVersion}
+                      onClearStrategyVersion={() => setSelectedVersion(undefined)}
+                      onOpenData={() => navigate('data')}
+                      onOpenExecution={() => navigate('execution', 'strategies')}
+                    />
+                  ) : (
+                    <ClassicResearch
+                      key={source}
+                      source={source}
+                      symbol={symbol}
+                      setSymbol={setSymbol}
+                      bar={bar}
+                      setBar={setBar}
+                      onExample={() => setSource('example')}
+                    />
+                  )}
+                </>
+              )}
+              {page === 'strategies' && (
+                <Strategies
+                  onResearch={(version) => {
+                    setSelectedRunId(undefined);
+                    setSelectedVersion(version);
+                    setResearchTab('advanced');
+                    navigate('research');
+                  }}
+                />
+              )}
+              {execution && (
+                <>
+                  <WorkspaceTabs
+                    value={page === 'risk' ? 'risk' : 'portfolio'}
+                    onChange={(value) => navigate(value === 'risk' ? 'risk' : 'execution')}
+                    items={[
+                      { key: 'portfolio', label: 'Portfolio' },
+                      { key: 'risk', label: 'Risk' },
+                    ]}
+                  />
+                  {page === 'execution' && (
+                    <Portfolio key={source} source={source} initialView={executionView} />
+                  )}
+                  {page === 'paper' && (
+                    <ClassicPaper
+                      key={source}
+                      source={source}
+                      symbol={symbol}
+                      setSymbol={setSymbol}
+                      ticker={selectedTicker}
+                    />
+                  )}
+                  {page === 'risk' && (
+                    <>
+                      <PageHeading
+                        eyebrow="EXECUTION"
+                        title="Risk"
+                        description="Portfolio limits and durable execution controls."
+                      />
+                      <ExecutionRisk key={source} source={source} analytics />
+                    </>
+                  )}
+                </>
+              )}
+              {page === 'data' && (
+                <DataLibrary
+                  key={source}
+                  source={source}
+                  onResearch={(inputs) => {
+                    setSelectedRunId(undefined);
+                    setSelectedVersion(undefined);
+                    setSelectedInputs(inputs);
+                    setResearchTab('advanced');
+                    navigate('research');
+                  }}
+                />
+              )}
+              {page === 'operations' && <Operations />}
+              {page === 'settings' && (
+                <SettingsPage system={system.data} source={source} setSource={setSource} />
+              )}
+            </Suspense>
+          </WorkspaceViewBoundary>
           <footer className="page-footer">
             <span>
               Tidebench <span className="footer-dot">·</span> {t('Self-hosted')}
