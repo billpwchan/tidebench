@@ -1,4 +1,6 @@
 export const professionalZh: Record<string, string> = {
+  'Maximum drawdown': '最大回撤',
+  'Risk-budgeted positive momentum rotation': '风险预算正动量轮动',
   'Modeled sleeve volatility': '分配资金模型波动率',
   'Stressed sleeve volatility': '分配资金压力波动率',
   'Portfolio performance': '组合表现',

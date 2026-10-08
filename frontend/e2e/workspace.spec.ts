@@ -13,7 +13,7 @@ const credentials = {
   display_name: 'Example workspace',
 };
 async function navigate(page: Page, name: string) {
-  const opener = page.getByRole('button', { name: 'Open navigation' });
+  const opener = page.getByRole('button', { name: /^(Open navigation|展开导航)$/ });
   if (await opener.isVisible()) await opener.click();
   await page.getByRole('navigation').getByRole('button', { name, exact: true }).click();
 }
@@ -1165,4 +1165,21 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   await page.getByRole('button', { name: 'Revise & research', exact: true }).click();
   await expect(page.getByLabel('Sleeve volatility target (%)', { exact: true })).toHaveValue('15');
   await expect(page.getByLabel('Stress correlation (0–1)', { exact: true })).toHaveValue('0.75');
+  await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
+  await page.reload();
+  await navigate(page, '策略研究');
+  await page.getByRole('tab', { name: '组合研究', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '仓位规模的依据', exact: true })).toBeVisible();
+  await expect(page.getByText('最大回撤', { exact: true })).toBeVisible();
+  await expect(page.getByText('分配资金压力波动率', { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBeTruthy();
+  if (testInfo.project.name === 'mobile') {
+    await page.locator('.portfolio-risk-evidence').scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: '../docs/assets/portfolio-risk-budget-mobile.png',
+      animations: 'disabled',
+    });
+  }
 });

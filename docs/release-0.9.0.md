@@ -9,3 +9,5 @@ The [two-year OKX spot experiment](portfolio-risk-research.md) publishes all 28 
 Local verification: 729 full-suite backend tests plus the separately passing new covariance-budget refusal test (730 total tests), all 24 desktop/mobile Chromium workflows, lint, format and production build. Complete browser and Linux CI results are recorded in the release verification. Frozen-capture replay reproduced all 28 input/result hashes before publication.
 
 SQLite schema remains 7; no user or financial-account reset. Numerical implementation identity changes, retaining existing drift/review safeguards before new risk. Public OKX data, historical research and local paper execution remain the authorized scope; there is no exchange-order adapter.
+
+A current public-feed integration smoke also passed in a disposable workspace. The strategy selected cash; a separate, labeled local-paper fill probe exercised real bid/ask and ended flat. English/Chinese risk controls and result navigation passed in desktop/mobile browsers. [Detailed verification](verification.md).

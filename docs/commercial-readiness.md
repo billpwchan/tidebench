@@ -20,7 +20,7 @@ Tidebench supplies a self-hosted shared workspace for public OKX spot/linear-USD
 | Recovery | Checksummed backups, schema match, maintenance/drain, preserved evidence, stopped groups and paused clock | Actual schema-6 restore with newer independent research facts retained; failure/cancellation/conflict regressions |
 | Interface/deployment | Responsive bilingual workflows, deferred bundles, locked build, non-root container, single-writer lease | Desktop/mobile browser checks and release-specific verification |
 
-[Verification](verification.md) identifies actual counts, environment and workload scope. The [v0.6 self-audit](audit/red-team-0.6.0.zh-CN.md) provides failure evidence and remaining contracts. Passing an isolated test or older CI run does not establish the state of a later release.
+[Verification](verification.md) identifies actual counts, environment and workload scope. The [v0.9 self-audit](audit/red-team-0.9.0.zh-CN.md) provides failure evidence and remaining contracts. Passing an isolated test or older CI run does not establish the state of a later release.
 
 The [v0.9 risk allocation research](portfolio-risk-research.md) implements causal covariance, capped inverse-volatility sizing and a shared historical/managed risk governor. All 28 exploratory public-data cases remain cost-sensitive; no alpha or realized-risk bound is established.
 

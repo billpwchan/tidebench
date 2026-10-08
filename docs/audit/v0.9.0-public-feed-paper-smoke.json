@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "source": "okx",
+  "execution": "isolated_local_paper_no_exchange_orders",
+  "implementation": {
+    "schema_version": 1,
+    "application_version": "0.9.0",
+    "code_fingerprint": "e11bb707eecd39ab0492a0cc6e76bc340ab69b0183e2eaf30ba6714a2737c000",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "a4cd61183dac99d1e14babc7736b432c6d49cf325a4c280d88162726782ba332",
+      "pro_api.py": "298b96111f7d0dfaafc85b301aa31daadd6245c546246db7ce4a7703eca2e00e",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "1c9537e6b72698968159fd9324b3d0e7992e08dc6ea21c7394a73deb93a3f433",
+      "strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+      "research_protocol.py": "9dda28876959eeb2b566168b7196cbc431227d1f1eb8def3b95be53acfe762e9",
+      "portfolio_registry.py": "3a45acaf6f27918c4149bbc2b22aee7a65b2334e2cb342df3b746eecf52f022a",
+      "portfolio_releases.py": "8ca1762ae73057a491a323bdd2436329940d176fea3df5940d62dc61b35191df",
+      "managed_portfolios.py": "d847c2f25a0e986cea6b5a9837e8c70c5a6a91c88d65002bc369fb62ab8f4bc3",
+      "portfolio_research.py": "26748409736fc3fd142e35d4f933e511d62b92cf8f752e0d41ef1e2d54b51991",
+      "portfolio_targets.py": "7bd70c03d88b575d40beb44110f2dd16f01f17f314838c63cc61184f84eea055",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "9b5b4c75d62769454f80028a177dd6de7762277daaed47c7675f04663b9b873f",
+      "contributions.py": "2516c7d1e6308952d46792000e25a4d18bfe228b9ccb4831be5c4b1df69bf4d2",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "49974b966eece45049695d31639af710fe5351990644d70189b3331f2e100213"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "driver_sha256": "6aad7947aa3201ea06174e6409f8d302acb14bc52f944d40e2bd88a9cc2b3028",
+  "observed_at": 1791475975474,
+  "passed": true,
+  "research": {
+    "input_hash": "f5bce0c07b1749603f9af1f9af769d8a45fa58cac724f3f035c855622c82bb6e",
+    "result_hash": "421c5b723d93c64130804c27ec9eed674dbec4542d28a0cff79d7368d18ee348",
+    "metrics": {
+      "complete_utc_days": 27,
+      "execution_rejections": 1,
+      "fees_paid": "13.266972963327",
+      "final_equity": "9933.972770703673",
+      "funding_paid": "0",
+      "initial_cash": "10000",
+      "insurance_debt": "0",
+      "max_drawdown_pct": "1.1293603289957123936833943976129071417012170879845",
+      "mean_gross_exposure_pct": "8.5982078612813595407767171942884394855271715658726",
+      "orders": 26,
+      "realized_annual_vol_pct": null,
+      "realized_vol_reason": "fewer_than_30_complete_utc_days_or_nonpositive_equity",
+      "total_return_pct": "-0.6602722929632700",
+      "turnover": "1.3266972963327",
+      "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity"
+    }
+  },
+  "forward": {
+    "status": "completed",
+    "bar": 1791460800000,
+    "available_at": 1791475200000,
+    "risk_evidence": {
+      "annualizer": "46.797435827190361135777061756298454414659312404816",
+      "asset_vol_pct": {
+        "BTC-USDT": "26.771214450162611009989822982422143367072021638498",
+        "ETH-USDT": "40.269816820641342815863089480957230082414691256157",
+        "SOL-USDT": "50.525598973886164199968788716641564723200094601927"
+      },
+      "available_at": 1791475200000,
+      "cash_weight": "1",
+      "ceiling_policy": "cap_without_redistribution_remainder_cash",
+      "covariance": [
+        [
+          "0.000032725932563314858033824827812807921065152793483508",
+          "0.000032143569080309014745697667768560555276249207496373",
+          "0.000035445842330145710404740722370645881621580610351364"
+        ],
+        [
+          "0.000032143569080309014745697667768560555276249207496373",
+          "0.000074048317204018649672496371132524760915399048467947",
+          "0.000056657360954104596419717359945491925613937669913836"
+        ],
+        [
+          "0.000035445842330145710404740722370645881621580610351364",
+          "0.000056657360954104596419717359945491925613937669913836",
+          "0.00011656786080684779035221415902358467509275652192278"
+        ]
+      ],
+      "decision_bar_ts": 1791460800000,
+      "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+      "excluded": {
+        "BTC-USDT": "nonpositive_momentum",
+        "ETH-USDT": "nonpositive_momentum",
+        "SOL-USDT": "nonpositive_momentum"
+      },
+      "floored_asset_vol_pct": {
+        "BTC-USDT": "26.771214450162611009989822982422143367072021638498",
+        "ETH-USDT": "40.269816820641342815863089480957230082414691256157",
+        "SOL-USDT": "50.525598973886164199968788716641564723200094601927"
+      },
+      "governor_scale": "1",
+      "initial_governor_scale": "1",
+      "modeled_vol_pct": "0E-48",
+      "momentum": {
+        "BTC-USDT": "-0.03726598857759312041764140485862187365967310578023",
+        "ETH-USDT": "-0.09218888023347260684987159752065807668367518086300",
+        "SOL-USDT": "-0.07514056909183847333446924518657352189470097120463"
+      },
+      "reason": "no_eligible_positive_momentum",
+      "required_returns": 84,
+      "risk_contribution_pct": {
+        "BTC-USDT": "0",
+        "ETH-USDT": "0",
+        "SOL-USDT": "0"
+      },
+      "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+      "sample_end": 1791475200000,
+      "sample_returns": 84,
+      "sample_start": 1790251200000,
+      "schema_version": 1,
+      "selected": [],
+      "stress_covariance": [
+        [
+          "0.000032725932563314858033824827812807921065152793483508",
+          "0.000036920270615553249679614632921357815245314779616355",
+          "0.000046323001553178851724820599962898815244561207547541"
+        ],
+        [
+          "0.000036920270615553249679614632921357815245314779616355",
+          "0.000074048317204018649672496371132524760915399048467947",
+          "0.000069680021076423973485762546176966557163612442571366"
+        ],
+        [
+          "0.000046323001553178851724820599962898815244561207547541",
+          "0.000069680021076423973485762546176966557163612442571366",
+          "0.00011656786080684779035221415902358467509275652192278"
+        ]
+      ],
+      "stressed_vol_pct": "0E-48",
+      "symbols": [
+        "BTC-USDT",
+        "ETH-USDT",
+        "SOL-USDT"
+      ],
+      "weights": {
+        "BTC-USDT": "0",
+        "ETH-USDT": "0",
+        "SOL-USDT": "0"
+      },
+      "weights_before_governor": {
+        "BTC-USDT": "0",
+        "ETH-USDT": "0",
+        "SOL-USDT": "0"
+      }
+    },
+    "rebalance_due": true,
+    "targets": {
+      "BTC-USDT": "0E+1",
+      "ETH-USDT": "0E+2",
+      "SOL-USDT": "0E+2"
+    },
+    "residuals": {
+      "capital_pct": "0.00",
+      "notional": "0.00",
+      "quantities": {
+        "BTC-USDT": "0",
+        "ETH-USDT": "0",
+        "SOL-USDT": "0"
+      }
+    },
+    "commands": []
+  },
+  "manual_fill_probe": {
+    "scope": "separate_100_USDT_local_paper_round_trip_not_a_strategy_signal",
+    "orders": [
+      {
+        "id": "69bd333489b44edaba5e085e5b24757c",
+        "side": "buy",
+        "quantity": "0.00123355",
+        "price": "81106.9",
+        "notional": "100.049416495",
+        "fee": "0.100049416495",
+        "quote_ts": 1791475980675,
+        "status": "filled"
+      },
+      {
+        "id": "a992c47992144d63b31b45a883781d5b",
+        "side": "sell",
+        "quantity": "0.00123355",
+        "price": "81025.6",
+        "notional": "99.949128880",
+        "fee": "0.09994912888",
+        "quote_ts": 1791475980675,
+        "status": "filled"
+      }
+    ],
+    "final_account": {
+      "source": "okx",
+      "execution_mode": "local-paper",
+      "initial_cash": "10000",
+      "cash": "9999.699713839625",
+      "available_cash": "9999.699713839625",
+      "reserved_cash": "0",
+      "equity": "9999.699713839625",
+      "used_margin": "0",
+      "maintenance_margin": "0",
+      "unrealized_pnl": "0",
+      "realized_pnl": "-0.300286160375",
+      "pnl_definition": "Spot disposal PnL includes proportional entry costs; swap realizes trading fees when charged. Funding is separate. Equity deducts recorded insurance liabilities.",
+      "ledger_precision": "50 significant digits; finite-context residuals explicitly journaled to rounding_adjustment",
+      "liquidation_fee_policy": "Trading fee plus configured additional liquidation allowance; estimate is a local model, not a venue fee-tier guarantee.",
+      "fees_paid": "0.199998545375",
+      "funding_paid": "0",
+      "insurance_debt": "0",
+      "valuation_status": "fresh",
+      "positions": [],
+      "as_of": 1791475981370
+    }
+  },
+  "idempotent_controller_reload": true,
+  "paper_order_count": 0,
+  "group_stopped": true,
+  "elapsed_seconds": 5.896
+}

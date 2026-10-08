@@ -74,3 +74,15 @@ Replay verifies the captured dataset identities and uses the frozen instrument r
 - Native-book integration verifies causal sample bounds, flat warmup, frozen replay, managed verified bars and idempotent controller restart. Frozen holdout tests bind all risk fields and enforce full warmup with mutable catalog access disabled.
 - Covariance work has a five-million-product admission budget in addition to existing bar-leg, process deadline, memory and artifact limits. Protective exits use a conservative every-bar work estimate. This budget is not a measured multi-tenant SLO.
 - Still unvalidated: capacity/partial fills, historical dynamic membership, robust calibrated forecasts, independent long-duration forward performance and reliable net alpha. A profitable, scalable strategy is not established by this release.
+
+## Current public-feed integration observation
+
+[The isolated real-feed smoke](audit/v0.9.0-public-feed-paper-smoke.json) exercised actual OKX public packages and current quotes through study, review, managed risk decision, idempotent controller reload and stop. All three current momentum signals were nonpositive, so the strategy made **zero orders**, correctly preserving cash. A separately labeled ~100 USDT manual **local-paper** round trip exercised real bid/ask, trading increments, fees and flat inventory. These two probe orders are not strategy returns. The primary operational workspace was untouched.
+
+```sh
+uv run python scripts/smoke_portfolio_risk.py \
+  --data-dir /tmp/new-empty-tidebench-risk-check --probe-fills \
+  --output /tmp/public-feed-risk-check.json
+```
+
+The directory must be new/empty. Public-feed results change with market time and are not historical replay. This one observed path does not establish long-duration forward reliability or executable exchange capacity.

@@ -8,6 +8,10 @@ All **24 desktop/mobile Chromium workflows passed** (2.4 minutes), including the
 
 [The two-year OKX experiment](portfolio-risk-research.md) captured 4,380 4H rows per BTC/ETH/SOL market and discloses all 28 pre-declared cases. All **28 frozen-capture replays matched** their ordered input/result hashes with plan, runner and implementation identities checked. Its negative/cost-sensitive results are part of acceptance evidence, not profit or target-volatility guarantees. All 128 recorded execution adjustments were below-minimum rebalance deferrals; other execution error codes totaled zero.
 
+The [independent Linux CI](https://github.com/billpwchan/tidebench/actions/runs/37805356717) on the numerical implementation passed **730 backend tests** (201.55 seconds), **24 browser workflows** (2.8 minutes), the measured HTTP workload, offline red team, managed recovery audit and nonroot container smoke. A final presentation check adds English-to-Chinese navigation and translated risk summaries on desktop/mobile; its isolated workflow passed after correcting the test helper's localized navigation selector.
+
+A [real public-feed integration observation](audit/v0.9.0-public-feed-paper-smoke.json) uses a new isolated database: real OKX BTC/ETH/SOL 4H packages → bound research → reviewed local-paper activation → completed current-bar risk batch → idempotent controller reload → group stop. The current strategy correctly selected cash (zero strategy orders). A separately labeled ~100 USDT manual local-paper probe then filled and closed with actual public bid/ask quotes, ending flat. It did not invent strategy signals or submit exchange orders. The observation is a single path, not a long-running forward or capacity acceptance. `scripts/smoke_portfolio_risk.py` refuses nonempty directories and accepts no venue credentials.
+
 Schema remains 7. Primary operational account/users are preserved across the release upgrade; all browser/research QA uses separate stores.
 
 ## v0.8.0 strategy research
