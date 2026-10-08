@@ -767,7 +767,8 @@ async def test_changed_observation_parser_requires_review_before_new_group_comma
     await runtime.managed_portfolios.evaluate(group)
     before_orders = runtime.book.orders("example")
     before_positions = runtime.book.positions("example")
-    assert len(before_orders) == 2
+    assert {order["inst_id"] for order in before_orders} == {"BTC-USDT", "ETH-USDT"}
+    assert len(before_positions) == 2
     clock = runtime.clock.status()
     runtime.clock.change(step_ms=HOUR, expected_revision=clock["revision"], actor="trader")
     original_read = Path.read_bytes
