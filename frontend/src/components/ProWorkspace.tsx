@@ -55,11 +55,13 @@ export function RecordGrid({ value }: { value: RecordData | undefined | null }) 
         .map(([key, v]) => (
           <div key={key}>
             <dt>{t(humanKey(key))}</dt>
-            <dd>
+            <dd title={valueText(v)}>
               {(key.endsWith('_at') || key.endsWith('_ts') || key === 'as_of') &&
               typeof v === 'number'
                 ? date(v, true)
-                : valueText(v)}
+                : typeof v === 'number' || (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v))
+                  ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 8 }).format(Number(v))
+                  : valueText(v)}
             </dd>
           </div>
         ))}

@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     session_hours: int = Field(default=12, ge=1, le=72)
     idle_minutes: int = Field(default=30, ge=5, le=240)
     backup_retention: int = Field(default=14, ge=2, le=90)
+    research_memory_budget_mb: int = Field(default=256, ge=64, le=4096)
+    research_timeout_seconds: int = Field(default=900, ge=10, le=7200)
+    research_process_isolation: bool = True
     max_catalog_bars: int = Field(default=250000, ge=1000, le=2000000)
 
     @property

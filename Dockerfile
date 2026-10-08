@@ -3,6 +3,7 @@ WORKDIR /build/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
+COPY examples/ /build/examples/
 RUN npm run build
 
 FROM ghcr.io/astral-sh/uv:0.12.21 AS uv

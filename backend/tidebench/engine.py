@@ -79,6 +79,16 @@ class StrategyConfig:
     entry: Decimal = Decimal("30")
     exit: Decimal = Decimal("60")
     allocation: Decimal = Decimal("0.25")
+    window: int = 20
+    z_entry: Decimal = Decimal("2")
+    z_exit: Decimal = Decimal(".5")
+    atr_period: int = 14
+    rules: list = field(default_factory=list)
+    stop_loss_pct: Decimal = ZERO
+    take_profit_pct: Decimal = ZERO
+    trailing_stop_pct: Decimal = ZERO
+    max_holding_bars: int = 0
+    risk_per_trade_pct: Decimal = ZERO
 
 
 @dataclass(frozen=True)
@@ -137,7 +147,14 @@ def _float(value: Decimal | float) -> float:
 def _validate_strategy(strategy: StrategyConfig) -> None:
     if not isinstance(strategy, StrategyConfig):
         raise EngineError("strategy must be a StrategyConfig")
-    if strategy.kind not in {"sma_cross", "rsi_reversion", "buy_hold"}:
+    if strategy.kind in {"close_breakout", "zscore_reversion", "program"}:
+        from .strategy_program import ProStrategyInput
+
+        try:
+            ProStrategyInput.model_validate(strategy.__dict__)
+        except ValueError as exc:
+            raise EngineError(str(exc)) from exc
+    elif strategy.kind not in {"sma_cross", "rsi_reversion", "buy_hold"}:
         raise EngineError("unsupported strategy kind")
     allocation = _decimal(strategy.allocation, "allocation")
     if not ZERO <= allocation <= ONE:
@@ -174,6 +191,8 @@ def _validate_config(instrument: Instrument, config: BacktestConfig) -> None:
     if instrument.state != "live":
         raise EngineError("instrument is not live")
     _validate_strategy(config.strategy)
+    if config.strategy.kind not in {"sma_cross", "rsi_reversion", "buy_hold"}:
+        raise EngineError("Use professional research for extended strategies.")
 
 
 def validate_candles(
@@ -289,6 +308,8 @@ def target_position(history: list[Candle], strategy: StrategyConfig) -> Decimal 
     SMA equality is flat. RSI uses Wilder smoothing and strict entry/exit bounds.
     """
     _validate_strategy(strategy)
+    if strategy.kind not in {"sma_cross", "rsi_reversion", "buy_hold"}:
+        raise EngineError("Use the professional directional signal for extended strategies.")
     if not history:
         return None
     previous = None

@@ -1,0 +1,203 @@
+[
+  {
+    "id": "trend",
+    "name": "Slow trend with a loss budget",
+    "hypothesis": "Persistent price trends may offset turnover costs. Reject if independent out-of-sample return fails cash after doubled fees/slippage, gains concentrate in one episode, or neighboring parameters reverse the conclusion. Sideways markets are the principal failure regime.",
+    "definition": {
+      "schema_version": 1,
+      "product": "SPOT",
+      "bar": "1H",
+      "strategy": {
+        "kind": "sma_cross",
+        "fast": 20,
+        "slow": 80,
+        "rsi_period": 14,
+        "entry": "30",
+        "exit": "60",
+        "allocation": "0.2",
+        "window": 20,
+        "z_entry": "2",
+        "z_exit": "0.5",
+        "atr_period": 14,
+        "stop_loss_pct": "5",
+        "take_profit_pct": "0",
+        "trailing_stop_pct": "8",
+        "max_holding_bars": 0,
+        "risk_per_trade_pct": "0.5",
+        "rules": []
+      },
+      "direction": "long_only",
+      "leverage": "1"
+    }
+  },
+  {
+    "id": "reversion",
+    "name": "Bounded RSI reversion",
+    "hypothesis": "Temporary price displacement may revert as liquidity normalizes. Reject if net out-of-sample return fails cash or losses cluster during directional trends. A 48-bar holding limit controls unresolved trades; test neighboring thresholds before freezing the holdout.",
+    "definition": {
+      "schema_version": 1,
+      "product": "SPOT",
+      "bar": "1H",
+      "strategy": {
+        "kind": "rsi_reversion",
+        "fast": 12,
+        "slow": 26,
+        "rsi_period": 14,
+        "entry": "25",
+        "exit": "55",
+        "allocation": "0.2",
+        "window": 20,
+        "z_entry": "2",
+        "z_exit": "0.5",
+        "atr_period": 14,
+        "stop_loss_pct": "4",
+        "take_profit_pct": "0",
+        "trailing_stop_pct": "0",
+        "max_holding_bars": 48,
+        "risk_per_trade_pct": "0.5",
+        "rules": []
+      },
+      "direction": "long_only",
+      "leverage": "1"
+    }
+  },
+  {
+    "id": "breakout",
+    "name": "Closing-price channel breakout",
+    "hypothesis": "A close above the prior closing-price channel may indicate persistent repricing. Reject if doubled costs remove out-of-sample gains or neighboring 30/40/50-bar windows are unstable. This uses closing prices, not intrabar highs and lows.",
+    "definition": {
+      "schema_version": 1,
+      "product": "SPOT",
+      "bar": "1H",
+      "strategy": {
+        "kind": "close_breakout",
+        "fast": 12,
+        "slow": 26,
+        "rsi_period": 14,
+        "entry": "30",
+        "exit": "60",
+        "allocation": "0.2",
+        "window": 40,
+        "z_entry": "2",
+        "z_exit": "0.5",
+        "atr_period": 14,
+        "stop_loss_pct": "5",
+        "take_profit_pct": "0",
+        "trailing_stop_pct": "7",
+        "max_holding_bars": 0,
+        "risk_per_trade_pct": "0.5",
+        "rules": []
+      },
+      "direction": "long_only",
+      "leverage": "1"
+    }
+  },
+  {
+    "id": "zscore",
+    "name": "Z-score reversion with timed exits",
+    "hypothesis": "Standardized closing-price displacement may normalize within a bounded horizon. Reject if regime changes dominate the sample, out-of-sample return fails cash, or one threshold determines the conclusion. Population variance and current-window closes define the score.",
+    "definition": {
+      "schema_version": 1,
+      "product": "SPOT",
+      "bar": "1H",
+      "strategy": {
+        "kind": "zscore_reversion",
+        "fast": 12,
+        "slow": 26,
+        "rsi_period": 14,
+        "entry": "30",
+        "exit": "60",
+        "allocation": "0.2",
+        "window": 48,
+        "z_entry": "2",
+        "z_exit": "0.5",
+        "atr_period": 14,
+        "stop_loss_pct": "4",
+        "take_profit_pct": "0",
+        "trailing_stop_pct": "0",
+        "max_holding_bars": 24,
+        "risk_per_trade_pct": "0.5",
+        "rules": []
+      },
+      "direction": "long_only",
+      "leverage": "1"
+    }
+  },
+  {
+    "id": "program",
+    "name": "Trend with RSI confirmation",
+    "hypothesis": "Momentum confirmation may filter weak trend entries but delay fills. Compare with the unfiltered trend on identical pre-registered test data and costs; reject if confirmation improves only the development sample.",
+    "definition": {
+      "schema_version": 1,
+      "product": "SPOT",
+      "bar": "1H",
+      "strategy": {
+        "kind": "program",
+        "fast": 20,
+        "slow": 80,
+        "rsi_period": 14,
+        "entry": "30",
+        "exit": "60",
+        "allocation": "0.2",
+        "window": 20,
+        "z_entry": "2",
+        "z_exit": "0.5",
+        "atr_period": 14,
+        "stop_loss_pct": "5",
+        "take_profit_pct": "0",
+        "trailing_stop_pct": "0",
+        "max_holding_bars": 120,
+        "risk_per_trade_pct": "0.5",
+        "rules": [
+          {
+            "conditions": [
+              {
+                "left": {
+                  "feature": "fast_sma",
+                  "constant": null
+                },
+                "op": "gt",
+                "right": {
+                  "feature": "slow_sma",
+                  "constant": null
+                }
+              },
+              {
+                "left": {
+                  "feature": "rsi",
+                  "constant": null
+                },
+                "op": "gt",
+                "right": {
+                  "feature": null,
+                  "constant": "55"
+                }
+              }
+            ],
+            "signal": 1,
+            "tag": "trend_confirmed"
+          },
+          {
+            "conditions": [
+              {
+                "left": {
+                  "feature": "fast_sma",
+                  "constant": null
+                },
+                "op": "lt",
+                "right": {
+                  "feature": "slow_sma",
+                  "constant": null
+                }
+              }
+            ],
+            "signal": 0,
+            "tag": "trend_invalidated"
+          }
+        ]
+      },
+      "direction": "long_only",
+      "leverage": "1"
+    }
+  }
+]

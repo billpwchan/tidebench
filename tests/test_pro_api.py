@@ -208,10 +208,54 @@ def test_unified_spot_swap_orders_idempotency_halt_and_balanced_journal(client):
 
 
 def test_verified_restore_revokes_session_and_halts_execution(client):
+    from tidebench.strategy_registry import StrategyDefinition
+
+    runtime = client.app.state.professional
+    definition = StrategyDefinition(strategy={"kind": "buy_hold", "allocation": ".1"}).record()
+    project = runtime.registry.create_project(
+        "Recovery lineage",
+        "All research, approval and forward evidence must survive a verified restore.",
+        definition,
+        "operator",
+    )
+    queued = client.post(
+        "/api/v1/pro/research/runs",
+        json={
+            "dataset_id": dataset(client),
+            "strategy_version_id": project["version"]["id"],
+            "strategy": definition["strategy"],
+        },
+    )
+    assert queued.status_code == 202, queued.text
+    run = wait(client, f"/api/v1/pro/research/runs/{queued.json()['id']}")
+    preview = runtime.registry.preview_release(runtime, run["id"], "single")
+    release = runtime.registry.approve_release(
+        runtime,
+        {
+            "run_id": run["id"],
+            "selection": "single",
+            "preview_hash": preview["preview_hash"],
+            "review": "Recovery fixture: reviewed version, costs and isolated paper scope.",
+            "acknowledgements": preview["required_acknowledgements"],
+        },
+        "operator",
+    )
+    release = runtime.registry.activate_release(runtime, release["id"], "operator")
+    deployment = next(d for d in runtime.deployments() if d["id"] == release["deployment_id"])
+    client.portal.call(runtime.evaluate, deployment)
+    client.portal.call(runtime.execution_once)
+    assert runtime.history.decisions(deployment["id"])
+    assert runtime.book.performance.report("example")["items"]
+    runtime.incidents.reconcile(
+        [{"kind": "recovery-fixture", "subject": "worker", "details": {"cause": "injected"}}]
+    )
+    saved_clock = runtime.clock.status()
     backup = client.post("/api/v1/pro/ops/backups/create")
     assert backup.status_code == 201, backup.text
     identifier = backup.json()["id"]
+    assert backup.json()["database_schema"] == 4
     assert client.get(f"/api/v1/pro/ops/backups/{identifier}/verify").json()["verified"]
+    runtime.clock.change(step_ms=3600000, expected_revision=saved_clock["revision"], actor="operator")
     restore = client.post(
         "/api/v1/pro/ops/restore", json={"backup_id": identifier, "confirmation": "RESTORE"}
     )
@@ -223,6 +267,17 @@ def test_verified_restore_revokes_session_and_halts_execution(client):
     )
     assert login.status_code == 200, login.text
     assert client.get("/api/v1/pro/execution/risk?source=example").json()["halted"]
+    assert runtime.clock.status()["market_ts"] == saved_clock["market_ts"]
+    assert runtime.clock.status()["paused"]
+    assert runtime.run(run["id"])["result"] == run["result"]
+    assert (
+        runtime.registry.version(project["version"]["id"])["content_hash"]
+        == project["version"]["content_hash"]
+    )
+    assert runtime.history.decisions(deployment["id"])
+    assert runtime.book.performance.report("example")["items"]
+    assert any(i["kind"] == "recovery-fixture" for i in runtime.incidents.list())
+    assert next(d for d in runtime.deployments() if d["id"] == deployment["id"])["status"] == "stopped"
 
 
 def test_additive_upgrade_is_repeatable_and_preserves_legacy_state(tmp_path):
@@ -236,7 +291,7 @@ def test_additive_upgrade_is_repeatable_and_preserves_legacy_state(tmp_path):
         assert first.app.state.professional.book.account("example", {})["cash"] == "10000"
     with TestClient(create_app(configuration)) as second:
         with second.app.state.store.read() as conn:
-            assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 3
+            assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 4
             assert conn.execute("SELECT COUNT(*) FROM schema_migrations WHERE version=2").fetchone()[0] == 1
             assert conn.execute("SELECT COUNT(*) FROM schema_migrations WHERE version=3").fetchone()[0] == 1
             assert conn.execute("SELECT cash FROM accounts WHERE source='example'").fetchone()[0] == "9876.54"

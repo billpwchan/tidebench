@@ -55,6 +55,154 @@ test.beforeEach(async ({ page, request }) => {
   await expect(page.locator('.example-notice')).toContainText('Synthetic example data.');
 });
 
+test('strategy version flows through research approval, activation and observed performance', async ({
+  page,
+  request,
+}, testInfo) => {
+  test.setTimeout(90000);
+  const csrf = (await (await request.get('/api/v1/auth/status')).json()).csrf_token;
+  const headers = { 'X-CSRF-Token': csrf };
+  const end = 1767225600000;
+  const job = await (
+    await request.post('/api/v1/pro/catalog/jobs', {
+      headers,
+      data: {
+        source: 'example',
+        inst_id: 'DOGE-USDT',
+        kind: 'trade',
+        bar: '1H',
+        start: end - 96 * 3600000,
+        end,
+      },
+    })
+  ).json();
+  let dataset = '';
+  await expect
+    .poll(async () => {
+      const found = (await (await request.get('/api/v1/pro/catalog/jobs')).json()).items.find(
+        (item: { id: string }) => item.id === job.id,
+      );
+      dataset = found?.dataset_id;
+      return found?.status;
+    })
+    .toBe('completed');
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await navigate(page, 'Strategies');
+  await page.getByRole('button', { name: 'New strategy', exact: true }).click();
+  await page.getByLabel('Research starting point', { exact: true }).selectOption('trend');
+  await expect(page.getByLabel('Strategy name', { exact: true })).toHaveValue(
+    'Slow trend with a loss budget',
+  );
+  await page
+    .getByLabel('Strategy name', { exact: true })
+    .fill(`Browser trend ${testInfo.project.name}`);
+  await page
+    .getByLabel('Economic hypothesis', { exact: true })
+    .fill('A persistent trend should survive measured costs; invalidate when the holdout fails.');
+  await page.getByLabel('Strategy', { exact: true }).selectOption('buy_hold');
+  await page.getByText('Exits & loss budget', { exact: true }).click();
+  await page.getByLabel('Maximum holding closes', { exact: true }).fill('2');
+  await page.getByRole('button', { name: 'Save version', exact: true }).click();
+  await expect(page.getByText('Immutable', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Research this version', exact: true }).click();
+  await expect(page.getByText('Bound strategy version', { exact: true })).toBeVisible();
+  await page.getByLabel('Dataset', { exact: true }).selectOption(dataset);
+  const queued = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/research/runs') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Run research', exact: true }).click();
+  const run = await (await queued).json();
+  expect(run.config.strategy_version_id).toBeTruthy();
+  await expect
+    .poll(
+      async () => (await (await request.get(`/api/v1/pro/research/runs/${run.id}`)).json()).status,
+    )
+    .toBe('completed');
+  await page.getByRole('button', { name: 'Review paper release', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Review paper release', exact: true });
+  await dialog
+    .getByLabel('Release review', { exact: true })
+    .fill('Reviewed finite-sample evidence and close-based holding limits; local simulation only.');
+  for (const checkbox of await dialog.getByRole('checkbox').all()) await checkbox.check();
+  await dialog.getByRole('button', { name: 'Approve paper release', exact: true }).click();
+  const activation = page.waitForResponse(
+    (r) => r.url().endsWith('/activate') && r.request().method() === 'POST',
+  );
+  await dialog.getByRole('button', { name: 'Activate paper release', exact: true }).click();
+  const release = await (await activation).json();
+  expect(release.status).toBe('deployed');
+  await dialog.getByRole('button', { name: 'Inspect deployment', exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await (
+            await request.get(
+              `/api/v1/pro/execution/deployments/${release.deployment_id}/decisions`,
+            )
+          ).json()
+        ).items.length,
+      { timeout: 30000 },
+    )
+    .toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Step 1 hour', exact: true }).click();
+  await page.getByRole('button', { name: 'Step 1 hour', exact: true }).click();
+  await expect
+    .poll(
+      async () => {
+        const decisions = (
+          await (
+            await request.get(
+              `/api/v1/pro/execution/deployments/${release.deployment_id}/decisions`,
+            )
+          ).json()
+        ).items;
+        return decisions.some(
+          (item: { indicators: { exit_reason?: string } }) =>
+            item.indicators.exit_reason === 'maximum_holding_closes',
+        );
+      },
+      { timeout: 30000 },
+    )
+    .toBeTruthy();
+  await page.getByRole('tab', { name: 'Forward performance', exact: true }).click();
+  await expect(page.getByText('Decision journal', { exact: true })).toBeVisible();
+  await page
+    .getByLabel('Deployment decisions', { exact: true })
+    .selectOption(release.deployment_id);
+  await expect(page.getByText('maximum_holding_closes', { exact: true }).first()).toBeVisible();
+  if (testInfo.project.name === 'desktop') {
+    await mkdir('../docs/assets', { recursive: true });
+    await page.screenshot({
+      path: '../docs/assets/strategy-performance.png',
+      animations: 'disabled',
+    });
+  }
+  expect(errors).toEqual([]);
+  await request.post(`/api/v1/pro/execution/deployments/${release.deployment_id}/stop`, {
+    headers,
+  });
+  const account = await (await request.get('/api/v1/pro/execution/account?source=example')).json();
+  const position = account.positions.find((p: { inst_id: string }) => p.inst_id === 'DOGE-USDT');
+  if (position) {
+    const closed = await request.post('/api/v1/pro/execution/orders', {
+      headers: { ...headers, 'Idempotency-Key': `browser-cleanup-${release.id}` },
+      data: {
+        source: 'example',
+        inst_id: 'DOGE-USDT',
+        side: 'sell',
+        quantity: position.quantity,
+        leverage: 1,
+        reduce_only: true,
+        order_type: 'market',
+        margin_mode: 'isolated',
+      },
+    });
+    expect(closed.ok()).toBeTruthy();
+  }
+});
+
 test('versioned research, saved results, replay and JSON export', async ({
   page,
   request,
@@ -86,6 +234,7 @@ test('versioned research, saved results, replay and JSON export', async ({
   const pageErrors: string[] = [];
   page.on('pageerror', (e) => pageErrors.push(e.message));
   await navigate(page, 'Research');
+  await page.getByRole('button', { name: 'New research', exact: true }).click();
   await page.getByLabel('Dataset', { exact: true }).selectOption(dataset);
   const queued = page.waitForResponse(
     (r) => r.url().endsWith('/pro/research/runs') && r.request().method() === 'POST',
@@ -149,6 +298,159 @@ test('versioned research, saved results, replay and JSON export', async ({
   await page.getByLabel('Parameter selection', { exact: true }).selectOption('fixed');
   await expect(page.getByLabel('Fast windows', { exact: true })).toHaveCount(0);
   expect(pageErrors).toEqual([]);
+});
+
+test('shared-capital portfolio study and one-use holdout governance', async ({
+  page,
+  request,
+}, testInfo) => {
+  test.setTimeout(60000);
+  const csrf = (await (await request.get('/api/v1/auth/status')).json()).csrf_token;
+  const headers = { 'X-CSRF-Token': csrf };
+  const end = 1767225600000;
+  const packages = [];
+  for (const symbol of ['BTC-USDT', 'ETH-USDT']) {
+    const response = await request.post('/api/v1/pro/catalog/packages', {
+      headers,
+      data: { source: 'example', inst_id: symbol, bar: '1H', start: end - 120 * 3600000, end },
+    });
+    expect(response.ok()).toBeTruthy();
+    const created = await response.json();
+    await expect
+      .poll(
+        async () =>
+          (await (await request.get(`/api/v1/pro/catalog/packages/${created.id}`)).json()).ready,
+      )
+      .toBeTruthy();
+    packages.push(created.id);
+  }
+  await navigate(page, 'Research');
+  await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
+  await page.getByRole('button', { name: 'New portfolio study', exact: true }).click();
+  await page
+    .getByLabel('Study name', { exact: true })
+    .fill(`Shared capital ${testInfo.project.name}`);
+  await page
+    .getByLabel('Economic hypothesis', { exact: true })
+    .fill('A fixed two-market basket must pay all costs from a shared finite cash balance.');
+  await page.getByLabel('Package 1', { exact: true }).selectOption(packages[0]);
+  await page.getByLabel('Package 2', { exact: true }).selectOption(packages[1]);
+  await page.getByLabel('Evaluation', { exact: true }).selectOption('train_test');
+  const queued = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/research/portfolios') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Run portfolio research', exact: true }).click();
+  const portfolio = await (await queued).json();
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get(`/api/v1/pro/research/portfolios/${portfolio.id}`)).json())
+          .status,
+    )
+    .toBe('completed');
+  await expect(
+    page.getByRole('heading', { name: `Shared capital ${testInfo.project.name}`, exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Financial records below cover the independent test window.', { exact: false }),
+  ).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
+  expect((await download).suggestedFilename()).toContain(portfolio.id);
+  await page.getByRole('tab', { name: 'Orders', exact: true }).click();
+  await expect(
+    page
+      .locator('.portfolio-study-result')
+      .getByRole('cell', { name: 'BTC-USDT', exact: true })
+      .first(),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBeTruthy();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `../docs/assets/portfolio-research${testInfo.project.name === 'mobile' ? '-mobile' : ''}.png`,
+    animations: 'disabled',
+  });
+
+  const offset = testInfo.project.name === 'desktop' ? 200 : 1200;
+  const holdoutEnd = end + offset * 3600000;
+  const project = await (
+    await request.post('/api/v1/pro/strategies', {
+      headers,
+      data: {
+        name: `Sealed hypothesis ${testInfo.project.name}`,
+        hypothesis: 'Reject a strategy whose unseen-window net return is nonpositive after costs.',
+        definition: {
+          schema_version: 1,
+          product: 'SPOT',
+          bar: '1H',
+          strategy: { kind: 'buy_hold' },
+          direction: 'long_only',
+          leverage: '1',
+        },
+      },
+    })
+  ).json();
+  expect(project.version.id).toBeTruthy();
+  const job = await (
+    await request.post('/api/v1/pro/catalog/jobs', {
+      headers,
+      data: {
+        source: 'example',
+        inst_id: 'OKB-USDT',
+        kind: 'trade',
+        bar: '1H',
+        start: holdoutEnd - 48 * 3600000,
+        end: holdoutEnd,
+      },
+    })
+  ).json();
+  let dataset = '';
+  await expect
+    .poll(async () => {
+      const found = (await (await request.get('/api/v1/pro/catalog/jobs')).json()).items.find(
+        (item: { id: string }) => item.id === job.id,
+      );
+      dataset = found?.dataset_id;
+      return found?.status;
+    })
+    .toBe('completed');
+  await page.getByRole('tab', { name: 'Research governance', exact: true }).click();
+  await page.getByLabel('Strategy project', { exact: true }).selectOption(project.id);
+  await page.getByRole('button', { name: 'Register holdout', exact: true }).click();
+  await page
+    .getByLabel('Holdout name', { exact: true })
+    .fill(`Untouched window ${testInfo.project.name}`);
+  await page.getByLabel('Strategy version', { exact: true }).selectOption(project.version.id);
+  await page.getByLabel('Dataset', { exact: true }).selectOption(dataset);
+  await page
+    .getByLabel('Pre-registered benchmark', { exact: true })
+    .fill('USDT cash; the buy-and-hold reference is also reported.');
+  await page
+    .getByLabel('Rejection plan', { exact: true })
+    .fill(
+      'Reject if net return is nonpositive or drawdown exceeds 10%; do not tune on this result.',
+    );
+  const sealing = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/research/holdouts') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Seal holdout', exact: true }).click();
+  const seal = await (await sealing).json();
+  expect(seal.status).toBe('sealed');
+  await page.getByRole('button', { name: 'Evaluate once', exact: true }).click();
+  await expect(page.getByText('Bound strategy version', { exact: true })).toBeVisible();
+  await expect
+    .poll(async () => {
+      const list = (await (await request.get('/api/v1/pro/research/holdouts')).json()).items;
+      return list.find((h: { id: string }) => h.id === seal.id)?.status;
+    })
+    .toBe('consumed');
+  await page.getByLabel('Interface language', { exact: true }).selectOption('zh-CN');
+  await expect(page.getByText('已绑定策略版本', { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBeTruthy();
 });
 
 test('unified portfolio order preview, fill and persistent risk halt', async ({

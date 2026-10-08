@@ -508,7 +508,7 @@ class BackupService:
                 or manifest["size_bytes"] <= 0
                 or type(manifest.get("created_at")) is not int
                 or type(manifest.get("database_schema")) is not int
-                or manifest["database_schema"] not in (1, 2, 3)
+                or manifest["database_schema"] not in (1, 2, 3, 4)
             ):
                 raise ValueError
         except (OSError, ValueError, TypeError, UnicodeError):
@@ -530,7 +530,7 @@ class BackupService:
             versions = [row[0] for row in conn.execute("SELECT version FROM schema_version")]
         except sqlite3.Error:
             raise PlatformError("backup_schema", "Backup database schema is missing.", 409) from None
-        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3):
+        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4):
             raise PlatformError("backup_schema", "Backup database schema is unsupported.", 409)
         return versions[0]
 
@@ -621,6 +621,65 @@ class BackupService:
                     "data_package_funding_marks": {"package_id", "ts", "body"},
                 }
             )
+        if version >= 4:
+            lineage = {
+                "research_artifacts": {"content_hash", "codec", "raw_bytes", "payload"},
+                "research_holdouts": {
+                    "id",
+                    "project_id",
+                    "version_id",
+                    "source",
+                    "inst_id",
+                    "bar",
+                    "start_ts",
+                    "end_ts",
+                    "plan",
+                    "plan_hash",
+                    "status",
+                    "run_id",
+                },
+                "portfolio_runs": {"id", "source", "status", "config", "manifest", "result", "progress"},
+                "simulation_clock": {"id", "market_ts", "wall_ts", "speed", "revision"},
+                "forward_bars": {"source", "inst_id", "bar", "ts", "body", "content_hash", "dataset_id"},
+                "forward_checkpoints": {"deployment_id", "last_bar", "identity", "state", "state_hash"},
+                "forward_decisions": {"deployment_id", "bar", "body", "content_hash"},
+                "forward_equity": {"id", "source", "market_ts", "ledger_sequence", "body", "state_hash"},
+                "ops_incidents": {
+                    "id",
+                    "kind",
+                    "subject",
+                    "status",
+                    "first_seen",
+                    "last_seen",
+                    "details",
+                    "ack_actor",
+                    "ack_reason",
+                },
+                "strategy_projects": {"id", "name", "created_by", "created_at"},
+                "strategy_versions": {
+                    "id",
+                    "project_id",
+                    "revision",
+                    "definition",
+                    "implementation",
+                    "content_hash",
+                },
+                "paper_releases": {
+                    "id",
+                    "run_id",
+                    "strategy_version_id",
+                    "preview",
+                    "config",
+                    "approval_hash",
+                    "status",
+                    "deployment_id",
+                },
+            }
+            if not set(lineage).issubset(tables):
+                raise PlatformError(
+                    "backup_schema", "Schema version 4 is missing strategy/release tables.", 409
+                )
+            required_columns.update(lineage)
         for table, required in required_columns.items():
             if table in tables and not required.issubset(
                 {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
@@ -774,6 +833,11 @@ class BackupService:
                         prepared.execute("UPDATE deployments SET status='stopped'")
                         if "pro_deployments" in tables:
                             prepared.execute("UPDATE pro_deployments SET status='stopped'")
+                        if "simulation_clock" in tables:
+                            prepared.execute(
+                                "UPDATE simulation_clock SET speed=0,wall_ts=?,revision=revision+1 WHERE id=1",
+                                (now_ms(),),
+                            )
                         if "pro_risk" in tables:
                             prepared.execute("UPDATE pro_risk SET halted=1,updated_at=?", (now_ms(),))
                         if "pro_orders" in tables:

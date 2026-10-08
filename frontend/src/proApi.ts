@@ -1,6 +1,63 @@
 import { ApiError, downloadBlob, request, setCsrfToken, readToken } from './api';
 import type { Source, Strategy } from './api';
 export type RecordData = Record<string, unknown>;
+export type StrategyDefinition = {
+  schema_version: 1;
+  product: 'SPOT' | 'SWAP';
+  bar: string;
+  strategy: Strategy;
+  direction: Direction;
+  leverage: string;
+};
+export type StrategyVersion = {
+  id: string;
+  project_id: string;
+  revision: number;
+  parent_id?: string | null;
+  hypothesis: string;
+  definition: StrategyDefinition;
+  implementation: RecordData;
+  content_hash: string;
+  created_by: string;
+  created_at: number;
+};
+export type StrategyProject = {
+  id: string;
+  name: string;
+  version_count?: number;
+  latest_revision?: number;
+  created_by: string;
+  created_at: number;
+  versions?: StrategyVersion[];
+  version?: StrategyVersion;
+};
+export type ReleasePreview = {
+  run_id: string;
+  selection: string;
+  selection_scope: string;
+  preview_hash: string;
+  definition: StrategyDefinition;
+  execution_config: RecordData;
+  risk_policy: RecordData;
+  cost_differences: RecordData[];
+  required_acknowledgements: string[];
+  blockers: string[];
+  model_difference: string;
+  [key: string]: unknown;
+};
+export type PaperRelease = {
+  id: string;
+  run_id: string;
+  strategy_version_id: string;
+  preview: ReleasePreview;
+  status: string;
+  config: RecordData;
+  deployment_id?: string;
+  approval_hash: string;
+  review: string;
+  approved_by: string;
+  approved_at: number;
+};
 export type AuthUser = {
   id?: string;
   username: string;
@@ -128,6 +185,7 @@ export type PortfolioAnalytics = {
   [key: string]: unknown;
 };
 export type ProRunConfig = {
+  strategy_version_id?: string | null;
   dataset_id: string;
   package_id?: string;
   package_manifest_hash?: string;
@@ -255,7 +313,98 @@ const post = <T>(path: string, body?: unknown, headers?: HeadersInit) =>
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     headers,
   });
+export type PortfolioResearchRun = {
+  id: string;
+  source: Source;
+  status: string;
+  config: RecordData;
+  manifest: RecordData;
+  error?: string;
+  progress: number;
+  created_at: number;
+  updated_at: number;
+  result?: {
+    metrics: RecordData;
+    equity: RecordData[];
+    decisions: RecordData[];
+    orders: RecordData[];
+    ledger: RecordData[];
+    execution_rejections: RecordData[];
+    assumptions: RecordData;
+    [key: string]: unknown;
+  };
+};
+export type Holdout = {
+  id: string;
+  project_id: string;
+  version_id: string;
+  source: Source;
+  inst_id: string;
+  bar: string;
+  start_ts: number;
+  end_ts: number;
+  status: string;
+  run_id?: string;
+  plan: {
+    name: string;
+    test_config: RecordData;
+    benchmark: string;
+    rejection_plan: string;
+    scope: string;
+  };
+  plan_hash: string;
+  created_at: number;
+};
 export const proApi = {
+  holdouts: () => request<{ items: Holdout[] }>('/pro/research/holdouts'),
+  sealHoldout: (body: RecordData) => post<Holdout>('/pro/research/holdouts', body),
+  evaluateHoldout: (holdout: Holdout) =>
+    post<ProRun>('/pro/research/runs', { ...holdout.plan.test_config, holdout_id: holdout.id }),
+  governance: (project: string) => request<RecordData>('/pro/research/governance/' + project),
+  portfolioRuns: (source: Source) =>
+    request<{ items: PortfolioResearchRun[] }>('/pro/research/portfolios?source=' + source),
+  portfolioRun: (id: string) => request<PortfolioResearchRun>('/pro/research/portfolios/' + id),
+  createPortfolioRun: (body: RecordData) =>
+    post<PortfolioResearchRun>('/pro/research/portfolios', body),
+  clock: () =>
+    request<{ market_ts: number; speed: number; paused: boolean; revision: number }>(
+      '/pro/execution/clock',
+    ),
+  changeClock: (body: { speed?: number; step_ms?: number; expected_revision: number }) =>
+    request('/pro/execution/clock', { method: 'POST', body: JSON.stringify(body) }),
+  performance: (source: Source, before?: number) =>
+    request<{
+      items: { id: number; market_ts: number; observed_at: number; body: RecordData }[];
+      summary: RecordData;
+      next_before?: number;
+    }>(`/pro/execution/performance?${q({ source, ...(before === undefined ? {} : { before }) })}`),
+  decisions: (id: string, before?: number) =>
+    request<{ items: RecordData[] }>(
+      `/pro/execution/deployments/${id}/decisions?${q(before === undefined ? {} : { before })}`,
+    ),
+  strategies: () => request<{ items: StrategyProject[] }>('/pro/strategies'),
+  strategy: (id: string) => request<StrategyProject>(`/pro/strategies/${encodeURIComponent(id)}`),
+  strategyVersion: (id: string) =>
+    request<StrategyVersion>(`/pro/strategy-versions/${encodeURIComponent(id)}`),
+  createStrategy: (body: { name: string; hypothesis: string; definition: StrategyDefinition }) =>
+    post<StrategyProject>('/pro/strategies', body),
+  createStrategyVersion: (
+    id: string,
+    body: { hypothesis: string; definition: StrategyDefinition; parent_id?: string },
+  ) => post<StrategyVersion>(`/pro/strategies/${encodeURIComponent(id)}/versions`, body),
+  previewRelease: (run_id: string, selection: string) =>
+    post<ReleasePreview>('/pro/execution/releases/preview', { run_id, selection }),
+  approveRelease: (body: {
+    run_id: string;
+    selection: string;
+    preview_hash: string;
+    acknowledgements: string[];
+    review: string;
+  }) => post<PaperRelease>('/pro/execution/releases', body),
+  activateRelease: (id: string) =>
+    post<PaperRelease>(`/pro/execution/releases/${encodeURIComponent(id)}/activate`),
+  releases: (source: Source) =>
+    request<{ items: PaperRelease[] }>(`/pro/execution/releases?${q({ source })}`),
   packages: (source: Source) =>
     request<{ items: DataPackage[] }>(`/pro/catalog/packages?${q({ source })}`),
   package: (id: string) => request<DataPackage>(`/pro/catalog/packages/${encodeURIComponent(id)}`),
@@ -332,7 +481,10 @@ export const proApi = {
     request<{ items: ProRun[]; next_cursor?: string | null }>(
       `/pro/research/runs?${q({ source, limit, ...(before ? { before } : {}) })}`,
     ),
-  run: (id: string) => request<ProRun>(`/pro/research/runs/${encodeURIComponent(id)}`),
+  run: (id: string, variant?: string) =>
+    request<ProRun>(
+      `/pro/research/runs/${encodeURIComponent(id)}${variant === undefined ? '' : '?variant=' + encodeURIComponent(variant)}`,
+    ),
   createRun: (body: ProRunConfig) => post<ProRun>('/pro/research/runs', body),
   replay: (id: string) => post<ProRun>(`/pro/research/runs/${encodeURIComponent(id)}/replay`),
   compare: (ids: string[]) =>
@@ -375,6 +527,8 @@ export const proApi = {
   halt: (body: { source: Source; active: boolean; reason: string }) =>
     post<ProRisk>('/pro/execution/halt', body),
   ops: () => request<Ops>('/pro/ops'),
+  acknowledgeIncident: (id: string, reason: string) =>
+    post<RecordData>(`/pro/ops/incidents/${id}/acknowledge`, { reason }),
   createBackup: () => post<RecordData>('/pro/ops/backups/create'),
   verifyBackup: (id: string) =>
     request<RecordData>(`/pro/ops/backups/${encodeURIComponent(id)}/verify`),

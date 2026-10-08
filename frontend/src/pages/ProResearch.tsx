@@ -21,6 +21,7 @@ import type {
   RecordData,
   ResearchInputs,
   ResearchMode,
+  StrategyVersion,
 } from '../proApi';
 import { useI18n } from '../lib/i18n';
 import { date, nameOf, number, percent, price, quantityText } from '../lib/format';
@@ -43,6 +44,7 @@ import {
   valueText,
 } from '../components/ProWorkspace';
 import ResearchChart from '../components/ResearchChart';
+import ResearchRelease from '../components/ResearchRelease';
 
 const arrayRecords = (v: unknown): RecordData[] =>
   Array.isArray(v) ? (v.filter((x) => x !== null && typeof x === 'object') as RecordData[]) : [];
@@ -78,11 +80,19 @@ function AutoTable({ rows }: { rows: RecordData[] }) {
 export default function ProResearch({
   source,
   initialInputs,
+  initialRunId,
+  initialStrategyVersion,
+  onClearStrategyVersion,
   onOpenData,
+  onOpenExecution,
 }: {
   source: Source;
   initialInputs?: ResearchInputs;
+  initialRunId?: string;
+  initialStrategyVersion?: StrategyVersion;
+  onClearStrategyVersion: () => void;
   onOpenData: () => void;
+  onOpenExecution: () => void;
 }) {
   const { t } = useI18n();
   const canOperate = canResearch(useSession()?.user?.role);
@@ -95,6 +105,16 @@ export default function ProResearch({
   const [fundingId, setFundingId] = useState(initialInputs?.funding_dataset_id ?? '');
   const [preparedInputs, setPreparedInputs] = useState(initialInputs);
   const [strategy, setStrategy] = useState<Strategy>({ ...defaultStrategy });
+  const [versionId, setVersionId] = useState<string | undefined>(initialStrategyVersion?.id);
+  useEffect(() => {
+    if (initialStrategyVersion) {
+      setVersionId(initialStrategyVersion.id);
+      setStrategy({ ...initialStrategyVersion.definition.strategy });
+      setDirection(initialStrategyVersion.definition.direction);
+      setLeverage(Number(initialStrategyVersion.definition.leverage));
+      hydrated.current = true;
+    }
+  }, [initialStrategyVersion?.id]);
   const [direction, setDirection] = useState<Direction>('long_only');
   const [leverage, setLeverage] = useState(1);
   const [capital, setCapital] = useState('10000');
@@ -118,7 +138,7 @@ export default function ProResearch({
   const [allocationGrid, setAllocationGrid] = useState('0.25,0.5,0.75');
   const [feeGrid, setFeeGrid] = useState('5,10,20');
   const [slipGrid, setSlipGrid] = useState('0,5,15');
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialRunId ?? null);
   const [detailTab, setDetailTab] = useState('fills');
   const [variantKey, setVariantKey] = useState('');
   const [chartMetric, setChartMetric] = useState<'equity' | 'drawdown'>('equity');
@@ -172,8 +192,8 @@ export default function ProResearch({
   }, [datasets.data, datasetId]);
   const activeId = selected ?? visibleRuns[0]?.id;
   const run = useQuery({
-    queryKey: ['pro-run', source, activeId],
-    queryFn: () => proApi.run(activeId!),
+    queryKey: ['pro-run', source, activeId, variantKey],
+    queryFn: () => proApi.run(activeId!, variantKey),
     enabled: !!activeId,
     refetchInterval: (q) =>
       q.state.data && ['queued', 'running'].includes(q.state.data.status) ? 1000 : false,
@@ -222,6 +242,7 @@ export default function ProResearch({
     setMarkId(c.mark_dataset_id ?? '');
     setFundingId(c.funding_dataset_id ?? '');
     setStrategy({ ...c.strategy });
+    setVersionId(c.strategy_version_id ?? undefined);
     setDirection(c.direction);
     setLeverage(c.leverage);
     setCapital(c.initial_cash);
@@ -258,6 +279,11 @@ export default function ProResearch({
     (preparedInputs.funding_dataset_id ?? '') === fundingId &&
     preparedInputs.start_ts === Date.parse(`${windowStart}Z`) &&
     preparedInputs.end_ts === Date.parse(`${windowEnd}Z`);
+  const boundVersion = useQuery({
+    queryKey: ['strategy-version', versionId],
+    queryFn: () => proApi.strategyVersion(versionId!),
+    enabled: !!versionId,
+  });
   const submit = () => {
     const startTs = Date.parse(`${windowStart}Z`),
       endTs = Date.parse(`${windowEnd}Z`);
@@ -284,6 +310,15 @@ export default function ProResearch({
     }
     if (startTs % interval || endTs % interval) {
       setValidation(t('Range boundaries must align to the selected UTC interval.'));
+      return;
+    }
+    if (
+      versionId &&
+      (!boundVersion.data ||
+        boundVersion.data.definition.bar !== dataset.bar ||
+        boundVersion.data.definition.product !== (isSwap ? 'SWAP' : 'SPOT'))
+    ) {
+      setValidation(t('Choose data matching the strategy version product and interval.'));
       return;
     }
     setValidation(null);
@@ -320,6 +355,7 @@ export default function ProResearch({
       preparedInputs.start_ts === startTs &&
       preparedInputs.end_ts === endTs;
     create.mutate({
+      strategy_version_id: versionId,
       ...(matchesPackage
         ? {
             package_id: preparedInputs.package_id,
@@ -426,6 +462,36 @@ export default function ProResearch({
       >
         <button
           className="button button-secondary"
+          disabled={!canOperate}
+          onClick={() => {
+            hydrated.current = true;
+            setSelected('');
+            setVariantKey('');
+            setVersionId(undefined);
+            onClearStrategyVersion();
+            setPreparedInputs(undefined);
+            setStrategy({ ...defaultStrategy });
+            setDirection('long_only');
+            setLeverage(1);
+            setMode('single');
+            setCapital('10000');
+            setFee('10');
+            setSlippage('5');
+            setLiqFee('5');
+            setNotice(null);
+            setValidation(null);
+            setMarkId('');
+            setFundingId('');
+            const first = tradeDatasets[0];
+            setDatasetId(first?.id ?? '');
+            setWindowStart(utcInput(first?.start));
+            setWindowEnd(utcInput(first?.end));
+          }}
+        >
+          {t('New research')}
+        </button>
+        <button
+          className="button button-secondary"
           disabled={!plan}
           onClick={() => void exportRun()}
         >
@@ -440,8 +506,26 @@ export default function ProResearch({
           <RefreshCw size={14} />
           {t('Replay snapshot')}
         </button>
+        {run.data?.status === 'completed' && variant && (
+          <ResearchRelease run={run.data} variant={variant.key} onExecution={onOpenExecution} />
+        )}
       </PageHeading>
       <ActionNote text={notice} error={exportError} />
+      {versionId && (
+        <div className="prepared-input-note">
+          <span>{t('Bound strategy version')}</span>
+          <code>{versionId.slice(0, 12)}</code>
+          <button
+            className="text-button"
+            onClick={() => {
+              setVersionId(undefined);
+              onClearStrategyVersion();
+            }}
+          >
+            {t('Detach for exploratory research')}
+          </button>
+        </div>
+      )}
       {preparedInputs?.package_id && (
         <p className="prepared-input-note">
           <span>
@@ -1095,6 +1179,7 @@ export default function ProResearch({
                 <div className="form-grid">
                   <Field label="Direction">
                     <select
+                      disabled={!!versionId}
                       value={direction}
                       onChange={(e) => setDirection(e.target.value as Direction)}
                     >
@@ -1110,6 +1195,7 @@ export default function ProResearch({
                       min="1"
                       max="50"
                       step="1"
+                      disabled={!!versionId}
                       value={leverage}
                       onChange={(e) => setLeverage(Number(e.target.value))}
                     />
@@ -1117,7 +1203,9 @@ export default function ProResearch({
                 </div>
               </>
             )}
-            <StrategyFields value={strategy} onChange={setStrategy} />
+            <fieldset className="strategy-bound-fields" disabled={!!versionId}>
+              <StrategyFields professional value={strategy} onChange={setStrategy} />
+            </fieldset>
             <Field label="Initial capital">
               <div className="input-suffix">
                 <input

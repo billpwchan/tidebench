@@ -1,5 +1,18 @@
 # Verification record
 
+## v0.4.0 · 2026-10-08
+
+- 532 backend/core/property/API tests passed on macOS arm64 / Python 3.13.15; Ruff and frozen offline lock checks passed.
+- 12 desktop/mobile Chromium workflows passed, including editable strategy recipe → immutable version → research → review → activation → holding-limit exit journal; shared-capital independent test/export; and one-use holdout evaluation. A subsequent presentation refinement is checked again in both portfolio workflows.
+- Production TypeScript/Vite build and Prettier passed. Research/registry/governance pages are deferred bundles; the main bundle is approximately 436 kB before transfer compression.
+- Actual schema-4 restore preserves compressed research, strategy/release lineage, forward decisions/equity and incidents, restores the saved synthetic time, revokes sessions and leaves deployment stopped/risk halted.
+- Process tests cover direct-engine result parity, exclusion of workspace credentials, deadline/cancel/failure cleanup and abrupt owner death. Linux-specific limits are independently exercised by CI; this local macOS run does not establish Linux enforcement.
+- [Current offline audit](audit/v0.4.0-observations.json) records complete research-module identities, incremental history, time progression, ownership and protective-stop faults. [Current assessment](audit/red-team-0.4.0.zh-CN.md) retains remaining economic gaps.
+
+The final local mixed workload used 240 real loopback HTTP reads at concurrency 12, four BTC/ETH spot/perpetual positions and a concurrent 24-case × 1,000-bar grid. All 240 returned HTTP 200 and all 24 cases completed: 4.598 seconds, 52.2 requests/second, median 185.18 ms, P95 597.72 ms, maximum 744.16 ms. This shared development host was also running acceptance work; it is not a controlled comparison against the older baseline or a capacity guarantee. [Machine-readable workload evidence](acceptance-load.json).
+
+A private online snapshot of the local schema-3 workspace passed integrity/FK checks before upgrade. Data and backup files are ignored by Git. Public market-data acceptance remains the separately dated read-only observation below; synthetic acceptance does not replace venue evidence. Use the published commit's actual CI/container outcome for independent Linux verification.
+
 ## 2026-10-08 red-team correction
 
 The v0.3.0 evidence below described specific implemented behavior and was insufficient to establish product completeness. The [red-team assessment](audit/README.md) records ten concrete observations, including execution/ownership defects now fixed and substantial strategy/portfolio gaps still open. Accompanying local validation passed 466 backend tests, eight desktop/mobile Chromium flows (including actual OOS candidate submission), Ruff, Prettier and the production build. The offline [before](audit/v0.3.0-baseline.json)/[after](audit/post-fix-observations.json) observations preserve the injected-fault evidence and its limits. For the published v0.3.1 build, use its actual CI run as independent evidence.

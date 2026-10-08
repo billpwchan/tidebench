@@ -1,3 +1,4 @@
+import ProgramEditor from './ProgramEditor';
 import {
   Activity,
   ArrowRight,
@@ -201,7 +202,11 @@ export function SourceBadge({ source }: { source: Source }) {
 export function StrategyFields({
   value,
   onChange,
+  professional = false,
+  showAllocation = true,
 }: {
+  professional?: boolean;
+  showAllocation?: boolean;
   value: Strategy;
   onChange: (s: Strategy) => void;
 }) {
@@ -214,6 +219,13 @@ export function StrategyFields({
           <option value="sma_cross">{t('Moving average crossover')}</option>
           <option value="rsi_reversion">{t('RSI mean reversion')}</option>
           <option value="buy_hold">{t('Buy & hold')}</option>
+          {professional && (
+            <>
+              <option value="close_breakout">{t('Close-channel breakout')}</option>
+              <option value="zscore_reversion">{t('Z-score reversion')}</option>
+              <option value="program">{t('Rule program')}</option>
+            </>
+          )}
         </select>
       </Field>
       {value.kind === 'sma_cross' && (
@@ -276,23 +288,107 @@ export function StrategyFields({
           </div>
         </>
       )}
-      <Field
-        label="Capital allocation"
-        hint="Fraction of available cash allocated on entry, including fees."
-      >
-        <div className="input-suffix">
+      {professional && ['close_breakout', 'zscore_reversion', 'program'].includes(value.kind) && (
+        <Field label="Lookback window">
           <input
-            type="number"
-            min="1"
-            max="100"
-            step="1"
             required
-            value={Number(value.allocation) * 100}
-            onChange={(e) => patch('allocation', String(Number(e.target.value) / 100))}
+            type="number"
+            min={2}
+            max={400}
+            value={value.window ?? 20}
+            onChange={(e) => patch('window', Number(e.target.value))}
           />
-          <span>%</span>
+        </Field>
+      )}
+      {professional && value.kind === 'zscore_reversion' && (
+        <div className="form-grid">
+          <Field label="Entry Z-score">
+            <input
+              required
+              type="number"
+              min={0.1}
+              max={10}
+              step={0.1}
+              value={value.z_entry ?? '2'}
+              onChange={(e) => patch('z_entry', e.target.value)}
+            />
+          </Field>
+          <Field label="Exit Z-score">
+            <input
+              required
+              type="number"
+              min={0}
+              max={9.9}
+              step={0.1}
+              value={value.z_exit ?? '.5'}
+              onChange={(e) => patch('z_exit', e.target.value)}
+            />
+          </Field>
         </div>
-      </Field>
+      )}
+      {professional && value.kind === 'program' && (
+        <ProgramEditor value={value} onChange={onChange} />
+      )}
+      {professional && (
+        <details className="strategy-exits">
+          <summary>{t('Exits & loss budget')}</summary>
+          <p className="field-hint">
+            {t(
+              'Close-based exits execute after the confirmed close. Gaps, slippage and funding can exceed the loss budget. Zero disables a rule.',
+            )}
+          </p>
+          <div className="form-grid">
+            {(
+              [
+                ['stop_loss_pct', 'Stop loss %', 100],
+                ['take_profit_pct', 'Take profit %', 1000],
+                ['trailing_stop_pct', 'Trailing stop %', 100],
+                ['risk_per_trade_pct', 'Equity loss budget %', 10],
+              ] as const
+            ).map(([key, label, max]) => (
+              <Field label={label} key={key}>
+                <input
+                  type="number"
+                  min={0}
+                  max={max}
+                  step="any"
+                  value={value[key] ?? '0'}
+                  onChange={(e) => patch(key, e.target.value)}
+                />
+              </Field>
+            ))}
+            <Field label="Maximum holding closes">
+              <input
+                type="number"
+                min={0}
+                max={100000}
+                step={1}
+                value={value.max_holding_bars ?? 0}
+                onChange={(e) => patch('max_holding_bars', Number(e.target.value))}
+              />
+            </Field>
+          </div>
+        </details>
+      )}
+      {showAllocation && (
+        <Field
+          label="Capital allocation"
+          hint="Fraction of available cash allocated on entry, including fees."
+        >
+          <div className="input-suffix">
+            <input
+              type="number"
+              min="1"
+              max="100"
+              step="1"
+              required
+              value={Number(value.allocation) * 100}
+              onChange={(e) => patch('allocation', String(Number(e.target.value) / 100))}
+            />
+            <span>%</span>
+          </div>
+        </Field>
+      )}
     </>
   );
 }

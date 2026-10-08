@@ -6,19 +6,29 @@ import asyncio
 import hashlib
 import json
 import logging
+import shutil
+import threading
+import time
 from collections import defaultdict
-from contextlib import suppress
-from decimal import Decimal, localcontext
+from contextlib import nullcontext, suppress
+from decimal import Decimal, DecimalException, localcontext
 
 from . import __version__
 from .catalog import CATALOG_BARS, CatalogService
 from .data_packages import DataPackageService
 from .derivatives import FundingEvent, LinearContract, MarginTier
-from .engine import ACCOUNTING_CONTEXT, Instrument, StrategyConfig
+from .engine import ACCOUNTING_CONTEXT, EngineError, Instrument, StrategyConfig
+from .forward_history import ForwardHistory
+from .operations import IncidentStore
 from .platform import BackupService, PlatformError, RuntimeMetrics
+from .portfolio_research import PortfolioResearch
 from .pro_execution import SimulationBook, base_size, number
 from .provenance import research_identity, serialized_result
+from .research_artifacts import ResearchArtifacts
+from .research_governance import ResearchGovernance
 from .store import dumps, encode, new_id, now_ms
+from .strategy_registry import StrategyRegistry, digest
+from .strategy_risk import risk_notional
 
 logger = logging.getLogger("tidebench.professional")
 D = Decimal
@@ -28,11 +38,22 @@ class ProfessionalRuntime:
     def __init__(self, store, market, settings):
         self.store, self.market, self.settings = store, market, settings
         self.catalog = CatalogService(store, market)
+        self.clock = self.catalog.clock
+        self.history = ForwardHistory(store, self.catalog)
         self.packages = DataPackageService(store, self.catalog)
         self.book = SimulationBook(store)
         self.backups = BackupService(store, settings)
         self.metrics = RuntimeMetrics()
+        self.incidents = IncidentStore(store)
+        self.heartbeats = {}
+        self.backup_error = None
+        self.operating_conditions, self.operating_checked_at = [], 0
+        self.research_cancelled = threading.Event()
+        self.artifacts = ResearchArtifacts(store)
         self.engine_identity = research_identity()
+        self.registry = StrategyRegistry(store, self.engine_identity)
+        self.portfolios = PortfolioResearch(self)
+        self.governance = ResearchGovernance(store, self.catalog, self.registry)
         self.tasks, self.inflight = [], set()
         self.snapshots, self.market_errors = {}, {}
         self.funding_checks = {}
@@ -58,9 +79,17 @@ class ProfessionalRuntime:
     async def start(self):
         if self.tasks:
             raise RuntimeError("Professional supervisors are already started")
+        self.research_cancelled.clear()
         self.catalog.resume_pending()
         self.packages.resume_pending()
+        self.heartbeats = {
+            name: {"at": now_ms(), "phase": "starting"}
+            for name in ("research", "catalog", "execution", "strategies", "backups")
+        }
         with self.store.write() as conn:
+            conn.execute(
+                "UPDATE portfolio_runs SET status='queued',updated_at=? WHERE status='running'", (now_ms(),)
+            )
             conn.execute(
                 "UPDATE pro_runs SET status='queued',updated_at=? WHERE status='running'", (now_ms(),)
             )
@@ -73,6 +102,7 @@ class ProfessionalRuntime:
         ]
 
     async def stop(self):
+        self.research_cancelled.set()
         for task in self.tasks:
             task.cancel()
         await asyncio.gather(*self.tasks, return_exceptions=True)
@@ -95,6 +125,12 @@ class ProfessionalRuntime:
         for key in ("config", "snapshot", "manifest", "result", "summary"):
             if key in output:
                 output[key] = json.loads(output[key]) if output[key] else None
+        output["result"] = self.artifacts.resolve(output.get("result"))
+        expected = (output.get("manifest") or {}).get("result_hash")
+        if expected is not None and output["result"] is not None:
+            actual = hashlib.sha256(dumps(output["result"]).encode()).hexdigest()
+            if actual != expected:
+                raise PlatformError("research_integrity", "Research result integrity check failed.", 409)
         return output
 
     @staticmethod
@@ -173,6 +209,7 @@ class ProfessionalRuntime:
                     409,
                 )
         dataset = self.catalog.get_dataset(config["dataset_id"])
+        self.registry.validate_binding(config, dataset)
         if dataset["kind"] != "trade" or not dataset["quality"].get("complete"):
             raise PlatformError(
                 "dataset_quality", "Research requires a complete, confirmed trade dataset.", 422
@@ -219,12 +256,25 @@ class ProfessionalRuntime:
             raise PlatformError(
                 "research_window", "Research accepts 2–98,000 selected bars plus indicator warmup.", 422
             )
+        from .research_budget import estimate_research_memory
+
+        try:
+            estimate = estimate_research_memory(config, dataset, start, end)
+        except (EngineError, ValueError, TypeError, DecimalException) as exc:
+            raise PlatformError("research_plan", str(exc), 422) from None
+        if estimate["estimated_peak_bytes"] > self.settings.research_memory_budget_mb * 1024 * 1024:
+            raise PlatformError(
+                "research_memory_budget",
+                "The estimated research working set exceeds the workspace memory budget. Split the grid or date window.",
+                422,
+            )
         identifier, now = new_id(), now_ms()
         with self.store.write() as conn:
+            self.governance.admit(conn, config, dataset, identifier, replay_of)
             if (
-                conn.execute("SELECT COUNT(*) FROM pro_runs WHERE status IN ('queued','running')").fetchone()[
-                    0
-                ]
+                conn.execute(
+                    "SELECT (SELECT COUNT(*) FROM pro_runs WHERE status IN ('queued','running')) + (SELECT COUNT(*) FROM portfolio_runs WHERE status IN ('queued','running'))"
+                ).fetchone()[0]
                 >= 10
             ):
                 raise PlatformError("research_queue_full", "The research queue is full.", 429)
@@ -245,7 +295,7 @@ class ProfessionalRuntime:
                 dataset["source"],
                 "pro.research_queued",
                 "Professional research queued",
-                {"run_id": identifier, "replay_of": replay_of},
+                {"run_id": identifier, "replay_of": replay_of, "resource_estimate": estimate},
             )
         self.wake.set()
         return self.run(identifier)
@@ -276,6 +326,7 @@ class ProfessionalRuntime:
 
     async def catalog_loop(self):
         while True:
+            self.beat("catalog", "scanning")
             jobs = [job for job in self.catalog.list_jobs() if job["status"] == "queued"]
             if jobs:
                 try:
@@ -296,12 +347,16 @@ class ProfessionalRuntime:
 
     async def jobs_loop(self):
         while True:
+            self.beat("research", "scanning")
             with self.store.read() as conn:
                 row = conn.execute(
-                    "SELECT id FROM pro_runs WHERE status='queued' ORDER BY created_at LIMIT 1"
+                    "SELECT id,kind FROM (SELECT id,created_at,'single' kind FROM pro_runs WHERE status='queued' UNION ALL SELECT id,created_at,'portfolio' kind FROM portfolio_runs WHERE status='queued') ORDER BY created_at LIMIT 1"
                 ).fetchone()
             if row:
-                await self.perform_run(row[0])
+                if row["kind"] == "single":
+                    await self.perform_run(row["id"])
+                else:
+                    await self.offload(self.portfolios.compute, row["id"])
                 continue
             self.wake.clear()
             with suppress(TimeoutError):
@@ -360,6 +415,13 @@ class ProfessionalRuntime:
                 "engine_version": __version__,
                 "build_sha": self.settings.build_sha,
                 "research_implementation": self.engine_identity,
+                "resource_policy": {
+                    "process_isolation": self.settings.research_process_isolation,
+                    "compute_deadline_seconds": self.settings.research_timeout_seconds,
+                    "additional_virtual_memory_mb": self.settings.research_memory_budget_mb,
+                    "memory_enforcement": "Linux RLIMIT_AS above initialized input baseline; other systems require OS deployment limits",
+                    "artifact_bytes": 128 * 1024 * 1024,
+                },
                 "package_id": config.get("package_id"),
                 "package_manifest_hash": config.get("package_manifest_hash"),
                 "dataset_hash": snapshot["trade"]["content_hash"],
@@ -396,7 +458,24 @@ class ProfessionalRuntime:
                     "UPDATE pro_runs SET snapshot=?,manifest=?,progress=.15,updated_at=? WHERE id=?",
                     (dumps(snapshot), dumps(manifest), now_ms(), identifier),
                 )
-            result = await self.offload(self.compute, config, snapshot, manifest)
+            from .pro_research import research_progress
+
+            last_progress = [0.0]
+
+            def progress(fraction):
+                if time.monotonic() - last_progress[0] >= 0.5 or fraction >= 1:
+                    with self.store.write() as conn:
+                        conn.execute(
+                            "UPDATE pro_runs SET progress=MAX(progress,?),updated_at=? WHERE id=? AND status='running'",
+                            (0.15 + 0.8 * fraction, now_ms(), identifier),
+                        )
+                    last_progress[0] = time.monotonic()
+
+            token = research_progress.set(progress)
+            try:
+                result = await self.offload(self.compute, config, snapshot, manifest)
+            finally:
+                research_progress.reset(token)
             payload, result_hash = await self.offload(serialized_result, result)
             manifest["result_hash"] = result_hash
             if manifest.get("replay_of"):
@@ -431,9 +510,10 @@ class ProfessionalRuntime:
 
     def complete_run(self, identifier, source, payload, summary, manifest):
         with self.store.write() as conn:
+            pointer = self.artifacts.put(conn, payload)
             conn.execute(
                 "UPDATE pro_runs SET status='completed',result=?,summary=?,manifest=?,progress=1,updated_at=? WHERE id=?",
-                (payload, dumps(summary or {}), dumps(manifest), now_ms(), identifier),
+                (dumps(pointer), dumps(summary or {}), dumps(manifest), now_ms(), identifier),
             )
             self.store.audit(
                 conn,
@@ -448,7 +528,7 @@ class ProfessionalRuntime:
             )
 
     def compute(self, config, snapshot, manifest):
-        from .pro_research import ResearchConfig, run_research_plan
+        from .pro_research import ResearchConfig, research_progress, run_research_plan
 
         raw = snapshot["instrument"]
         decimals = {
@@ -468,8 +548,19 @@ class ProfessionalRuntime:
                 }
             )
         strategy = {**config["strategy"]}
-        for key in ("allocation", "entry", "exit"):
-            strategy[key] = D(str(strategy[key]))
+        for key in (
+            "allocation",
+            "entry",
+            "exit",
+            "z_entry",
+            "z_exit",
+            "stop_loss_pct",
+            "take_profit_pct",
+            "trailing_stop_pct",
+            "risk_per_trade_pct",
+        ):
+            if key in strategy:
+                strategy[key] = D(str(strategy[key]))
         research = ResearchConfig(
             strategy=StrategyConfig(**strategy),
             direction=config["direction"],
@@ -481,21 +572,32 @@ class ProfessionalRuntime:
             start_ts=config.get("start_ts"),
             end_ts=config.get("end_ts"),
         )
-        candles = self.catalog.load_candles(config["dataset_id"])
-        marks = (
-            self.catalog.load_candles(config["mark_dataset_id"]) if config.get("mark_dataset_id") else None
+        lower = max(
+            snapshot["trade"]["start"],
+            (config.get("start_ts") or snapshot["trade"]["start"])
+            - 2000 * CATALOG_BARS[snapshot["trade"]["bar"]],
         )
-        if config.get("start_ts") is not None:
-            first = next(
-                (index for index, candle in enumerate(candles) if candle.ts >= config["start_ts"]),
-                len(candles),
+        upper = config.get("end_ts") or snapshot["trade"]["end"]
+        if isinstance(self.catalog, CatalogService):
+            candles = self.catalog.load_candles(config["dataset_id"], start=lower, end=upper)
+            marks = (
+                self.catalog.load_candles(config["mark_dataset_id"], start=lower, end=upper)
+                if config.get("mark_dataset_id")
+                else None
             )
-            lower = max(0, first - 2000)
-            candles = candles[lower:]
-        if config.get("end_ts") is not None:
-            candles = [candle for candle in candles if candle.ts < config["end_ts"]]
-        if marks is not None:
-            marks = [candle for candle in marks if candles[0].ts <= candle.ts <= candles[-1].ts]
+        else:
+            # Transport fixtures and external catalog adapters retain their
+            # original protocol; the built-in catalog filters in SQL.
+            candles = [c for c in self.catalog.load_candles(config["dataset_id"]) if lower <= c.ts < upper]
+            marks = (
+                [
+                    c
+                    for c in self.catalog.load_candles(config["mark_dataset_id"])
+                    if candles[0].ts <= c.ts <= candles[-1].ts
+                ]
+                if config.get("mark_dataset_id")
+                else None
+            )
         funding = (
             [
                 FundingEvent.from_record(
@@ -538,6 +640,37 @@ class ProfessionalRuntime:
                         }
                     )
                 )
+        if self.settings.research_process_isolation:
+            from .pro_research import json_safe
+            from .research_process import run_isolated
+
+            payload = {
+                "snapshot": {
+                    "trade_candles": candles,
+                    "interval_ms": CATALOG_BARS[snapshot["trade"]["bar"]],
+                    "instrument": instrument,
+                    "instrument_type": raw["inst_type"],
+                    "config": research,
+                    "mark_candles": marks,
+                    "funding_events": funding or [],
+                    "margin_tiers": tiers,
+                    "provenance": {
+                        "trade": snapshot["trade"],
+                        "mark": snapshot.get("mark"),
+                        "funding": snapshot.get("funding"),
+                        "tiers": snapshot.get("margin_tiers") or {},
+                    },
+                },
+                "plan": {"mode": config["mode"], "options": config["options"]},
+            }
+            return run_isolated(
+                "single",
+                json_safe(payload),
+                timeout=self.settings.research_timeout_seconds,
+                memory_mb=self.settings.research_memory_budget_mb,
+                progress=research_progress.get(),
+                cancelled=self.research_cancelled,
+            )
         return run_research_plan(
             candles,
             CATALOG_BARS[snapshot["trade"]["bar"]],
@@ -545,6 +678,7 @@ class ProfessionalRuntime:
             research,
             mode=config["mode"],
             options=config["options"],
+            progress=research_progress.get(),
             mark_candles=marks,
             funding_events=funding,
             margin_tiers=tiers,
@@ -559,17 +693,29 @@ class ProfessionalRuntime:
     async def snapshots_for(self, source, extra=()):
         symbols = set(extra) | {row["inst_id"] for row in self.book.positions(source)}
         output = {}
-        for symbol in symbols:
-            try:
-                snapshot = await self.catalog.get_market_snapshot(symbol, source)
-                self.snapshots[(source, symbol)] = snapshot
-                self.market_errors.pop((source, symbol), None)
+        slots = asyncio.Semaphore(4)
+
+        async def fetch(symbol):
+            async with slots:
+                snapshot = await self.quote_snapshot(source, symbol)
+            if snapshot:
                 output[symbol] = snapshot
-            except Exception as exc:
-                self.market_errors[(source, symbol)] = {"error": str(exc)[:300], "at": now_ms()}
-                if (source, symbol) in self.snapshots:
-                    output[symbol] = self.snapshots[(source, symbol)]
+
+        await asyncio.gather(*(fetch(symbol) for symbol in sorted(symbols)))
         return output
+
+    async def quote_snapshot(self, source, symbol):
+        try:
+            async with asyncio.timeout(12):
+                snapshot = await self.catalog.get_market_snapshot(symbol, source)
+            self.snapshots[(source, symbol)] = snapshot
+            self.market_errors.pop((source, symbol), None)
+            return snapshot
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            self.market_errors[(source, symbol)] = {"error": str(exc)[:300], "at": now_ms()}
+            return self.snapshots.get((source, symbol))
 
     async def sync_funding(self, source, symbol, snapshots, *, periodic=False):
         position = next((p for p in self.book.positions(source) if p["inst_id"] == symbol), None)
@@ -615,7 +761,9 @@ class ProfessionalRuntime:
             snapshots = await self.snapshots_for(order["source"], [order["inst_id"]])
             await self.sync_funding(order["source"], order["inst_id"], snapshots)
             await self.offload(self.book.observe, order["source"], snapshots)
-            return await self.offload(self.book.submit, order, key, snapshots, actor)
+            result = await self.offload(self.book.submit, order, key, snapshots, actor)
+            await self.offload(self.book.observe, order["source"], snapshots)
+            return result
 
     def deployments(self, source=None):
         with self.store.read() as conn:
@@ -625,13 +773,13 @@ class ProfessionalRuntime:
             ).fetchall()
         return [{**dict(row), "config": json.loads(row["config"])} for row in rows]
 
-    def deploy(self, config, actor):
+    def deploy(self, config, actor, *, conn=None):
         identifier, now = new_id(), now_ms()
-        with self.store.write() as conn:
+        with nullcontext(conn) if conn is not None else self.store.write() as conn:
             if self.book.risk(config["source"], conn)["halted"]:
                 raise PlatformError("execution_halted", "Resume new risk before starting a strategy.", 409)
             if conn.execute(
-                "SELECT 1 FROM pro_positions WHERE source=? AND inst_id=?",
+                "SELECT 1 FROM pro_positions WHERE source=? AND inst_id=? AND quantity!='0'",
                 (config["source"], config["inst_id"]),
             ).fetchone():
                 raise PlatformError(
@@ -675,7 +823,8 @@ class ProfessionalRuntime:
                 "Forward simulation strategy started",
                 {"deployment_id": identifier, "actor": actor},
             )
-        return next(row for row in self.deployments(config["source"]) if row["id"] == identifier)
+            row = conn.execute("SELECT * FROM pro_deployments WHERE id=?", (identifier,)).fetchone()
+            return dict(row) | {"config": json.loads(row["config"])}
 
     def stop_deployment(self, identifier, actor):
         with self.store.write() as conn:
@@ -696,10 +845,8 @@ class ProfessionalRuntime:
 
     async def evaluate(self, deployment):
         with localcontext(ACCOUNTING_CONTEXT):
-            from .pro_research import directional_signal
-
             config = deployment["config"]
-            source, symbol, identifier = config["source"], config["inst_id"], deployment["id"]
+            source, identifier = config["source"], deployment["id"]
             # History transport must never hold the economic market lock. A
             # separate deployment lock still serializes retries of one signal.
             async with self.strategy_locks[identifier]:
@@ -710,7 +857,8 @@ class ProfessionalRuntime:
                 if not active or active["status"] != "running":
                     return
                 interval = CATALOG_BARS[config["bar"]]
-                end = 1767225600000 if source == "example" else now_ms() // interval * interval
+                market_time = self.clock.now() if source == "example" else now_ms()
+                end = market_time // interval * interval
                 latest = end - interval
                 with self.store.read() as conn:
                     intent = conn.execute(
@@ -722,39 +870,8 @@ class ProfessionalRuntime:
                 if intent is None:
                     if active["last_bar"] is not None and active["last_bar"] >= latest:
                         return
-                    job = self.catalog.create_job(
-                        symbol, "trade", config["bar"], end - 2000 * interval, end, source
-                    )
-                    job = await self.catalog.run_job(job["id"])
-                    if job["status"] != "completed":
-                        raise PlatformError("strategy_data", "Confirmed strategy history is incomplete.", 409)
-                    candles = self.catalog.load_candles(job["dataset_id"])
-                    if candles[-1].ts != latest:
-                        raise PlatformError("strategy_data", "Latest confirmed bar is missing.", 409)
-                    strategy = {
-                        **config["strategy"],
-                        "allocation": D(str(config["allocation"])),
-                        "entry": D(str(config["strategy"]["entry"])),
-                        "exit": D(str(config["strategy"]["exit"])),
-                    }
-                    signal = directional_signal(candles, StrategyConfig(**strategy), config["direction"])
-                    target = None if signal is None else D(signal) * D(str(config["allocation"]))
-                    with self.store.write() as conn:
-                        active = conn.execute(
-                            "SELECT status FROM pro_deployments WHERE id=?", (identifier,)
-                        ).fetchone()
-                        if not active or active["status"] != "running":
-                            raise PlatformError(
-                                "strategy_stopped", "The strategy no longer owns this market.", 409
-                            )
-                        conn.execute(
-                            "INSERT OR IGNORE INTO pro_strategy_intents VALUES(?,?,?,'pending',?)",
-                            (identifier, latest, str(target) if target is not None else None, now_ms()),
-                        )
-                        conn.execute(
-                            "UPDATE pro_strategy_intents SET status='superseded',updated_at=? WHERE deployment_id=? AND bar<? AND status='pending'",
-                            (now_ms(), identifier, latest),
-                        )
+                    self.history.catalog = self.catalog
+                    target = await self.history.prepare(deployment, end, self.engine_identity)
                 else:
                     target = D(intent["target"]) if intent["target"] is not None else None
                 await self.execute_strategy_intent(config, identifier, latest, end, target)
@@ -769,13 +886,23 @@ class ProfessionalRuntime:
                     ).fetchone()
                 if not active or active["status"] != "running":
                     raise PlatformError("strategy_stopped", "The strategy no longer owns this market.", 409)
+                if (
+                    target not in (None, D(0))
+                    and config.get("risk_policy_hash")
+                    and config["risk_policy_hash"] != digest(self.book.risk(source))
+                ):
+                    raise PlatformError(
+                        "strategy_policy_changed",
+                        "Approved risk policy changed; review a new release before further strategy decisions.",
+                        409,
+                    )
                 snapshots = await self.snapshots_for(source, [symbol])
                 await self.sync_funding(source, symbol, snapshots)
                 snapshot = snapshots[symbol]
                 self.book.fresh(snapshot)
                 if snapshot["ts"] < end:
                     raise PlatformError("quote_before_signal", "A post-close quote is required.", 409)
-                account = await self.offload(self.book.observe, source, snapshots)
+                account = await self.offload(self.book.observe, source, snapshots, record_performance=False)
                 position = next((row for row in account["positions"] if row["inst_id"] == symbol), None)
                 quantity = D(position["quantity"]) if position else D(0)
                 close_key, open_key = (
@@ -827,6 +954,34 @@ class ProfessionalRuntime:
                             size = (
                                 number(account["available_cash"]) * abs(target) / denominator / lot
                             ).to_integral_value(rounding="ROUND_FLOOR") * lot
+                            strategy_record = dict(config["strategy"])
+                            for key in (
+                                "allocation",
+                                "entry",
+                                "exit",
+                                "z_entry",
+                                "z_exit",
+                                "stop_loss_pct",
+                                "take_profit_pct",
+                                "trailing_stop_pct",
+                                "risk_per_trade_pct",
+                            ):
+                                if key in strategy_record:
+                                    strategy_record[key] = D(str(strategy_record[key]))
+                            loss_notional = risk_notional(
+                                number(account["equity"]),
+                                StrategyConfig(**strategy_record),
+                                policy["fee_bps"],
+                                policy["slippage_bps"],
+                            )
+                            if loss_notional is not None:
+                                size = min(
+                                    size,
+                                    (loss_notional / price / base_size(meta) / lot).to_integral_value(
+                                        rounding="ROUND_FLOOR"
+                                    )
+                                    * lot,
+                                )
                         if size >= number(meta["min_size"]):
                             order = {
                                 "source": source,
@@ -839,6 +994,7 @@ class ProfessionalRuntime:
                                 "order_type": "market",
                             }
                             await self.offload(self.book.submit, order, open_key, snapshots, actor)
+                await self.offload(self.book.observe, source, snapshots)
                 with self.store.write() as conn:
                     conn.execute(
                         "UPDATE pro_strategy_intents SET status='completed',updated_at=? WHERE deployment_id=? AND bar=?",
@@ -849,97 +1005,127 @@ class ProfessionalRuntime:
                         (latest, now_ms(), identifier),
                     )
 
-    async def execution_loop(self):
+    async def poll_market(self, source, symbol, snapshots):
         with localcontext(ACCOUNTING_CONTEXT):
-            while True:
-                for source in ("okx", "example"):
-                    symbols = (
-                        {p["inst_id"] for p in self.book.positions(source)}
-                        | {row["inst_id"] for row in self.deployments(source) if row["status"] == "running"}
-                        | {
-                            json.loads(row["body"])["inst_id"]
-                            for row in self.book.pending()
-                            if row["source"] == source
-                        }
-                    )
-                    if not symbols:
+            async with self.locks[(source, symbol)]:
+                await self.sync_funding(source, symbol, snapshots, periodic=True)
+                account = await self.offload(self.book.observe, source, snapshots, record_performance=False)
+                for position in account["positions"]:
+                    if (
+                        position["inst_id"] != symbol
+                        or position["inst_type"] != "SWAP"
+                        or position["unrealized_pnl"] is None
+                    ):
                         continue
-                    for symbol in symbols:
+                    policy = self.book.risk(source)
+                    mark_notional = number(position["market_value"])
+                    if (
+                        number(position["margin"]) + number(position["unrealized_pnl"])
+                        <= number(position["maintenance_margin"])
+                        + mark_notional
+                        * (number(policy["fee_bps"]) + number(policy["liquidation_fee_bps"]))
+                        / 10000
+                    ):
+                        order = {
+                            "source": source,
+                            "inst_id": symbol,
+                            "side": "sell" if number(position["quantity"]) > 0 else "buy",
+                            "quantity": str(abs(number(position["quantity"]))),
+                            "leverage": position["leverage"],
+                            "reduce_only": True,
+                            "order_type": "market",
+                            "margin_mode": "isolated",
+                        }
+                        await self.offload(
+                            self.book.submit,
+                            order,
+                            f"liquidation:{symbol}:{snapshots[symbol]['ts']}",
+                            snapshots,
+                            "risk-engine",
+                            liquidation=True,
+                        )
+                for row in self.book.pending():
+                    order = json.loads(row["payload"])
+                    if order["source"] != source or order["inst_id"] != symbol:
+                        continue
+                    bid, ask, mark = self.book.fresh(snapshots[symbol])
+                    trigger = number(
+                        order.get("limit_price")
+                        if order["order_type"] == "limit"
+                        else order.get("stop_price")
+                    )
+                    matched = (
+                        (ask <= trigger if order["side"] == "buy" else bid >= trigger)
+                        if order["order_type"] == "limit"
+                        else (mark >= trigger if order["side"] == "buy" else mark <= trigger)
+                    )
+                    if matched:
                         try:
-                            async with self.locks[(source, symbol)]:
-                                snapshots = await self.snapshots_for(source, [symbol])
-                                await self.sync_funding(source, symbol, snapshots, periodic=True)
-                                account = await self.offload(self.book.observe, source, snapshots)
-                                for position in account["positions"]:
-                                    if (
-                                        position["inst_id"] != symbol
-                                        or position["inst_type"] != "SWAP"
-                                        or position["unrealized_pnl"] is None
-                                    ):
-                                        continue
-                                    policy = self.book.risk(source)
-                                    mark_notional = number(position["market_value"])
-                                    if (
-                                        number(position["margin"]) + number(position["unrealized_pnl"])
-                                        <= number(position["maintenance_margin"])
-                                        + mark_notional
-                                        * (number(policy["fee_bps"]) + number(policy["liquidation_fee_bps"]))
-                                        / 10000
-                                    ):
-                                        order = {
-                                            "source": source,
-                                            "inst_id": symbol,
-                                            "side": "sell" if number(position["quantity"]) > 0 else "buy",
-                                            "quantity": str(abs(number(position["quantity"]))),
-                                            "leverage": position["leverage"],
-                                            "reduce_only": True,
-                                            "order_type": "market",
-                                            "margin_mode": "isolated",
-                                        }
-                                        await self.offload(
-                                            self.book.submit,
-                                            order,
-                                            f"liquidation:{symbol}:{snapshots[symbol]['ts']}",
-                                            snapshots,
-                                            "risk-engine",
-                                            liquidation=True,
-                                        )
-                                for row in self.book.pending():
-                                    order = json.loads(row["payload"])
-                                    if order["source"] != source or order["inst_id"] != symbol:
-                                        continue
-                                    bid, ask, mark = self.book.fresh(snapshots[symbol])
-                                    trigger = number(
-                                        order.get("limit_price")
-                                        if order["order_type"] == "limit"
-                                        else order.get("stop_price")
-                                    )
-                                    matched = (
-                                        (ask <= trigger if order["side"] == "buy" else bid >= trigger)
-                                        if order["order_type"] == "limit"
-                                        else (mark >= trigger if order["side"] == "buy" else mark <= trigger)
-                                    )
-                                    if matched:
-                                        try:
-                                            await self.offload(
-                                                self.book.submit,
-                                                order,
-                                                row["key"],
-                                                snapshots,
-                                                "pending-order",
-                                                pending_id=row["id"],
-                                            )
-                                        except PlatformError as exc:
-                                            self.market_errors[(source, symbol)] = {
-                                                "error": exc.message,
-                                                "at": now_ms(),
-                                                "order_id": row["id"],
-                                            }
-                        except asyncio.CancelledError:
-                            raise
-                        except Exception as exc:
-                            self.market_errors[(source, symbol)] = {"error": str(exc)[:300], "at": now_ms()}
-                await asyncio.sleep(5)
+                            await self.offload(
+                                self.book.submit,
+                                order,
+                                row["key"],
+                                snapshots,
+                                "pending-order",
+                                pending_id=row["id"],
+                            )
+                        except PlatformError as exc:
+                            self.market_errors[(source, symbol)] = {
+                                "error": exc.message,
+                                "at": now_ms(),
+                                "order_id": row["id"],
+                            }
+
+    async def execution_once(self):
+        for source in ("okx", "example"):
+            symbols = (
+                {p["inst_id"] for p in self.book.positions(source)}
+                | {row["inst_id"] for row in self.deployments(source) if row["status"] == "running"}
+                | {
+                    json.loads(row["body"])["inst_id"]
+                    for row in self.book.pending()
+                    if row["source"] == source
+                }
+            )
+            if not symbols:
+                continue
+            # Start each market's protective actions as its quote arrives.
+            # A missing quote elsewhere blocks new risk through account
+            # freshness checks, but cannot delay a fresh reduce-only stop.
+            snapshots = {
+                symbol: self.snapshots[(source, symbol)]
+                for symbol in symbols
+                if (source, symbol) in self.snapshots
+            }
+            quote_slots, poll_slots = asyncio.Semaphore(4), asyncio.Semaphore(4)
+
+            async def poll(
+                symbol, source=source, snapshots=snapshots, quote_slots=quote_slots, poll_slots=poll_slots
+            ):
+                try:
+                    async with quote_slots:
+                        snapshot = await self.quote_snapshot(source, symbol)
+                    if snapshot:
+                        snapshots[symbol] = snapshot
+                        async with poll_slots, asyncio.timeout(20):
+                            # Copy at dispatch: worker threads never iterate a
+                            # dictionary that another quote callback mutates.
+                            await self.poll_market(source, symbol, dict(snapshots))
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    self.market_errors[(source, symbol)] = {"error": str(exc)[:300], "at": now_ms()}
+
+            await asyncio.gather(*(poll(symbol) for symbol in sorted(symbols)))
+            await self.offload(self.book.observe, source, snapshots)
+
+    async def execution_loop(self):
+        while True:
+            self.beat("execution", "polling")
+            await self.execution_once()
+            self.beat("execution", "idle")
+            await self.offload(self.monitor_conditions)
+            await asyncio.sleep(5)
 
     async def strategy_loop(self):
         # Bounded concurrency isolates a slow history request from other
@@ -969,6 +1155,7 @@ class ProfessionalRuntime:
 
         try:
             while True:
+                self.beat("strategies", "scheduling")
                 for identifier, task in list(pending.items()):
                     if task.done():
                         if not task.cancelled():
@@ -990,21 +1177,122 @@ class ProfessionalRuntime:
             await asyncio.gather(*pending.values(), return_exceptions=True)
 
     def workers_healthy(self):
-        return len(self.tasks) == 5 and all(not task.done() for task in self.tasks)
+        return (
+            len(self.tasks) == 5
+            and all(not task.done() for task in self.tasks)
+            and all(item["healthy"] for item in self.worker_progress())
+        )
+
+    def beat(self, worker, phase):
+        self.heartbeats[worker] = {"at": now_ms(), "phase": phase}
+
+    def worker_progress(self):
+        beats = {name: dict(beat) for name, beat in list(self.heartbeats.items())}
+        # Durable page/bar progress keeps long work healthy. The scheduler's
+        # liveness by itself cannot prove the active computation is progressing.
+        with self.store.read() as conn:
+            for table, worker in [
+                ("pro_runs", "research"),
+                ("portfolio_runs", "research"),
+                ("catalog_jobs", "catalog"),
+            ]:
+                row = conn.execute(f"SELECT MAX(updated_at) FROM {table} WHERE status='running'").fetchone()
+                if row[0] and worker in beats:
+                    beats[worker]["at"] = max(beats[worker]["at"], row[0])
+        return [
+            dict(
+                worker=name,
+                **beat,
+                age_ms=max(0, now_ms() - beat["at"]),
+                healthy=now_ms() - beat["at"] < 120000,
+            )
+            for name, beat in beats.items()
+        ]
+
+    def monitor_conditions(self):
+        conditions = []
+        if now_ms() - self.operating_checked_at >= 30000:
+            self.operating_checked_at = now_ms()
+            self.operating_conditions = []
+            try:
+                free = shutil.disk_usage(self.settings.data_dir).free
+                if free < 256 * 1024 * 1024:
+                    self.operating_conditions.append(
+                        {
+                            "kind": "disk_space",
+                            "subject": "workspace",
+                            "details": {"free_bytes": free, "minimum_bytes": 256 * 1024 * 1024},
+                        }
+                    )
+            except OSError as exc:
+                self.operating_conditions.append(
+                    {"kind": "disk_space", "subject": "workspace", "details": {"error": str(exc)}}
+                )
+            backups = self.backups.list()
+            if not backups or now_ms() - backups[0]["created_at"] > 48 * 3600000:
+                self.operating_conditions.append(
+                    {
+                        "kind": "backup_age",
+                        "subject": "workspace",
+                        "details": {
+                            "latest_created_at": backups[0]["created_at"] if backups else None,
+                            "maximum_age_ms": 48 * 3600000,
+                        },
+                    }
+                )
+        conditions.extend(self.operating_conditions)
+        if self.backup_error:
+            conditions.append(
+                {"kind": "backup_failure", "subject": "workspace", "details": dict(self.backup_error)}
+            )
+        for (source, symbol), failure in list(self.market_errors.items()):
+            conditions.append(
+                {"kind": "market_execution", "subject": f"{source}:{symbol}", "details": dict(failure)}
+            )
+        for worker in self.worker_progress():
+            if not worker["healthy"]:
+                conditions.append({"kind": "worker_progress", "subject": worker["worker"], "details": worker})
+        for task in self.tasks:
+            if task.done():
+                conditions.append(
+                    {
+                        "kind": "worker_stopped",
+                        "subject": task.get_name(),
+                        "details": {"cancelled": task.cancelled()},
+                    }
+                )
+        for deployment in self.deployments():
+            if deployment["status"] == "running" and deployment["last_error"]:
+                conditions.append(
+                    {
+                        "kind": "strategy_evaluation",
+                        "subject": deployment["id"],
+                        "details": {
+                            "source": deployment["source"],
+                            "inst_id": deployment["inst_id"],
+                            "error": deployment["last_error"],
+                        },
+                    }
+                )
+        self.incidents.reconcile(conditions)
 
     async def backup_loop(self):
         while True:
+            self.beat("backups", "checking")
             backups = self.backups.list()
             if not backups or now_ms() - backups[0]["created_at"] >= 86400000:
                 try:
                     await self.offload(self.backups.create, "scheduled_daily")
-                except Exception:
+                    self.backup_error = None
+                except Exception as exc:
+                    self.backup_error = {"at": now_ms(), "error": str(exc)[:1000]}
                     logger.exception("Scheduled verified backup failed")
+            self.beat("backups", "idle")
             await asyncio.sleep(60)
 
     def operations(self):
         feeds = self.catalog.health()["items"]
-        for (source, symbol), snapshot in self.snapshots.items():
+        for (source, symbol), snapshot in list(self.snapshots.items()):
             if not any(item["source"] == source and item["inst_id"] == symbol for item in feeds):
                 feeds.append(
                     {
@@ -1020,7 +1308,7 @@ class ProfessionalRuntime:
                         **self.market_errors.get((source, symbol), {}),
                     }
                 )
-        for (source, symbol), failure in self.market_errors.items():
+        for (source, symbol), failure in list(self.market_errors.items()):
             if not any(item["source"] == source and item["inst_id"] == symbol for item in feeds):
                 feeds.append({"source": source, "inst_id": symbol, "status": "unavailable", **failure})
         jobs = self.catalog.list_jobs()
@@ -1039,7 +1327,9 @@ class ProfessionalRuntime:
                 "checks": checks,
             },
             "feeds": feeds,
-            "jobs": jobs + self.runs(),
+            "jobs": jobs + self.runs() + self.portfolios.list("okx") + self.portfolios.list("example"),
+            "incidents": self.incidents.list(),
+            "workers": self.worker_progress(),
             "checkpoints": [
                 {key: job.get(key) for key in ("id", "cursor", "rows", "pages", "status")} for job in jobs
             ],

@@ -16,7 +16,6 @@ from decimal import Decimal
 from pathlib import Path
 
 import httpx
-from pydantic import ValidationError
 from tidebench import __version__
 from tidebench.catalog import CatalogService
 from tidebench.config import Settings
@@ -25,9 +24,10 @@ from tidebench.market import MarketService
 from tidebench.platform import PlatformError
 from tidebench.pro_research import ResearchConfig, run_research_plan
 from tidebench.pro_service import ProfessionalRuntime
-from tidebench.provenance import serialized_result
-from tidebench.schemas import StrategyInput
+from tidebench.provenance import research_identity, serialized_result
+from tidebench.research_artifacts import ResearchArtifacts, project_result
 from tidebench.store import Store
+from tidebench.strategy_program import ProStrategyInput
 
 D = Decimal
 END = 1767225600000
@@ -101,7 +101,7 @@ class FaultCatalog:
         self.release_history = asyncio.Event()
         self.release_history.set()
         self.candles = [
-            Candle(END - (500 - i) * HOUR, D(100), D(100), D(100), D(100), D(1)) for i in range(500)
+            Candle(END - (2000 - i) * HOUR, D(100), D(100), D(100), D(100), D(1)) for i in range(2000)
         ]
 
     async def get_market_snapshot(self, symbol, source):
@@ -184,17 +184,43 @@ async def observe(directory, market):
     )
     await runtime.stop()
 
-    runtime = runtime_at(directory / "clock", market)
+    settings = Settings(data_dir=directory / "clock", _env_file=None, worker_enabled=False)
+    runtime = ProfessionalRuntime(Store(settings.database), market, settings)
     deployed = deployment(runtime)
     await runtime.evaluate(deployed)
-    jobs = runtime.catalog.jobs
-    await runtime.evaluate(deployed)
+    before = runtime.clock.status()
+    for _ in range(4):
+        runtime.clock.change(
+            step_ms=HOUR, expected_revision=runtime.clock.status()["revision"], actor="audit"
+        )
+        await runtime.evaluate(runtime.deployments()[0])
+    with runtime.store.read() as conn:
+        stored = conn.execute("SELECT COUNT(*) FROM catalog_records").fetchone()[0]
+        distinct = conn.execute("SELECT COUNT(DISTINCT ts) FROM catalog_records").fetchone()[0]
+        bytes_used = (
+            conn.execute("PRAGMA page_count").fetchone()[0] * conn.execute("PRAGMA page_size").fetchone()[0]
+        )
     findings.append(
         {
             "id": "RT-06",
-            "observation": "example_strategy_clock_does_not_advance",
-            "history_jobs_after_first_and_second_evaluation": [jobs, runtime.catalog.jobs],
+            "observation": "controllable_example_clock_advances_forward_decisions",
+            "market_time_advanced_ms": runtime.clock.status()["market_ts"] - before["market_ts"],
+            "new_bars_per_decision": [
+                d["new_bars"] for d in reversed(runtime.history.decisions(deployed["id"]))
+            ],
             "last_evaluated_bar": runtime.deployments()[0]["last_bar"],
+        }
+    )
+    findings.append(
+        {
+            "id": "RT-04",
+            "observation": "incremental_forward_history_stores_only_new_confirmed_bars",
+            "windows": 5,
+            "bootstrap_bars": 2000,
+            "stored_records": stored,
+            "distinct_bar_timestamps": distinct,
+            "database_allocated_bytes": bytes_used,
+            "caveat": "Actual forward scheduler path with a synthetic clock; no storage-capacity extrapolation.",
         }
     )
     await runtime.stop()
@@ -301,12 +327,11 @@ async def observe(directory, market):
     for index, symbol in enumerate(quotes):
         runtime.book.submit(order(inst_id=symbol, quantity="1"), f"audit-held-{index}", quotes, "audit-user")
     runtime.catalog.calls = 0
-    for symbol in quotes:
-        await runtime.snapshots_for("example", [symbol])
+    await runtime.execution_once()
     findings.append(
         {
             "id": "RT-07",
-            "observation": "execution_per_market_refresh_revisits_entire_portfolio",
+            "observation": "execution_cycle_dispatches_each_held_market_once",
             "held_markets": 3,
             "logical_snapshot_dispatches": runtime.catalog.calls,
             "caveat": "Logical calls, not measured venue HTTP calls; the 1.5s provider cache can coalesce fast repeats.",
@@ -315,30 +340,9 @@ async def observe(directory, market):
     await runtime.stop()
 
     catalog = CatalogService(Store(directory / "storage.sqlite3"), market)
-    for shift in range(5):
-        job = catalog.create_job(
-            "BTC-USDT", "trade", "1H", END - 2000 * HOUR + shift * HOUR, END + shift * HOUR, "example"
-        )
-        result = await catalog.run_job(job["id"])
-        assert result["status"] == "completed", result
-    with catalog.store.read() as conn:
-        rows = conn.execute("SELECT COUNT(*) FROM catalog_records").fetchone()[0]
-        distinct = conn.execute("SELECT COUNT(DISTINCT ts) FROM catalog_records").fetchone()[0]
-        bytes_used = (
-            conn.execute("PRAGMA page_count").fetchone()[0] * conn.execute("PRAGMA page_size").fetchone()[0]
-        )
-    findings.append(
-        {
-            "id": "RT-04",
-            "observation": "five_overlapping_forward_history_captures_duplicate_records",
-            "windows": 5,
-            "bars_per_window": 2000,
-            "stored_records": rows,
-            "distinct_bar_timestamps": distinct,
-            "database_allocated_bytes": bytes_used,
-            "caveat": "Local synthetic catalog measurement; no cloud/storage capacity extrapolation is claimed.",
-        }
-    )
+    job = catalog.create_job("BTC-USDT", "trade", "1H", END - 240 * HOUR, END, "example")
+    result = await catalog.run_job(job["id"])
+    assert result["status"] == "completed", result
 
     trade = catalog.list_datasets("example")[-1]
     candles = catalog.load_candles(trade["id"])[-240:]
@@ -374,29 +378,41 @@ async def observe(directory, market):
         options={"grid": {"fast": [5, 8, 10, 12], "slow": [20]}},
     )
     payload, _ = serialized_result(result)
+    artifacts = ResearchArtifacts(catalog.store)
+    with catalog.store.write() as conn:
+        pointer = artifacts.put(conn, payload)
+        compressed = conn.execute(
+            "SELECT LENGTH(payload) FROM research_artifacts WHERE content_hash=?", (pointer["artifact_hash"],)
+        ).fetchone()[0]
     findings.append(
         {
             "id": "RT-08",
-            "observation": "research_artifact_contains_full_result_and_input_arrays_per_candidate",
+            "observation": "research_candidates_share_inputs_and_results_are_compressed",
             "cases": 4,
             "bars_per_case": len(candles),
             "json_bytes": len(payload.encode()),
+            "compressed_bytes": compressed,
+            "shared_input_sets": len(result["shared_inputs"]),
+            "selected_detail_json_bytes": len(
+                serialized_result(project_result(result, "experiment-1"))[0].encode()
+            ),
             "bytes_per_bar_case": round(len(payload.encode()) / (4 * len(candles)), 1),
             "caveat": "Small measured artifact only; no OOM at the maximum budget was injected.",
         }
     )
-    rejected = []
-    for kind in ["trend_breakout", "funding_carry", "cross_sectional_momentum"]:
-        try:
-            StrategyInput(kind=kind)
-        except ValidationError:
-            rejected.append(kind)
+    supported = [
+        kind
+        for kind in ["sma_cross", "rsi_reversion", "buy_hold", "close_breakout", "zscore_reversion"]
+        if ProStrategyInput(kind=kind).kind == kind
+    ]
     findings.append(
         {
             "id": "RT-09",
-            "observation": "only_three_builtin_strategy_kinds_are_supported",
-            "rejected_examples": rejected,
-            "caveat": "These are absent capabilities; adding names alone would not implement their required data and portfolio semantics.",
+            "observation": "bounded_strategy_program_and_shared_capital_portfolio_models_are_available",
+            "reference_rules": supported,
+            "program_limits": {"rules": 4, "conditions_per_rule": 4, "arbitrary_code": False},
+            "portfolio_modes": ["fixed_weights", "independent_signals", "momentum", "funding_carry"],
+            "caveat": "Program causality, portfolio semantics and rendered workflows are separately tested. No investment edge or order-book capacity is implied.",
         }
     )
     await catalog.stop_polling()
@@ -427,6 +443,7 @@ async def main():
                     {
                         "audited_version": __version__,
                         "stage": "working-tree-observation",
+                        "research_implementation": research_identity(),
                         "implementation_sha256": {
                             name: hashlib.sha256((root / name).read_bytes()).hexdigest()
                             for name in observed_files

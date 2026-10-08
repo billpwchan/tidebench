@@ -31,6 +31,12 @@ flowchart TD
 | `engine.py`, `derivatives.py`, `pro_research.py` | Indicators, causality, finite Decimal accounting, margin/funding/liquidation and bounded research plans |
 | `pro_execution.py` | Unified accounts, inventory/margin, native asset journal, risk, reservations, funding deduplication and atomic orders |
 | `pro_service.py` | Separate catalog/research tasks, forward supervision, durable reversal intents and tracked CPU work |
+| `strategy_registry.py`, `research_governance.py` | Immutable definitions, reviewed releases, trial records and one-use holdout access |
+| `strategy_program.py`, `strategy_risk.py` | Typed programs, close exits and loss-budget sizing |
+| `portfolio_research.py` | Shared-capital history and independent test windows |
+| `research_artifacts.py`, `research_budget.py`, `research_process.py` | Compressed/shared evidence, admission and disposable computation |
+| `forward_history.py`, `forward_performance.py`, `simulation_clock.py` | Incremental state, decision/orders, observed equity and time |
+| `operations.py` | Durable incidents, acknowledgements and recovery |
 | `platform.py` | Passwords, sessions, users, measured request metrics and verified safe recovery |
 | `pro_api.py`, `main.py` | Typed contracts, role/CSRF boundaries, maintenance admission, request IDs and static application |
 | `paper.py`, `worker.py` | v0.1 API compatibility; legacy records remain distinct from professional capital |
@@ -64,3 +70,9 @@ Starting a deployment transactionally requires no existing position or pending o
 Password/session controls and role checks apply to every API route. Cookie mutations require CSRF; exact hosts/origins and bounded request bodies apply before dispatch. No arbitrary provider URLs or user code are accepted. Exchange secrets are outside this product's API and storage boundary.
 
 Recovery enters maintenance, drains requests and workers, verifies the backup, creates a safety copy and prepares a safe restored image with revoked sessions, canceled orders and halted execution before replacing workspace state. See [operations](operations.md) and [scope/evidence](commercial-readiness.md).
+
+## Research process boundary
+
+Research uses owned disposable interpreters with fixed entrypoints and JSON input/output. Children have no workspace database or inherited workspace credentials; temporary files are private. Parent deadlines and maintenance cancellation kill/reap workers. A portable owner watcher and Linux parent-death signal stop orphans. Linux CPU/additional-address-space limits supplement input/output caps; they are not total RSS enforcement. Apply deployment OS/container limits. Running-thread cancellation alone cannot supply this boundary. Durable progress updates do not enter financial identity.
+
+Candidate inputs are shared by content hash; results are compressed/verified and selected-detail projections omit unselected financial arrays. Full exports retain reconstructible evidence. Normal reads verify completed result identity. The queue is shared across single-market and portfolio studies.

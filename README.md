@@ -15,17 +15,19 @@ English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Re
 
 ## A connected trading workflow
 
-Current strategies are three reference rules: SMA crossover, RSI reversion and buy-and-hold. Research is single-market; multi-asset strategies, version-bound research-to-deployment promotion and forward portfolio performance attribution are not implemented. The [red-team review](docs/audit/README.md) records reproduced defects, bounded fixes and remaining product gaps.
+Go from an economic hypothesis to an immutable strategy version, reproducible research, reviewed paper release and an inspectable forward decision journal. Shared-capital historical portfolios, one-use holdouts and explicit costs make the evidence reviewable. See the [workflow guide](docs/strategy-workflows.md) and [current self-audit](docs/audit/README.md).
 
 | Workspace | What you can do |
 |---|---|
 | Overview | Monitor actual positions, pending orders, asset exposure, risk attention and active research from one desk |
 | Markets | Inspect confirmed candles and timestamped OKX quotes; switch explicitly to an isolated synthetic source |
 | Data library | Prepare a complete research package in one action: trade, mark, settled funding and exact-time settlement marks; inspect blockers, immutable versions and hashes; import attributed history |
-| Research | Single replay, parameter grid, cost stress, train/test and rolling walk-forward evaluation; independent out-of-sample results, fills, funding, liquidations and round trips |
+| Strategies | Immutable hypotheses and definitions; five reference families, bounded declarative programs, exits, loss budgets and editable research recipes |
+| Research | Version-bound replay, grids, cost stress, train/test, walk-forward; one-use pre-registered holdouts and trial ledger |
+| Portfolio research | One cash budget across 2–10 aligned markets; fixed weights, independent signals, momentum and funding carry; independent chronological test windows |
 | Portfolio | Spot inventory and isolated perpetual positions in one account; order previews, market/limit/stop simulation, reservations, cancellation, leverage, margin and funding |
 | Risk | Asset and market gross/net exposure, concentration, isolated margin buffers and captured custom price shocks; transactional limits and a persistent halt |
-| Operations | Named users and roles, server-side sessions, audit records, feed age, durable job checkpoints, Prometheus metrics, verified backups and maintenance-mode recovery |
+| Operations | Named users and roles, sessions, audit, feed age, progress health, disposable research processes, persistent incidents, verified backups and recovery |
 
 The research engine makes time, costs and accounting visible. Signals use confirmed closes; historical fills occur at the next open. Walk-forward candidates are selected on training data only. Test folds start with independent accounts; the UI does not invent a continuous equity curve from overlapping experiments.
 
@@ -48,12 +50,13 @@ Open [localhost:5173](http://localhost:5173) and create your administrator. Pass
 
 For an offline walkthrough, choose **Example**:
 
-1. Open **Data library → Research packages**, choose a spot or perpetual market and UTC range, then **Prepare research package**. A perpetual package gathers trade, mark, realized funding and settlement marks before becoming ready.
-2. Choose **Open in research**. The complete version set and window travel together. Set a hypothesis, costs and evaluation mode; inspect results, export the captured evidence or replay it with automatic result-hash verification.
-3. Open **Execution**. Preview an order, inspect positions and the ledger, then open **Exposure & scenarios** to test parallel, asset or market shocks. **Overview** brings the current book and work in progress together.
-4. Open **Operations**. Create and verify a backup. A restore replaces workspace state, revokes sessions, cancels pending orders and halts strategies.
+1. Open **Strategies**, load a reference hypothesis or define your own, and save a version. Choose **Research this version**.
+2. Open **Data library → Research packages**, choose a spot or perpetual market and UTC range, then **Prepare research package**. A perpetual package gathers trade, mark, realized funding and settlement marks before becoming ready.
+3. Prepare and select the exact data version in the bound study. Evaluate costs and independent test windows; export or replay the captured evidence. **Research governance** freezes a one-use final test before evaluation.
+4. **Review paper release** from the result, inspect the selected configuration and current policy, approve and activate. In **Execution**, advance the synthetic clock and inspect actual decisions, orders, exits and observed account performance. Order previews and captured exposure scenarios remain available.
+5. Open **Operations**. Create and verify a backup. A restore replaces workspace state, revokes sessions, cancels pending orders and halts strategies.
 
-Example prices use a fixed synthetic clock and separate capital. OKX failures remain visible; the application never substitutes synthetic prices automatically.
+Example time can be paused, accelerated or stepped forward, with separate capital. OKX failures remain visible; the application never substitutes synthetic prices automatically.
 
 ### Built application
 
@@ -101,6 +104,7 @@ flowchart LR
 | One-action research packages, funding marks and immutable handoff | [Data packages](docs/data-packages.md) |
 | Data identity, pagination, retention and imports | [Data operations](docs/data-operations.md) |
 | Exposure, isolated margin and captured stress scenarios | [Portfolio risk](docs/portfolio-risk.md) |
+| Strategy recipes, review, holdouts, portfolio models and forward evidence | [Strategy workflows](docs/strategy-workflows.md) |
 | Signals, costs, funding, liquidation and OOS selection | [Professional research](docs/pro-research.md) |
 | Process boundaries, persistence and precision | [Architecture](docs/architecture.md) |
 | Authentication, roles, recovery and deployment | [Operations](docs/operations.md) |
@@ -109,6 +113,10 @@ flowchart LR
 
 <details>
 <summary>Research and execution workspaces</summary>
+
+![Observed paper-account performance on synthetic data; not investment returns](docs/assets/strategy-performance.png)
+
+![Shared-capital portfolio study on synthetic data](docs/assets/portfolio-research.png)
 
 ![Research on a synthetic dataset; illustrative, not investment performance](docs/assets/research.png)
 
@@ -136,6 +144,7 @@ Tests exercise causal replay, indicator state, cost sensitivity, train-only sele
 - Market, limit and stop orders use a local full-fill model. Historical bars cannot reconstruct queue position, partial fills, market impact or exact intrabar paths.
 - Public settled funding history has limited retention. Older research requires attributed imports with an explicit coverage declaration; missing history blocks derivative research.
 - Historical funding marks can be one-minute bar-open approximations. Captured current maintenance tiers are scenario inputs, not historical tier evidence.
+- Managed forward deployment is single-market. Historical portfolio construction does not provide managed multi-leg forward execution or strategy-level contribution attribution. Current-universe selection does not establish survivorship-free history.
 - One shared workspace with role-based users, one process and one SQLite writer. This deployment does not provide distributed failover or tenant isolation.
 - A short test run cannot prove months of availability or strategy profitability. Metrics state insufficient-sample and insolvent-account conditions explicitly.
 

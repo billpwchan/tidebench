@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, DecimalException, localcontext
@@ -9,6 +10,7 @@ from functools import wraps
 
 from .derivatives import LinearContract, MarginTier, contract_base_quantity, select_margin_tier
 from .engine import ACCOUNTING_CONTEXT, EngineError, _decimal, _floor_lot, _round_to_step
+from .forward_performance import ForwardPerformance
 from .platform import PlatformError
 from .store import Store, dumps, new_id, now_ms
 
@@ -107,8 +109,11 @@ def tier_for(metadata, quantity, tiers):
 
 
 class SimulationBook:
-    def __init__(self, store: Store):
+    def __init__(self, store: Store, *, clock=None, order_id_factory=None):
+        self.now = clock or now_ms
+        self.order_id = order_id_factory or new_id
         self.store = store
+        self.performance = ForwardPerformance(store)
         with store.write() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS pro_accounts(source TEXT PRIMARY KEY,initial_cash TEXT NOT NULL,cash TEXT NOT NULL,realized TEXT NOT NULL DEFAULT '0',fees TEXT NOT NULL DEFAULT '0',funding TEXT NOT NULL DEFAULT '0',debt TEXT NOT NULL DEFAULT '0',day_key TEXT NOT NULL DEFAULT '',day_equity TEXT NOT NULL DEFAULT '10000');
@@ -139,7 +144,8 @@ class SimulationBook:
                         [("USDT", "cash", D(10000)), ("USDT", "contributed_capital", D(-10000))],
                     )
                 conn.execute(
-                    "INSERT OR IGNORE INTO pro_risk VALUES(?,?,0,?)", (source, dumps(DEFAULT_RISK), now_ms())
+                    "INSERT OR IGNORE INTO pro_risk VALUES(?,?,0,?)",
+                    (source, dumps(DEFAULT_RISK), self.now()),
                 )
 
     @_accounted
@@ -179,7 +185,7 @@ class SimulationBook:
                 (
                     tx_id,
                     source,
-                    now_ms(),
+                    self.now(),
                     asset,
                     account,
                     str(amount if amount > ZERO else ZERO),
@@ -231,7 +237,7 @@ class SimulationBook:
                 raise PlatformError("risk_policy", "Halted state must be boolean.", 422)
             conn.execute(
                 "UPDATE pro_risk SET body=?,halted=?,updated_at=? WHERE source=?",
-                (dumps(risk), int(risk["halted"]), now_ms(), source),
+                (dumps(risk), int(risk["halted"]), self.now(), source),
             )
             self.store.audit(
                 conn,
@@ -255,19 +261,18 @@ class SimulationBook:
             ).fetchall()
         return [dict(row) for row in rows if number(row["quantity"]) != ZERO]
 
-    @staticmethod
     @_accounted
-    def fresh(snapshot):
+    def fresh(self, snapshot):
         if not all(key in snapshot for key in ("source", "ts", "bid", "ask", "instrument")):
             raise PlatformError(
                 "invalid_market", "A complete source-matched bid/ask snapshot is required.", 409
             )
         if snapshot.get("source") != "example" and snapshot.get("instrument", {}).get("inst_type") == "SWAP":
-            if "mark_ts" not in snapshot or not -5000 <= now_ms() - int(snapshot["mark_ts"]) <= 15000:
+            if "mark_ts" not in snapshot or not -5000 <= self.now() - int(snapshot["mark_ts"]) <= 15000:
                 raise PlatformError(
                     "stale_mark", "The independent perpetual mark price is stale or missing.", 409
                 )
-        if snapshot.get("source") != "example" and not -5000 <= now_ms() - int(snapshot["ts"]) <= 15000:
+        if snapshot.get("source") != "example" and not -5000 <= self.now() - int(snapshot["ts"]) <= 15000:
             raise PlatformError(
                 "stale_market", "Market snapshot is stale. New simulation risk is blocked.", 409
             )
@@ -417,7 +422,7 @@ class SimulationBook:
                 "insurance_debt": str(debt),
                 "valuation_status": status,
                 "positions": output,
-                "as_of": now_ms(),
+                "as_of": self.now(),
             }
 
     def orders(self, source, limit=200):
@@ -671,6 +676,19 @@ class SimulationBook:
                         raise PlatformError(
                             "strategy_stopped", "The strategy no longer owns this market.", 409
                         )
+                    config = json.loads(deployment["config"])
+                    expected_policy = config.get("risk_policy_hash")
+                    if (
+                        expected_policy
+                        and not order.get("reduce_only")
+                        and expected_policy
+                        != hashlib.sha256(dumps(self.risk(order["source"], conn)).encode()).hexdigest()
+                    ):
+                        raise PlatformError(
+                            "strategy_policy_changed",
+                            "Approved risk policy changed; review a new release before adding strategy risk.",
+                            409,
+                        )
                 elif pending_id is None and not liquidation and not order.get("reduce_only"):
                     if conn.execute(
                         "SELECT 1 FROM pro_deployments WHERE source=? AND inst_id=? AND status='running'",
@@ -702,7 +720,7 @@ class SimulationBook:
                 )
                 meta, qty, signed, old, row = (values[k] for k in ("metadata", "qty", "signed", "old", "row"))
                 price, fee, notional, cash = (values[k] for k in ("price", "fee", "notional", "cash"))
-                identifier = previous["id"] if previous else new_id()
+                identifier = previous["id"] if previous else self.order_id()
                 order_type = order.get("order_type", "market")
                 pending = order_type != "market" and pending_id is None
                 result = {
@@ -713,8 +731,8 @@ class SimulationBook:
                     "price": str(price),
                     "notional": str(notional),
                     "fee": str(fee),
-                    "created_at": previous["created_at"] if previous else now_ms(),
-                    "updated_at": now_ms(),
+                    "created_at": previous["created_at"] if previous else self.now(),
+                    "updated_at": self.now(),
                     "actor": actor,
                     "instrument": meta,
                     "quote_ts": values["snapshot"]["ts"],
@@ -841,11 +859,17 @@ class SimulationBook:
                         journal,
                     )
                     cursor = (
-                        (int(values["snapshot"]["ts"]) if source == "example" else now_ms())
+                        (int(values["snapshot"]["ts"]) if source == "example" else self.now())
                         if not row or old == 0
                         else row["funding_cursor"]
                     )
-                    stored_meta = dict(meta)
+                    previous_position_meta = json.loads(row["metadata"]) if row and old else {}
+                    stored_meta = dict(meta) | {
+                        "position_opened_at": previous_position_meta.get(
+                            "position_opened_at", int(values["snapshot"]["ts"])
+                        ),
+                        "position_generation": previous_position_meta.get("position_generation", identifier),
+                    }
                     if meta["inst_type"] == "SWAP":
                         previous_meta = json.loads(row["metadata"]) if row and old else {}
                         expected = previous_meta.get("expected_funding_time")
@@ -891,7 +915,7 @@ class SimulationBook:
                 if previous:
                     conn.execute(
                         "UPDATE pro_orders SET status=?,body=?,reservation=?,updated_at=? WHERE id=?",
-                        (result["status"], dumps(result), str(reservation), now_ms(), identifier),
+                        (result["status"], dumps(result), str(reservation), self.now(), identifier),
                     )
                 else:
                     conn.execute(
@@ -905,7 +929,7 @@ class SimulationBook:
                             dumps(result),
                             str(reservation),
                             result["created_at"],
-                            now_ms(),
+                            self.now(),
                         ),
                     )
                 self.store.audit(
@@ -920,7 +944,7 @@ class SimulationBook:
                     # leave a filled signal looking unevaluated after restart.
                     conn.execute(
                         "UPDATE pro_deployments SET last_bar=?,last_error=NULL,updated_at=? WHERE id=?",
-                        (int(key.rsplit(":", 1)[1]), now_ms(), actor.split(":", 1)[1]),
+                        (int(key.rsplit(":", 1)[1]), self.now(), actor.split(":", 1)[1]),
                     )
                 return result
 
@@ -932,10 +956,10 @@ class SimulationBook:
             body = json.loads(row["body"])
             if row["status"] != "pending":
                 return body
-            body.update(status="canceled", updated_at=now_ms())
+            body.update(status="canceled", updated_at=self.now())
             conn.execute(
                 "UPDATE pro_orders SET status='canceled',reservation='0',body=?,updated_at=? WHERE id=?",
-                (dumps(body), now_ms(), identifier),
+                (dumps(body), self.now(), identifier),
             )
             self.store.audit(
                 conn,
@@ -951,11 +975,16 @@ class SimulationBook:
             return [dict(row) for row in conn.execute("SELECT * FROM pro_orders WHERE status='pending'")]
 
     @_accounted
-    def observe(self, source, snapshots):
+    def observe(self, source, snapshots, *, record_performance=True):
         """Persist a new observed UTC-day baseline before evaluating new risk."""
         with localcontext(ACCOUNTING_CONTEXT), self.store.write() as conn:
             account = self.account(source, snapshots, conn)
-            day = datetime.now(UTC).strftime("%Y-%m-%d")
+            observed_ts = max((int(s["ts"]) for s in snapshots.values()), default=self.now())
+            day = (
+                datetime.fromtimestamp(observed_ts / 1000, UTC).strftime("%Y-%m-%d")
+                if source == "example"
+                else datetime.fromtimestamp(self.now() / 1000, UTC).strftime("%Y-%m-%d")
+            )
             previous = conn.execute("SELECT day_key FROM pro_accounts WHERE source=?", (source,)).fetchone()[
                 0
             ]
@@ -975,6 +1004,8 @@ class SimulationBook:
                     "Observed UTC-day equity baseline established",
                     {"day": day, "equity": account["equity"]},
                 )
+            if record_performance:
+                self.performance.capture(conn, source, snapshots, account)
         return account
 
     @_accounted
@@ -997,7 +1028,7 @@ class SimulationBook:
             output, cursor = [], row["funding_cursor"]
             expected = meta.get("expected_funding_time")
             snapshot = snapshots.get(symbol, {})
-            observed_until = int(snapshot.get("ts", now_ms()))
+            observed_until = int(snapshot.get("ts", self.now()))
             if expected is not None and expected <= observed_until:
                 already = conn.execute(
                     "SELECT 1 FROM pro_funding WHERE source=? AND inst_id=? AND ts=?",
@@ -1011,7 +1042,7 @@ class SimulationBook:
                     )
             for event in sorted(events, key=lambda e: int(e["ts"])):
                 ts = int(event["ts"])
-                if ts > now_ms() or (event.get("inst_id") is not None and event["inst_id"] != symbol):
+                if ts > self.now() or (event.get("inst_id") is not None and event["inst_id"] != symbol):
                     raise PlatformError(
                         "invalid_funding_event",
                         "Funding cannot use a future settlement or a different instrument.",

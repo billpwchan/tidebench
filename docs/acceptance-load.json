@@ -7,12 +7,12 @@
   "status_counts": {
     "200": 240
   },
-  "elapsed_seconds": 2.291,
-  "throughput_requests_second": 104.77,
+  "elapsed_seconds": 4.598,
+  "throughput_requests_second": 52.2,
   "latency_ms": {
-    "median": 63.39,
-    "p95": 226.17,
-    "maximum": 1114.77
+    "median": 185.18,
+    "p95": 597.72,
+    "maximum": 744.16
   },
   "read_workload": {
     "account_requests": 192,
@@ -30,6 +30,5 @@
   "concurrent_work": "24 research grid cases x 1000 synthetic bars; two computation threads",
   "research_status": "completed",
   "research_experiments": 24,
-  "interpretation": "Local acceptance workload; not a cloud capacity or availability guarantee.",
-  "observed_at_utc": "2026-10-07"
+  "interpretation": "Local acceptance workload; not a cloud capacity or availability guarantee."
 }

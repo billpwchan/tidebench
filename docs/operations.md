@@ -46,8 +46,8 @@ To restore:
 
 1. Select **Verify backup**. A missing artifact, checksum mismatch, invalid schema or failed integrity check blocks recovery.
 2. Select **Restore backup** and explicitly enter the required confirmation in the UI.
-3. The server enters maintenance, drains active HTTP work, stops both legacy and professional workers and waits for tracked computation threads.
-4. It creates a safety backup. Before replacement, a separate verified recovery image revokes all sessions, stops strategies, cancels pending simulated orders and halts accounts.
+3. The server enters maintenance, drains active HTTP work, stops both legacy and professional workers and cancels/reaps owned research processes and drains tracked storage work.
+4. It creates a safety backup. Before replacement, a separate verified recovery image revokes all sessions, stops strategies, cancels pending simulated orders and halts accounts and pauses synthetic time.
 5. It restores that safe image, restarts workers and leaves execution halted. Sign in again, inspect balances, ledger, datasets and pending work, then resume risk deliberately.
 
 The safety backup and selected target are protected from retention during this operation. Recovery is tested by modifying actual SQLite state and restoring it; it is not a file-copy-only health assertion.
@@ -56,7 +56,7 @@ Disconnecting the browser does not interrupt an in-progress database replacement
 
 ## Monitoring and incident response
 
-- `/healthz`: database/process liveness. `/readyz`: database and expected supervisor tasks; HTTP 503 on maintenance or failed readiness.
+- `/healthz`: database/process liveness. `/readyz`: database and expected supervisors with recent progress; HTTP 503 on maintenance or failed readiness.
 - **Operations**: measured database/WAL/disk sizes, backup age, worker health, feed timestamps, errors, job checkpoints and audit records.
 - `/api/v1/pro/ops/metrics`: administrator-authenticated Prometheus counters, request latency histogram and uptime. Use a private service token in your scraper configuration.
 - Logs include operational failures and request IDs; API validation errors omit submitted credentials. Keep logs and backups private.
@@ -72,3 +72,11 @@ Take and verify a backup before changing versions. The app factory acquires the 
 Version 0.3 upgrades a schema-2 workspace additively to schema 3 with package tables and run-summary storage, preserving balances and existing research. Backups declare the actual database schema. In-app restore requires a matching current schema; keep pre-upgrade backups with the prior application version for rollback. Never edit a manifest schema number to bypass this check.
 
 For rollback, stop the new application and preserve its database and backups. Restore the verified pre-upgrade database to a separate data directory with the prior tagged application. Do not point older code at a database with unreviewed schema changes. An external reverse proxy, off-host backups, host patching and a hosting account are deployment resources, not artifacts supplied by this repository.
+
+## v0.4 process limits and schema 4
+
+`TIDEBENCH_RESEARCH_PROCESS_ISOLATION=true` is the default. Compute deadline defaults to 900 seconds and the additional Linux virtual-address budget to 256 MiB above initialized input memory. Limits enter the run manifest; this is not total RSS enforcement. Configure OS/container memory/CPU limits. Explicitly disabling isolation loses process deadline enforcement. Maintenance cancellation leaves resumable work queued; a normal deadline fails the study without fabricated results.
+
+Incidents retain feed/strategy errors, stopped/stalled workers, backup failure/age and low free disk (256 MiB). Administrator acknowledgement records a response without hiding failure. Recovery resolves it; recurrence reopens it. No external messages are sent. Connect private metrics/logs to an actual operator alert destination when hosting.
+
+Schema 4 adds registry/releases, governance, portfolio runs, compressed artifacts, forward state/equity, time and incidents. Real restore acceptance preserves this evidence while leaving execution stopped/halted and time paused. Keep a verified schema-3 database with v0.3.1 for rollback; in-app restore rejects cross-schema replacement.

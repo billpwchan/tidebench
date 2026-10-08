@@ -28,6 +28,8 @@ export default function Operations() {
   const [verified, setVerified] = useState<RecordData | null>(null);
   const [backup, setBackup] = useState<RecordData | null>(null);
   const [confirmation, setConfirmation] = useState('');
+  const [incident, setIncident] = useState<RecordData | null>(null);
+  const [responseNote, setResponseNote] = useState('');
   const ops = useQuery({ queryKey: ['pro-ops'], queryFn: proApi.ops, refetchInterval: 5000 });
   const audit = useQuery({
     queryKey: ['pro-audit'],
@@ -47,6 +49,14 @@ export default function Operations() {
     },
   });
   const verify = useMutation({ mutationFn: proApi.verifyBackup, onSuccess: (r) => setVerified(r) });
+  const acknowledge = useMutation({
+    mutationFn: () => proApi.acknowledgeIncident(String(incident!.id), responseNote),
+    onSuccess: () => {
+      setIncident(null);
+      setResponseNote('');
+      refresh();
+    },
+  });
   const restore = useMutation({
     mutationFn: proApi.restore,
     onSuccess: () => {
@@ -121,6 +131,8 @@ export default function Operations() {
               onChange={setTab}
               items={[
                 { key: 'feeds', label: 'Feeds' },
+                { key: 'incidents', label: 'Incidents' },
+                { key: 'workers', label: 'Workers' },
                 { key: 'jobs', label: 'Jobs' },
                 { key: 'checkpoints', label: 'Checkpoints' },
                 { key: 'backups', label: 'Backups' },
@@ -128,6 +140,106 @@ export default function Operations() {
                 { key: 'metrics', label: 'Operational metrics' },
               ]}
             />
+            {tab === 'incidents' && (
+              <>
+                <p className="quiet-copy">
+                  {t(
+                    'Acknowledgement records your response. A failing condition remains active until the monitor observes recovery.',
+                  )}
+                </p>
+                <DataTable
+                  rows={records(data?.incidents)}
+                  columns={[
+                    { key: 'kind', label: 'Kind' },
+                    { key: 'subject', label: 'Subject' },
+                    {
+                      key: 'status',
+                      label: 'Status',
+                      render: (r) => (
+                        <Status type={r.status === 'resolved' ? 'good' : 'warning'}>
+                          {valueText(r.status)}
+                        </Status>
+                      ),
+                    },
+                    {
+                      key: 'last_seen',
+                      label: 'Last observed',
+                      render: (r) => date(Number(r.last_seen)),
+                    },
+                    { key: 'occurrences', label: 'Occurrences' },
+                    { key: 'details', label: 'Details', render: (r) => <JsonDetails value={r} /> },
+                    {
+                      key: 'action',
+                      label: 'Actions',
+                      render: (r) =>
+                        admin &&
+                        r.status !== 'resolved' && (
+                          <button
+                            className="text-button"
+                            onClick={() => {
+                              acknowledge.reset();
+                              setIncident(r);
+                              setResponseNote('');
+                            }}
+                          >
+                            {t('Acknowledge')}
+                          </button>
+                        ),
+                    },
+                  ]}
+                />
+                {incident && (
+                  <form
+                    className="incident-response"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      acknowledge.mutate();
+                    }}
+                  >
+                    <Field label="Incident response">
+                      <textarea
+                        minLength={12}
+                        maxLength={2000}
+                        required
+                        rows={3}
+                        value={responseNote}
+                        onChange={(e) => setResponseNote(e.target.value)}
+                      />
+                    </Field>
+                    {acknowledge.isError && <ErrorBox error={acknowledge.error} />}
+                    <button className="button button-dark" disabled={acknowledge.isPending}>
+                      {t('Acknowledge')}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-ghost"
+                      onClick={() => setIncident(null)}
+                    >
+                      {t('Cancel')}
+                    </button>
+                  </form>
+                )}
+              </>
+            )}
+            {tab === 'workers' && (
+              <DataTable
+                rows={records(data?.workers)}
+                columns={[
+                  { key: 'worker', label: 'Worker' },
+                  { key: 'phase', label: 'Phase' },
+                  { key: 'age_ms', label: 'Progress age (ms)' },
+                  {
+                    key: 'healthy',
+                    label: 'Status',
+                    render: (r) => (
+                      <Status type={r.healthy ? 'good' : 'warning'}>
+                        {t(r.healthy ? 'Progressing' : 'Stalled')}
+                      </Status>
+                    ),
+                  },
+                ]}
+              />
+            )}
             {tab === 'feeds' && (
               <DataTable
                 rows={feeds}

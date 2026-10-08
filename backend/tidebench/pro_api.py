@@ -15,8 +15,13 @@ from pydantic import Field, model_validator
 from .engine import ACCOUNTING_CONTEXT
 from .platform import COOKIE, PlatformError
 from .portfolio_analytics import PriceShock, analyze_portfolio
-from .schemas import InputModel, KillInput, Money, Source, StrategyInput
+from .portfolio_research import PortfolioInput
+from .research_artifacts import project_result
+from .research_governance import HoldoutInput
+from .schemas import InputModel, KillInput, Money, Source
 from .store import encode, now_ms
+from .strategy_program import ProStrategyInput
+from .strategy_registry import ReleaseInput, ReleasePreviewInput, StrategyProjectInput, StrategyVersionInput
 
 MarketId = Annotated[str, Field(pattern=r"^[A-Z0-9]{1,24}-USDT(?:-SWAP)?$")]
 CatalogBar = Literal["1m", "5m", "15m", "1H", "4H", "1Dutc"]
@@ -24,6 +29,16 @@ Direction = Literal["long_only", "long_short", "short_only"]
 Role = Literal["admin", "trader", "researcher", "viewer", "risk_operator"]
 ShockPercent = Annotated[Decimal, Field(gt=-100, le=1000)]
 AssetId = Annotated[str, Field(pattern=r"^[A-Z0-9]{1,24}$")]
+
+
+class ClockInput(InputModel):
+    speed: int | None = Field(default=None, ge=0, le=3600)
+    step_ms: int = Field(default=0, ge=0, le=86_400_000)
+    expected_revision: int = Field(ge=0)
+
+
+class IncidentAcknowledgement(InputModel):
+    reason: str = Field(min_length=12, max_length=2000)
 
 
 class ShockInput(InputModel):
@@ -93,12 +108,14 @@ class PackageInput(InputModel):
 
 
 class ResearchInput(InputModel):
+    holdout_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
+    strategy_version_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     dataset_id: str = Field(min_length=1, max_length=64)
     mark_dataset_id: str | None = Field(default=None, max_length=64)
     funding_dataset_id: str | None = Field(default=None, max_length=64)
     package_id: str | None = Field(default=None, min_length=1, max_length=64)
     package_manifest_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
-    strategy: StrategyInput = Field(default_factory=StrategyInput)
+    strategy: ProStrategyInput = Field(default_factory=ProStrategyInput)
     direction: Direction = "long_only"
     initial_cash: Money = Decimal("10000")
     leverage: Decimal = Field(default=1, ge=1, le=50)
@@ -156,7 +173,7 @@ class ProDeployInput(InputModel):
     source: Source
     inst_id: MarketId
     bar: CatalogBar = "1H"
-    strategy: StrategyInput = Field(default_factory=StrategyInput)
+    strategy: ProStrategyInput = Field(default_factory=ProStrategyInput)
     direction: Direction = "long_only"
     leverage: Decimal = Field(default=1, ge=1, le=50)
     allocation: Decimal = Field(default=Decimal(".25"), gt=0, le=1)
@@ -190,6 +207,46 @@ def professional_router(app, access, runtime, supervisor, settings):
 
     def actor(request):
         return request.state.user["username"]
+
+    @router.get("/pro/strategies")
+    def strategies():
+        return {"items": runtime.registry.projects()}
+
+    @router.post("/pro/strategies", status_code=201)
+    def create_strategy(body: StrategyProjectInput, request: Request):
+        return runtime.registry.create_project(
+            body.name, body.hypothesis, body.definition.record(), actor(request)
+        )
+
+    @router.get("/pro/strategies/{identifier}")
+    def strategy_project(identifier: str):
+        return runtime.registry.project(identifier)
+
+    @router.post("/pro/strategies/{identifier}/versions", status_code=201)
+    def create_strategy_version(identifier: str, body: StrategyVersionInput, request: Request):
+        return runtime.registry.create_version(
+            identifier, body.hypothesis, body.definition.record(), actor(request), body.parent_id
+        )
+
+    @router.get("/pro/strategy-versions/{identifier}")
+    def strategy_version(identifier: str):
+        return runtime.registry.version(identifier)
+
+    @router.post("/pro/execution/releases/preview")
+    def preview_release(body: ReleasePreviewInput):
+        return runtime.registry.preview_release(runtime, body.run_id, body.selection)
+
+    @router.post("/pro/execution/releases", status_code=201)
+    def approve_release(body: ReleaseInput, request: Request):
+        return runtime.registry.approve_release(runtime, body.model_dump(), actor(request))
+
+    @router.get("/pro/execution/releases")
+    def releases(source: Source = "okx"):
+        return {"items": runtime.registry.releases(source)}
+
+    @router.post("/pro/execution/releases/{identifier}/activate")
+    def activate_release(identifier: str, request: Request):
+        return runtime.registry.activate_release(runtime, identifier, actor(request))
 
     def session_response(token, user):
         response = JSONResponse(
@@ -383,8 +440,11 @@ def professional_router(app, access, runtime, supervisor, settings):
         return runtime.create_run(encode(body.model_dump()))
 
     @router.get("/pro/research/runs/{identifier}")
-    def run(identifier: str):
-        return runtime.run(identifier)
+    def run(identifier: str, variant: str | None = Query(default=None, max_length=100)):
+        result = runtime.run(identifier)
+        if variant is not None:
+            result["result"] = project_result(result["result"], variant)
+        return result
 
     @router.post("/pro/research/runs/{identifier}/replay", status_code=202)
     def replay(identifier: str):
@@ -486,6 +546,66 @@ def professional_router(app, access, runtime, supervisor, settings):
             body.source, [PriceShock(**scenario.model_dump()) for scenario in body.scenarios]
         )
 
+    @router.get("/pro/research/holdouts")
+    def holdouts():
+        return {"items": runtime.governance.list()}
+
+    @router.post("/pro/research/holdouts", status_code=201)
+    def create_holdout(body: HoldoutInput, request: Request):
+        return runtime.governance.create(encode(body.model_dump()), actor(request))
+
+    @router.get("/pro/research/governance/{project_id}")
+    def research_governance(project_id: str):
+        runtime.registry.project(project_id)
+        return runtime.governance.trials(project_id)
+
+    @router.get("/pro/research/portfolios")
+    def portfolios(source: Source = "okx"):
+        return {"items": runtime.portfolios.list(source)}
+
+    @router.get("/pro/research/portfolios/{identifier}")
+    def portfolio_run(identifier: str):
+        return runtime.portfolios.get(identifier)
+
+    @router.post("/pro/research/portfolios", status_code=202)
+    async def create_portfolio(body: PortfolioInput, request: Request):
+        tiers = {}
+        for leg in body.legs:
+            package = runtime.packages.get_package(leg.package_id)
+            if package["inst_id"].endswith("-SWAP"):
+                tiers[package["inst_id"]] = await runtime.catalog.get_margin_tiers(
+                    package["inst_id"], package["source"]
+                )
+        run = await runtime.offload(
+            runtime.portfolios.create, encode(body.model_dump()), actor(request), tiers
+        )
+        runtime.wake.set()
+        return run
+
+    @router.get("/pro/execution/clock")
+    def clock():
+        return runtime.clock.status()
+
+    @router.post("/pro/execution/clock")
+    def clock_command(body: ClockInput, request: Request):
+        return runtime.clock.change(**body.model_dump(), actor=actor(request))
+
+    @router.get("/pro/execution/performance")
+    def performance(
+        source: Source = "okx",
+        limit: int = Query(default=500, ge=1, le=5000),
+        before: int = Query(default=2**63 - 1, ge=1),
+    ):
+        return runtime.book.performance.report(source, limit=limit, before=before)
+
+    @router.get("/pro/execution/deployments/{identifier}/decisions")
+    def decisions(
+        identifier: str,
+        limit: int = Query(default=100, ge=1, le=500),
+        before: int = Query(default=2**63 - 1, ge=1),
+    ):
+        return {"items": runtime.history.decisions(identifier, limit, before)}
+
     @router.get("/pro/execution/orders")
     def orders(source: Source = "okx"):
         return {"items": runtime.book.orders(source)}
@@ -545,6 +665,10 @@ def professional_router(app, access, runtime, supervisor, settings):
     @router.get("/pro/ops")
     def operations():
         return runtime.operations()
+
+    @router.post("/pro/ops/incidents/{identifier}/acknowledge")
+    def acknowledge_incident(identifier: str, body: IncidentAcknowledgement, request: Request):
+        return runtime.incidents.acknowledge(identifier, actor(request), body.reason)
 
     @router.get("/pro/ops/audit")
     def audit(limit: int = Query(default=100, ge=1, le=500)):

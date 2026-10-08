@@ -23,10 +23,11 @@ from .market import (
     _source,
     _timestamp,
 )
+from .simulation_clock import SimulationClock
 from .store import Store, dumps, new_id, now_ms
 
 CATALOG_BARS = {"1m": 60_000, "5m": 300_000, **BAR_MS}
-EXAMPLE_WARNING = "Deterministic synthetic market data for the requested UTC range. Not OKX market data. Forward example quotes use a fixed synthetic clock."
+EXAMPLE_WARNING = "Deterministic synthetic market data for the requested UTC range. Not OKX market data. Forward example quotes use a durable, forward-only synthetic clock."
 KINDS = ("trade", "mark", "index", "funding")
 TERMINAL = ("completed", "degraded", "failed", "canceled")
 MAX_ROWS = 1_000_000
@@ -206,6 +207,7 @@ def _example_records(
 class CatalogService:
     def __init__(self, store: Store, market: MarketService):
         self.store, self.market = store, market
+        self.clock = SimulationClock(store)
         self._instrument_lock = asyncio.Lock()
         self._poll_task: asyncio.Task | None = None
         self._poll_stop = asyncio.Event()
@@ -914,11 +916,17 @@ class CatalogService:
             ).fetchall()
         return [_restore_record(json.loads(row[0]), manifest["kind"]) for row in rows]
 
-    def load_candles(self, dataset_id: str) -> list[Candle]:
-        if self.get_dataset(dataset_id)["kind"] == "funding":
+    def load_candles(self, dataset_id: str, *, start=None, end=None) -> list[Candle]:
+        manifest = self.get_dataset(dataset_id)
+        if manifest["kind"] == "funding":
             raise MarketError("wrong_dataset_kind", "Funding events are not candles.")
         self.verify_dataset(dataset_id)
-        return [Candle(**record) for record in self.dataset_records(dataset_id, MAX_ROWS)]
+        with self.store.read() as conn:
+            rows = conn.execute(
+                "SELECT r.body FROM catalog_records r JOIN catalog_datasets d ON d.job_id=r.job_id WHERE d.id=? AND (? IS NULL OR r.ts>=?) AND (? IS NULL OR r.ts<?) ORDER BY r.ts",
+                (dataset_id, start, start, end, end),
+            ).fetchall()
+        return [Candle(**_restore_record(json.loads(row[0]), manifest["kind"])) for row in rows]
 
     def load_funding(self, dataset_id: str) -> list[dict[str, Any]]:
         if self.get_dataset(dataset_id)["kind"] != "funding":
@@ -1123,25 +1131,29 @@ class CatalogService:
             raise MarketError("invalid_instrument", "A derivative snapshot requires a USDT perpetual.")
         instrument = await self.get_instrument(inst_id, source)
         if source == "example":
-            mark = _example_price(inst_id, EXAMPLE_ANCHOR, "mark")
+            current = self.clock.now()
+            mark = _example_price(inst_id, current, "mark")
+            day = current // 86_400_000 * 86_400_000
+            schedule = [day + offset * 3_600_000 for offset in (0, 4, 8, 16, 24, 28, 32)]
+            future = [ts for ts in schedule if ts > current]
             return {
                 "source": source,
                 "synthetic": True,
                 "inst_id": inst_id,
                 "mark_price": mark,
-                "mark_ts": EXAMPLE_ANCHOR,
-                "index_price": mark * Decimal("0.9998"),
-                "index_ts": EXAMPLE_ANCHOR,
+                "mark_ts": current,
+                "index_price": _example_price(inst_id, current, "index"),
+                "index_ts": current,
                 "funding_rate": Decimal("0.0001"),
-                "funding_time": EXAMPLE_ANCHOR + 4 * 3_600_000,
-                "next_funding_time": EXAMPLE_ANCHOR + 8 * 3_600_000,
-                "current_interval_ms": 4 * 3_600_000,
-                "funding_ts": EXAMPLE_ANCHOR,
-                "settled_funding_rate": Decimal("-0.0001"),
+                "funding_time": future[0],
+                "next_funding_time": future[1],
+                "current_interval_ms": future[1] - future[0],
+                "funding_ts": current,
+                "settled_funding_rate": None,
                 "settlement_state": "synthetic",
                 "formula_type": "synthetic",
                 "method": "synthetic",
-                "observed_at": EXAMPLE_ANCHOR,
+                "observed_at": current,
                 "transport": "example",
                 "instrument": instrument,
                 "warning": EXAMPLE_WARNING,
@@ -1193,6 +1205,8 @@ class CatalogService:
         """Unified execution inputs; all prices are USDT per base asset."""
         _source(source)
         _symbol(inst_id)
+        if source == "example":
+            return await self._load_market_snapshot(inst_id, source)
         return await self.market._cached(
             ("professional-quote", source, inst_id), 1.5, lambda: self._load_market_snapshot(inst_id, source)
         )
@@ -1203,8 +1217,9 @@ class CatalogService:
             await self.get_derivative_snapshot(inst_id, source) if _symbol(inst_id) == "SWAP" else None
         )
         if source == "example":
-            last = _example_price(inst_id, EXAMPLE_ANCHOR)
-            bid, ask, ts = last * Decimal("0.9999"), last * Decimal("1.0001"), EXAMPLE_ANCHOR
+            ts = self.clock.now()
+            last = _example_price(inst_id, ts)
+            bid, ask = last * Decimal("0.9999"), last * Decimal("1.0001")
         else:
             rows = await self.market._get("/api/v5/market/ticker", {"instId": inst_id})
             if not rows or rows[0].get("instId") != inst_id:
@@ -1233,7 +1248,7 @@ class CatalogService:
             "margin_tiers": tiers["tiers"] if tiers else [],
             "margin_tiers_snapshot": tiers,
             "instrument": instrument,
-            "observed_at": EXAMPLE_ANCHOR if source == "example" else now_ms(),
+            "observed_at": ts if source == "example" else now_ms(),
             "transport": "example" if source == "example" else "rest",
         }
 

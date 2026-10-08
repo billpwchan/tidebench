@@ -1,34 +1,28 @@
 # Scope and release acceptance
 
-The workspace ships public OKX data, single-market historical research and persistent local spot / linear USDT perpetual simulation. Authentication, recovery and operating controls below are implemented. These controls do not establish a complete professional strategy platform. The [red-team review](audit/README.md) records reproduced v0.3.0 defects, fixes and substantial remaining gaps in strategy expression, portfolio semantics, promotion and attribution.
+Tidebench supplies a self-hosted shared workspace for public OKX spot/linear-USDT data, versioned research, shared-capital historical portfolios and persistent local paper simulation. This records implemented behavior and checks; it does not certify an industry-leading or complete institutional platform.
 
-| Control | Implemented behavior | Evidence |
+| Contract | Implemented behavior | Evidence |
 |---|---|---|
-| Data lineage | Durable pagination, cancellation fencing, immutable manifests, rules, quality, provider attribution and record hashes | `test_catalog.py`; public 48h integration acceptance |
-| Research packages | Atomic trade/mark/funding preparation, bounded exact-time mark capture, immutable manifests and strict research binding | `test_data_packages.py`; complete perpetual-package browser workflow |
-| Captured portfolio analysis | Asset/market gross and net exposure, concentration, isolated margin, custom price shocks, deterministic capture/replay | `test_portfolio_analytics.py`; read-only API and rendered workflow acceptance |
-| Research reproducibility | Installed module identity, canonical full-result hash and explicit replay divergence failure | `test_pro_service.py`; API and browser replay acceptance |
-| Research causality | Confirmed closes, next-open orders, prefix/future perturbation checks and explicit costs | `test_engine.py`, `test_pro_research.py` |
-| OOS evaluation | Train-only candidate selection, purged windows, independent test folds, bounded grids/cost stress; explicit fixed/candidate selection in the UI after the red-team fix | `test_pro_research.py`; browser submission verifies two training candidates. The original v0.3.0 OOS UI only submitted fixed parameters |
-| Derivative accounting | Contract units, signed P&L, actual funding events, isolated tiers, explicit gap liabilities | `test_derivatives.py`, `test_pro_execution.py` |
-| Durable orders | Transactional risk, cash/margin reservations, canonical idempotency, cancellation and native asset journal | Concurrency, rollback, exact balance replay and source/freshness tests |
-| Forward strategies | Three reference rules, persisted close/open intents, per-fill ownership and stop checks; flat/no-pending admission and separate history preparation after the red-team fixes | Real Store/book crash/restart, stop-race and blocked-history protective-stop tests in `test_pro_service.py` |
-| Access | Salted bounded scrypt, server sessions, expiry, CSRF, five roles, password reset and revocation | `test_platform.py`, `test_pro_boundaries.py`; actual browser user/password workflows |
-| Recovery | Online checksummed backups, retention, schema matching, maintenance/drain, pre-halted restore image | Actual SQLite mutate/restore tests, concurrent recovery and canceled-drain tests |
-| Operations | Readiness, independent feed ages, job checkpoints, disk/WAL sizes, audit and Prometheus request metrics | API acceptance and measured HTTP workload |
-| Deployment | Locked source build, non-root image, private Compose binding, schema upgrade record and rollback runbook | CI verify + container startup/auth/account smoke |
-| Product usability | Data-package→research handoff, separate local execution workspace, bilingual controls, responsive layout, large-table pagination | Desktop/mobile browser acceptance. Research results are not version-bound to deployments; those configurations are still entered separately |
+| Data lineage | Immutable datasets/packages, funding marks, quality/attribution, resumable fenced downloads | Catalog/package tests; separate public-data acceptance |
+| Strategy definitions | Immutable hypotheses/versions; five families, bounded programs, sizing and close exits | Registry/program/risk tests; rendered recipe/version workflow |
+| Research | Next-open fills, train-only selection, replay hashes, cost stress, compressed shared-input artifacts | Research/storage/service tests; replay/export browser workflow |
+| Governance | Project trials, frozen one-use tests, alias/warmup/portfolio overlap guards | Governance concurrency/tamper tests; seal/evaluate browser workflow |
+| Historical portfolios | One cash book, 2–10 aligned markets, fixed/signal/momentum/carry, sequential fills/residuals, independent chronological tests | Portfolio tests; rendered two-market study/export |
+| Reviewed promotion | Candidate/cost/policy review, immutable approval, transactional activation revalidation | Registry drift/concurrency/ownership tests; version→research→approval→activation workflow |
+| Forward evidence | Incremental bars/checkpoints, decisions/intents/orders, observed equity/TWR pages and controllable time | Forward/fault tests; browser exit journal |
+| Accounting/risk | Spot/contract units, native-asset double entry, funding, tiers, isolated liquidation/debt, reservations/idempotency/halt | Domain/property/concurrency/replay tests |
+| Access | Named users, five roles, scrypt, sessions, CSRF, expiry/revocation | Platform/boundary tests; browser role/password workflows |
+| Resource/operations | Shared bounded queue, budgets, owned compute processes, deadlines/owner-death cleanup, progress health, incidents | Process/storage/operations tests; real HTTP mixed load |
+| Recovery | Checksummed backups, schema match, maintenance/drain, preserved new evidence chain, paused clock | Actual schema-4 restore; failure/cancellation regressions |
+| Interface/deployment | Responsive bilingual workflows, deferred bundles, locked build, non-root container, single-writer lease | Desktop/mobile Chromium; CI verify/container job |
 
-Detailed results, environment and scripts are in the [verification record](verification.md). Backups, role controls and deployment procedures are described in the [operations runbook](operations.md).
+See [verification](verification.md) for observed counts/environment and [current self-audit](audit/red-team-0.4.0.zh-CN.md) for remaining contracts: managed multi-asset forward execution, contribution attribution, historical universe/contract events and portfolio version/holdout governance. Account observations and historical portfolios do not substitute for them.
 
-## Evidence boundaries
+Bar-level full fills cannot establish queue priority, partial fills, impact, capacity or investment edge. Current rules remain scenarios unless attributed historical rules are supplied. Workflow holdouts cannot detect outside experiments or prevent raw public-data access.
 
-The repository can establish tested behavior and reproducible local workloads. It cannot establish months of service availability from a short run, manufacture an external security certification, provide tenant isolation from shared-workspace roles, or grant rights to a third party's data. No such claim is made.
-
-Historical bars and public observations support explicit simulation models. They do not establish exchange matching fidelity, investment edge, future returns or a live account reconciliation guarantee. Current tiers are captured scenarios; one-minute settlement marks are labeled approximations. Missing funding evidence blocks continuation rather than becoming zero cost.
-
-The supplied local deployment is operational with authentication and recovery. A public HTTPS host, domain, separately protected off-host backup destination and any applicable provider permissions belong to the actual hosting environment. Configure those resources using the runbook when operating a hosted service.
+One process owns one SQLite workspace; there is no distributed failover or tenant isolation. Short runs do not establish months of uptime. Hosted operation also needs actual HTTPS/domain, protected off-host backups, host operations and applicable data permissions, configured using the [runbook](operations.md).
 
 ## Exchange execution boundary
 
-No exchange order endpoint is called. Introducing private execution would expand the authorized product scope and needs a dedicated acknowledgement/fill/unknown-state reconciliation adapter, durable outbox, deduplication and explicit live-execution authorization. An OKX Read key does not grant that authorization. This boundary is distinct from the implemented local simulation product.
+No exchange order endpoint is called. The selected execution scope is local simulation. Read-only credentials do not enable live execution; private execution needs explicit authorization and a dedicated acknowledgement/fill/unknown-state reconciliation adapter.

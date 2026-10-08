@@ -14,6 +14,9 @@ import {
 import { defaultStrategy, downloadCsv } from '../api';
 import type { Source, Strategy } from '../api';
 import { useSession } from '../components/AuthGate';
+import ForwardPerformance from '../components/ForwardPerformance';
+import SimulationClock from '../components/SimulationClock';
+import ReleaseHistory from '../components/ReleaseHistory';
 import PortfolioAnalytics from '../components/PortfolioAnalytics';
 import { proApi } from '../proApi';
 import type { Direction, OrderRequest, ProRisk, RecordData } from '../proApi';
@@ -175,6 +178,7 @@ export default function Portfolio({
           {t('Deploy strategy')}
         </button>
       </PageHeading>
+      {source === 'example' && <SimulationClock />}
       <ActionNote text={notice} />
       {risk.data?.halted && (
         <div className="halt-notice">
@@ -226,12 +230,16 @@ export default function Portfolio({
               onChange={setTable}
               items={[
                 { key: 'positions', label: 'Positions' },
+                { key: 'performance', label: 'Forward performance' },
                 { key: 'analytics', label: 'Exposure & scenarios' },
                 { key: 'orders', label: 'Orders' },
                 { key: 'ledger', label: 'Ledger' },
                 { key: 'strategies', label: 'Strategies' },
+                { key: 'releases', label: 'Paper releases' },
               ]}
             />
+            {table === 'performance' && <ForwardPerformance source={source} />}
+            {table === 'releases' && <ReleaseHistory source={source} />}
             {table === 'analytics' && <PortfolioAnalytics source={source} />}
             {table === 'positions' &&
               (account.isPending ? (
@@ -766,7 +774,7 @@ export default function Portfolio({
                   />
                 </Field>
               )}
-              <StrategyFields value={strategy} onChange={setStrategy} />
+              <StrategyFields professional value={strategy} onChange={setStrategy} />
               <p className="form-footnote pro-form-note">
                 {t(
                   'Start requires a flat market with no pending orders. Close positions and cancel orders first.',

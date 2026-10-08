@@ -31,10 +31,13 @@ The shared `directional_signal` policy returns `+1` for long, `-1` for short, `0
 | SMA | Fast average above slow | Fast below slow | Equality is flat |
 | RSI reversion | Wilder RSI below entry | RSI above exit | Middle region retains inventory |
 | Buy and hold | Long, unless short-only | Short in short-only | No repeated weight rebalance |
+| Closing channel | Above prior closing-price channel | Below prior channel | Inside retains |
+| Z-score | Below negative entry threshold | Above positive entry threshold | Central band flat |
+| Program | First matching +1 rule | First matching −1 rule | Rule 0 exits; no match retains |
 
 `long_only` maps the negative regime to flat; `short_only` maps the positive regime to flat. A reversal closes existing inventory before opening the opposite side. Allocation applies when entering a regime, not as an instruction to rebalance on every bar. Zero allocation or an order below minimum size creates an attributed skipped order.
 
-Forward deployment requires a flat market and no pending orders at admission. It does not adopt existing manual or stopped-strategy inventory. Once running, a strategy can reverse its own position with the durable close/open phases below. These three rules are reference policies, not a validated alpha library or a user strategy SDK.
+Forward deployment requires a flat market and no pending orders at admission. It does not adopt existing manual or stopped-strategy inventory. Once running, a strategy can reverse its own position with the durable close/open phases below. Additional closing-channel, Z-score and bounded program policies, exits, sizing and release workflows are specified in [strategy workflows](strategy-workflows.md). Reference policies do not establish alpha.
 
 Every fill references an order and, when applicable, the originating closed-bar signal. Funding and risk liquidations have their own attribution and phase labels. Repeated entry fees, slippage, closing costs and remaining open inventory stay visible in the result.
 

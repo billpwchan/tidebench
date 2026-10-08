@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   FlaskConical,
+  GitBranch,
   HelpCircle,
   Layers3,
   Menu,
@@ -26,6 +27,7 @@ import { LanguageSelect, useSession } from './AuthGate';
 
 export const pages: { id: Page; label: string; icon: typeof Activity; group: string }[] = [
   { id: 'overview', label: 'Overview', icon: Layers3, group: 'Research' },
+  { id: 'strategies', label: 'Strategies', icon: GitBranch, group: 'Research' },
   { id: 'research', label: 'Research', icon: FlaskConical, group: 'Research' },
   { id: 'execution', label: 'Execution', icon: Wallet, group: 'Execution' },
   { id: 'data', label: 'Data library', icon: Database, group: 'Workspace' },

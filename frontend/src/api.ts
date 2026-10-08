@@ -8,6 +8,16 @@ export type Strategy = {
   entry: string;
   exit: string;
   allocation: string;
+  window?: number;
+  z_entry?: string;
+  z_exit?: string;
+  atr_period?: number;
+  stop_loss_pct?: string;
+  take_profit_pct?: string;
+  trailing_stop_pct?: string;
+  max_holding_bars?: number;
+  risk_per_trade_pct?: string;
+  rules?: Record<string, unknown>[];
 };
 export type RunConfig = {
   source: Source;

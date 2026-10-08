@@ -13,7 +13,24 @@ from .store import dumps
 def research_identity() -> dict:
     directory = Path(__file__).parent
     modules = {}
-    for name in ("engine.py", "derivatives.py", "pro_research.py", "pro_service.py", "provenance.py"):
+    for name in (
+        "engine.py",
+        "derivatives.py",
+        "pro_research.py",
+        "pro_service.py",
+        "strategy_registry.py",
+        "strategy_risk.py",
+        "research_budget.py",
+        "research_process.py",
+        "research_artifacts.py",
+        "research_governance.py",
+        "portfolio_research.py",
+        "pro_execution.py",
+        "strategy_program.py",
+        "forward_history.py",
+        "simulation_clock.py",
+        "provenance.py",
+    ):
         modules[name] = hashlib.sha256((directory / name).read_bytes()).hexdigest()
     return {
         "schema_version": 1,

@@ -11,12 +11,14 @@ import json
 from collections import deque
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field, replace
 from decimal import Decimal, DecimalException, localcontext
 from hashlib import sha256
 from itertools import product
 from math import sqrt
 from statistics import mean, median, stdev
+from threading import Lock
 from typing import Any
 
 from .derivatives import (
@@ -53,12 +55,14 @@ from .engine import (
     _validate_strategy,
     validate_candles,
 )
+from .strategy_risk import exit_on_close, risk_notional
 
 ENGINE_VERSION = "pro-research-1"
 MAX_CASES = 64
 MAX_FOLDS = 20
 MAX_BAR_WORK = 2_000_000
 MAX_CANDLES = 100_000
+research_progress = ContextVar("research_progress", default=None)
 
 
 @dataclass(frozen=True)
@@ -110,6 +114,17 @@ def _validate_config(config: ResearchConfig, instrument: Instrument | LinearCont
     if not isinstance(config, ResearchConfig):
         raise EngineError("config must be a ResearchConfig")
     _validate_strategy(config.strategy)
+    for name, maximum in (
+        ("stop_loss_pct", 100),
+        ("take_profit_pct", 1000),
+        ("trailing_stop_pct", 100),
+        ("risk_per_trade_pct", 10),
+    ):
+        if not ZERO <= _decimal(getattr(config.strategy, name), name) <= maximum:
+            raise EngineError(f"{name} is outside supported bounds")
+    _integer(config.strategy.max_holding_bars, "max_holding_bars", 0)
+    if config.strategy.risk_per_trade_pct and not config.strategy.stop_loss_pct:
+        raise EngineError("Loss-budget sizing requires a positive close-based stop loss")
     if config.direction not in {"long_only", "short_only", "long_short"}:
         raise EngineError("direction must be long_only, short_only or long_short")
     if not isinstance(instrument, (Instrument, LinearContract)):
@@ -139,66 +154,185 @@ def _validate_config(config: ResearchConfig, instrument: Instrument | LinearCont
 
 
 class _DecisionState:
+    """One causal indicator implementation across research and forward execution."""
+
     def __init__(self, config: ResearchConfig):
         self.config = config
-        self.fast: deque[Decimal] = deque()
-        self.slow: deque[Decimal] = deque()
-        self.fast_sum = ZERO
-        self.slow_sum = ZERO
-        self.previous: Decimal | None = None
-        self.gain = ZERO
-        self.loss = ZERO
+        self.fast, self.slow, self.window = deque(), deque(), deque()
+        self.fast_sum = self.slow_sum = self.gain = self.loss = ZERO
+        self.previous = None
         self.changes = 0
+        self.atr = ZERO
+        self.atr_count = 0
+        self.volume = self.true_range = None
 
-    def on_close(self, close: Decimal) -> tuple[int | None, dict[str, Any]]:
+    def snapshot(self):
+        return json_safe(
+            {
+                "schema_version": 2,
+                "fast": list(self.fast),
+                "slow": list(self.slow),
+                "window": list(self.window),
+                "fast_sum": self.fast_sum,
+                "slow_sum": self.slow_sum,
+                "previous": self.previous,
+                "gain": self.gain,
+                "loss": self.loss,
+                "changes": self.changes,
+                "atr": self.atr,
+                "atr_count": self.atr_count,
+            }
+        )
+
+    def restore(self, body):
+        if body.get("schema_version") != 2:
+            raise EngineError("unsupported indicator checkpoint")
+        for name, limit in (
+            ("fast", self.config.strategy.fast),
+            ("slow", self.config.strategy.slow),
+            ("window", self.config.strategy.window),
+        ):
+            values = deque(Decimal(v) for v in body[name])
+            if len(values) > limit:
+                raise EngineError("indicator checkpoint exceeds its window")
+            setattr(self, name, values)
+        for name in ("fast_sum", "slow_sum", "gain", "loss", "atr"):
+            setattr(self, name, Decimal(body[name]))
+        self.previous = Decimal(body["previous"]) if body["previous"] is not None else None
+        self.changes, self.atr_count = body["changes"], body["atr_count"]
+
+    def on_bar(self, candle):
+        self.volume = candle.volume
+        self.true_range = (
+            max(candle.high - candle.low, abs(candle.high - self.previous), abs(candle.low - self.previous))
+            if self.previous is not None
+            else candle.high - candle.low
+        )
+        return self.on_close(candle.close)
+
+    def on_close(self, close):
+        from .strategy_program import compare_rule
+
         strategy = self.config.strategy
-        indicators: dict[str, Any] = {}
-        raw: int | None
-        if strategy.kind == "buy_hold":
-            raw = -1 if self.config.direction == "short_only" else 1
-        elif strategy.kind == "sma_cross":
-            self.fast.append(close)
-            self.slow.append(close)
-            self.fast_sum += close
-            self.slow_sum += close
-            if len(self.fast) > strategy.fast:
-                self.fast_sum -= self.fast.popleft()
-            if len(self.slow) > strategy.slow:
-                self.slow_sum -= self.slow.popleft()
-            if len(self.slow) < strategy.slow:
-                return None, {"reason": "warmup"}
-            fast, slow = self.fast_sum / strategy.fast, self.slow_sum / strategy.slow
-            indicators = {"fast_sma": _string(fast), "slow_sma": _string(slow)}
-            raw = 1 if fast > slow else -1 if fast < slow else 0
-        else:
-            if self.previous is None:
-                self.previous = close
-                return None, {"reason": "warmup"}
-            change, self.previous = close - self.previous, close
+        previous = self.previous
+        channel = (
+            (max(self.window), min(self.window)) if len(self.window) == strategy.window else (None, None)
+        )
+        for values, length, total in (
+            (self.fast, strategy.fast, "fast_sum"),
+            (self.slow, strategy.slow, "slow_sum"),
+        ):
+            values.append(close)
+            setattr(self, total, getattr(self, total) + close)
+            if len(values) > length:
+                setattr(self, total, getattr(self, total) - values.popleft())
+        self.window.append(close)
+        if len(self.window) > strategy.window:
+            self.window.popleft()
+        rsi = None
+        if previous is not None:
+            change = close - previous
             self.changes += 1
             period = strategy.rsi_period
             if self.changes <= period:
                 self.gain += max(change, ZERO)
                 self.loss += max(-change, ZERO)
-                if self.changes < period:
-                    return None, {"reason": "warmup"}
-                self.gain /= period
-                self.loss /= period
+                if self.changes == period:
+                    self.gain /= period
+                    self.loss /= period
             else:
                 self.gain = (self.gain * (period - 1) + max(change, ZERO)) / period
                 self.loss = (self.loss * (period - 1) + max(-change, ZERO)) / period
-            rsi = (
-                (Decimal("50") if self.gain == self.loss == ZERO else Decimal("100"))
-                if self.loss == ZERO
-                else Decimal("100") - Decimal("100") / (ONE + self.gain / self.loss)
+            if self.changes >= period:
+                rsi = (
+                    (Decimal("50") if self.gain == self.loss == ZERO else Decimal("100"))
+                    if self.loss == ZERO
+                    else Decimal("100") - Decimal("100") / (ONE + self.gain / self.loss)
+                )
+        self.previous = close
+        if self.true_range is not None:
+            self.atr_count += 1
+            if self.atr_count <= strategy.atr_period:
+                self.atr += self.true_range
+                if self.atr_count == strategy.atr_period:
+                    self.atr /= strategy.atr_period
+            else:
+                self.atr = (self.atr * (strategy.atr_period - 1) + self.true_range) / strategy.atr_period
+        zscore = None
+        if strategy.kind in {"zscore_reversion", "program"} and len(self.window) == strategy.window:
+            average = sum(self.window, ZERO) / strategy.window
+            variance = sum(((v - average) ** 2 for v in self.window), ZERO) / strategy.window
+            zscore = (close - average) / variance.sqrt() if variance > ZERO else ZERO
+        features = {
+            "close": close,
+            "volume": self.volume,
+            "fast_sma": self.fast_sum / strategy.fast if len(self.fast) == strategy.fast else None,
+            "slow_sma": self.slow_sum / strategy.slow if len(self.slow) == strategy.slow else None,
+            "rsi": rsi,
+            "zscore": zscore,
+            "channel_upper": channel[0],
+            "channel_lower": channel[1],
+            "atr": self.atr if self.atr_count >= strategy.atr_period else None,
+        }
+        tag = None
+        if strategy.kind == "buy_hold":
+            raw = -1 if self.config.direction == "short_only" else 1
+        elif strategy.kind == "sma_cross":
+            fast, slow = features["fast_sma"], features["slow_sma"]
+            raw = None if slow is None else 1 if fast > slow else -1 if fast < slow else 0
+        elif strategy.kind == "rsi_reversion":
+            raw = None if rsi is None else 1 if rsi < strategy.entry else -1 if rsi > strategy.exit else None
+        elif strategy.kind == "close_breakout":
+            raw = (
+                None
+                if channel[0] is None
+                else 1
+                if close > channel[0]
+                else -1
+                if close < channel[1]
+                else None
             )
-            indicators = {"rsi": _string(rsi)}
-            raw = 1 if rsi < strategy.entry else -1 if rsi > strategy.exit else None
-        if raw == 1 and self.config.direction == "short_only":
+        elif strategy.kind == "zscore_reversion":
+            raw = (
+                None
+                if zscore is None
+                else 1
+                if zscore < -strategy.z_entry
+                else -1
+                if zscore > strategy.z_entry
+                else 0
+                if abs(zscore) <= strategy.z_exit
+                else None
+            )
+        else:
+            raw = None
+            for rule in strategy.rules:
+                if compare_rule(rule, features):
+                    raw, tag = rule["signal"], rule["tag"]
+                    break
+        if (
+            raw == 1
+            and self.config.direction == "short_only"
+            or raw == -1
+            and self.config.direction == "long_only"
+        ):
             raw = 0
-        elif raw == -1 and self.config.direction == "long_only":
-            raw = 0
-        return raw, {**indicators, "reason": "hold_regime" if raw is None else "closed_bar_signal"}
+        # Retain the historical indicator keys for existing result consumers.
+        names = {
+            "sma_cross": ("fast_sma", "slow_sma"),
+            "rsi_reversion": ("rsi",),
+            "buy_hold": (),
+            "close_breakout": ("channel_upper", "channel_lower"),
+            "zscore_reversion": ("zscore",),
+        }.get(strategy.kind, tuple(features))
+        indicators = {key: _string(features[key]) for key in names if features[key] is not None}
+        if strategy.kind == "sma_cross" and features["slow_sma"] is None:
+            indicators = {}
+        ready = strategy.kind == "buy_hold" or bool(indicators)
+        return raw, indicators | {
+            "reason": "warmup" if not ready else "hold_regime" if raw is None else "closed_bar_signal",
+            **({"tag": tag} if tag else {}),
+        }
 
 
 def directional_signal(
@@ -227,7 +361,7 @@ def directional_signal(
             state = _DecisionState(ResearchConfig(strategy=strategy, direction=direction))
             target = None
             for candle in history:
-                target, _ = state.on_close(candle.close)
+                target, _ = state.on_bar(candle)
             return target
     except DecimalException as exc:
         raise EngineError("Signal arithmetic exceeds the supported numeric domain") from exc
@@ -288,6 +422,8 @@ def run_professional_backtest(
     funding_events: Sequence[FundingEvent | Mapping[str, Any]] | None = None,
     margin_tiers: Sequence[MarginTier | Mapping[str, Any]] | Mapping[str, Any] | None = None,
     provenance: Mapping[str, Any] | None = None,
+    _shared_input: tuple[str, dict] | None = None,
+    progress=None,
 ) -> dict[str, Any]:
     """Replay one flat-start, close-signal/next-open experiment.
 
@@ -358,6 +494,8 @@ def run_professional_backtest(
                 quality,
                 mark_quality,
                 provenance,
+                _shared_input,
+                progress,
             )
     except DecimalException as exc:
         raise EngineError("Research accounting exceeds the supported numeric domain") from exc
@@ -375,6 +513,8 @@ def _simulate(
     quality,
     mark_quality,
     provenance,
+    shared_input,
+    progress=None,
 ):
     is_perp = isinstance(instrument, LinearContract)
     first, last = selected[0], selected[-1]
@@ -399,9 +539,10 @@ def _simulate(
     signals, orders, fills, funding_rows, liquidations, round_trips, equity = [], [], [], [], [], [], []
     observations = [(start, cash)]
     pending = None
+    exit_peak, holding_closes = None, 0
     state = _DecisionState(config)
     for candle in candles[:first]:
-        state.on_close(candle.close)
+        state.on_bar(candle)
     # A cost-adjusted, unlevered underlying benchmark starts at the same first
     # executable open as the strategy, irrespective of its indicator warmup.
     benchmark_instrument = (
@@ -447,7 +588,7 @@ def _simulate(
 
     def close_position(ts, reference, reason, signal_id, phase):
         nonlocal cash, quantity, margin, entry, entry_fee, entry_notional, fees, realized
-        nonlocal position_funding, shortfall_total, turnover, entry_ts, entry_signal
+        nonlocal position_funding, shortfall_total, turnover, entry_ts, entry_signal, exit_peak
         signed = quantity
         side = "sell" if signed > ZERO else "buy"
         price = _fill_price(reference, side, instrument, slip)
@@ -541,7 +682,7 @@ def _simulate(
             ZERO,
             ZERO,
         )
-        entry_ts, entry_signal = None, None
+        entry_ts, entry_signal, exit_peak = None, None, None
         check_accounting()
 
     def open_position(ts, reference, direction, signal_id):
@@ -557,6 +698,8 @@ def _simulate(
             entry_ts, \
             entry_signal, \
             skipped
+        nonlocal exit_peak
+        exit_peak = None
         side = "buy" if direction > 0 else "sell"
         if shortfall_total > ZERO:
             orders.append(
@@ -575,6 +718,9 @@ def _simulate(
             return
         price = _fill_price(reference, side, instrument, slip)
         budget = _accounting_value(cash * config.strategy.allocation, "position budget")
+        loss_notional = risk_notional(cash, config.strategy, config.fee_bps, config.slippage_bps)
+        if loss_notional is not None:
+            budget = min(budget, loss_notional * (ONE / config.leverage + fee_rate))
         if is_perp:
             unit_notional = contract_base_quantity(ONE, instrument) * price
             cost_per_contract = unit_notional * (ONE / config.leverage + fee_rate)
@@ -682,6 +828,8 @@ def _simulate(
         return False
 
     for index in selected:
+        if progress and (index - first) % 128 == 0:
+            progress((index - first) / len(selected))
         candle = candles[index]
         mark = marks[candle.ts] if is_perp else candle
         liquidated = False
@@ -701,11 +849,11 @@ def _simulate(
                 close_position(candle.ts, mark.open, "liquidation", None, "mark_open_gap")
                 liquidated = True
         if pending is not None and not liquidated:
-            target, signal_id = pending
+            target, signal_id, exit_reason = pending
             current = 1 if quantity > ZERO else -1 if quantity < ZERO else 0
             if current != target:
                 if quantity != ZERO:
-                    close_position(candle.ts, candle.open, "signal_exit", signal_id, "next_open")
+                    close_position(candle.ts, candle.open, exit_reason, signal_id, "next_open")
                 if target != 0:
                     open_position(candle.ts, candle.open, target, signal_id)
         pending = None
@@ -787,7 +935,17 @@ def _simulate(
             }
         )
         observations.append((close_ts, value))
-        target, indicators = state.on_close(candle.close)
+        target, indicators = state.on_bar(candle)
+        if quantity:
+            holding_closes = (close_ts - entry_ts) // interval_ms
+            reason, exit_peak = exit_on_close(
+                config.strategy, quantity, entry, candle.close, exit_peak, holding_closes
+            )
+            if reason:
+                target = 0
+                indicators = indicators | {"exit_reason": reason, "exit_reference": _string(candle.close)}
+        else:
+            reason, exit_peak, holding_closes = None, None, 0
         signal_id = f"signal-{len(signals) + 1}"
         signals.append(
             {
@@ -801,7 +959,7 @@ def _simulate(
             }
         )
         if target is not None:
-            pending = (target, signal_id)
+            pending = (target, signal_id, reason or "signal_exit")
         check_accounting()
     metrics = _metrics(
         observations,
@@ -861,17 +1019,24 @@ def _simulate(
         },
         "skipped_entries": skipped,
     }
-    snapshot = {
-        "trade_candles": json_safe(candles),
-        "mark_candles": json_safe(list(marks.values())) if is_perp else None,
-        "funding_events": json_safe(events),
-        "margin_tiers": json_safe(tiers),
-        "instrument": json_safe(instrument),
-        "instrument_type": "SWAP" if is_perp else "SPOT",
-        "interval_ms": interval_ms,
-        "config": json_safe(config),
-        "provenance": json_safe(provenance),
-    }
+    snapshot = (
+        {**shared_input[1], "config": json_safe(config)}
+        if shared_input
+        else {
+            "trade_candles": json_safe(candles),
+            "mark_candles": json_safe(list(marks.values())) if is_perp else None,
+            "funding_events": json_safe(events),
+            "margin_tiers": json_safe(tiers),
+            "instrument": json_safe(instrument),
+            "instrument_type": "SWAP" if is_perp else "SPOT",
+            "interval_ms": interval_ms,
+            "config": json_safe(config),
+            "provenance": json_safe(provenance),
+        }
+    )
+    reference = (
+        {"shared_input_hash": shared_input[0], "config": json_safe(config)} if shared_input else snapshot
+    )
     return {
         "engine_version": ENGINE_VERSION,
         "metrics": metrics,
@@ -879,7 +1044,7 @@ def _simulate(
         "signals": signals,
         "orders": orders,
         "fills": fills,
-        "trades": fills,
+        **({} if shared_input else {"trades": fills}),
         "funding": funding_rows,
         "liquidations": liquidations,
         "round_trips": round_trips,
@@ -887,7 +1052,7 @@ def _simulate(
         "assumptions": assumptions,
         "provenance": json_safe(provenance),
         "input_hash": _hash(snapshot),
-        "input_snapshot": snapshot,
+        "input_snapshot": reference,
     }
 
 
@@ -1033,7 +1198,18 @@ def _plan_options(options: ResearchPlanConfig | Mapping[str, Any] | None) -> Res
 
 
 def _strategy_candidates(strategy: StrategyConfig, grid: Mapping[str, Sequence[Any]]) -> list[StrategyConfig]:
-    allowed = {"kind", "fast", "slow", "rsi_period", "entry", "exit", "allocation"}
+    allowed = {
+        "kind",
+        "fast",
+        "slow",
+        "rsi_period",
+        "entry",
+        "exit",
+        "allocation",
+        "window",
+        "z_entry",
+        "z_exit",
+    }
     if set(grid) - allowed:
         raise EngineError("grid contains unsupported strategy parameters")
     keys, dimensions = [], []
@@ -1046,7 +1222,7 @@ def _strategy_candidates(strategy: StrategyConfig, grid: Mapping[str, Sequence[A
             raise EngineError(f"parameter grid exceeds the {MAX_CASES}-case limit")
         converted = []
         for item in values:
-            if key in {"entry", "exit", "allocation"}:
+            if key in {"entry", "exit", "allocation", "z_entry", "z_exit"}:
                 try:
                     item = item if isinstance(item, Decimal) else Decimal(str(item))
                 except (ValueError, DecimalException) as exc:
@@ -1104,6 +1280,7 @@ def run_research_plan(
     funding_events: Sequence[FundingEvent | Mapping[str, Any]] | None = None,
     margin_tiers: Sequence[MarginTier | Mapping[str, Any]] | Mapping[str, Any] | None = None,
     provenance: Mapping[str, Any] | None = None,
+    progress=None,
 ) -> dict[str, Any]:
     """Run deterministic, resource-bounded experiments with explicit OOS folds.
 
@@ -1113,6 +1290,8 @@ def run_research_plan(
     """
     if mode not in {"single", "train_test", "walk_forward", "grid", "cost_stress"}:
         raise EngineError("unsupported research mode")
+    from .strategy_program import strategy_complexity
+
     plan = _plan_options(options)
     if len(trade_candles) > MAX_CANDLES:
         raise EngineError(f"research accepts at most {MAX_CANDLES} bars per dataset")
@@ -1127,10 +1306,64 @@ def run_research_plan(
         "provenance": provenance,
     }
 
-    def run(candidate_config):
-        return run_professional_backtest(
-            trade_candles, interval_ms, instrument, candidate_config, **dependencies
+    shared = None
+    shared_inputs = {}
+    if mode != "single":
+        is_perp = isinstance(instrument, LinearContract)
+        common = {
+            "trade_candles": json_safe(trade_candles),
+            "mark_candles": json_safe(mark_candles) if is_perp else None,
+            "funding_events": json_safe(_funding_records(funding_events)) if is_perp else [],
+            "margin_tiers": json_safe(_tier_records(margin_tiers)) if is_perp else [],
+            "instrument": json_safe(instrument),
+            "instrument_type": "SWAP" if is_perp else "SPOT",
+            "interval_ms": interval_ms,
+            "provenance": json_safe(dict(provenance or {})),
+        }
+        identity = _hash(common)
+        shared = (identity, common)
+        shared_inputs = {identity: common}
+
+    expected_calls = len(candidates) if mode == "grid" else 1
+    if mode == "cost_stress":
+        expected_calls = max(1, len(plan.fee_bps)) * max(1, len(plan.slippage_bps))
+    if mode in {"train_test", "walk_forward"}:
+        size = len(selected)
+        train = plan.train_bars or int(size * plan.train_fraction)
+        test = plan.test_bars or (
+            size - train - plan.purge_bars
+            if mode == "train_test"
+            else max(2, int(size * (1 - plan.train_fraction)))
         )
+        step = plan.step_bars or max(1, test)
+        folds_count = (
+            1 if mode == "train_test" else max(1, 1 + (size - train - plan.purge_bars - test) // step)
+        )
+        expected_calls = folds_count * (len(candidates) + 1)
+    fractions, progress_lock = [], Lock()
+
+    def run(candidate_config):
+        with progress_lock:
+            position = len(fractions)
+            fractions.append(0)
+
+        def report(fraction):
+            with progress_lock:
+                fractions[position] = fraction
+                if progress:
+                    progress(min(1, sum(fractions) / expected_calls))
+
+        result = run_professional_backtest(
+            trade_candles,
+            interval_ms,
+            instrument,
+            candidate_config,
+            _shared_input=shared,
+            progress=report if progress else None,
+            **dependencies,
+        )
+        report(1)
+        return result
 
     def experiments(configurations):
         with ThreadPoolExecutor(max_workers=plan.max_workers, thread_name_prefix="research") as pool:
@@ -1143,11 +1376,12 @@ def run_research_plan(
     if mode == "single":
         if plan.grid or plan.fee_bps or plan.slippage_bps:
             raise EngineError("single mode does not consume grid or cost dimensions")
-        _bounded_work(1, len(trade_candles))
+        _bounded_work(strategy_complexity(config.strategy), len(trade_candles))
         result = run(config)
         return {
             "mode": mode,
             "engine_version": ENGINE_VERSION,
+            "shared_inputs": shared_inputs,
             "result": result,
             "comparison": [{"id": "experiment-1", **result["metrics"]}],
             "plan_hash": _hash({"input_hash": result["input_hash"], "mode": mode, "options": plan}),
@@ -1155,12 +1389,13 @@ def run_research_plan(
     if mode == "grid":
         if plan.fee_bps or plan.slippage_bps:
             raise EngineError("grid mode does not consume cost dimensions")
-        _bounded_work(len(candidates), len(trade_candles))
+        _bounded_work(max(strategy_complexity(c) for c in candidates) * len(candidates), len(trade_candles))
         runs = experiments([replace(config, strategy=candidate) for candidate in candidates])
         comparison = _rank(runs)
         return {
             "mode": mode,
             "engine_version": ENGINE_VERSION,
+            "shared_inputs": shared_inputs,
             "selection_scope": "in_sample_descriptive_only",
             "selection_metric": "total_return_pct",
             "comparison": comparison,
@@ -1194,11 +1429,12 @@ def run_research_plan(
         ]
         for candidate in configurations:
             _validate_config(candidate, instrument)
-        _bounded_work(len(configurations), len(trade_candles))
+        _bounded_work(sum(strategy_complexity(c.strategy) for c in configurations), len(trade_candles))
         runs = experiments(configurations)
         return {
             "mode": mode,
             "engine_version": ENGINE_VERSION,
+            "shared_inputs": shared_inputs,
             "selection_scope": "fixed_strategy_cost_sensitivity",
             "comparison": _rank(runs),
             "experiments": runs,
@@ -1250,7 +1486,10 @@ def run_research_plan(
             raise EngineError(f"walk-forward is limited to {MAX_FOLDS} folds")
     if not folds:
         raise EngineError("requested training, purge and test windows do not fit the selected date range")
-    _bounded_work(len(folds) * (len(candidates) + 1), len(trade_candles))
+    _bounded_work(
+        len(folds) * (len(candidates) + 1),
+        len(trade_candles) * max(strategy_complexity(c) for c in candidates),
+    )
     results = []
     for number, (train_start, train_end, test_start, test_end) in enumerate(folds, 1):
         train_config = replace(
@@ -1290,6 +1529,7 @@ def run_research_plan(
     return {
         "mode": mode,
         "engine_version": ENGINE_VERSION,
+        "shared_inputs": shared_inputs,
         "folds": results,
         "selection_scope": "training_only; independent flat-start out-of-sample test accounts",
         "oos_summary": {
@@ -1313,8 +1553,19 @@ def run_research_plan(
     }
 
 
-def replay_research_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
+def replay_research_snapshot(
+    snapshot: Mapping[str, Any], shared_inputs: Mapping[str, Any] | None = None, *, _plan=None, progress=None
+) -> dict[str, Any]:
     """Reconstruct domain inputs from the JSON-safe saved input snapshot."""
+
+    shared = None
+    if snapshot.get("shared_input_hash"):
+        reference = snapshot["shared_input_hash"]
+        common = (shared_inputs or {}).get(reference)
+        if common is None or _hash(common) != reference:
+            raise EngineError("Shared research input reference is missing or corrupt")
+        shared = (reference, common)
+        snapshot = {**common, "config": snapshot["config"]}
 
     def candle(record):
         return Candle(
@@ -1334,7 +1585,19 @@ def replay_research_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
     )
     config_record = dict(snapshot["config"])
     strategy_record = dict(config_record.pop("strategy"))
-    for key in ("entry", "exit", "allocation"):
+    for key in (
+        "entry",
+        "exit",
+        "allocation",
+        "z_entry",
+        "z_exit",
+        "stop_loss_pct",
+        "take_profit_pct",
+        "trailing_stop_pct",
+        "risk_per_trade_pct",
+    ):
+        if key not in strategy_record:
+            continue
         strategy_record[key] = Decimal(strategy_record[key])
     for key in ("initial_cash", "leverage", "fee_bps", "slippage_bps", "liquidation_fee_bps"):
         config_record[key] = Decimal(config_record[key])
@@ -1356,7 +1619,13 @@ def replay_research_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
         )
         for item in snapshot["margin_tiers"]
     ]
-    return run_professional_backtest(
+    function = run_professional_backtest if _plan is None else run_research_plan
+    options = (
+        {"_shared_input": shared}
+        if _plan is None
+        else {"mode": _plan["mode"], "options": _plan["options"], "progress": progress}
+    )
+    return function(
         [candle(item) for item in snapshot["trade_candles"]],
         snapshot["interval_ms"],
         instrument,
@@ -1367,4 +1636,5 @@ def replay_research_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
         funding_events=funding if isinstance(instrument, LinearContract) else None,
         margin_tiers=tiers if isinstance(instrument, LinearContract) else None,
         provenance=snapshot.get("provenance"),
+        **options,
     )

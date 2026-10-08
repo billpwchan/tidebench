@@ -78,6 +78,27 @@ Historical replay and forward simulation have different fill observations. Neith
 
 Admin `POST /pro/ops/backups/create`, `GET /pro/ops/backups/{id}/verify` and `POST /pro/ops/restore {backup_id,confirmation:'RESTORE'}` implement verified recovery. Recovery rejects concurrent attempts and enters maintenance. It revokes all sessions, cancels pending orders, stops strategies and halts execution. See [recovery procedure](operations.md#backups-and-recovery).
 
+## Strategy, governance and forward evidence (v0.4)
+
+| Method | Path | Contract |
+|---|---|---|
+| GET / POST | `/pro/strategies` | List/create `{name,hypothesis,definition}`; definition binds product/bar/direction/leverage/strategy |
+| GET | `/pro/strategies/{id}`, `/pro/strategy-versions/{id}` | Project revisions or verified immutable version |
+| POST | `/pro/strategies/{id}/versions` | `{hypothesis,definition,parent_id?}`; new immutable revision |
+| POST | `/pro/execution/releases/preview` | `{run_id,selection}`; config, blockers, acknowledgements and preview hash |
+| GET / POST | `/pro/execution/releases` | History or `{run_id,selection,preview_hash,acknowledgements,review}` approval |
+| POST | `/pro/execution/releases/{id}/activate` | Atomic condition revalidation and idempotent deployment |
+| GET / POST | `/pro/research/holdouts` | List or freeze version-bound `test_config`, benchmark and rejection plan |
+| GET | `/pro/research/governance/{project_id}` | Trial/candidate counts and holdout usage |
+| GET / POST | `/pro/research/portfolios` | List/create historical portfolios; 2–10 ready aligned package legs and shared policy |
+| GET | `/pro/research/portfolios/{id}` | Status, manifest and hash-verified result |
+| GET / POST | `/pro/execution/clock` | Durable synthetic time; mutation `{expected_revision,speed?,step_ms?}` |
+| GET | `/pro/execution/performance?source=...&limit=500&before=...` | Observations, page-scoped summary and `next_before` |
+| GET | `/pro/execution/deployments/{id}/decisions?limit=100&before=...` | Descending bars with intent and actual phase orders |
+| POST | `/pro/ops/incidents/{id}/acknowledge` | Admin `{reason}`; failing condition stays active |
+
+Research additionally accepts `strategy_version_id` and `holdout_id`. Detail `?variant=experiment-2` retains all candidate metrics but selected financial arrays; full export retains exact shared inputs. Programs/exits/sizing are specified in [strategy workflows](strategy-workflows.md). Portfolio `evaluation:'train_test'`, `train_pct` and `embargo_bars` fix construction and reset accounts; top-level financials cover test only, without test-score optimization.
+
 ## Compatibility
 
 The original spot `/backtests`, `/paper/*` and `/risk` APIs are retained; their [legacy contract](api-legacy-v0.1.md) applies with current authorization. Legacy paper capital is separate and is not silently merged into the professional portfolio. New clients should use `/pro/*`.

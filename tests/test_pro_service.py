@@ -84,7 +84,7 @@ class MemoryCatalog:
         self.funding_calls = []
         self.resumes = 0
         self.candles = [
-            Candle(END - (500 - index) * HOUR, D(100), D(100), D(100), D(100), D(1)) for index in range(500)
+            Candle(END - (2000 - index) * HOUR, D(100), D(100), D(100), D(100), D(1)) for index in range(2000)
         ]
         self.dataset = {
             "id": "trade-version",
