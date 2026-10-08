@@ -15,6 +15,14 @@ English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Re
 
 Instrument evidence preserves full forward REST data-array observations, including unavailable preopen rows. Compare responses, inspect missing rules, review information known by a UTC time and export exact hashes; older listing timestamps do not manufacture historical coverage. [Observation and recovery guide](docs/instrument-evidence.md).
 
+## Strategies with evidence, including failed hypotheses
+
+The bilingual research library covers weekly momentum, conditional reversion, matched funding carry, relative-strength rotation and closing-channel breakouts. Two new causal signal models and cost-aware carry admissions are executable through the same backtest and persistent paper workflow. Each dossier explains the mechanism, exact formula, sources, costs and what would reject it.
+
+The [public 108-case OKX battery](docs/strategy-research.md) includes all neighbors, cost stress and filter ablations. Default momentum was positive in 4/12 correlated scenarios; reversion in 6/12. The filter did not consistently help. These are disclosed exploratory results, not a profitable-strategy claim. Captured replay matched every input/result hash.
+
+![Strategy research library with actual public-data checks](docs/assets/strategy-library-desktop.png)
+
 ## A connected trading workflow
 
 Go from an economic hypothesis to an immutable strategy or portfolio version, reproducible research, reviewed paper release and inspectable forward decisions. Multi-market groups preserve targets and commands across interruption, expose failed-leg compensation, and reconcile actual monetary contribution to the shared account. See [strategy workflows](docs/strategy-workflows.md), [managed portfolios](docs/managed-portfolios.md) and the [self-audit](docs/audit/README.md).
@@ -24,7 +32,7 @@ Go from an economic hypothesis to an immutable strategy or portfolio version, re
 | Overview | Monitor actual positions, pending orders, asset exposure, risk attention and active research from one desk |
 | Markets | Inspect confirmed candles and timestamped OKX quotes; switch explicitly to an isolated synthetic source |
 | Data library | Prepare a complete research package in one action: trade, mark, settled funding and exact-time settlement marks; inspect blockers, immutable versions and hashes; import attributed history |
-| Strategies | Immutable hypotheses and definitions; five reference families, bounded declarative programs, exits, loss budgets and editable research recipes |
+| Strategies | Immutable hypotheses and definitions; seven signal families, source-backed dossiers, public contrary evidence, bounded declarative programs, exits, loss budgets and editable research recipes |
 | Research | Version-bound replay, grids, cost stress, train/test, walk-forward; single-strategy and captured-input portfolio final evaluations, shared one-use governance and retained trial ledger |
 | Portfolio research | Immutable multi-market hypotheses; one cash budget across 2–10 aligned markets; fixed weights, independent signals, momentum and funding carry; editable hypotheses with rejection criteria and chronological tests |
 | Managed portfolios | Whole-group review and activation; durable targets/commands, common cash scaling, residual limits, group stops and recoverable failed-leg compensation |

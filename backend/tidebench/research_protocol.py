@@ -496,7 +496,18 @@ class ResearchProtocol:
             portfolio_version_id=version["id"],
             **{
                 k: definition[k]
-                for k in ("mode", "capital_pct", "rebalance_bars", "lookback", "top_k", "carry_threshold")
+                for k in (
+                    "mode",
+                    "capital_pct",
+                    "rebalance_bars",
+                    "lookback",
+                    "top_k",
+                    "carry_window",
+                    "carry_cost_settlements",
+                    "carry_buffer_bps",
+                    "carry_max_age_hours",
+                    "carry_threshold",
+                )
             },
             **{
                 k: request[k]

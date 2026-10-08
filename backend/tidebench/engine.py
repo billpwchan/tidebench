@@ -83,6 +83,12 @@ class StrategyConfig:
     z_entry: Decimal = Decimal("2")
     z_exit: Decimal = Decimal(".5")
     atr_period: int = 14
+    momentum_horizons: list[int] = field(default_factory=lambda: [42, 84, 168])
+    momentum_entry: Decimal = Decimal(".5")
+    vol_window: int = 42
+    max_bar_vol_pct: Decimal = Decimal("5")
+    efficiency_max: Decimal = Decimal(".35")
+    reversion_trend_window: int = 84
     rules: list = field(default_factory=list)
     stop_loss_pct: Decimal = ZERO
     take_profit_pct: Decimal = ZERO
@@ -147,7 +153,7 @@ def _float(value: Decimal | float) -> float:
 def _validate_strategy(strategy: StrategyConfig) -> None:
     if not isinstance(strategy, StrategyConfig):
         raise EngineError("strategy must be a StrategyConfig")
-    if strategy.kind in {"close_breakout", "zscore_reversion", "program"}:
+    if strategy.kind in {"close_breakout", "zscore_reversion", "program", "ts_momentum", "regime_reversion"}:
         from .strategy_program import ProStrategyInput
 
         try:

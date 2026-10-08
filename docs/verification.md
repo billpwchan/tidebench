@@ -1,5 +1,13 @@
 # Verification record
 
+## v0.8.0 strategy research
+
+Local validation passed **705 backend tests** (120.83 seconds), **22 desktop/mobile Chromium workflows** (2.2 minutes), Ruff lint/format, Prettier, TypeScript and the production build. Formula, causality, captured replay, durable forward restart and historical/managed cost-aware carry counterexamples are included. The existing Starlette/HTTPX deprecation warning remains visible. Immutable-binding checks additionally reject changes to every new carry control.
+
+The [108-case public OKX spot battery](audit/v0.8.0-strategy-battery.json) captured 2,190 4H bars each for BTC/ETH/SOL and disclosed all two-window, two-cost, neighbor and ablation outcomes. Exact local-capture replay matched every input/result hash. Default momentum was positive in 4/12 correlated scenarios; reversion in 6/12, with no consistent filter improvement. This is contrary/mixed exploratory evidence, not alpha acceptance. [Methods, sources and scope](strategy-research.md).
+
+The isolated browser workflow loads an executable hypothesis into the actual editor, saves its immutable model parameters and verifies English/Chinese library content and mobile width. Published screenshots depict a synthetic workspace containing a separately labeled, fixed public OKX research report. Schema remains 7; no operational user/account reset is part of this release.
+
 ## v0.7.0 instrument evidence
 
 Local final-source validation passed **684 backend tests** (111.62 seconds), **20 desktop/mobile Chromium workflows** (2.1 minutes), Ruff, Prettier, TypeScript and the production build. The two new browser paths exercise actual capture, raw inspection/download, prior-time unknown coverage, age expiry and source-product separation. The final parser review additionally passed all 17 instrument counterexamples, including contract-family conflicts and invalid/oversized source arrays. Focused research/recovery regressions passed after expanding code identity; a real-book counterexample changes only the installed observation-parser identity and confirms a new-bar group evaluation is blocked without adding commands or changing inventory. One existing Starlette/HTTPX deprecation warning remains visible.

@@ -42,6 +42,10 @@ class PortfolioDefinition(InputModel):
     lookback: int = Field(default=20, ge=2, le=400)
     top_k: int = Field(default=1, ge=1, le=10)
     carry_threshold: Decimal = Field(default=0, ge="-.01", le=".01")
+    carry_window: int = Field(default=1, ge=1, le=30)
+    carry_cost_settlements: int = Field(default=0, ge=0, le=300)
+    carry_buffer_bps: Decimal = Field(default=0, ge=0, le=1000)
+    carry_max_age_hours: int = Field(default=0, ge=0, le=168)
     max_residual_pct: Decimal = Field(default=2, ge=".01", le=100)
     failure_policy: Literal["reduce_group"] = "reduce_group"
 
@@ -218,9 +222,22 @@ class PortfolioRegistry:
             raise PlatformError(
                 "portfolio_binding", "Research hypothesis must match its immutable portfolio version.", 409
             )
-        for key in ("mode", "rebalance_bars", "lookback", "top_k", "carry_threshold", "capital_pct"):
+        for key in (
+            "mode",
+            "rebalance_bars",
+            "lookback",
+            "top_k",
+            "carry_window",
+            "carry_cost_settlements",
+            "carry_buffer_bps",
+            "carry_max_age_hours",
+            "carry_threshold",
+            "capital_pct",
+        ):
             observed = (
-                canonical(D(str(config[key]))) if key in {"carry_threshold", "capital_pct"} else config[key]
+                canonical(D(str(config[key])))
+                if key in {"carry_threshold", "carry_buffer_bps", "capital_pct"}
+                else config[key]
             )
             if observed != definition[key]:
                 raise PlatformError(

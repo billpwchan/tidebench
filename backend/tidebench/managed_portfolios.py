@@ -13,7 +13,7 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, localcontext
 from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, StrategyConfig
 from .platform import PlatformError
-from .portfolio_construction import apply_weight_caps, construction_weights
+from .portfolio_construction import apply_weight_caps, construction_weights, funding_carry_evidence
 from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import base_size, number
 from .store import dumps, encode, new_id, now_ms
@@ -434,6 +434,7 @@ class ManagedPortfolios:
                             prices = [D(verified(row, "body", "content_hash")["close"]) for row in rows]
                             momentum[leg["inst_id"]] = prices[0] / prices[-1] - 1
                 past_rate = None
+                past = []
                 if definition["mode"] == "funding_carry":
                     history = await r.catalog.funding_history(
                         definition["legs"][1]["inst_id"], latest - 32 * 86400000, latest, group["source"]
@@ -458,6 +459,16 @@ class ManagedPortfolios:
                             409,
                         )
                     positions = {p["inst_id"]: D(p["quantity"]) for p in account["positions"]}
+                    policy = r.book.risk(group["source"])
+                    carry_evidence = (
+                        funding_carry_evidence(
+                            definition, past, latest, policy["fee_bps"], policy["slippage_bps"]
+                        )
+                        if definition["mode"] == "funding_carry"
+                        else None
+                    )
+                    if carry_evidence:
+                        past_rate = carry_evidence["mean_rate"] if carry_evidence["allowed"] else None
                     weights = construction_weights(
                         definition,
                         definition["legs"],
@@ -505,6 +516,7 @@ class ManagedPortfolios:
                             "decisions": decisions,
                             "momentum": momentum,
                             "past_funding_rate": past_rate,
+                            **({"carry_evidence": carry_evidence} if carry_evidence else {}),
                             "rebalance_due": due,
                             "risk_exits": exits,
                             "weights": weights,

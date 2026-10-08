@@ -1058,3 +1058,50 @@ test('instrument observations expose causal coverage, exact exports and current-
       animations: 'disabled',
     });
 });
+
+test('research library loads executable hypotheses and bilingual cost-aware carry notes', async ({
+  page,
+}, testInfo) => {
+  await navigate(page, 'Strategies');
+  const library = page.getByRole('region', { name: 'Strategy research library' });
+  await expect(library.getByRole('heading', { name: 'Multi-horizon momentum' })).toBeVisible();
+  await expect(
+    library.getByText('Moskowitz, Ooi & Pedersen · 2012', { exact: true }),
+  ).toHaveAttribute('href', /aqr\.com/);
+  const assetDir = process.env.TIDEBENCH_BROWSER_ASSET_DIR ?? '../docs/assets';
+  await mkdir(assetDir, { recursive: true });
+  if (testInfo.project.name === 'desktop')
+    await page.screenshot({
+      path: `${assetDir}/strategy-library-desktop.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  await library.getByRole('button', { name: 'Use this hypothesis', exact: true }).click();
+  await expect(page.getByLabel('Strategy', { exact: true })).toHaveValue('ts_momentum');
+  await expect(page.getByLabel('Interval', { exact: true })).toHaveValue('4H');
+  await expect(page.getByLabel('Momentum horizon 3', { exact: true })).toHaveValue('168');
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith('/strategies') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Save version', exact: true }).click();
+  const record = await (await saved).json();
+  expect(record.version.definition.strategy.momentum_horizons).toEqual([42, 84, 168]);
+  await page.getByRole('button', { name: 'Research library', exact: true }).click();
+  await library.getByRole('button', { name: /Cost-aware funding carry/ }).click();
+  await expect(library.getByText(/positive 1 bp rate does not pass/)).toBeVisible();
+  await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
+  await page.reload();
+  const zh = page.getByRole('region', { name: '策略研究库' });
+  await zh.getByRole('button', { name: /考虑成本的资金费率配对/ }).click();
+  await expect(zh.getByText(/正的 1 bp 费率仍不达标/)).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBeTruthy();
+  if (testInfo.project.name === 'mobile')
+    await page.screenshot({
+      path: `${assetDir}/strategy-library-mobile-zh.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  await page.evaluate(() => localStorage.setItem('tidebench:language', 'en'));
+});

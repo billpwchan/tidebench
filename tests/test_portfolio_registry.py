@@ -81,7 +81,15 @@ def test_exact_binding_uses_numeric_identity_and_complete_ordered_universe(regis
         ).model_dump()
     )
     assert registry.validate_binding(body, packages)["id"] == version["id"]
-    for change in ({"capital_pct": "74"}, {"rebalance_bars": 23}, {"top_k": 2}):
+    for change in (
+        {"capital_pct": "74"},
+        {"rebalance_bars": 23},
+        {"top_k": 2},
+        {"carry_window": 12},
+        {"carry_cost_settlements": 21},
+        {"carry_buffer_bps": "20"},
+        {"carry_max_age_hours": 16},
+    ):
         with pytest.raises(PlatformError, match="match"):
             registry.validate_binding(body | change, packages)
     wrong = copy.deepcopy(body)

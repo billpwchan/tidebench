@@ -165,6 +165,13 @@ class _DecisionState:
         self.atr = ZERO
         self.atr_count = 0
         self.volume = self.true_range = None
+        from .strategy_models import CausalStrategyModel
+
+        self.model = (
+            CausalStrategyModel(config.strategy)
+            if config.strategy.kind in {"ts_momentum", "regime_reversion"}
+            else None
+        )
 
     def snapshot(self):
         return json_safe(
@@ -181,6 +188,7 @@ class _DecisionState:
                 "changes": self.changes,
                 "atr": self.atr,
                 "atr_count": self.atr_count,
+                **({"model": self.model.snapshot()} if self.model else {}),
             }
         )
 
@@ -200,6 +208,8 @@ class _DecisionState:
             setattr(self, name, Decimal(body[name]))
         self.previous = Decimal(body["previous"]) if body["previous"] is not None else None
         self.changes, self.atr_count = body["changes"], body["atr_count"]
+        if self.model:
+            self.model.restore(body.get("model", {}))
 
     def on_bar(self, candle):
         self.volume = candle.volume
@@ -275,7 +285,10 @@ class _DecisionState:
             "atr": self.atr if self.atr_count >= strategy.atr_period else None,
         }
         tag = None
-        if strategy.kind == "buy_hold":
+        model_features = None
+        if self.model:
+            raw, model_features = self.model.on_close(close)
+        elif strategy.kind == "buy_hold":
             raw = -1 if self.config.direction == "short_only" else 1
         elif strategy.kind == "sma_cross":
             fast, slow = features["fast_sma"], features["slow_sma"]
@@ -317,6 +330,8 @@ class _DecisionState:
             and self.config.direction == "long_only"
         ):
             raw = 0
+        if model_features is not None:
+            return raw, model_features
         # Retain the historical indicator keys for existing result consumers.
         names = {
             "sma_cross": ("fast_sma", "slow_sma"),
@@ -1207,6 +1222,9 @@ def _strategy_candidates(strategy: StrategyConfig, grid: Mapping[str, Sequence[A
         "exit",
         "allocation",
         "window",
+        "momentum_entry",
+        "max_bar_vol_pct",
+        "efficiency_max",
         "z_entry",
         "z_exit",
     }
@@ -1222,7 +1240,16 @@ def _strategy_candidates(strategy: StrategyConfig, grid: Mapping[str, Sequence[A
             raise EngineError(f"parameter grid exceeds the {MAX_CASES}-case limit")
         converted = []
         for item in values:
-            if key in {"entry", "exit", "allocation", "z_entry", "z_exit"}:
+            if key in {
+                "entry",
+                "exit",
+                "allocation",
+                "z_entry",
+                "z_exit",
+                "momentum_entry",
+                "max_bar_vol_pct",
+                "efficiency_max",
+            }:
                 try:
                     item = item if isinstance(item, Decimal) else Decimal(str(item))
                 except (ValueError, DecimalException) as exc:
@@ -1589,6 +1616,9 @@ def replay_research_snapshot(
         "entry",
         "exit",
         "allocation",
+        "momentum_entry",
+        "max_bar_vol_pct",
+        "efficiency_max",
         "z_entry",
         "z_exit",
         "stop_loss_pct",

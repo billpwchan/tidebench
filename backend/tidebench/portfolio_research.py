@@ -18,7 +18,7 @@ from pydantic import Field, model_validator
 from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, EngineError, StrategyConfig
 from .platform import PlatformError
-from .portfolio_construction import apply_weight_caps, construction_weights
+from .portfolio_construction import apply_weight_caps, construction_weights, funding_carry_evidence
 from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import SimulationBook, base_size, number, tier_for
 from .pro_research import ResearchConfig, _DecisionState, json_safe
@@ -71,6 +71,10 @@ class PortfolioInput(InputModel):
     lookback: int = Field(default=20, ge=2, le=400)
     top_k: int = Field(default=1, ge=1, le=10)
     carry_threshold: Decimal = Field(default=0, ge=-0.01, le=0.01)
+    carry_window: int = Field(default=1, ge=1, le=30)
+    carry_cost_settlements: int = Field(default=0, ge=0, le=300)
+    carry_buffer_bps: Decimal = Field(default=0, ge=0, le=1000)
+    carry_max_age_hours: int = Field(default=0, ge=0, le=168)
     rules_mode: Literal["captured_current", "point_in_time"] = "captured_current"
     evaluation: Literal["full", "train_test"] = "full"
     train_pct: int = Field(default=70, ge=50, le=85)
@@ -611,6 +615,9 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 "allocation",
                 "entry",
                 "exit",
+                "momentum_entry",
+                "max_bar_vol_pct",
+                "efficiency_max",
                 "z_entry",
                 "z_exit",
                 "stop_loss_pct",
@@ -618,7 +625,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 "trailing_stop_pct",
                 "risk_per_trade_pct",
             ):
-                strategy[key] = D(str(strategy[key]))
+                strategy[key] = D(str(strategy.get(key, getattr(StrategyConfig(), key))))
             states.append(
                 _DecisionState(
                     ResearchConfig(strategy=StrategyConfig(**strategy), direction=leg["config"]["direction"])
@@ -856,6 +863,11 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 if config["mode"] == "funding_carry"
                 else []
             )
+            carry_evidence = (
+                funding_carry_evidence(config, past, ts, config["fee_bps"], config["slippage_bps"])
+                if config["mode"] == "funding_carry"
+                else None
+            )
             weights = construction_weights(
                 config,
                 [leg["config"] | {"inst_id": leg["instrument"]["inst_id"]} for leg in legs],
@@ -872,7 +884,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 }
                 if index >= config["lookback"]
                 else {},
-                past[-1]["rate"] if past else None,
+                carry_evidence["mean_rate"] if carry_evidence and carry_evidence["allowed"] else None,
             )
             if config["mode"] == "funding_carry" and risk_exits:
                 risk_exits = {leg["instrument"]["inst_id"]: "carry_group_exit" for leg in legs}
@@ -899,6 +911,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 ],
                 "mode": config["mode"],
                 "risk_exits": risk_exits,
+                **({"carry_evidence": carry_evidence} if carry_evidence else {}),
                 "exit_only": not rebalance_due,
                 "status": "next_open",
             }

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "plan_hash": "68af2085b0c26b1cdf519dadb5f18dbede262eeb5e4927b413e926369ec4da52",
+  "implementation": {
+    "schema_version": 1,
+    "application_version": "0.8.0",
+    "code_fingerprint": "b25b713ad56ccb0692b1f1c199bcb85f811741147574f8d9d65806ad7981c1c7",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "a4cd61183dac99d1e14babc7736b432c6d49cf325a4c280d88162726782ba332",
+      "pro_api.py": "298b96111f7d0dfaafc85b301aa31daadd6245c546246db7ce4a7703eca2e00e",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "1c9537e6b72698968159fd9324b3d0e7992e08dc6ea21c7394a73deb93a3f433",
+      "strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+      "research_protocol.py": "2daa9f4174a11957d0c761501accaac4dda62cc68bc7dd2c81c938524bed7d38",
+      "portfolio_registry.py": "3b6c74f0db54eb72584f3d2c001a564d5ebcec0bb89529850ffffb4530d7f071",
+      "portfolio_releases.py": "8ca1762ae73057a491a323bdd2436329940d176fea3df5940d62dc61b35191df",
+      "managed_portfolios.py": "2aae391b7c4058ab54707312488bbacbb14b4c8cb82b1a6ce57f116369e5123b",
+      "portfolio_research.py": "1a172a7ccd9bd1d365a8ac8853b33b6b0b96e5da77b5802baa8fc24763c7f249",
+      "portfolio_targets.py": "7bd70c03d88b575d40beb44110f2dd16f01f17f314838c63cc61184f84eea055",
+      "portfolio_construction.py": "8ca08f9614a7348c54cbf440b72f0ab65ae8b39426231b0f8ddc70f187bcc565",
+      "pro_execution.py": "9b5b4c75d62769454f80028a177dd6de7762277daaed47c7675f04663b9b873f",
+      "contributions.py": "2516c7d1e6308952d46792000e25a4d18bfe228b9ccb4831be5c4b1df69bf4d2",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "bd41a7e367589f44d9f3a9bf48dec488923e9d3a1689c90fe33e3ab061338951"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "completed_at": 1791456785647,
+  "cases": 108,
+  "replay_verified": true,
+  "comparison": "All 108 ordered rows, including input_hash, result_hash, metrics and sample counts, equal the original retained-capture report."
+}

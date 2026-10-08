@@ -37,12 +37,25 @@ class SignalRule(InputModel):
 
 class ProStrategyInput(StrategyInput):
     kind: Literal[
-        "sma_cross", "rsi_reversion", "buy_hold", "close_breakout", "zscore_reversion", "program"
+        "sma_cross",
+        "rsi_reversion",
+        "buy_hold",
+        "close_breakout",
+        "zscore_reversion",
+        "program",
+        "ts_momentum",
+        "regime_reversion",
     ] = "sma_cross"
     window: int = Field(default=20, ge=2, le=400)
     z_entry: Decimal = Field(default=2, gt=0, le=10)
     z_exit: Decimal = Field(default=".5", ge=0, lt=10)
     atr_period: int = Field(default=14, ge=2, le=200)
+    momentum_horizons: list[int] = Field(default_factory=lambda: [42, 84, 168], min_length=2, max_length=4)
+    momentum_entry: Decimal = Field(default=".5", ge=0, le=10)
+    vol_window: int = Field(default=42, ge=2, le=400)
+    max_bar_vol_pct: Decimal = Field(default=5, ge=0, le=100)
+    efficiency_max: Decimal = Field(default=".35", ge=0, le=1)
+    reversion_trend_window: int = Field(default=84, ge=2, le=400)
     stop_loss_pct: Decimal = Field(default=0, ge=0, le=100)
     take_profit_pct: Decimal = Field(default=0, ge=0, le=1000)
     trailing_stop_pct: Decimal = Field(default=0, ge=0, le=100)
@@ -52,6 +65,12 @@ class ProStrategyInput(StrategyInput):
 
     @model_validator(mode="after")
     def program_bounds(self):
+        if any(
+            isinstance(h, bool) or h < 2 or h > 400 for h in self.momentum_horizons
+        ) or self.momentum_horizons != sorted(set(self.momentum_horizons)):
+            raise ValueError(
+                "Momentum horizons require two to four distinct ascending bar counts in [2, 400]."
+            )
         if self.risk_per_trade_pct and not self.stop_loss_pct:
             raise ValueError("Loss-budget sizing requires a positive close-based stop loss.")
         if self.z_exit >= self.z_entry:

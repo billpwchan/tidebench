@@ -94,6 +94,9 @@ class ForwardHistory:
         for key in (
             "entry",
             "exit",
+            "momentum_entry",
+            "max_bar_vol_pct",
+            "efficiency_max",
             "z_entry",
             "z_exit",
             "stop_loss_pct",
@@ -101,7 +104,20 @@ class ForwardHistory:
             "trailing_stop_pct",
             "risk_per_trade_pct",
         ):
-            strategy[key] = Decimal(str(strategy.get(key, {"z_entry": 2, "z_exit": ".5"}.get(key, 0))))
+            strategy[key] = Decimal(
+                str(
+                    strategy.get(
+                        key,
+                        {
+                            "z_entry": 2,
+                            "z_exit": ".5",
+                            "momentum_entry": ".5",
+                            "max_bar_vol_pct": 5,
+                            "efficiency_max": ".35",
+                        }.get(key, 0),
+                    )
+                )
+            )
         state = _DecisionState(
             ResearchConfig(strategy=StrategyConfig(**strategy), direction=config["direction"])
         )

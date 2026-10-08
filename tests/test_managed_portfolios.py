@@ -61,7 +61,18 @@ async def research(r, **definition_changes):
                 "legs": inputs,
                 **{
                     k: definition[k]
-                    for k in ("mode", "rebalance_bars", "lookback", "top_k", "carry_threshold", "capital_pct")
+                    for k in (
+                        "mode",
+                        "rebalance_bars",
+                        "lookback",
+                        "top_k",
+                        "carry_threshold",
+                        "capital_pct",
+                        "carry_window",
+                        "carry_cost_settlements",
+                        "carry_buffer_bps",
+                        "carry_max_age_hours",
+                    )
                 },
             }
         ).model_dump()
@@ -789,3 +800,29 @@ async def test_changed_observation_parser_requires_review_before_new_group_comma
     assert runtime.book.orders("example") == before_orders
     assert runtime.book.positions("example") == before_positions
     assert len(runtime.managed_portfolios.history(group)) == 1
+
+
+async def test_forward_carry_uses_current_policy_four_fill_hurdle_and_records_nonadmission(runtime):
+    r = runtime
+    group = await activate(
+        r,
+        mode="funding_carry",
+        carry_window=12,
+        carry_threshold="-.01",
+        carry_cost_settlements=21,
+        carry_buffer_bps=1000,
+        carry_max_age_hours=16,
+        legs=[
+            {"inst_id": symbol, "weight": weight, "strategy": {"kind": "buy_hold"}}
+            for symbol, weight in [("BTC-USDT", ".3"), ("BTC-USDT-SWAP", "-.3")]
+        ],
+    )
+    await r.managed_portfolios.evaluate(group["id"])
+    batch = r.managed_portfolios.history(group["id"])[0]
+    evidence = batch["body"]["carry_evidence"]
+    assert not evidence["allowed"] and evidence["reason"] == "cost_hurdle"
+    assert D(evidence["round_trip_cost_bps"]) == 4 * (
+        D(r.book.risk("example")["fee_bps"]) + D(r.book.risk("example")["slippage_bps"])
+    )
+    assert not r.book.positions("example")
+    assert all(D(w) == 0 for w in batch["body"]["weights"].values())

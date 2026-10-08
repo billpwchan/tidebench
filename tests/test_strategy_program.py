@@ -115,7 +115,7 @@ def test_shipped_recipes_validate_with_explicit_risk_and_failure_hypotheses():
     from tidebench.strategy_registry import StrategyDefinition
 
     recipes = json.loads((Path(__file__).parents[1] / "examples/strategies.json").read_text())
-    assert len({r["id"] for r in recipes}) == len(recipes) == 5
+    assert len({r["id"] for r in recipes}) == len(recipes) == 7
     for recipe in recipes:
         definition = StrategyDefinition.model_validate(recipe["definition"])
         assert definition.strategy.stop_loss_pct > 0

@@ -212,3 +212,26 @@ async def test_duplicate_market_and_input_identity_tamper_are_refused(runtime):
 
 async def run_portfolio(runtime, body):
     return await run(runtime, body)
+
+
+async def test_cost_aware_carry_preserves_zero_trade_evidence_when_positive_rates_cannot_pay_costs(runtime):
+    inputs = await packages(runtime, ("BTC-USDT", "BTC-USDT-SWAP"))
+    body = config(
+        inputs,
+        mode="funding_carry",
+        carry_window=12,
+        carry_cost_settlements=21,
+        carry_buffer_bps=1000,
+        carry_max_age_hours=16,
+        legs=[
+            {"package_id": p["id"], "weight": weight, "strategy": {"kind": "buy_hold"}}
+            for p, weight in zip(inputs, [".3", "-.3"], strict=True)
+        ],
+    )
+    result = (await run(runtime, body))["result"]
+    assert result["orders"] == [] and result["metrics"]["total_return_pct"] == "0"
+    evidence = [d["carry_evidence"] for d in result["decisions"]]
+    assert any(e["reason"] == "cost_hurdle" for e in evidence)
+    assert all(not e["allowed"] for e in evidence)
+    for decision in result["decisions"]:
+        assert all(ts < decision["bar_ts"] for ts in decision["carry_evidence"]["settlement_times"])

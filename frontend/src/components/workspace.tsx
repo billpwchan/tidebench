@@ -223,6 +223,8 @@ export function StrategyFields({
             <>
               <option value="close_breakout">{t('Close-channel breakout')}</option>
               <option value="zscore_reversion">{t('Z-score reversion')}</option>
+              <option value="ts_momentum">{t('Multi-horizon momentum')}</option>
+              <option value="regime_reversion">{t('Regime-gated reversion')}</option>
               <option value="program">{t('Rule program')}</option>
             </>
           )}
@@ -288,19 +290,22 @@ export function StrategyFields({
           </div>
         </>
       )}
-      {professional && ['close_breakout', 'zscore_reversion', 'program'].includes(value.kind) && (
-        <Field label="Lookback window">
-          <input
-            required
-            type="number"
-            min={2}
-            max={400}
-            value={value.window ?? 20}
-            onChange={(e) => patch('window', Number(e.target.value))}
-          />
-        </Field>
-      )}
-      {professional && value.kind === 'zscore_reversion' && (
+      {professional &&
+        ['close_breakout', 'zscore_reversion', 'regime_reversion', 'program'].includes(
+          value.kind,
+        ) && (
+          <Field label="Lookback window">
+            <input
+              required
+              type="number"
+              min={2}
+              max={400}
+              value={value.window ?? 20}
+              onChange={(e) => patch('window', Number(e.target.value))}
+            />
+          </Field>
+        )}
+      {professional && ['zscore_reversion', 'regime_reversion'].includes(value.kind) && (
         <div className="form-grid">
           <Field label="Entry Z-score">
             <input
@@ -325,6 +330,102 @@ export function StrategyFields({
             />
           </Field>
         </div>
+      )}
+      {professional && ['ts_momentum', 'regime_reversion'].includes(value.kind) && (
+        <>
+          {value.kind === 'ts_momentum' && (
+            <>
+              <div className="form-grid">
+                {(value.momentum_horizons ?? [42, 84, 168]).map((h, i) => (
+                  <Field key={i} label={`${t('Momentum horizon')} ${i + 1}`}>
+                    <input
+                      required
+                      type="number"
+                      min={2}
+                      max={400}
+                      value={h}
+                      onChange={(e) => {
+                        const horizons = [...(value.momentum_horizons ?? [42, 84, 168])];
+                        horizons[i] = Number(e.target.value);
+                        onChange({ ...value, momentum_horizons: horizons });
+                      }}
+                    />
+                  </Field>
+                ))}
+                <Field label="Momentum entry score">
+                  <input
+                    required
+                    type="number"
+                    min={0}
+                    max={10}
+                    step="any"
+                    value={value.momentum_entry ?? '.5'}
+                    onChange={(e) => patch('momentum_entry', e.target.value)}
+                  />
+                </Field>
+              </div>
+              <p className="quiet-copy">
+                {t(
+                  'Horizons are ascending bar counts. All normalized returns must agree; disagreement flattens exposure. Scores are not significance tests.',
+                )}
+              </p>
+            </>
+          )}
+          <div className="form-grid">
+            <Field label="Return volatility window">
+              <input
+                required
+                type="number"
+                min={2}
+                max={400}
+                value={value.vol_window ?? 42}
+                onChange={(e) => patch('vol_window', Number(e.target.value))}
+              />
+            </Field>
+            <Field
+              label="Maximum bar volatility %"
+              hint="Unannualized close-return volatility; zero disables the guard."
+            >
+              <input
+                required
+                type="number"
+                min={0}
+                max={100}
+                step="any"
+                value={value.max_bar_vol_pct ?? '5'}
+                onChange={(e) => patch('max_bar_vol_pct', e.target.value)}
+              />
+            </Field>
+            {value.kind === 'regime_reversion' && (
+              <>
+                <Field label="Directional efficiency window">
+                  <input
+                    required
+                    type="number"
+                    min={2}
+                    max={400}
+                    value={value.reversion_trend_window ?? 84}
+                    onChange={(e) => patch('reversion_trend_window', Number(e.target.value))}
+                  />
+                </Field>
+                <Field
+                  label="Maximum directional efficiency"
+                  hint="Net price displacement / total absolute price path; stronger trends flatten exposure."
+                >
+                  <input
+                    required
+                    type="number"
+                    min={0}
+                    max={1}
+                    step="any"
+                    value={value.efficiency_max ?? '.35'}
+                    onChange={(e) => patch('efficiency_max', e.target.value)}
+                  />
+                </Field>
+              </>
+            )}
+          </div>
+        </>
       )}
       {professional && value.kind === 'program' && (
         <ProgramEditor value={value} onChange={onChange} />

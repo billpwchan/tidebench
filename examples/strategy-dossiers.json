@@ -1,0 +1,269 @@
+[
+  {
+    "id": "trend",
+    "recipe": "multi-horizon-trend",
+    "title": {
+      "en": "Multi-horizon momentum",
+      "zh": "多周期动量"
+    },
+    "subtitle": {
+      "en": "Weekly persistence · directional",
+      "zh": "周级延续 · 方向策略"
+    },
+    "scope": {
+      "en": "Spot / USDT perpetual · 4H",
+      "zh": "现货／USDT 永续 · 4 小时"
+    },
+    "mechanism": {
+      "en": "Information diffuses unevenly and leveraged demand can reinforce price trends. Require agreement across one, two and four weeks rather than betting on one crossover.",
+      "zh": "信息传播不均匀，杠杆需求可能强化价格趋势。用一周、两周、四周的共同方向入场，避免依赖单次均线交叉。"
+    },
+    "formula": "rₜ = Cₜ / Cₜ₋₁ − 1\nσₜ = population_std(last 42 returns)\nsₕ = (Cₜ / Cₜ₋ₕ − 1) / (σₜ √h), h ∈ {42, 84, 168}\nlong: every sₕ > 0.5; short: every sₕ < −0.5; else flat",
+    "rule": {
+      "en": "Confirmed 4H closes; 169 closes initialize the default horizon. Long-only maps negative consensus to cash. Zero volatility or bar volatility above 5% flattens exposure. Orders execute at a later open/quote. This is consensus plus fixed/loss-budget sizing, not volatility-targeted allocation.",
+      "zh": "使用已确认的 4 小时收盘；默认需 169 根初始化。仅做多时，负向共识对应现金。波动率为零或超过单根 5% 时清仓。在后续开盘／报价成交。这是共识信号与固定／亏损预算仓位，并非目标波动率配置。"
+    },
+    "evidence": {
+      "en": "Traditional-futures time-series momentum is motivation, not a crypto replication. Crypto-specific research reports daily/weekly momentum in historical samples. Our three-horizon score, threshold and 4H implementation are adaptations that still require testing.",
+      "zh": "传统期货时间序列动量提供研究动机，不是加密复现。加密原始研究在历史样本发现日／周动量。本实现的三个周期、阈值和 4 小时粒度是需要验证的改编。"
+    },
+    "failure": {
+      "en": "Whipsaw, fast V-shaped reversals, crowded exits and a volatility estimate that reacts after the jump. Consensus can miss the beginning of a trend and repeatedly exit during consolidation.",
+      "zh": "震荡反复、快速 V 型反转、拥挤退出，以及跳变后才反应的波动率估计。共识可能错过趋势初段，并在整理时反复清仓。"
+    },
+    "cost": {
+      "en": "20% allocation cap; 0.5% estimated loss budget; 8% close stop and 12% trailing close exit. Gaps can exceed the budget. Perpetual research also needs settled funding, mark prices and margin tiers.",
+      "zh": "20% 配置上限；0.5% 估计亏损预算；8% 收盘止损和 12% 收盘跟踪退出。跳空可突破预算。永续还需实际结算费率、标记价格和保证金档位。"
+    },
+    "reject": {
+      "en": "Returns after 2× fees/slippage fail cash or equal-allocation buy/hold in repeated independent windows; nearby horizons reverse the result; gains are confined to one trend. A few trades give inconclusive evidence.",
+      "zh": "在多个独立时段，双倍费用／滑点后的收益不及现金或等配置买入持有；相邻周期反转结论；收益只来自一段趋势。交易过少时证据不充分。"
+    },
+    "experiment": {
+      "en": "Keep the 42/84/168 specification fixed. Compare 36/72/144 and 48/96/192 as disclosed sensitivity cases, alongside 20/80 SMA and equal-allocation buy/hold. Report all BTC/ETH/SOL cases and both cost settings without selecting a test winner.",
+      "zh": "固定 42/84/168 主规格。公开比较 36/72/144、48/96/192 相邻规格、20/80 均线与等配置买入持有。保留 BTC／ETH／SOL 与两档成本的全部结果，不根据测试结果选冠军。"
+    },
+    "sources": [
+      {
+        "title": "Moskowitz, Ooi & Pedersen · 2012",
+        "url": "https://www.aqr.com/Insights/Research/Journal-Article/Time-Series-Momentum"
+      },
+      {
+        "title": "Liu & Tsyvinski · cryptocurrency returns",
+        "url": "https://www.nber.org/papers/w24877.pdf"
+      }
+    ]
+  },
+  {
+    "id": "reversion",
+    "recipe": "regime-reversion",
+    "title": {
+      "en": "Range-gated reversion",
+      "zh": "区间过滤回归"
+    },
+    "subtitle": {
+      "en": "Displacement · conditional reversal",
+      "zh": "价格偏离 · 条件回归"
+    },
+    "scope": {
+      "en": "Spot / USDT perpetual · 4H",
+      "zh": "现货／USDT 永续 · 4 小时"
+    },
+    "mechanism": {
+      "en": "Temporary liquidity pressure may push price away from its recent center. Avoid fading strongly directional paths by using net displacement relative to total price travel. The filter is a testable hypothesis, not a regime oracle.",
+      "zh": "临时流动性压力可能使价格偏离近期中心。以净位移占总路径的比例过滤强单边行情。过滤器是待检验假设，不能准确预知市场状态。"
+    },
+    "formula": "zₜ = (Cₜ − mean(Cₜ₋₄₈ … Cₜ₋₁)) / population_std(prior 48 closes)\nERₜ = |Cₜ − Cₜ₋₈₄| / Σ₈₄ |ΔC|\nER > 0.35 → flat; z < −2 → long; z > 2 → short; |z| ≤ 0.5 → flat",
+    "rule": {
+      "en": "The current close is excluded from its own reference mean and deviation. Between thresholds retain inventory. Zero variance, excessive return volatility or a strong trend flattens it. Default holding limit: 12 closes. A price Z-score is not a stationary spread or a cointegration test.",
+      "zh": "当前价格不进入自身的参考均值和标准差。阈值之间保留仓位。零方差、过高收益波动率或强趋势时清仓。默认最多持有 12 次收盘。价格 Z 分数不等于平稳价差或协整检验。"
+    },
+    "evidence": {
+      "en": "Original reversal/liquidity research links short-run reversals to liquidity conditions, principally in equities. It does not establish profitable 4H OKX reversion. This lower-confidence adaptation must outperform an ungated ablation after costs.",
+      "zh": "原始反转／流动性研究联系短期反转与流动性条件，主要证据来自股票，不能证明 OKX 4 小时回归盈利。此较低置信度改编必须在成本后优于移除过滤器的版本。"
+    },
+    "failure": {
+      "en": "Structural repricing, persistent sell pressure, liquidation cascades and a filter that reacts too late. Cheap-looking assets can continue falling; correlated “independent” reversion positions can lose together.",
+      "zh": "结构性重估、持续抛压、连锁强平及过滤器反应过慢。看似便宜的资产可能继续下跌；相关回归仓位可能同时亏损。"
+    },
+    "cost": {
+      "en": "20% cap, 0.5% estimated loss budget, 5% close stop, two-day maximum holding on 4H bars. Fees must be earned back over short holding periods; price improvement is not assumed.",
+      "zh": "20% 上限，0.5% 估计亏损预算，5% 收盘止损；4 小时粒度最多约两天。短持有期必须覆盖往返成本，不假设被动成交或价格改善。"
+    },
+    "reject": {
+      "en": "The 0.35 filter fails to improve on the efficiency=1 ablation; 0.25/0.45 neighbors contradict it; test gains vanish with doubled costs; downside clusters remain dominant.",
+      "zh": "0.35 过滤未改善效率上限为 1 的消融版本；0.25／0.45 相邻值结论相反；双倍成本抹去收益；连续下行损失占主导。"
+    },
+    "experiment": {
+      "en": "Use identical prices, costs, stop and holding policy for the filtered model and its ablation. Separate parameter exploration from the final one-use test. Report idle time, round trips and losses alongside returns.",
+      "zh": "过滤版与消融版使用相同价格、成本、止损和持有规则。参数探索与最终一次性测试分开。除收益外，同时报告空仓时间、完整往返交易与亏损。"
+    },
+    "sources": [
+      {
+        "title": "Dai et al. · reversals and liquidity",
+        "url": "https://www.nber.org/papers/w30917"
+      },
+      {
+        "title": "Liu & Tsyvinski · cryptocurrency returns",
+        "url": "https://www.nber.org/papers/w24877.pdf"
+      }
+    ]
+  },
+  {
+    "id": "carry",
+    "recipe": "",
+    "title": {
+      "en": "Cost-aware funding carry",
+      "zh": "考虑成本的资金费率配对"
+    },
+    "subtitle": {
+      "en": "Matched spot / perpetual · two legs",
+      "zh": "现货／永续匹配 · 双腿"
+    },
+    "scope": {
+      "en": "Spot long + matching USDT perpetual short",
+      "zh": "买入现货＋做空匹配的 USDT 永续"
+    },
+    "mechanism": {
+      "en": "Leveraged long demand may compensate traders willing to warehouse the opposite exposure. Pair spot and perpetual notionals to reduce directional exposure while explicitly retaining basis and margin risk.",
+      "zh": "杠杆做多需求可能补偿承接反向敞口的交易者。匹配现货与永续名义金额以减少方向敞口，同时明确保留基差和保证金风险。"
+    },
+    "formula": "f̄ = mean(last 12 strictly prior realized settlements)\nH = 21 × f̄ × 10,000 − 4 × (fee_bps + slippage_bps) − 20\nH > 0 AND f̄ ≥ threshold AND latest age ≤ 16h → admit matched weights",
+    "rule": {
+      "en": "The new recipe needs enough prior observations and a fresh settlement. All four entry/exit fills count. Projected settlement count is an explicit constant-rate scenario, not a holding commitment, APR or guaranteed recovery of costs. Existing zero-count definitions retain a visible legacy rate-only policy.",
+      "zh": "新配方要求足够历史样本与及时结算数据，计入四次开平仓成交。预测结算次数是明确的恒定费率情景，不是持有承诺、年化收益或成本必然收回。旧版零次数定义仍保留明确的仅费率门槛。"
+    },
+    "evidence": {
+      "en": "BIS studies crypto futures carry and the scarcity of arbitrage capital. Its dated-futures evidence is not identical to perpetual funding. OKX funding can change sign and settlement frequency; use actual events rather than assuming three payments daily.",
+      "zh": "BIS 研究期货 carry 与套利资本稀缺。交割期货证据不等同于永续资金费率。OKX 费率可变号，结算频率可变化，应使用实际事件，不能固定假设每日三次。"
+    },
+    "failure": {
+      "en": "Basis widens, short-leg margin is exhausted while spot gains cannot rescue isolated margin, funding turns negative, one leg fails or an exchange becomes unavailable. Equal quote notionals are only approximately base-delta neutral.",
+      "zh": "基差扩大、空头隔离保证金耗尽而现货盈利无法补救、费率转负、单腿失败或交易所不可用。相等报价名义金额仅近似基础资产 delta 中性。"
+    },
+    "cost": {
+      "en": "At 10 bps fee plus 5 bps slippage per fill, four-fill cost is 60 bps. With a 20 bps buffer and 21 settlements, the mean rate must exceed 3.81 bps per settlement. A positive 1 bp rate does not pass. Reserve margin and inspect residual exposure.",
+      "zh": "每次成交 10 bps 费用＋5 bps 滑点时，四次成本为 60 bps。另加 20 bps 缓冲并预测 21 次结算时，平均单次费率须超过 3.81 bps。正的 1 bp 费率仍不达标。须预留保证金并检查残余敞口。"
+    },
+    "reject": {
+      "en": "Matched test P&L after funding, spot/perpetual price moves and all fees fails cash; rate reversal or basis stress consumes the reserve; asymmetric fill or margin failure cannot be contained.",
+      "zh": "计入资金费、现货／永续价格变化和所有费用后，配对收益不及现金；费率反转或基差压力耗尽储备；不对称成交或保证金失败无法受控。"
+    },
+    "experiment": {
+      "en": "Use the shared-capital portfolio engine. Compare rate-only and cost-aware admissions; include zero and negative funding, stale history, doubled costs, divergent marks and failed-leg compensation. A hurdle pass grants an experiment, not an alpha validation.",
+      "zh": "使用共享资金组合引擎。比较仅费率版与成本门槛版，覆盖零／负费率、陈旧数据、双倍成本、标记价格分离与单腿失败补偿。通过门槛仅允许实验，不代表优势被验证。"
+    },
+    "sources": [
+      {
+        "title": "Schmeling, Schrimpf & Todorov · Crypto carry",
+        "url": "https://www.bis.org/publications/working-paper-1087-crypto-carry"
+      },
+      {
+        "title": "OKX · funding fee mechanism",
+        "url": "https://www.okx.com/en-gb/help/perps-funding-fee-mechanism"
+      }
+    ]
+  },
+  {
+    "id": "rotation",
+    "recipe": "",
+    "title": {
+      "en": "Cross-sectional rotation",
+      "zh": "横截面动量轮动"
+    },
+    "subtitle": {
+      "en": "Relative winners · explicit universe",
+      "zh": "相对赢家 · 明确交易池"
+    },
+    "scope": {
+      "en": "Spot portfolio · 1H decision / daily rebalance",
+      "zh": "现货组合 · 小时决策／每日调仓"
+    },
+    "mechanism": {
+      "en": "If capital follows recent relative performance, stronger assets may continue to outperform weaker peers. Ranking relative strength differs from forecasting whether the whole market will rise.",
+      "zh": "若资金追逐近期相对表现，强势资产可能继续优于弱势资产。相对强度排名与预测整个市场上涨不同。"
+    },
+    "formula": "mᵢ = Cᵢ,ₜ / Cᵢ,ₜ₋₁₆₈ − 1\nrank by mᵢ; top_k with mᵢ > 0 retain declared leg weights\nothers → zero; unused weight stays cash",
+    "rule": {
+      "en": "Existing positive-momentum construction, fixed declared weights and stable symbol tie-breaking. No redistribution of unused slots, no short losers and no market-cap factor. It implements a constrained long-only hypothesis rather than the published long-short factor.",
+      "zh": "已实现正动量构建，使用预声明权重及稳定的品种并列排序。空缺权重不重新分配、不做空输家、不含市值因子。它是受约束的仅做多假设，不是文献多空因子的复现。"
+    },
+    "evidence": {
+      "en": "Original crypto factor research identifies market, size and momentum factors. A tiny present-day large-cap basket cannot reproduce that broad cross-sectional result or remove survivorship bias.",
+      "zh": "加密原始因子研究识别市场、市值与动量因子。少量当前大市值品种无法复现广泛横截面结果，也无法消除幸存者偏差。"
+    },
+    "failure": {
+      "en": "Momentum crashes, correlated drawdowns, unstable ranks and winner chasing after a one-off jump. Expanding the universe with today’s survivors can manufacture an apparent advantage.",
+      "zh": "动量崩溃、相关下跌、排名不稳定及追逐一次性跳涨。用今天的幸存品种扩展历史交易池，可能制造虚假优势。"
+    },
+    "cost": {
+      "en": "Daily ranking changes cause turnover. Fixed weights, cash scale, lot rounding and actual residuals share one balance. Compare with the same reserve-aware passive basket, not unrelated independent backtests.",
+      "zh": "每日排名变化带来换手。固定权重、现金缩放、手数舍入与真实残余使用同一余额。应与同储备的被动组合比较，不能拼接独立回测。"
+    },
+    "reject": {
+      "en": "Net returns fail the same-universe passive basket; neighboring ranking horizons disagree; one coin drives the result; incomplete universe histories prevent the intended claim.",
+      "zh": "净收益不及相同交易池的被动组合；相邻排名周期结论不一致；单币驱动全部结果；不完整历史交易池无法支撑目标结论。"
+    },
+    "experiment": {
+      "en": "Declare members before the test. Compare one-, two- and four-week ranking horizons with identical capital and costs. Historical-universe lifecycle evidence is required before making broad factor or survivorship-free claims.",
+      "zh": "测试前声明成员。以相同资本与成本比较一、二、四周排名周期。做广泛因子或无幸存者偏差结论前，必须具备历史交易池生命周期证据。"
+    },
+    "sources": [
+      {
+        "title": "Liu, Tsyvinski & Wu · crypto factors",
+        "url": "https://www.nber.org/papers/w25882"
+      }
+    ]
+  },
+  {
+    "id": "breakout",
+    "recipe": "breakout",
+    "title": {
+      "en": "Closing-channel breakout",
+      "zh": "收盘通道突破"
+    },
+    "subtitle": {
+      "en": "Price discovery · simpler reference",
+      "zh": "价格发现 · 简单对照"
+    },
+    "scope": {
+      "en": "Spot / USDT perpetual · configurable bar",
+      "zh": "现货／USDT 永续 · 可配置粒度"
+    },
+    "mechanism": {
+      "en": "A new closing-price extreme may reflect persistent information-driven repricing. Keep a simple channel model as a reference against which extra filters must justify their complexity.",
+      "zh": "新的收盘极值可能反映信息驱动的持续重估。保留简单通道模型作为对照，额外过滤器必须证明其复杂性有价值。"
+    },
+    "formula": "upperₜ = max(prior 40 closes); lowerₜ = min(prior 40 closes)\nCₜ > upperₜ → long; Cₜ < lowerₜ → short; else retain",
+    "rule": {
+      "en": "The channel excludes the current close and uses closing prices, not candle highs/lows. Long-only lower breakout closes the position. There is no separate shorter exit channel and no intrabar stop fill assumption.",
+      "zh": "通道排除当前收盘，使用收盘价而非 K 线高低价。仅做多时，下破通道清仓。未使用独立较短退出通道，也不假设盘中止损成交。"
+    },
+    "evidence": {
+      "en": "Trend research motivates persistence, not this 40-bar channel. The original, deliberately simple implementation is a baseline; calling it a Turtle replication would be inaccurate.",
+      "zh": "趋势研究支持探索价格延续，不能证明 40 根通道有效。此简单实现用作基线，不应称为海龟策略的复现。"
+    },
+    "failure": {
+      "en": "False breakouts, range-bound markets, delayed exits and gaps through close-based stops. A profitable rare trend can hide repeated small trading losses.",
+      "zh": "假突破、区间震荡、退出滞后及跳过收盘止损的缺口。罕见大趋势盈利可能掩盖反复的小额交易损失。"
+    },
+    "cost": {
+      "en": "20% allocation cap, 5% close stop, 7% trailing-close exit and 0.5% estimated loss budget. Test wider spreads and opening gaps separately from configured fixed slippage.",
+      "zh": "20% 配置上限、5% 收盘止损、7% 收盘跟踪退出及 0.5% 估计亏损预算。扩大点差与开盘缺口须单独检验，不能只依赖固定滑点。"
+    },
+    "reject": {
+      "en": "30/40/50-bar neighbors produce incompatible conclusions, doubled costs remove the gain, or all return depends on one unrepeatable breakout.",
+      "zh": "30／40／50 根相邻窗口得出冲突结论，双倍成本消除收益，或全部回报依赖一次难以重复的突破。"
+    },
+    "experiment": {
+      "en": "Use identical windows and capital for channel, SMA and multi-horizon momentum. Record every attempted setting before final evaluation; increasing the number of templates does not create more independent evidence.",
+      "zh": "在相同区间和资本下比较通道、均线与多周期动量。最终评估前记录所有尝试，增加模板数量并不会产生更多独立证据。"
+    },
+    "sources": [
+      {
+        "title": "Moskowitz, Ooi & Pedersen · 2012",
+        "url": "https://www.aqr.com/Insights/Research/Journal-Article/Time-Series-Momentum"
+      }
+    ]
+  }
+]

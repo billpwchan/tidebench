@@ -6375,3 +6375,206 @@ tbody tr:hover {
     flex-basis: 100%;
   }
 }
+
+.strategy-research-intro {
+  max-width: 780px;
+  margin: 34px 0 40px;
+}
+.strategy-research-intro h2 {
+  font-size: clamp(24px, 3vw, 38px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  margin: 12px 0;
+}
+.strategy-research-intro p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.strategy-research-layout {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 58px;
+}
+.strategy-research-layout nav button {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 20px 12px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  border-radius: 4px;
+}
+.strategy-research-layout nav button[aria-pressed='true'] {
+  background: #edf2e9;
+}
+.strategy-research-layout nav button > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.strategy-research-layout nav button > div {
+  flex: 1;
+}
+.strategy-research-layout nav strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 550;
+}
+.strategy-research-layout nav small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.strategy-dossier {
+  min-width: 0;
+  max-width: 900px;
+}
+.strategy-dossier-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.strategy-dossier h3 {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  margin: 22px 0 14px;
+}
+.strategy-dossier-thesis {
+  font-size: 17px;
+  line-height: 1.85;
+}
+.strategy-dossier-formula {
+  background: #f0f3ec;
+  padding: 22px 26px;
+  margin: 28px 0;
+}
+.strategy-dossier-formula > span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.strategy-dossier-formula code {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.strategy-dossier p {
+  line-height: 1.85;
+}
+.strategy-dossier-formula p,
+.strategy-dossier-grid p,
+.strategy-dossier-test p {
+  color: var(--muted);
+  font-size: 13px;
+}
+.strategy-dossier-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 42px;
+  row-gap: 12px;
+}
+.strategy-dossier h4 {
+  font-size: 12px;
+  font-weight: 650;
+  margin: 12px 0 8px;
+}
+.strategy-dossier-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 24px 0;
+  margin: 12px 0 6px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+.strategy-dossier-sources > span {
+  color: var(--muted);
+}
+.strategy-dossier-sources a {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: inherit;
+}
+@media (max-width: 900px) {
+  .strategy-research-layout {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .strategy-research-layout nav {
+    display: flex;
+    overflow: auto;
+    padding-bottom: 8px;
+  }
+  .strategy-research-layout nav button {
+    min-width: 220px;
+  }
+}
+@media (max-width: 560px) {
+  .strategy-dossier-grid {
+    grid-template-columns: 1fr;
+  }
+  .strategy-research-intro {
+    margin: 24px 0;
+  }
+  .strategy-dossier-formula {
+    padding: 18px;
+  }
+}
+
+.strategy-observed-evidence {
+  margin: 30px 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.strategy-observed-evidence p {
+  color: var(--muted);
+  font-size: 12px;
+}
+.strategy-observed-evidence select {
+  max-width: 230px;
+  font-size: 11px;
+}
+.strategy-observed-evidence .section-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.strategy-observed-evidence th,
+.strategy-observed-evidence td {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.strategy-observed-evidence a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  font-size: 12px;
+}
+
+.strategy-observed-evidence select {
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: #273d34;
+}
+.strategy-observed-evidence td {
+  color: #273d34;
+}
+.strategy-observed-evidence th {
+  color: #5d6c62;
+}

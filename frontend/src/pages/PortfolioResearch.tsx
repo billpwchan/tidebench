@@ -98,6 +98,19 @@ export default function PortfolioResearch({
   const [capitalPct, setCapitalPct] = useState('100');
   const [residualPct, setResidualPct] = useState('2');
   const [carryThreshold, setCarryThreshold] = useState('0');
+  const [carryConfig, setCarryConfig] = useState({
+    carry_window: 1,
+    carry_cost_settlements: 0,
+    carry_buffer_bps: '0',
+    carry_max_age_hours: 0,
+  });
+  const loadCarry = (d: Partial<PortfolioDefinition>) =>
+    setCarryConfig({
+      carry_window: d.carry_window ?? 1,
+      carry_cost_settlements: d.carry_cost_settlements ?? 0,
+      carry_buffer_bps: d.carry_buffer_bps ?? '0',
+      carry_max_age_hours: d.carry_max_age_hours ?? 0,
+    });
   const projects = useQuery({
     queryKey: ['portfolio-projects'],
     queryFn: proApi.portfolioProjects,
@@ -127,6 +140,7 @@ export default function PortfolioResearch({
         lookback,
         top_k: topK,
         carry_threshold: carryThreshold,
+        ...carryConfig,
         max_residual_pct: residualPct,
         failure_policy: 'reduce_group',
         legs: legs.map((leg, i) => ({
@@ -165,6 +179,7 @@ export default function PortfolioResearch({
         lookback,
         top_k: topK,
         carry_threshold: carryThreshold,
+        ...carryConfig,
         max_gross_pct: gross,
         max_daily_loss_pct: daily,
         evaluation,
@@ -199,6 +214,7 @@ export default function PortfolioResearch({
       setCapitalPct(d.capital_pct);
       setResidualPct(d.max_residual_pct);
       setCarryThreshold(d.carry_threshold);
+      loadCarry(d);
       setRebalance(d.rebalance_bars);
       setLookback(d.lookback);
       setTopK(d.top_k);
@@ -234,6 +250,7 @@ export default function PortfolioResearch({
       setLegs(config.legs as Leg[]);
       setCapitalPct(String(config.capital_pct ?? 100));
       setCarryThreshold(String(config.carry_threshold));
+      loadCarry(config as Partial<PortfolioDefinition>);
       setCash(String(config.initial_cash));
       setFee(String(config.fee_bps));
       setSlip(String(config.slippage_bps));
@@ -324,6 +341,7 @@ export default function PortfolioResearch({
                     setCapitalPct(d.capital_pct);
                     setResidualPct(d.max_residual_pct);
                     setCarryThreshold(d.carry_threshold);
+                    loadCarry(d);
                     setRebalance(d.rebalance_bars);
                     setLookback(d.lookback);
                     setTopK(d.top_k);
@@ -578,17 +596,56 @@ export default function PortfolioResearch({
                 />
               </Field>
               {mode === 'funding_carry' && (
-                <Field label="Prior funding threshold">
-                  <input
-                    required
-                    type="number"
-                    min={-0.01}
-                    max={0.01}
-                    step="any"
-                    value={carryThreshold}
-                    onChange={(e) => setCarryThreshold(e.target.value)}
-                  />
-                </Field>
+                <>
+                  <Field label="Prior funding threshold">
+                    <input
+                      required
+                      type="number"
+                      min={-0.01}
+                      max={0.01}
+                      step="any"
+                      value={carryThreshold}
+                      onChange={(e) => setCarryThreshold(e.target.value)}
+                    />
+                  </Field>
+                  {(
+                    [
+                      ['carry_window', 'Prior settlements', 1, 30],
+                      ['carry_cost_settlements', 'Projected settlement count', 0, 300],
+                      ['carry_max_age_hours', 'Maximum funding age (hours)', 0, 168],
+                      ['carry_buffer_bps', 'Additional carry hurdle (bps)', 0, 1000],
+                    ] as const
+                  ).map(([key, label, min, max]) => (
+                    <Field key={key} label={label}>
+                      <input
+                        required
+                        type="number"
+                        min={min}
+                        max={max}
+                        step={key === 'carry_buffer_bps' ? 'any' : 1}
+                        value={carryConfig[key]}
+                        onChange={(e) =>
+                          setCarryConfig((old) => ({
+                            ...old,
+                            [key]:
+                              key === 'carry_buffer_bps' ? e.target.value : Number(e.target.value),
+                          }))
+                        }
+                      />
+                    </Field>
+                  ))}
+                  <p className="quiet-copy">
+                    {t('Four-fill entry/exit cost hurdle')}:{' '}
+                    {(
+                      4 * (Number(fee) + Number(slip)) +
+                      Number(carryConfig.carry_buffer_bps)
+                    ).toFixed(2)}{' '}
+                    bps.{' '}
+                    {t(
+                      'Projection is per settlement, not APR. Zero projected settlements retains the legacy rate-only gate; zero maximum age disables freshness checks.',
+                    )}
+                  </p>
+                </>
               )}
               <Field label="Initial capital">
                 <input

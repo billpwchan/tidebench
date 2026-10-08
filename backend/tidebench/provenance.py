@@ -41,6 +41,7 @@ def research_identity() -> dict:
         "pro_execution.py",
         "contributions.py",
         "strategy_program.py",
+        "strategy_models.py",
         "forward_history.py",
         "simulation_clock.py",
         "provenance.py",

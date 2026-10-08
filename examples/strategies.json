@@ -199,5 +199,79 @@
       "direction": "long_only",
       "leverage": "1"
     }
+  },
+  {
+    "id": "multi-horizon-trend",
+    "name": "Multi-horizon momentum consensus",
+    "hypothesis": "Underreaction and staggered adoption may sustain weekly crypto trends. This 4H adaptation requires 1/2/4-week volatility-normalized returns to agree; it is not a replication of a published portfolio. Reject after full turnover costs if it fails equal-allocation buy/hold or cash across disjoint development windows, depends on one episode, or neighbors change the conclusion. Sudden trend reversal and repeated disagreement are failure regimes.",
+    "definition": {
+      "schema_version": 1,
+      "product": "SPOT",
+      "bar": "4H",
+      "strategy": {
+        "kind": "ts_momentum",
+        "fast": 20,
+        "slow": 80,
+        "rsi_period": 14,
+        "entry": "30",
+        "exit": "60",
+        "allocation": "0.2",
+        "window": 20,
+        "z_entry": "2",
+        "z_exit": "0.5",
+        "atr_period": 14,
+        "stop_loss_pct": "8",
+        "take_profit_pct": "0",
+        "trailing_stop_pct": "12",
+        "max_holding_bars": 0,
+        "risk_per_trade_pct": "0.5",
+        "rules": [],
+        "momentum_horizons": [
+          42,
+          84,
+          168
+        ],
+        "momentum_entry": "0.5",
+        "vol_window": 42,
+        "max_bar_vol_pct": "5"
+      },
+      "direction": "long_only",
+      "leverage": "1"
+    }
+  },
+  {
+    "id": "regime-reversion",
+    "name": "Range-gated price reversion",
+    "hypothesis": "Temporary liquidity displacement may reverse in low-directional-efficiency markets. Price distance is standardized against a prior-only 48-close window; 84-bar efficiency above 0.35 or excessive bar volatility flattens the trade. This regime filter is an unvalidated engineering hypothesis. Reject if net test returns fail cash, if removing the filter performs as well, or if 2x costs erase the result. Structural repricing and serial crashes can defeat the filter and stop.",
+    "definition": {
+      "schema_version": 1,
+      "product": "SPOT",
+      "bar": "4H",
+      "strategy": {
+        "kind": "regime_reversion",
+        "fast": 20,
+        "slow": 80,
+        "rsi_period": 14,
+        "entry": "30",
+        "exit": "60",
+        "allocation": "0.2",
+        "window": 48,
+        "z_entry": "2",
+        "z_exit": "0.5",
+        "atr_period": 14,
+        "stop_loss_pct": "5",
+        "take_profit_pct": "0",
+        "trailing_stop_pct": "0",
+        "max_holding_bars": 12,
+        "risk_per_trade_pct": "0.5",
+        "rules": [],
+        "vol_window": 42,
+        "reversion_trend_window": 84,
+        "efficiency_max": "0.35",
+        "max_bar_vol_pct": "5"
+      },
+      "direction": "long_only",
+      "leverage": "1"
+    }
   }
 ]

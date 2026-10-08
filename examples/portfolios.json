@@ -233,8 +233,8 @@
   },
   {
     "id": "carry",
-    "name": "BTC spot / perpetual lagged-funding study",
-    "hypothesis": "A BTC spot long and equal-notional USDT perpetual short may receive funding while prior realized funding exceeds one basis point per settlement. Prior settlement is a signal, not a forecast or a normalized annual yield. Reject if actual funding minus fees, slippage and hedge drift fails cash, or if basis widening, short-leg margin stress or failed sequential hedging breaches the loss budget. Leverage reduces short collateral, not target notional. Both legs reduce together on a leg exit; inspect failed compensation and residual evidence.",
+    "name": "Cost-aware lagged funding carry",
+    "hypothesis": "Leveraged demand may pay spot-long/perpetual-short funding, but positive funding alone need not cover turnover. Require a 12-settlement lagged mean, latest settlement at most 16 hours old, and a 21-future-settlement constant-rate scenario exceeding all four entry/exit fees and slippage plus 20 bps buffer. Settlement counts are scenarios, not 7-day guarantees or APR. Reject if matched test P&L after funding, basis, fees and liquidation fails cash; stress rate reversal, divergent marks and failed legs. Margin spikes, funding reversal, basis widening and exchange failure remain material risks.",
     "definition": {
       "schema_version": 1,
       "bar": "1H",
@@ -297,7 +297,11 @@
       "top_k": 1,
       "carry_threshold": ".0001",
       "max_residual_pct": "2",
-      "failure_policy": "reduce_group"
+      "failure_policy": "reduce_group",
+      "carry_window": 12,
+      "carry_cost_settlements": 21,
+      "carry_buffer_bps": "20",
+      "carry_max_age_hours": 16
     }
   }
 ]

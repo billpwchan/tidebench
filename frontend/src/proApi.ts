@@ -365,6 +365,10 @@ export type PortfolioDefinition = {
   lookback: number;
   top_k: number;
   carry_threshold: string;
+  carry_window?: number;
+  carry_cost_settlements?: number;
+  carry_buffer_bps?: string;
+  carry_max_age_hours?: number;
   max_residual_pct: string;
   failure_policy: 'reduce_group';
 };

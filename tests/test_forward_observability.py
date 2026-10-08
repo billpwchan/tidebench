@@ -250,3 +250,26 @@ async def test_holding_exit_and_decision_order_link_survive_restart(runtime):
         conn.execute("UPDATE forward_equity SET body='{}' WHERE id=(SELECT MAX(id) FROM forward_equity)")
     with pytest.raises(PlatformError, match="content check"):
         restored.book.performance.report("example")
+
+
+@pytest.mark.parametrize("kind", ["ts_momentum", "regime_reversion"])
+async def test_new_models_resume_from_durable_forward_history_and_match_full_path(runtime, kind):
+    deployment = deploy(runtime, kind=kind, symbol="ETH-USDT")
+    await runtime.evaluate(deployment)
+    step(runtime)
+    await runtime.evaluate(runtime.deployments()[0])
+    restored = ProfessionalRuntime(Store(runtime.store.path), runtime.market, runtime.settings)
+    step(restored)
+    await restored.evaluate(restored.deployments()[0])
+    latest = restored.history.decisions(deployment["id"])[0]
+    assert latest["new_bars"] == 1
+    with restored.store.read() as conn:
+        rows = conn.execute("SELECT body FROM forward_bars ORDER BY ts").fetchall()
+    import json
+
+    with localcontext(ACCOUNTING_CONTEXT):
+        state = _DecisionState(ResearchConfig(strategy=StrategyConfig(kind=kind, allocation=D(".1"))))
+        for row in rows:
+            signal, indicators = state.on_close(D(json.loads(row["body"])["close"]))
+    assert latest["signal"] == signal and latest["indicators"] == indicators
+    assert "bar_vol_pct" in indicators

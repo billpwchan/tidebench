@@ -1,4 +1,32 @@
 export const professionalZh: Record<string, string> = {
+  'Research library': '研究库',
+  'My strategy versions': '我的策略版本',
+  'Strategy view': '策略视图',
+  'Multi-horizon momentum': '多周期动量',
+  'Regime-gated reversion': '市场状态过滤回归',
+  'Multi-horizon momentum consensus': '多周期动量共识',
+  'Range-gated price reversion': '区间过滤价格回归',
+  'Momentum horizon': '动量周期',
+  'Momentum entry score': '动量入场分数',
+  'Return volatility window': '收益波动率窗口',
+  'Maximum bar volatility %': '单根 K 线波动率上限 %',
+  'Unannualized close-return volatility; zero disables the guard.':
+    '未年化的收盘收益波动率；零关闭此过滤。',
+  'Directional efficiency window': '方向效率窗口',
+  'Maximum directional efficiency': '方向效率上限',
+  'Net price displacement / total absolute price path; stronger trends flatten exposure.':
+    '净位移除以价格路径总长度；强趋势时清仓。',
+  'Horizons are ascending bar counts. All normalized returns must agree; disagreement flattens exposure. Scores are not significance tests.':
+    '周期为递增的 K 线根数。各周期标准化收益必须一致，否则清仓。分数不代表统计显著性。',
+  'Prior settlements': '历史结算样本数',
+  'Projected settlement count': '情景预测结算次数',
+  'Maximum funding age (hours)': '资金费率最长时效（小时）',
+  'Additional carry hurdle (bps)': '资金费率额外门槛（bps）',
+  'Four-fill entry/exit cost hurdle': '四次开平仓成交的成本门槛',
+  'Projection is per settlement, not APR. Zero projected settlements retains the legacy rate-only gate; zero maximum age disables freshness checks.':
+    '预测以结算次数计，不代表年化收益率。预测次数为零时保留旧版仅费率门槛；最长时效为零时关闭时效检查。',
+  'Cost-aware lagged funding carry': '考虑成本的滞后资金费率配对',
+
   'Instrument evidence': '品种证据',
   'Instrument observations': '品种观察记录',
   'Preserve what the endpoint returned, when it became known and which rules remain unavailable.':

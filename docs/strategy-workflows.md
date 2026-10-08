@@ -12,7 +12,7 @@ Single-market releases own one flat/no-pending market at activation. Stops retai
 
 ## Strategy expression
 
-Five reference signal families are available: SMA crossover, Wilder RSI reversion, buy-and-hold, **prior closing-price channel** breakout, and population-standard-deviation Z-score reversion. The bounded `program` model supports up to four ordered rules with up to four comparisons each. Operands are typed features or constants; first matching rule wins. Unavailable features do not match. No match retains the existing regime. No Python, JavaScript, `eval`, arbitrary imports or remote code is accepted.
+Seven signal families are available, including multi-horizon momentum and regime-gated reversion described with formulas and public contrary evidence in [Strategy research](strategy-research.md). The original reference families are: SMA crossover, Wilder RSI reversion, buy-and-hold, **prior closing-price channel** breakout, and population-standard-deviation Z-score reversion. The bounded `program` model supports up to four ordered rules with up to four comparisons each. Operands are typed features or constants; first matching rule wins. Unavailable features do not match. No match retains the existing regime. No Python, JavaScript, `eval`, arbitrary imports or remote code is accepted.
 
 Features: `close`, `volume`, `fast_sma`, `slow_sma`, `rsi`, `zscore`, `channel_upper`, `channel_lower`, `atr`. Thresholds and windows are versioned with the program. See the runnable, schema-validated [recipes](../examples/strategies.json); the strategy editor loads the same file. These are research starting points with rejection criteria, not validated alpha.
 
@@ -31,6 +31,8 @@ An optional chronological train/test evaluation fixes construction in advance, i
 Current instrument rules are explicitly scenario inputs. API clients can supply attributed, causally available rule events for point-in-time rules. Missing bars, future-known rules, unsupported contract-unit conversions and unsupported non-live instruments are rejected. A selected present-day universe does not become survivorship-free historical listing coverage.
 
 Portfolio research saves an immutable multi-market definition and binds it to exact package/result evidence. **Review portfolio release** promotes that result as a whole managed group, with current cost/risk review and flat/unowned activation checks. Shared forward targets, frozen commands, failed-leg compensation and whole-group stops preserve the multi-leg lifecycle; independently starting single-market strategies is unnecessary. See [Managed portfolios](managed-portfolios.md) for failure handling and actual contribution accounting.
+
+The cost-aware carry recipe now requires a 12-settlement lagged mean, a 16-hour age bound and a 21-settlement scenario that covers four entry/exit fills plus a buffer. Legacy zero-count definitions retain rate-only admission explicitly.
 
 The editor loads four editable [portfolio hypotheses](../examples/portfolios.json): a reserve-aware BTC/ETH basket, shared trend/reversion, seven-day positive momentum and a lagged-funding spot/perpetual pair. They default to chronological train/test and state benchmarks, failure regimes and rejection criteria. Additional comparisons described in the hypothesis still need to be run; a recipe is not validated alpha.
 

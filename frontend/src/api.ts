@@ -17,6 +17,12 @@ export type Strategy = {
   trailing_stop_pct?: string;
   max_holding_bars?: number;
   risk_per_trade_pct?: string;
+  momentum_horizons?: number[];
+  momentum_entry?: string;
+  vol_window?: number;
+  max_bar_vol_pct?: string;
+  efficiency_max?: string;
+  reversion_trend_window?: number;
   rules?: Record<string, unknown>[];
 };
 export type RunConfig = {
