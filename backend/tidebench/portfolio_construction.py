@@ -7,7 +7,9 @@ from .engine import ACCOUNTING_CONTEXT
 D = Decimal
 
 
-def construction_weights(config, legs, signals, positions, momentum, past_funding_rate):
+def construction_weights(
+    config, legs, signals, positions, momentum, past_funding_rate, *, risk_evidence=None
+):
     """Inputs are already cut at the confirmed decision bar by the caller.
 
     ``None`` signals retain the economic position direction, never an invented
@@ -17,6 +19,12 @@ def construction_weights(config, legs, signals, positions, momentum, past_fundin
     with localcontext(ACCOUNTING_CONTEXT):
         weights = {leg["inst_id"]: D(str(leg["weight"])) for leg in legs}
         mode = config["mode"]
+        if mode == "risk_momentum":
+            if risk_evidence is None:
+                from .engine import EngineError
+
+                raise EngineError("Risk momentum requires captured causal risk evidence.")
+            return {s: D(str(w)) for s, w in risk_evidence["weights"].items()}
         if mode == "independent_signals":
             weights = {
                 symbol: abs(weight)

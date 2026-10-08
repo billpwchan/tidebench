@@ -235,3 +235,45 @@ async def test_cost_aware_carry_preserves_zero_trade_evidence_when_positive_rate
     assert all(not e["allowed"] for e in evidence)
     for decision in result["decisions"]:
         assert all(ts < decision["bar_ts"] for ts in decision["carry_evidence"]["settlement_times"])
+
+
+async def test_risk_rotation_causal_window_replay_and_risk_budget(runtime):
+    inputs = await packages(runtime)
+    body = config(
+        inputs,
+        mode="risk_momentum",
+        risk_window=20,
+        lookback=20,
+        top_k=2,
+        vol_target_pct="10",
+        rebalance_bars=6,
+    )
+    result = await run(runtime, body)
+    decisions = result["result"]["decisions"]
+    assert decisions[0]["risk_evidence"]["reason"] == "insufficient_history"
+    allocated = [d for d in decisions if d["risk_evidence"].get("covariance")]
+    assert allocated
+    for decision in allocated:
+        e = decision["risk_evidence"]
+        assert e["sample_end"] == decision["ts"]
+        assert D(e["modeled_vol_pct"]) <= D(10) + D("1e-40")
+        assert D(e["stressed_vol_pct"]) <= D(10) + D("1e-40")
+        assert all(D(w) >= 0 for w in decision["weights"].values())
+    replay = runtime.portfolios.replay(result["id"], "researcher")
+    await runtime.offload(runtime.portfolios.compute, replay["id"])
+    replay = runtime.portfolios.get(replay["id"])
+    assert replay["manifest"]["replay_verified"]
+    assert replay["result"] == result["result"]
+
+
+async def test_covariance_product_budget_refuses_excess_work_before_enqueue(runtime):
+    inputs = []
+    for symbol in ("BTC-USDT", "ETH-USDT"):
+        p = runtime.packages.create_package(symbol, "1H", END - 3360 * HOUR, END, "example")
+        p = await runtime.packages.run_package(p["id"])
+        assert p["ready"]
+        inputs.append(p)
+    body = config(inputs, mode="risk_momentum", risk_window=400, rebalance_bars=1)
+    with pytest.raises(PlatformError, match="five million"):
+        runtime.portfolios.create(body, "researcher")
+    assert runtime.portfolios.list("example") == []

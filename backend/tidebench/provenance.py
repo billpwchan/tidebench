@@ -38,6 +38,7 @@ def research_identity() -> dict:
         "portfolio_research.py",
         "portfolio_targets.py",
         "portfolio_construction.py",
+        "portfolio_risk.py",
         "pro_execution.py",
         "contributions.py",
         "strategy_program.py",

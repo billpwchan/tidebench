@@ -22,6 +22,8 @@ Tidebench supplies a self-hosted shared workspace for public OKX spot/linear-USD
 
 [Verification](verification.md) identifies actual counts, environment and workload scope. The [v0.6 self-audit](audit/red-team-0.6.0.zh-CN.md) provides failure evidence and remaining contracts. Passing an isolated test or older CI run does not establish the state of a later release.
 
+The [v0.9 risk allocation research](portfolio-risk-research.md) implements causal covariance, capped inverse-volatility sizing and a shared historical/managed risk governor. All 28 exploratory public-data cases remain cost-sensitive; no alpha or realized-risk bound is established.
+
 ## Substantive remaining work
 
 - **Historical universe and contract events:** explicit selected markets and captured current rules reproduce a scenario; they do not prove historical tradability, listing/delisting completeness, contract conversions or survivorship-free history. Current margin tiers remain scenarios unless attributed history is supplied. See the [temporal evidence design](historical-universe-design.md).

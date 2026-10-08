@@ -19,6 +19,7 @@ from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, EngineError, StrategyConfig
 from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights, funding_carry_evidence
+from .portfolio_risk import constrain_risk_weights, realized_portfolio_metrics, risk_momentum_weights
 from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import SimulationBook, base_size, number, tier_for
 from .pro_research import ResearchConfig, _DecisionState, json_safe
@@ -58,7 +59,9 @@ class PortfolioInput(InputModel):
     name: str = Field(min_length=2, max_length=100)
     hypothesis: str = Field(min_length=12, max_length=4000)
     legs: list[PortfolioLeg] = Field(min_length=2, max_length=10)
-    mode: Literal["fixed_weights", "independent_signals", "momentum", "funding_carry"] = "fixed_weights"
+    mode: Literal["fixed_weights", "independent_signals", "momentum", "risk_momentum", "funding_carry"] = (
+        "fixed_weights"
+    )
     portfolio_version_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     capital_pct: Decimal = Field(default=100, gt=0, le=100)
     initial_cash: Money = D(10000)
@@ -70,6 +73,11 @@ class PortfolioInput(InputModel):
     rebalance_bars: int = Field(default=24, ge=1, le=1000)
     lookback: int = Field(default=20, ge=2, le=400)
     top_k: int = Field(default=1, ge=1, le=10)
+    risk_window: int = Field(default=84, ge=10, le=400)
+    vol_target_pct: Decimal = Field(default=20, gt=0, le=100)
+    vol_floor_pct: Decimal = Field(default=20, gt=0, le=200)
+    covariance_shrinkage: Decimal = Field(default=".25", ge=0, le=1)
+    correlation_stress: Decimal = Field(default=".75", ge=0, le=1)
     carry_threshold: Decimal = Field(default=0, ge=-0.01, le=0.01)
     carry_window: int = Field(default=1, ge=1, le=30)
     carry_cost_settlements: int = Field(default=0, ge=0, le=300)
@@ -151,6 +159,23 @@ class PortfolioResearch:
                 "portfolio_window", "The complete warmup and test window must fit every aligned package.", 422
             )
         bars = (end - start) // interval
+        if config["mode"] == "risk_momentum":
+            has_exits = any(
+                any(
+                    D(str(leg["strategy"].get(k) or 0)) != 0
+                    for k in ("stop_loss_pct", "trailing_stop_pct", "take_profit_pct", "max_holding_bars")
+                )
+                for leg in config["legs"]
+            )
+            decisions = (
+                bars if has_exits else (bars + config["rebalance_bars"] - 1) // config["rebalance_bars"]
+            )
+            if decisions * len(packages) ** 2 * config["risk_window"] > 5000000:
+                raise PlatformError(
+                    "portfolio_risk_budget",
+                    "Risk covariance estimation exceeds five million products; shorten the window, universe or rebalance frequency.",
+                    422,
+                )
         if bars * len(packages) > 20000:
             raise PlatformError(
                 "portfolio_budget", "Portfolio research is limited to 20000 bar-leg observations.", 422
@@ -245,6 +270,18 @@ class PortfolioResearch:
             raise PlatformError(
                 "momentum_legs",
                 "Momentum rotation uses nonnegative weights and top_k no greater than the universe.",
+                422,
+            )
+        if config["mode"] == "risk_momentum" and (
+            config["top_k"] > len(packages)
+            or any(
+                not 0 <= D(leg["weight"]) <= 1 or D(leg["leverage"]) != 1 or leg["direction"] != "long_only"
+                for leg in config["legs"]
+            )
+        ):
+            raise PlatformError(
+                "risk_momentum_legs",
+                "Risk momentum requires long-only unlevered legs and weight ceilings in [0,1].",
                 422,
             )
         inputs = [self.runtime.packages.research_inputs(p["id"]) for p in packages]
@@ -868,6 +905,20 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 if config["mode"] == "funding_carry"
                 else None
             )
+            risk_evidence = None
+            if config["mode"] == "risk_momentum":
+                risk_evidence = risk_momentum_weights(
+                    config,
+                    [leg["config"] | {"inst_id": leg["instrument"]["inst_id"]} for leg in legs],
+                    {
+                        leg["instrument"]["inst_id"]: leg["candles"][
+                            max(0, index - max(config["lookback"], config["risk_window"])) : index + 1
+                        ]
+                        for leg in legs
+                    },
+                    ts,
+                    interval,
+                )
             weights = construction_weights(
                 config,
                 [leg["config"] | {"inst_id": leg["instrument"]["inst_id"]} for leg in legs],
@@ -885,6 +936,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 if index >= config["lookback"]
                 else {},
                 carry_evidence["mean_rate"] if carry_evidence and carry_evidence["allowed"] else None,
+                risk_evidence=risk_evidence,
             )
             if config["mode"] == "funding_carry" and risk_exits:
                 risk_exits = {leg["instrument"]["inst_id"]: "carry_group_exit" for leg in legs}
@@ -901,6 +953,8 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 max(D(0), D(account["equity"]) * D(str(config.get("capital_pct", 100))) / 100),
                 risk_exits,
             )
+            if risk_evidence:
+                weights, risk_evidence = constrain_risk_weights(config, weights, risk_evidence)
             decision = {
                 "ts": clock[0],
                 "bar_ts": ts,
@@ -912,6 +966,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 "mode": config["mode"],
                 "risk_exits": risk_exits,
                 **({"carry_evidence": carry_evidence} if carry_evidence else {}),
+                **({"risk_evidence": risk_evidence} if risk_evidence else {}),
                 "exit_only": not rebalance_due,
                 "status": "next_open",
             }
@@ -955,6 +1010,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 "fees_paid": final["fees_paid"],
                 "funding_paid": final["funding_paid"],
                 "insurance_debt": final["insurance_debt"],
+                **realized_portfolio_metrics(equity, orders, initial, interval),
                 "orders": len(orders),
                 "execution_rejections": len(errors),
             },

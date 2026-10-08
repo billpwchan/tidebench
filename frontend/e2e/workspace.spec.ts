@@ -1105,3 +1105,64 @@ test('research library loads executable hypotheses and bilingual cost-aware carr
     });
   await page.evaluate(() => localStorage.setItem('tidebench:language', 'en'));
 });
+
+test('risk-budgeted portfolio recipe persists controls and explains causal position sizes', async ({
+  page,
+  request,
+}, testInfo) => {
+  test.setTimeout(90000);
+  const csrf = (await (await request.get('/api/v1/auth/status')).json()).csrf_token;
+  const headers = { 'X-CSRF-Token': csrf };
+  const end = 1767225600000;
+  for (const symbol of ['BTC-USDT', 'ETH-USDT', 'SOL-USDT']) {
+    const response = await request.post('/api/v1/pro/catalog/packages', {
+      headers,
+      data: { source: 'example', inst_id: symbol, bar: '4H', start: end - 180 * 4 * 3600000, end },
+    });
+    expect(response.ok()).toBeTruthy();
+    const created = await response.json();
+    await expect
+      .poll(
+        async () =>
+          (await (await request.get(`/api/v1/pro/catalog/packages/${created.id}`)).json()).ready,
+      )
+      .toBeTruthy();
+  }
+  await navigate(page, 'Research');
+  await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
+  await page.getByRole('button', { name: 'New portfolio study', exact: true }).click();
+  await page.getByLabel('Portfolio starting point', { exact: true }).selectOption('risk-rotation');
+  await expect(page.getByLabel('Risk estimation bars', { exact: true })).toHaveValue('84');
+  await page.getByLabel('Sleeve volatility target (%)', { exact: true }).fill('15');
+  const queued = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/research/portfolios') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Run portfolio research', exact: true }).click();
+  const response = await queued;
+  expect(response.ok()).toBeTruthy();
+  const run = await response.json();
+  expect(run.config.mode).toBe('risk_momentum');
+  expect(run.config.vol_target_pct).toBe('15');
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get(`/api/v1/pro/research/portfolios/${run.id}`)).json()).status,
+    )
+    .toBe('completed');
+  await expect(
+    page.getByRole('heading', { name: 'What sets the position size', exact: true }),
+  ).toBeVisible();
+  await page.getByLabel('Risk decision', { exact: true }).selectOption({ index: 0 });
+  await expect(page.getByText('Stressed sleeve volatility', { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBeTruthy();
+  await page.locator('.portfolio-risk-evidence').scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: `../docs/assets/portfolio-risk-budget-${testInfo.project.name}.png`,
+    animations: 'disabled',
+  });
+  await page.getByRole('button', { name: 'Revise & research', exact: true }).click();
+  await expect(page.getByLabel('Sleeve volatility target (%)', { exact: true })).toHaveValue('15');
+  await expect(page.getByLabel('Stress correlation (0–1)', { exact: true })).toHaveValue('0.75');
+});

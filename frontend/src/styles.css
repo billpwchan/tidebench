@@ -6578,3 +6578,55 @@ tbody tr:hover {
 .strategy-observed-evidence th {
   color: #5d6c62;
 }
+
+.portfolio-risk-controls,
+.portfolio-risk-evidence {
+  margin: 1.5rem 0;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--line);
+}
+.risk-evidence-metrics {
+  display: flex;
+  gap: clamp(1rem, 4vw, 4rem);
+  margin: 1.25rem 0;
+  flex-wrap: wrap;
+}
+.risk-evidence-metrics > div {
+  display: grid;
+  gap: 0.35rem;
+}
+.risk-evidence-metrics span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.risk-evidence-metrics strong {
+  font-size: 1.55rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.portfolio-risk-evidence .section-heading select {
+  max-width: 100%;
+}
+.portfolio-performance-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.portfolio-risk-evidence .section-heading select {
+  background: #f5f7f5;
+  color: var(--ink);
+  border: 0;
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  font: inherit;
+  font-size: 0.8rem;
+}
+@media (max-width: 680px) {
+  .portfolio-risk-evidence .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .portfolio-performance-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

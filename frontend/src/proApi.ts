@@ -365,6 +365,11 @@ export type PortfolioDefinition = {
   lookback: number;
   top_k: number;
   carry_threshold: string;
+  risk_window?: number;
+  vol_target_pct?: string;
+  vol_floor_pct?: string;
+  covariance_shrinkage?: string;
+  correlation_stress?: string;
   carry_window?: number;
   carry_cost_settlements?: number;
   carry_buffer_bps?: string;

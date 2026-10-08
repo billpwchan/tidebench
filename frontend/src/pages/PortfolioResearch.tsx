@@ -7,6 +7,8 @@ import { proApi } from '../proApi';
 import { useSession } from '../components/AuthGate';
 import { DataTable, JsonDetails, RecordGrid, WorkspaceTabs } from '../components/ProWorkspace';
 import ResearchChart from '../components/ResearchChart';
+import PortfolioRiskEvidence from '../components/PortfolioRiskEvidence';
+import PortfolioResearchSummary from '../components/PortfolioResearchSummary';
 import {
   Empty,
   ErrorBox,
@@ -111,6 +113,21 @@ export default function PortfolioResearch({
       carry_buffer_bps: d.carry_buffer_bps ?? '0',
       carry_max_age_hours: d.carry_max_age_hours ?? 0,
     });
+  const [riskConfig, setRiskConfig] = useState({
+    risk_window: 84,
+    vol_target_pct: '20',
+    vol_floor_pct: '20',
+    covariance_shrinkage: '.25',
+    correlation_stress: '.75',
+  });
+  const loadRisk = (d: Partial<PortfolioDefinition>) =>
+    setRiskConfig({
+      risk_window: d.risk_window ?? 84,
+      vol_target_pct: d.vol_target_pct ?? '20',
+      vol_floor_pct: d.vol_floor_pct ?? '20',
+      covariance_shrinkage: d.covariance_shrinkage ?? '.25',
+      correlation_stress: d.correlation_stress ?? '.75',
+    });
   const projects = useQuery({
     queryKey: ['portfolio-projects'],
     queryFn: proApi.portfolioProjects,
@@ -141,6 +158,7 @@ export default function PortfolioResearch({
         top_k: topK,
         carry_threshold: carryThreshold,
         ...carryConfig,
+        ...riskConfig,
         max_residual_pct: residualPct,
         failure_policy: 'reduce_group',
         legs: legs.map((leg, i) => ({
@@ -180,6 +198,7 @@ export default function PortfolioResearch({
         top_k: topK,
         carry_threshold: carryThreshold,
         ...carryConfig,
+        ...riskConfig,
         max_gross_pct: gross,
         max_daily_loss_pct: daily,
         evaluation,
@@ -215,6 +234,7 @@ export default function PortfolioResearch({
       setResidualPct(d.max_residual_pct);
       setCarryThreshold(d.carry_threshold);
       loadCarry(d);
+      loadRisk(d);
       setRebalance(d.rebalance_bars);
       setLookback(d.lookback);
       setTopK(d.top_k);
@@ -251,6 +271,7 @@ export default function PortfolioResearch({
       setCapitalPct(String(config.capital_pct ?? 100));
       setCarryThreshold(String(config.carry_threshold));
       loadCarry(config as Partial<PortfolioDefinition>);
+      loadRisk(config as Partial<PortfolioDefinition>);
       setCash(String(config.initial_cash));
       setFee(String(config.fee_bps));
       setSlip(String(config.slippage_bps));
@@ -342,6 +363,7 @@ export default function PortfolioResearch({
                     setResidualPct(d.max_residual_pct);
                     setCarryThreshold(d.carry_threshold);
                     loadCarry(d);
+                    loadRisk(d);
                     setRebalance(d.rebalance_bars);
                     setLookback(d.lookback);
                     setTopK(d.top_k);
@@ -417,6 +439,7 @@ export default function PortfolioResearch({
                   <option value="independent_signals">
                     {t('Independent signals, shared capital')}
                   </option>
+                  <option value="risk_momentum">{t('Risk-budgeted momentum')}</option>
                   <option value="momentum">{t('Positive momentum rotation')}</option>
                   <option value="funding_carry">{t('Lagged funding carry')}</option>
                 </select>
@@ -710,7 +733,7 @@ export default function PortfolioResearch({
                   onChange={(e) => setDaily(Number(e.target.value))}
                 />
               </Field>
-              {mode === 'momentum' && (
+              {['momentum', 'risk_momentum'].includes(mode) && (
                 <>
                   <Field label="Lookback window">
                     <input
@@ -735,6 +758,55 @@ export default function PortfolioResearch({
                 </>
               )}
             </div>
+            {mode === 'risk_momentum' && (
+              <section className="portfolio-risk-controls">
+                <h3>{t('Portfolio risk budget')}</h3>
+                <p className="quiet-copy">
+                  {t(
+                    'Positive momentum selects markets. Inverse volatility sets weights within each leg ceiling; excess stays in cash. The larger of shrunk-covariance risk and a correlation stress sets a common downward scale. Targets refer to allocated capital, before execution.',
+                  )}
+                </p>
+                <div className="form-grid">
+                  <Field label="Risk estimation bars">
+                    <input
+                      type="number"
+                      required
+                      min={10}
+                      max={400}
+                      value={riskConfig.risk_window}
+                      onChange={(e) =>
+                        setRiskConfig({ ...riskConfig, risk_window: Number(e.target.value) })
+                      }
+                    />
+                  </Field>
+                  {(
+                    [
+                      ['vol_target_pct', 'Sleeve volatility target (%)', 0.01, 100],
+                      ['vol_floor_pct', 'Asset volatility floor (%)', 0.01, 200],
+                      ['covariance_shrinkage', 'Diagonal shrinkage (0–1)', 0, 1],
+                      ['correlation_stress', 'Stress correlation (0–1)', 0, 1],
+                    ] as const
+                  ).map(([key, label, min, max]) => (
+                    <Field key={key} label={label}>
+                      <input
+                        type="number"
+                        required
+                        min={min}
+                        max={max}
+                        step="any"
+                        value={riskConfig[key]}
+                        onChange={(e) => setRiskConfig({ ...riskConfig, [key]: e.target.value })}
+                      />
+                    </Field>
+                  ))}
+                </div>
+                <p className="quiet-copy">
+                  {t(
+                    'Long-only, leverage one. Leg weights are ceilings in [0,1]. This is inverse-volatility allocation, not an equal-risk optimizer. Scheduled rebalances, price gaps, residuals and estimation error can exceed the risk target.',
+                  )}
+                </p>
+              </section>
+            )}
             <p className="quiet-copy">
               {t(
                 'This form captures current instrument rules. Attributed point-in-time rule events are supported through the API. The chosen universe is explicit; no historical listing coverage is inferred. Multi-leg fills are sequential, with residuals and rejections reported.',
@@ -956,7 +1028,8 @@ export default function PortfolioResearch({
                       </button>
                       <JsonDetails value={run.data?.manifest} label="Input manifest" />
                     </div>
-                    <RecordGrid value={plan.metrics} />
+                    <PortfolioResearchSummary metrics={plan.metrics} />
+                    <PortfolioRiskEvidence decisions={plan.decisions ?? []} />
                     {evaluationEvidence?.mode === 'train_test' && (
                       <>
                         <p className="quiet-copy">

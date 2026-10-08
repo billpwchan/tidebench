@@ -23,6 +23,15 @@ The [public 108-case OKX battery](docs/strategy-research.md) includes all neighb
 
 ![Strategy research library with actual public-data checks](docs/assets/strategy-library-desktop.png)
 
+### Position sizing has its own hypothesis
+
+[Risk-budgeted momentum](docs/portfolio-risk-research.md) adds capped inverse-volatility weights, causal covariance, correlation stress and cash allocation to the shared-capital research → reviewed paper workflow. Inspect every decision's risk inputs and contributions; compare planned sleeve risk with actual account volatility and turnover.
+
+All **28 two-year OKX checks** are published. Lower drawdowns came with less exposure; doubled-cost check B returned only **0.17%**, and a neighboring window lost money. The report keeps that counterevidence visible.
+
+![Causal portfolio risk decision and realized account metrics](docs/assets/portfolio-risk-budget-desktop.png)
+
+
 ## A connected trading workflow
 
 Go from an economic hypothesis to an immutable strategy or portfolio version, reproducible research, reviewed paper release and inspectable forward decisions. Multi-market groups preserve targets and commands across interruption, expose failed-leg compensation, and reconcile actual monetary contribution to the shared account. See [strategy workflows](docs/strategy-workflows.md), [managed portfolios](docs/managed-portfolios.md) and the [self-audit](docs/audit/README.md).

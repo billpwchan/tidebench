@@ -1,3 +1,4 @@
+import PortfolioRiskEvidence from './PortfolioRiskEvidence';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Play, Square } from 'lucide-react';
@@ -221,9 +222,19 @@ function VerifiedGroupEvidence({
     mutationFn: () => proApi.stopPortfolio(group.id),
     onSuccess: onChange,
   });
+  const riskDecision = batch?.body.risk_evidence
+    ? [
+        {
+          risk_evidence: batch.body.risk_evidence,
+          ts: batch.body.available_at,
+          rebalance_due: batch.body.rebalance_due,
+        },
+      ]
+    : [];
   const active = ['running', 'compensating'].includes(group.status);
   return (
     <section className="managed-group-evidence">
+      <PortfolioRiskEvidence decisions={riskDecision} />
       <div className="section-heading">
         <div>
           <h3>{group.manifest.name}</h3>

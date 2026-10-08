@@ -1,6 +1,8 @@
 # Red-team record
 
-Latest: [v0.8 strategy self-audit](red-team-0.8.0.zh-CN.md), [all 108 public spot cases](v0.8.0-strategy-battery.json) and [methods/negative conclusions](../strategy-research.md).
+Latest: [v0.9 portfolio risk self-audit](red-team-0.9.0.zh-CN.md), [28 public-data allocation cases](v0.9.0-portfolio-risk-battery.json) and [risk research methods](../portfolio-risk-research.md).
+
+Previous: [v0.8 strategy self-audit](red-team-0.8.0.zh-CN.md), [all 108 public spot cases](v0.8.0-strategy-battery.json) and [methods/negative conclusions](../strategy-research.md).
 
 Previous: [v0.7 instrument evidence self-audit](red-team-0.7.0.zh-CN.md) and [real public observation counts/hashes](v0.7.0-public-instrument-observations.json).
 

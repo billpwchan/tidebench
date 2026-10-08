@@ -333,3 +333,35 @@ async def test_perpetual_seal_freezes_tiers_realized_rates_and_exact_settlement_
     replay = r.portfolios.replay(run["id"], "researcher")
     await r.offload(r.portfolios.compute, replay["id"])
     assert r.portfolios.get(replay["id"])["manifest"]["replay_verified"]
+
+
+async def test_risk_rotation_frozen_fields_and_required_warmup(setup, monkeypatch):
+    r, project, _, body = setup
+    definition = project["version"]["definition"] | dict(
+        mode="risk_momentum",
+        risk_window=30,
+        lookback=10,
+        top_k=2,
+        vol_target_pct="12",
+        vol_floor_pct="15",
+        covariance_shrinkage=".4",
+        correlation_stress=".9",
+    )
+    version = r.portfolio_registry.create_version(
+        project["id"], project["version"]["hypothesis"], definition, "researcher", project["version"]["id"]
+    )
+    body |= dict(portfolio_version_id=version["id"])
+    with pytest.raises(PlatformError, match="full frozen"):
+        r.protocol.preview(body, "researcher")
+    body["warmup_bars"] = 30
+    holdout = seal(r, body)
+    for method in ("load_candles", "verify_dataset", "get_margin_tiers"):
+        monkeypatch.setattr(
+            r.catalog, method, lambda *a, **k: pytest.fail("Frozen risk computation read mutable inputs")
+        )
+    run = evaluate(r, holdout)
+    await r.offload(r.portfolios.compute, run["id"])
+    result = r.portfolios.get(run["id"])
+    assert result["status"] == "completed", result["error"]
+    assert result["config"]["vol_target_pct"] == "12"
+    assert result["result"]["decisions"][0]["risk_evidence"]["sample_returns"] == 30

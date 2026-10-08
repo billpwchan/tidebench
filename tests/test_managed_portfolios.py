@@ -68,6 +68,11 @@ async def research(r, **definition_changes):
                         "top_k",
                         "carry_threshold",
                         "capital_pct",
+                        "risk_window",
+                        "vol_target_pct",
+                        "vol_floor_pct",
+                        "covariance_shrinkage",
+                        "correlation_stress",
                         "carry_window",
                         "carry_cost_settlements",
                         "carry_buffer_bps",
@@ -826,3 +831,34 @@ async def test_forward_carry_uses_current_policy_four_fill_hurdle_and_records_no
     )
     assert not r.book.positions("example")
     assert all(D(w) == 0 for w in batch["body"]["weights"].values())
+
+
+async def test_risk_rotation_forward_uses_verified_causal_bars_and_restart_stable_batch(runtime):
+    from tidebench.managed_portfolios import verified
+    from tidebench.portfolio_risk import risk_momentum_weights
+
+    r = runtime
+    group = await activate(r, mode="risk_momentum", risk_window=20, lookback=20, top_k=2, vol_target_pct="10")
+    await r.managed_portfolios.evaluate(group["id"])
+    batch = r.managed_portfolios.history(group["id"])[0]
+    assert batch["status"] == "completed", batch["error"]
+    evidence = batch["body"]["risk_evidence"]
+    assert evidence["sample_end"] == END
+    definition = group["definition"] if "definition" in group else group["manifest"]["definition"]
+    bars = {}
+    with r.store.read() as conn:
+        for symbol in evidence["symbols"]:
+            rows = conn.execute(
+                "SELECT body,content_hash FROM forward_bars WHERE inst_id=? ORDER BY ts", (symbol,)
+            ).fetchall()
+            bars[symbol] = [verified(row, "body", "content_hash") for row in rows]
+    oracle = risk_momentum_weights(definition, definition["legs"], bars, END - HOUR, HOUR)
+    assert oracle["covariance"] == evidence["covariance"]
+    assert oracle["selected"] == evidence["selected"]
+    assert D(evidence["modeled_vol_pct"]) <= D(10) + D("1e-40")
+    assert D(evidence["stressed_vol_pct"]) <= D(10) + D("1e-40")
+    orders = r.book.orders("example")
+    r.managed_portfolios = type(r.managed_portfolios)(r)
+    await r.managed_portfolios.evaluate(group["id"])
+    assert r.book.orders("example") == orders
+    assert r.managed_portfolios.history(group["id"]) == [batch]

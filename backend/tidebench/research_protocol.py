@@ -502,6 +502,11 @@ class ResearchProtocol:
                     "rebalance_bars",
                     "lookback",
                     "top_k",
+                    "risk_window",
+                    "vol_target_pct",
+                    "vol_floor_pct",
+                    "covariance_shrinkage",
+                    "correlation_stress",
                     "carry_window",
                     "carry_cost_settlements",
                     "carry_buffer_bps",
@@ -533,6 +538,14 @@ class ResearchProtocol:
         if definition["mode"] == "momentum" and request["warmup_bars"] < definition["lookback"]:
             raise PlatformError(
                 "holdout_warmup", "Momentum requires its full frozen lookback before the final window.", 422
+            )
+        if definition["mode"] == "risk_momentum" and request["warmup_bars"] < max(
+            definition["lookback"], definition["risk_window"]
+        ):
+            raise PlatformError(
+                "holdout_warmup",
+                "Risk momentum requires the full frozen momentum and covariance history.",
+                422,
             )
         if definition["mode"] == "funding_carry" and not any(
             int(e["ts"]) < start for e in bundle["legs"][1]["funding"]

@@ -265,5 +265,64 @@
         "url": "https://www.aqr.com/Insights/Research/Journal-Article/Time-Series-Momentum"
       }
     ]
+  },
+  {
+    "id": "risk-rotation",
+    "recipe": "",
+    "title": {
+      "en": "Risk-budgeted momentum",
+      "zh": "风险预算动量"
+    },
+    "subtitle": {
+      "en": "Allocation · correlation and cash",
+      "zh": "风险配置 · 相关性与现金"
+    },
+    "scope": {
+      "en": "Long-only, leverage one · 4H portfolio",
+      "zh": "组合 · 4 小时 · 只做多，杠杆一"
+    },
+    "mechanism": {
+      "en": "A market ranking does not determine a safe position size. Select positive momentum, allocate inversely to causal volatility within leg ceilings, and reduce the whole sleeve when estimated or stressed covariance exceeds the declared budget.",
+      "zh": "市场排名无法决定合理仓位。先筛选正动量，再按当时可知波动率的倒数配置，并限制逐腿权重；估计协方差或压力相关性超过预算时，整体降低仓位。"
+    },
+    "formula": "rₜ = Cₜ / Cₜ₋₁ − 1; S = sample_cov(last 84 returns)\nσᵢ = max(√Sᵢᵢ, 20% / √2190)\nΣ = 75% × floored sample covariance + 25% × its diagonal\nwᵢ = min(leg ceiling, (1/σᵢ) / Σⱼ(1/σⱼ)) for top 2 positive 42-bar momentum\nscale = min(1, 20% / max(σ_model(w), σ_corr=0.75(w)))",
+    "rule": {
+      "en": "Daily rebalance after six confirmed 4H closes. Sample covariance uses N−1. A 20% allocated-sleeve volatility target is about 8% of account equity at 40% capital, before execution. Fixed diagonal shrinkage is not a fitted Ledoit–Wolf estimator. Unused ceiling weight remains cash; zero variance is excluded.",
+      "zh": "每六根已确认 4 小时 K 线后调仓。样本协方差分母为 N−1。分配资金的 20% 年化目标，在 40% 资金比例下约为执行前账户风险的 8%。固定对角收缩并非拟合的 Ledoit–Wolf 估计。上限剩余保留现金；排除零方差资产。"
+    },
+    "evidence": {
+      "en": "Risk allocation and shrinkage literature motivate the design; they do not validate this crypto rule. Counterevidence finds volatility management unreliable out of sample. Our 28 public-data checks found lower drawdowns and lower exposure, but weak cost-sensitive returns. Risk-adjusted alpha is not established.",
+      "zh": "风险配置和协方差收缩文献支持设计动机，不能验证加密策略。反证研究指出波动管理样本外表现不稳定。28 项公开数据检验显示回撤及仓位下降，但收益对成本敏感，未建立风险调整后的超额收益。"
+    },
+    "failure": {
+      "en": "Correlation jumps, stale volatility, crash-then-rebound whipsaw and estimated risk below realized risk. In our doubled-cost check B, realized account volatility reached 8.97% despite the approximate 8% planned account level. More cash is not proof of superior timing.",
+      "zh": "相关性突变、滞后波动率、暴跌反弹反复交易，以及估计风险低于实际风险。双倍成本 B 时段实际账户年化波动率为 8.97%，高于约 8% 的计划账户水平。现金增加不等于择时更优。"
+    },
+    "cost": {
+      "en": "Both rotation controls cap each leg at 50% of allocated capital and rebalance daily; no borrowing. More frequent resizing adds turnover. Check B return fell from 2.73% to 0.17% at doubled costs; the 42-return neighbor turned negative. Bar fills model no capacity or partial fills.",
+      "zh": "两个轮动对照均限制逐腿不超过分配资金的 50%，每日调仓，不借贷。动态仓位会增加换手。B 时段收益随成本翻倍从 2.73% 降至 0.17%；42 收益估计窗口版本转负。K 线成交不模拟容量或部分成交。"
+    },
+    "reject": {
+      "en": "Risk reduction disappears under correlation/volatility shocks, costs remove net return, or apparent improvement is entirely explained by lower average exposure. Compare all neighbors and windows; do not deploy a test winner.",
+      "zh": "相关性／波动冲击下风险改善消失、费用侵蚀净收益，或改善完全可由较低平均仓位解释，就应淘汰。比较所有相邻规格与时段，不部署测试冠军。"
+    },
+    "experiment": {
+      "en": "Frozen two-year BTC/ETH/SOL captures; two adjacent six-month flat-start checks. Compare static equal weight, fixed momentum, the 84-return model, 42/126 neighbors, no-stress ablation and inverse volatility without the 20% governor. Same cash ceiling and clock, explicitly different realized exposure; no ex-post risk matching.",
+      "zh": "冻结两年 BTC／ETH／SOL 数据，两个相邻半年时段分别空仓启动。比较静态等权、固定动量、84 收益主模型、42／126 邻域、无压力消融及不使用 20% 风险调节的波动倒数。资金上限与调仓时钟相同，实际仓位有差异，不用事后缩放伪造风险匹配。"
+    },
+    "sources": [
+      {
+        "title": "Ledoit & Wolf · covariance shrinkage",
+        "url": "https://ledoit.net/honey.pdf"
+      },
+      {
+        "title": "Moreira & Muir · volatility management",
+        "url": "https://www.nber.org/papers/w22208"
+      },
+      {
+        "title": "Cederburg et al. · out-of-sample counterevidence",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0304405X2030132X"
+      }
+    ]
   }
 ]

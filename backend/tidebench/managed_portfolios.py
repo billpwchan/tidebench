@@ -14,6 +14,7 @@ from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, StrategyConfig
 from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights, funding_carry_evidence
+from .portfolio_risk import constrain_risk_weights, risk_momentum_weights
 from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import base_size, number
 from .store import dumps, encode, new_id, now_ms
@@ -410,7 +411,13 @@ class ManagedPortfolios:
                         raise result
                 decisions = dict(prepared)
                 momentum = {}
-                if definition["mode"] == "momentum":
+                risk_bars = {}
+                if definition["mode"] in {"momentum", "risk_momentum"}:
+                    history_window = (
+                        max(definition["lookback"], definition["risk_window"])
+                        if definition["mode"] == "risk_momentum"
+                        else definition["lookback"]
+                    )
                     with self.store.read() as conn:
                         for leg in group["manifest"]["legs"]:
                             rows = conn.execute(
@@ -420,10 +427,10 @@ class ManagedPortfolios:
                                     leg["inst_id"],
                                     definition["bar"],
                                     latest,
-                                    definition["lookback"] + 1,
+                                    history_window + 1,
                                 ),
                             ).fetchall()
-                            if len(rows) != definition["lookback"] + 1 or any(
+                            if len(rows) != history_window + 1 or any(
                                 row["ts"] != latest - i * interval for i, row in enumerate(rows)
                             ):
                                 raise PlatformError(
@@ -432,7 +439,10 @@ class ManagedPortfolios:
                                     409,
                                 )
                             prices = [D(verified(row, "body", "content_hash")["close"]) for row in rows]
-                            momentum[leg["inst_id"]] = prices[0] / prices[-1] - 1
+                            momentum[leg["inst_id"]] = prices[0] / prices[definition["lookback"]] - 1
+                            risk_bars[leg["inst_id"]] = [
+                                verified(row, "body", "content_hash") for row in reversed(rows)
+                            ]
                 past_rate = None
                 past = []
                 if definition["mode"] == "funding_carry":
@@ -469,6 +479,11 @@ class ManagedPortfolios:
                     )
                     if carry_evidence:
                         past_rate = carry_evidence["mean_rate"] if carry_evidence["allowed"] else None
+                    risk_evidence = (
+                        risk_momentum_weights(definition, definition["legs"], risk_bars, latest, interval)
+                        if definition["mode"] == "risk_momentum"
+                        else None
+                    )
                     weights = construction_weights(
                         definition,
                         definition["legs"],
@@ -476,6 +491,7 @@ class ManagedPortfolios:
                         positions,
                         momentum,
                         past_rate,
+                        risk_evidence=risk_evidence,
                     )
                     exits = {
                         s: d["exit_state"]["reason"]
@@ -496,6 +512,8 @@ class ManagedPortfolios:
                         for leg in definition["legs"]
                     }
                     weights = apply_weight_caps(definition["mode"], weights, caps, capital, exits)
+                    if risk_evidence:
+                        weights, risk_evidence = constrain_risk_weights(definition, weights, risk_evidence)
                     due = (
                         group["anchor_bar"] is None
                         or (latest - group["anchor_bar"]) // interval % definition["rebalance_bars"] == 0
@@ -517,6 +535,7 @@ class ManagedPortfolios:
                             "momentum": momentum,
                             "past_funding_rate": past_rate,
                             **({"carry_evidence": carry_evidence} if carry_evidence else {}),
+                            **({"risk_evidence": risk_evidence} if risk_evidence else {}),
                             "rebalance_due": due,
                             "risk_exits": exits,
                             "weights": weights,

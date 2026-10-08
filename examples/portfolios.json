@@ -303,5 +303,134 @@
       "carry_buffer_bps": "20",
       "carry_max_age_hours": 16
     }
+  },
+  {
+    "id": "risk-rotation",
+    "name": "Risk-budgeted positive momentum rotation",
+    "hypothesis": "Positive seven-day momentum selects up to two of BTC, ETH and SOL. Capped inverse volatility and a 20% allocated-sleeve annualized volatility target may improve drawdown behavior versus fixed weights. Use 84 causal 4H returns, 25% diagonal shrinkage, 20% asset-volatility floor and 0.75 correlation stress; rebalance daily with unused ceiling weight in cash. Reject if doubled costs, adjacent windows, correlation shocks or a static equal-weight comparator remove the benefit. This is not an equal-risk optimizer or a forecast of realized risk. The current three-market universe and instrument rules are explicit scenarios.",
+    "definition": {
+      "schema_version": 1,
+      "bar": "4H",
+      "mode": "risk_momentum",
+      "legs": [
+        {
+          "inst_id": "BTC-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 12,
+            "slow": 26,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.25",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "momentum_entry": "0.5",
+            "vol_window": 42,
+            "max_bar_vol_pct": "5",
+            "efficiency_max": "0.35",
+            "reversion_trend_window": 84,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        },
+        {
+          "inst_id": "ETH-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 12,
+            "slow": 26,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.25",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "momentum_entry": "0.5",
+            "vol_window": 42,
+            "max_bar_vol_pct": "5",
+            "efficiency_max": "0.35",
+            "reversion_trend_window": 84,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        },
+        {
+          "inst_id": "SOL-USDT",
+          "weight": ".5",
+          "leverage": "1",
+          "direction": "long_only",
+          "strategy": {
+            "kind": "buy_hold",
+            "fast": 12,
+            "slow": 26,
+            "rsi_period": 14,
+            "entry": "30",
+            "exit": "60",
+            "allocation": "0.25",
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5",
+            "atr_period": 14,
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "momentum_entry": "0.5",
+            "vol_window": 42,
+            "max_bar_vol_pct": "5",
+            "efficiency_max": "0.35",
+            "reversion_trend_window": 84,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "max_holding_bars": 0,
+            "risk_per_trade_pct": "0",
+            "rules": []
+          }
+        }
+      ],
+      "capital_pct": "40",
+      "rebalance_bars": 6,
+      "lookback": 42,
+      "top_k": 2,
+      "carry_threshold": "0",
+      "max_residual_pct": "2",
+      "failure_policy": "reduce_group",
+      "risk_window": 84,
+      "vol_target_pct": "20",
+      "vol_floor_pct": "20",
+      "covariance_shrinkage": ".25",
+      "correlation_stress": ".75"
+    }
   }
 ]

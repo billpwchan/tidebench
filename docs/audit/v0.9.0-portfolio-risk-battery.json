@@ -1,0 +1,3073 @@
+{
+  "schema_version": 1,
+  "plan": {
+    "source": "okx",
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT",
+      "SOL-USDT"
+    ],
+    "bar": "4H",
+    "start": 1728374400000,
+    "end": 1791446400000,
+    "cases": {
+      "static_equal_weight": {
+        "mode": "fixed_weights"
+      },
+      "fixed_weight_momentum": {
+        "mode": "momentum"
+      },
+      "risk_momentum_84": {
+        "mode": "risk_momentum"
+      },
+      "risk_window_42": {
+        "mode": "risk_momentum",
+        "risk_window": 42
+      },
+      "risk_window_126": {
+        "mode": "risk_momentum",
+        "risk_window": 126
+      },
+      "risk_no_stress": {
+        "mode": "risk_momentum",
+        "correlation_stress": "0"
+      },
+      "inverse_vol_without_target": {
+        "mode": "risk_momentum",
+        "vol_target_pct": "100"
+      }
+    },
+    "costs": [
+      [
+        10,
+        5
+      ],
+      [
+        20,
+        10
+      ]
+    ],
+    "windows": "first half available development; third/fourth quarters are adjacent flat-book checks with 126 pre-window warmup bars",
+    "capital_pct": 40,
+    "rebalance_bars": 6,
+    "lookback": 42,
+    "top_k": 2,
+    "risk_window": 84,
+    "vol_target_pct": 20,
+    "vol_floor_pct": 20,
+    "covariance_shrinkage": ".25",
+    "correlation_stress": ".75",
+    "ceiling": ".5 in every rotation leg; static basket targets 1/3 in each leg",
+    "selection": "none; all seven definitions and both costs reported; no test winner deployment",
+    "limitations": [
+      "not statistically blinded or independent of prior public data research",
+      "three current large-cap markets; no historical membership inference",
+      "current instrument rules; zero modeled spread plus configured slippage",
+      "constant costs, no partial fills/order book/capacity",
+      "same capital ceiling and clock; achieved exposure/risk deliberately differ, no ex-post risk matching",
+      "risk target is for the allocated sleeve; no bound on future realized account risk"
+    ]
+  },
+  "plan_hash": "f8f8af09cadb989a298dbd9d6d60e740a0d78ca9c7f8127d1bc11dbece78dea8",
+  "implementation": {
+    "schema_version": 1,
+    "application_version": "0.9.0",
+    "code_fingerprint": "e11bb707eecd39ab0492a0cc6e76bc340ab69b0183e2eaf30ba6714a2737c000",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "a4cd61183dac99d1e14babc7736b432c6d49cf325a4c280d88162726782ba332",
+      "pro_api.py": "298b96111f7d0dfaafc85b301aa31daadd6245c546246db7ce4a7703eca2e00e",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "1c9537e6b72698968159fd9324b3d0e7992e08dc6ea21c7394a73deb93a3f433",
+      "strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+      "research_protocol.py": "9dda28876959eeb2b566168b7196cbc431227d1f1eb8def3b95be53acfe762e9",
+      "portfolio_registry.py": "3a45acaf6f27918c4149bbc2b22aee7a65b2334e2cb342df3b746eecf52f022a",
+      "portfolio_releases.py": "8ca1762ae73057a491a323bdd2436329940d176fea3df5940d62dc61b35191df",
+      "managed_portfolios.py": "d847c2f25a0e986cea6b5a9837e8c70c5a6a91c88d65002bc369fb62ab8f4bc3",
+      "portfolio_research.py": "26748409736fc3fd142e35d4f933e511d62b92cf8f752e0d41ef1e2d54b51991",
+      "portfolio_targets.py": "7bd70c03d88b575d40beb44110f2dd16f01f17f314838c63cc61184f84eea055",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "9b5b4c75d62769454f80028a177dd6de7762277daaed47c7675f04663b9b873f",
+      "contributions.py": "2516c7d1e6308952d46792000e25a4d18bfe228b9ccb4831be5c4b1df69bf4d2",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "49974b966eece45049695d31639af710fe5351990644d70189b3331f2e100213"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "runner_hash": "d393680112d4b39350ea2646e5b45dacae95fd0226e5a5b992ada04810252270",
+  "captures": [
+    {
+      "inst_id": "BTC-USDT",
+      "dataset_id": "daa2b29a90bc4161ac08217e37f59134",
+      "content_hash": "87b13bd6c7ca3f85e26db9f5892b6b77daa320d6c32999e6ecd29b11ae0324ba",
+      "instrument": {
+        "inst_id": "BTC-USDT",
+        "inst_type": "SPOT",
+        "inst_family": "BTC-USDT",
+        "base": "BTC",
+        "quote": "USDT",
+        "settle_ccy": "USDT",
+        "ct_type": null,
+        "ct_val": null,
+        "ct_mult": null,
+        "ct_val_ccy": null,
+        "contract_size_base": null,
+        "tick_size": "0.1",
+        "lot_size": "1E-8",
+        "min_size": "0.00001",
+        "state": "live",
+        "quantity_unit": "base",
+        "source": "okx",
+        "synthetic": false,
+        "observed_at": 1791474479854,
+        "list_time": 1611907686000,
+        "expiry_time": null,
+        "instrument_version": "bcfb7e77dffcbd37acbfcb8f2d76e0d6d468e8501b765dee07480c4ea0274422",
+        "observation_id": "1c866a1253d8425f97b6da3473b6afa2",
+        "metadata_known_at": 1791474479854,
+        "evidence_scope": "forward_observation"
+      },
+      "rows": 4380
+    },
+    {
+      "inst_id": "ETH-USDT",
+      "dataset_id": "fb349132047c4eaaaa9da999106eecd3",
+      "content_hash": "a3c1ee8f77caf4e9b0d17dec9673fea4a994fcaabc199e21e8180a02bd9a0f15",
+      "instrument": {
+        "inst_id": "ETH-USDT",
+        "inst_type": "SPOT",
+        "inst_family": "ETH-USDT",
+        "base": "ETH",
+        "quote": "USDT",
+        "settle_ccy": "USDT",
+        "ct_type": null,
+        "ct_val": null,
+        "ct_mult": null,
+        "ct_val_ccy": null,
+        "contract_size_base": null,
+        "tick_size": "0.01",
+        "lot_size": "0.000001",
+        "min_size": "0.0001",
+        "state": "live",
+        "quantity_unit": "base",
+        "source": "okx",
+        "synthetic": false,
+        "observed_at": 1791474479854,
+        "list_time": 1611907686000,
+        "expiry_time": null,
+        "instrument_version": "59f88026acabd7db024264761cf80cda66c56e300d69c297cca8300fbefe3cfe",
+        "observation_id": "1c866a1253d8425f97b6da3473b6afa2",
+        "metadata_known_at": 1791474479854,
+        "evidence_scope": "forward_observation"
+      },
+      "rows": 4380
+    },
+    {
+      "inst_id": "SOL-USDT",
+      "dataset_id": "07d165699a33420792566920642dbe60",
+      "content_hash": "0f5bf0ae992ad8b3e67cce802bf3dc81110a14b4e87b0518fe93331900b98350",
+      "instrument": {
+        "inst_id": "SOL-USDT",
+        "inst_type": "SPOT",
+        "inst_family": "SOL-USDT",
+        "base": "SOL",
+        "quote": "USDT",
+        "settle_ccy": "USDT",
+        "ct_type": null,
+        "ct_val": null,
+        "ct_mult": null,
+        "ct_val_ccy": null,
+        "contract_size_base": null,
+        "tick_size": "0.01",
+        "lot_size": "0.000001",
+        "min_size": "0.01",
+        "state": "live",
+        "quantity_unit": "base",
+        "source": "okx",
+        "synthetic": false,
+        "observed_at": 1791474479854,
+        "list_time": 1611907686000,
+        "expiry_time": null,
+        "instrument_version": "bf27a63b0dd8041643fe9ae1d6ee5f382afa6dc1baa402042349c0e8c95f2312",
+        "observation_id": "1c866a1253d8425f97b6da3473b6afa2",
+        "metadata_known_at": 1791474479854,
+        "evidence_scope": "forward_observation"
+      },
+      "rows": 4380
+    }
+  ],
+  "results": [
+    {
+      "case": "static_equal_weight",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "89077969dbf696bff618a78226f5bb4ac62d64b9d290adcdc1d2d40e6edfd257",
+      "result_hash": "b8994823c273883c3191ad45ec99ba6691200c36091d79f2814f989f2496e9cb",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "7610.082950658190",
+        "total_return_pct": "-23.899170493418100",
+        "max_drawdown_pct": "28.603112854321857181350059140881182190674413804089",
+        "fees_paid": "13.366988189810",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 25.75487438765423,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "39.898315554088003857436774472931151068306359211798",
+        "turnover": "1.336698818981",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 527,
+        "execution_rejections": 22
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 22
+      },
+      "risk_summary": {
+        "decisions": 0,
+        "max_modeled_vol_pct": "0",
+        "max_stressed_vol_pct": "0",
+        "last": null
+      }
+    },
+    {
+      "case": "fixed_weight_momentum",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "bce7c2718bf72775c4bafb2a569f01ae3e6daf1a9b58c7ba0ea15dbc14d95693",
+      "result_hash": "9f393b79d332b4688cae4bc435795f0a29cbc02ea22171946cdf9606f405df52",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "8581.167733037954",
+        "total_return_pct": "-14.1883226696204600",
+        "max_drawdown_pct": "17.391898167266368673664738348039003897950763395070",
+        "fees_paid": "205.950518974046",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 13.74990406476334,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "18.234088018747959446157790121267613362167312289801",
+        "turnover": "20.5950518974046",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 221,
+        "execution_rejections": 2
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 2
+      },
+      "risk_summary": {
+        "decisions": 0,
+        "max_modeled_vol_pct": "0",
+        "max_stressed_vol_pct": "0",
+        "last": null
+      }
+    },
+    {
+      "case": "risk_momentum_84",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "bc46d13b6417c0cee5f47847d3b857515858a1106a8aa581a4f95c423a9691c1",
+      "result_hash": "bca60a7d42771471486dac7d22270c37902bb6ed1463b718390bf942c84003cb",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9305.853693737889",
+        "total_return_pct": "-6.9414630626211100",
+        "max_drawdown_pct": "8.3454888244195739705193979424449453423538756317833",
+        "fees_paid": "104.192443323111",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 5.852127272709462,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "7.7988327481284608856261555084595933988738723708512",
+        "turnover": "10.4192443323111",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 219,
+        "execution_rejections": 4
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 4
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0.23081022714333399970525194635984582920113706787456",
+            "ETH-USDT": "0.19581737510525137964851873447821753150099864688658",
+            "SOL-USDT": "0E-50"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.57337239775141462064622931916193663929786428523886",
+          "sample_start": 1774425600000,
+          "sample_end": 1775649600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.000078746633397887207715742964170104542569476947700503"
+            ],
+            [
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00010456093041603246204716028568509576048149543749964"
+            ],
+            [
+              "0.000078746633397887207715742964170104542569476947700503",
+              "0.00010456093041603246204716028568509576048149543749964",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000086105964241663005399481314698672814878188700504948",
+              "0.000089312958208490341358541136812486513037629965692222"
+            ],
+            [
+              "0.000086105964241663005399481314698672814878188700504948",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00012123367137292030639331186974567125219912895282336"
+            ],
+            [
+              "0.000089312958208490341358541136812486513037629965692222",
+              "0.00012123367137292030639331186974567125219912895282336",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42419562063783263321684224215629874312162326452619",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "19.725426528153740441157639237524275329124378120747",
+          "stressed_vol_pct": "19.999999999999999999999999999999999999999999999999",
+          "risk_contribution_pct": {
+            "BTC-USDT": "9.0467913517022164324765820918990125071315943834202",
+            "ETH-USDT": "10.678635176451524008681057145625262821992783737328",
+            "SOL-USDT": "0E-150"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "0.46162045428666799941050389271969165840227413574913"
+        }
+      }
+    },
+    {
+      "case": "risk_window_42",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "2ff1c30e38f535d8e111dd6f5628a2ac517afdb31b6efebb9714dc56a9646b9b",
+      "result_hash": "bcb65c793b5f6681584194968dfb65d1a1a85fe3c3b09c2007704c8ade87e9ec",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9272.930015489662",
+        "total_return_pct": "-7.2706998451033800",
+        "max_drawdown_pct": "8.8540853048946179085273249365071149968806966466749",
+        "fees_paid": "111.426131868338",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 6.289530563100562,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "8.2478781233965955555721347518546801114769302154913",
+        "turnover": "11.1426131868338",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 220,
+        "execution_rejections": 3
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 3
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 42,
+          "weights": {
+            "BTC-USDT": "0.21762856249900623575169586698994573445636339453829",
+            "ETH-USDT": "0.18480481514683053423254473042127647788088890720834",
+            "SOL-USDT": "0E-50"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.59756662235416323001575940258877778766274769825337",
+          "sample_start": 1775030400000,
+          "sample_end": 1775649600000,
+          "sample_returns": 42,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "45.661753553857754576436182951939028494388091829563",
+            "ETH-USDT": "61.882000424788299799602945942484979273582438270501",
+            "SOL-USDT": "64.090883199844345918364484654271067450459943634819"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "45.661753553857754576436182951939028494388091829563",
+            "ETH-USDT": "61.882000424788299799602945942484979273582438270501",
+            "SOL-USDT": "64.090883199844345918364484654271067450459943634819"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000095205284822522432875164818122388910539186092256374",
+              "0.000090747990509988106016173564717888076526691176577087",
+              "0.000085518342692194092703243134688150415261934563398695"
+            ],
+            [
+              "0.000090747990509988106016173564717888076526691176577087",
+              "0.00017485762450107302816635427617639557893948951631788",
+              "0.00011321062757530607566663235236261092045626425258306"
+            ],
+            [
+              "0.000085518342692194092703243134688150415261934563398695",
+              "0.00011321062757530607566663235236261092045626425258306",
+              "0.00018756353010667078652368100777183965871639751670559"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000095205284822522432875164818122388910539186092256374",
+              "0.000096768515507411103654477294057536853483060175387012",
+              "0.00010022267512741009656360766835400231318588063972990"
+            ],
+            [
+              "0.000096768515507411103654477294057536853483060175387012",
+              "0.00017485762450107302816635427617639557893948951631788",
+              "0.00013582438566430907949441941169371581357611763133662"
+            ],
+            [
+              "0.00010022267512741009656360766835400231318588063972990",
+              "0.00013582438566430907949441941169371581357611763133662",
+              "0.00018756353010667078652368100777183965871639751670559"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42458768514742731519003664887217450849349909085767",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "19.733077337628002965966031546359500754841049424972",
+          "stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+          "risk_contribution_pct": {
+            "BTC-USDT": "9.0548501303839118613114508567491567705779293395783",
+            "ETH-USDT": "10.678227207244091104654580689610343984263120085393",
+            "SOL-USDT": "0E-150"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "0.43525712499801247150339173397989146891272678907658"
+        }
+      }
+    },
+    {
+      "case": "risk_window_126",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "9622bcf7737bfe06b6dc3ebd13ccbf3df0775f9cabed049f0afae5a9eff1c13c",
+      "result_hash": "542cacad0dd000f8537a303fbc93090a03cc65beaac52a163ca73c8363b90108",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9270.306579146908",
+        "total_return_pct": "-7.2969342085309200",
+        "max_drawdown_pct": "8.6603976085443449909030614650180361866349281360759",
+        "fees_paid": "103.091516475092",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 5.609670778278538,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "7.5078551270065217587875584247603710995104971847034",
+        "turnover": "10.3091516475092",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 221,
+        "execution_rejections": 2
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 2
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 126,
+          "weights": {
+            "BTC-USDT": "0.22857229661172987043550450968361372816444682529602",
+            "ETH-USDT": "0.19332341123767618401654890904402845619781947464211",
+            "SOL-USDT": "0E-50"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.57810429215059394554794658127235781563773370006187",
+          "sample_start": 1773820800000,
+          "sample_end": 1775649600000,
+          "sample_returns": 126,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "43.406499352822026909834514275318683854650015519253",
+            "ETH-USDT": "59.235215703119660541668202869351728245083839274492",
+            "SOL-USDT": "60.159886791666158907849243011926657803744310693251"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "43.406499352822026909834514275318683854650015519253",
+            "ETH-USDT": "59.235215703119660541668202869351728245083839274492",
+            "SOL-USDT": "60.159886791666158907849243011926657803744310693251"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000086033067856919590911543038396264953485065165346128",
+              "0.000081962691397829374989287545857971704823143759881599",
+              "0.000079290305622815104694323748307346748958558838148827"
+            ],
+            [
+              "0.000081962691397829374989287545857971704823143759881599",
+              "0.00016021967029201433882204209824155518851424168916916",
+              "0.00010755579227092251453184893617379405843097107095446"
+            ],
+            [
+              "0.000079290305622815104694323748307346748958558838148827",
+              "0.00010755579227092251453184893617379405843097107095446",
+              "0.00016526082094913645509787657942811041501275958761550"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000086033067856919590911543038396264953485065165346128",
+              "0.000088054566852114270924595793361833970440584299623392",
+              "0.000089429112571517244228398449945445495704175767651508"
+            ],
+            [
+              "0.000088054566852114270924595793361833970440584299623392",
+              "0.00016021967029201433882204209824155518851424168916916",
+              "0.00012204054351984946268192168991291481678986370031026"
+            ],
+            [
+              "0.000089429112571517244228398449945445495704175767651508",
+              "0.00012204054351984946268192168991291481678986370031026",
+              "0.00016526082094913645509787657942811041501275958761550"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42289335607033318723514007731762908501013802367663",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "19.703032110158206085031123726601396307076053806003",
+          "stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+          "risk_contribution_pct": {
+            "BTC-USDT": "9.0216573680178565893138287117512601970443742823247",
+            "ETH-USDT": "10.681374742140349495717295014850136110031679523679",
+            "SOL-USDT": "0E-150"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "0.45714459322345974087100901936722745632889365059203"
+        }
+      }
+    },
+    {
+      "case": "risk_no_stress",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "2b730a83519da2cf3f69d91e8b2139736f7f4b6bbe1398cbda274dee4579f8e8",
+      "result_hash": "14fa21a843f07f30823c9cdb4546337e6a9c56330fd24de56943a023e3ac4400",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9295.598479708414",
+        "total_return_pct": "-7.0440152029158600",
+        "max_drawdown_pct": "8.4728823560865423373475120372607489155173898226044",
+        "fees_paid": "105.790963401586",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 5.942594658738946,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "7.9510782427403024548027970166162639470784079280199",
+        "turnover": "10.5790963401586",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 222,
+        "execution_rejections": 1
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 1
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0.23402305325454208533992659355414206738298054432418",
+            "ETH-USDT": "0.19854310863774207599530590638568237717719824338923",
+            "SOL-USDT": "0E-50"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.56743383810771583866476750006017555543982121228659",
+          "sample_start": 1774425600000,
+          "sample_end": 1775649600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.000078746633397887207715742964170104542569476947700503"
+            ],
+            [
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00010456093041603246204716028568509576048149543749964"
+            ],
+            [
+              "0.000078746633397887207715742964170104542569476947700503",
+              "0.00010456093041603246204716028568509576048149543749964",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0E-53",
+              "0E-53"
+            ],
+            [
+              "0E-53",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0E-53"
+            ],
+            [
+              "0E-53",
+              "0E-53",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42419562063783263321684224215629874312162326452619",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+          "stressed_vol_pct": "15.361586598404627934190292856536390738379040692737",
+          "risk_contribution_pct": {
+            "BTC-USDT": "9.1727206393128144849526625716221361559637002724005",
+            "ETH-USDT": "10.827279360687185515047337428377863844036299727600",
+            "SOL-USDT": "0E-150"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "0.46804610650908417067985318710828413476596108864835"
+        }
+      }
+    },
+    {
+      "case": "inverse_vol_without_target",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "08213b6c2dc92e9379118655a28b6c7e270f7a565db3e23b6c7f4246546a2253",
+      "result_hash": "a565bad7893ba1bab0d8dd28822b28f6832b0a19953a72cbcf226fd183ad3ddd",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "8610.809918469574",
+        "total_return_pct": "-13.8919008153042600",
+        "max_drawdown_pct": "16.656369423989842970318493303775255365785459775550",
+        "fees_paid": "202.933197060426",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 13.140744963204307,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "17.219939309265006858090871290582460333296074814553",
+        "turnover": "20.2933197060426",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 223,
+        "execution_rejections": 0
+      },
+      "execution_diagnostics": {},
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "78.311484120730167979508881443658218543986353291223",
+        "max_stressed_vol_pct": "80.714403860334357276460827981722439660695196173923",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42419562063783263321684224215629874312162326452619",
+            "SOL-USDT": "0"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.07580437936216736678315775784370125687837673547381",
+          "sample_start": 1774425600000,
+          "sample_end": 1775649600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.000078746633397887207715742964170104542569476947700503"
+            ],
+            [
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00010456093041603246204716028568509576048149543749964"
+            ],
+            [
+              "0.000078746633397887207715742964170104542569476947700503",
+              "0.00010456093041603246204716028568509576048149543749964",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000086105964241663005399481314698672814878188700504948",
+              "0.000089312958208490341358541136812486513037629965692222"
+            ],
+            [
+              "0.000086105964241663005399481314698672814878188700504948",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00012123367137292030639331186974567125219912895282336"
+            ],
+            [
+              "0.000089312958208490341358541136812486513037629965692222",
+              "0.00012123367137292030639331186974567125219912895282336",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42419562063783263321684224215629874312162326452619",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "42.730832971071463917836241537983661710708289253272",
+          "stressed_vol_pct": "43.325636492658374413069017044938208334107375345771",
+          "risk_contribution_pct": {
+            "BTC-USDT": "19.597899676438786526526213255800565205913032323352",
+            "ETH-USDT": "23.132933294632677391310028282183096504795256929919",
+            "SOL-USDT": "0E-100"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "static_equal_weight",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "cd6f449a98d7832a455d2afe3b36e8fbf688561e1a2b797c1f4bcb9270078de1",
+      "result_hash": "0636c5420f740cadce49d163666f143aba6a2ba0e2cd43b4ad186e37c0d6d0c8",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "7592.612605066126",
+        "total_return_pct": "-24.0738739493387400",
+        "max_drawdown_pct": "28.691373175312624427063083072151822675042981537783",
+        "fees_paid": "26.713691342874",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 25.75632701102193,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "39.898829814142866457524601283970563500041883677974",
+        "turnover": "1.3356845671437",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 527,
+        "execution_rejections": 22
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 22
+      },
+      "risk_summary": {
+        "decisions": 0,
+        "max_modeled_vol_pct": "0",
+        "max_stressed_vol_pct": "0",
+        "last": null
+      }
+    },
+    {
+      "case": "fixed_weight_momentum",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "f42e0e0f4527f6204e3696bb981d01f07db0682fcd609c1ef11d0b62c431fc21",
+      "result_hash": "c7b243c353b24420366ab6f75eea03b6e14f62312bad1d69ff39fbfbb7337acd",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "8295.194075792606",
+        "total_return_pct": "-17.0480592420739400",
+        "max_drawdown_pct": "19.900240448719847825312549227394769135375245089423",
+        "fees_paid": "405.355069356394",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 13.838504352906405,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "18.239222110704551738478945697311714348376901125455",
+        "turnover": "20.2677534678197",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 222,
+        "execution_rejections": 1
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 1
+      },
+      "risk_summary": {
+        "decisions": 0,
+        "max_modeled_vol_pct": "0",
+        "max_stressed_vol_pct": "0",
+        "last": null
+      }
+    },
+    {
+      "case": "risk_momentum_84",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "cd10032a5d47b735777ae3c3c85ad434b91c0443a1795fbe3aa0cb1a698e2d41",
+      "result_hash": "f4e13999d9652a3e4f10553cc690a5a9ecec485f6b3b62a45a8757e8f176fd9c",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9154.681762672288",
+        "total_return_pct": "-8.4531823732771200",
+        "max_drawdown_pct": "9.7985439049860446897352601064673721492886963971362",
+        "fees_paid": "206.742454099712",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 5.890892240668371,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "7.7999689182158461136809209190972482793372676353392",
+        "turnover": "10.3371227049856",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 219,
+        "execution_rejections": 4
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 4
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0.23081022714333399970525194635984582920113706787456",
+            "ETH-USDT": "0.19581737510525137964851873447821753150099864688658",
+            "SOL-USDT": "0E-50"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.57337239775141462064622931916193663929786428523886",
+          "sample_start": 1774425600000,
+          "sample_end": 1775649600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.000078746633397887207715742964170104542569476947700503"
+            ],
+            [
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00010456093041603246204716028568509576048149543749964"
+            ],
+            [
+              "0.000078746633397887207715742964170104542569476947700503",
+              "0.00010456093041603246204716028568509576048149543749964",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000086105964241663005399481314698672814878188700504948",
+              "0.000089312958208490341358541136812486513037629965692222"
+            ],
+            [
+              "0.000086105964241663005399481314698672814878188700504948",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00012123367137292030639331186974567125219912895282336"
+            ],
+            [
+              "0.000089312958208490341358541136812486513037629965692222",
+              "0.00012123367137292030639331186974567125219912895282336",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42419562063783263321684224215629874312162326452619",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "19.725426528153740441157639237524275329124378120747",
+          "stressed_vol_pct": "19.999999999999999999999999999999999999999999999999",
+          "risk_contribution_pct": {
+            "BTC-USDT": "9.0467913517022164324765820918990125071315943834202",
+            "ETH-USDT": "10.678635176451524008681057145625262821992783737328",
+            "SOL-USDT": "0E-150"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "0.46162045428666799941050389271969165840227413574913"
+        }
+      }
+    },
+    {
+      "case": "risk_window_42",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "e58752a82998b922220fc78e6c73d1a56cb42cffd6db5cd8a84dad5f7418b449",
+      "result_hash": "40068c3902833d1bee81adce11ba96e8a604df05c55293cd6cfb7efe2937eb29",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9110.927000230718",
+        "total_return_pct": "-8.8907299976928200",
+        "max_drawdown_pct": "10.402807715276632745352513558646777790767072950401",
+        "fees_paid": "220.969299666282",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 6.3345577191861295,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "8.2491813001237719765523296406549925170637531763300",
+        "turnover": "11.0484649833141",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 220,
+        "execution_rejections": 3
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 3
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 42,
+          "weights": {
+            "BTC-USDT": "0.21762856249900623575169586698994573445636339453829",
+            "ETH-USDT": "0.18480481514683053423254473042127647788088890720834",
+            "SOL-USDT": "0E-50"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.59756662235416323001575940258877778766274769825337",
+          "sample_start": 1775030400000,
+          "sample_end": 1775649600000,
+          "sample_returns": 42,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "45.661753553857754576436182951939028494388091829563",
+            "ETH-USDT": "61.882000424788299799602945942484979273582438270501",
+            "SOL-USDT": "64.090883199844345918364484654271067450459943634819"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "45.661753553857754576436182951939028494388091829563",
+            "ETH-USDT": "61.882000424788299799602945942484979273582438270501",
+            "SOL-USDT": "64.090883199844345918364484654271067450459943634819"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000095205284822522432875164818122388910539186092256374",
+              "0.000090747990509988106016173564717888076526691176577087",
+              "0.000085518342692194092703243134688150415261934563398695"
+            ],
+            [
+              "0.000090747990509988106016173564717888076526691176577087",
+              "0.00017485762450107302816635427617639557893948951631788",
+              "0.00011321062757530607566663235236261092045626425258306"
+            ],
+            [
+              "0.000085518342692194092703243134688150415261934563398695",
+              "0.00011321062757530607566663235236261092045626425258306",
+              "0.00018756353010667078652368100777183965871639751670559"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000095205284822522432875164818122388910539186092256374",
+              "0.000096768515507411103654477294057536853483060175387012",
+              "0.00010022267512741009656360766835400231318588063972990"
+            ],
+            [
+              "0.000096768515507411103654477294057536853483060175387012",
+              "0.00017485762450107302816635427617639557893948951631788",
+              "0.00013582438566430907949441941169371581357611763133662"
+            ],
+            [
+              "0.00010022267512741009656360766835400231318588063972990",
+              "0.00013582438566430907949441941169371581357611763133662",
+              "0.00018756353010667078652368100777183965871639751670559"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42458768514742731519003664887217450849349909085767",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "19.733077337628002965966031546359500754841049424972",
+          "stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+          "risk_contribution_pct": {
+            "BTC-USDT": "9.0548501303839118613114508567491567705779293395783",
+            "ETH-USDT": "10.678227207244091104654580689610343984263120085393",
+            "SOL-USDT": "0E-150"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "0.43525712499801247150339173397989146891272678907658"
+        }
+      }
+    },
+    {
+      "case": "risk_window_126",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "fcd90b675a7b067871264d9356926be0c02a170d300cb6cf612f9bed8fbaf951",
+      "result_hash": "219f62642af2709bbbb11027bdfd45ee6fa3e5aa976c585366583491aeb6a50e",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9120.931170193442",
+        "total_return_pct": "-8.7906882980655800",
+        "max_drawdown_pct": "10.095727297240412099574195434450742222480100324334",
+        "fees_paid": "204.573762915558",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 5.656818976964557,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "7.5089802411636694275967945518555804589143938011104",
+        "turnover": "10.2286881457779",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 221,
+        "execution_rejections": 2
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 2
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 126,
+          "weights": {
+            "BTC-USDT": "0.22857229661172987043550450968361372816444682529602",
+            "ETH-USDT": "0.19332341123767618401654890904402845619781947464211",
+            "SOL-USDT": "0E-50"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.57810429215059394554794658127235781563773370006187",
+          "sample_start": 1773820800000,
+          "sample_end": 1775649600000,
+          "sample_returns": 126,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "43.406499352822026909834514275318683854650015519253",
+            "ETH-USDT": "59.235215703119660541668202869351728245083839274492",
+            "SOL-USDT": "60.159886791666158907849243011926657803744310693251"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "43.406499352822026909834514275318683854650015519253",
+            "ETH-USDT": "59.235215703119660541668202869351728245083839274492",
+            "SOL-USDT": "60.159886791666158907849243011926657803744310693251"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000086033067856919590911543038396264953485065165346128",
+              "0.000081962691397829374989287545857971704823143759881599",
+              "0.000079290305622815104694323748307346748958558838148827"
+            ],
+            [
+              "0.000081962691397829374989287545857971704823143759881599",
+              "0.00016021967029201433882204209824155518851424168916916",
+              "0.00010755579227092251453184893617379405843097107095446"
+            ],
+            [
+              "0.000079290305622815104694323748307346748958558838148827",
+              "0.00010755579227092251453184893617379405843097107095446",
+              "0.00016526082094913645509787657942811041501275958761550"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000086033067856919590911543038396264953485065165346128",
+              "0.000088054566852114270924595793361833970440584299623392",
+              "0.000089429112571517244228398449945445495704175767651508"
+            ],
+            [
+              "0.000088054566852114270924595793361833970440584299623392",
+              "0.00016021967029201433882204209824155518851424168916916",
+              "0.00012204054351984946268192168991291481678986370031026"
+            ],
+            [
+              "0.000089429112571517244228398449945445495704175767651508",
+              "0.00012204054351984946268192168991291481678986370031026",
+              "0.00016526082094913645509787657942811041501275958761550"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42289335607033318723514007731762908501013802367663",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "19.703032110158206085031123726601396307076053806003",
+          "stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+          "risk_contribution_pct": {
+            "BTC-USDT": "9.0216573680178565893138287117512601970443742823247",
+            "ETH-USDT": "10.681374742140349495717295014850136110031679523679",
+            "SOL-USDT": "0E-150"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "0.45714459322345974087100901936722745632889365059203"
+        }
+      }
+    },
+    {
+      "case": "risk_no_stress",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "d5bcc9623a50af878a47cdae58b20b36ffc3e0bcc585626bff11a02bd65d4e78",
+      "result_hash": "e6d423ded8c38cc1b36a8a93f9e6c2a73e92c8dc34a50269881d6cb7d2cd971d",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9142.213694457118",
+        "total_return_pct": "-8.5778630554288200",
+        "max_drawdown_pct": "9.9460566736738884632648094105836685295012041007385",
+        "fees_paid": "209.888191575882",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 5.982589095554812,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "7.9522524962937218464240650971124336200060463683269",
+        "turnover": "10.4944095787941",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 222,
+        "execution_rejections": 1
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 1
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0.23402305325454208533992659355414206738298054432418",
+            "ETH-USDT": "0.19854310863774207599530590638568237717719824338923",
+            "SOL-USDT": "0E-50"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.56743383810771583866476750006017555543982121228659",
+          "sample_start": 1774425600000,
+          "sample_end": 1775649600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.000078746633397887207715742964170104542569476947700503"
+            ],
+            [
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00010456093041603246204716028568509576048149543749964"
+            ],
+            [
+              "0.000078746633397887207715742964170104542569476947700503",
+              "0.00010456093041603246204716028568509576048149543749964",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0E-53",
+              "0E-53"
+            ],
+            [
+              "0E-53",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0E-53"
+            ],
+            [
+              "0E-53",
+              "0E-53",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42419562063783263321684224215629874312162326452619",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+          "stressed_vol_pct": "15.361586598404627934190292856536390738379040692737",
+          "risk_contribution_pct": {
+            "BTC-USDT": "9.1727206393128144849526625716221361559637002724005",
+            "ETH-USDT": "10.827279360687185515047337428377863844036299727600",
+            "SOL-USDT": "0E-150"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "0.46804610650908417067985318710828413476596108864835"
+        }
+      }
+    },
+    {
+      "case": "inverse_vol_without_target",
+      "window": "check_A",
+      "start": 1759910400000,
+      "end": 1775678400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "1a29cd4a2253328009925b5b4a9f4c38e1951d270e22cec53e5fce38526d6c9a",
+      "result_hash": "0234b4d5e2d50c32809f6fcfd72240f7e6d6d686dffd073d7d455a637f8e2c96",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "8328.934916136288",
+        "total_return_pct": "-16.7106508386371200",
+        "max_drawdown_pct": "19.163690826391220989970050879394486897230472201151",
+        "fees_paid": "399.514924093712",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 181,
+        "realized_annual_vol_pct": 13.22867365757045,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "17.224729950208557299697470656413319823965672439844",
+        "turnover": "19.9757462046856",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 223,
+        "execution_rejections": 0
+      },
+      "execution_diagnostics": {},
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "78.311484120730167979508881443658218543986353291223",
+        "max_stressed_vol_pct": "80.714403860334357276460827981722439660695196173923",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1775635200000,
+          "available_at": 1775649600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42419562063783263321684224215629874312162326452619",
+            "SOL-USDT": "0"
+          },
+          "reason": "allocated",
+          "selected": [
+            "ETH-USDT",
+            "BTC-USDT"
+          ],
+          "excluded": {},
+          "cash_weight": "0.07580437936216736678315775784370125687837673547381",
+          "sample_start": 1774425600000,
+          "sample_end": 1775649600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "0.0432949511296359900105366716924456138921068104156",
+            "ETH-USDT": "0.0523200824085779837992227372758346209673643301962",
+            "SOL-USDT": "0.0130726792995922283521228112257136003837850803550"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "43.038155605824207712242860021882203286042655642256",
+            "ETH-USDT": "58.420118624142639891008249555949300826255283966390",
+            "SOL-USDT": "60.595960560517014972687951741727455747211865551641"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.000078746633397887207715742964170104542569476947700503"
+            ],
+            [
+              "0.000080596025626108499642166642518326860519296314404038",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00010456093041603246204716028568509576048149543749964"
+            ],
+            [
+              "0.000078746633397887207715742964170104542569476947700503",
+              "0.00010456093041603246204716028568509576048149543749964",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000084579125020599893861478441310361668911410724145925",
+              "0.000086105964241663005399481314698672814878188700504948",
+              "0.000089312958208490341358541136812486513037629965692222"
+            ],
+            [
+              "0.000086105964241663005399481314698672814878188700504948",
+              "0.00015584065114424190557454123681190930610556678938103",
+              "0.00012123367137292030639331186974567125219912895282336"
+            ],
+            [
+              "0.000089312958208490341358541136812486513037629965692222",
+              "0.00012123367137292030639331186974567125219912895282336",
+              "0.00016766531672382344983507417837167963255433047904069"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0.5",
+            "ETH-USDT": "0.42419562063783263321684224215629874312162326452619",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "42.730832971071463917836241537983661710708289253272",
+          "stressed_vol_pct": "43.325636492658374413069017044938208334107375345771",
+          "risk_contribution_pct": {
+            "BTC-USDT": "19.597899676438786526526213255800565205913032323352",
+            "ETH-USDT": "23.132933294632677391310028282183096504795256929919",
+            "SOL-USDT": "0E-100"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "static_equal_weight",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "830edfaa4c31bd6ecc1a00fc157985fa80dfd0e5289223a2817395c8e526d543",
+      "result_hash": "783394bb12b4f2355aaaf6f7e3f4bfb5d32a6966bdb12e8d0cf6cd69ebbb4050",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "11046.057676793732",
+        "total_return_pct": "10.4605767679373200",
+        "max_drawdown_pct": "14.304719257552470985721097291052859178412447564320",
+        "fees_paid": "12.429698834268",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 18.41234984762978,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "39.971337099636527419085133352554160242276057179873",
+        "turnover": "1.2429698834268",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 531,
+        "execution_rejections": 18
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 18
+      },
+      "risk_summary": {
+        "decisions": 0,
+        "max_modeled_vol_pct": "0",
+        "max_stressed_vol_pct": "0",
+        "last": null
+      }
+    },
+    {
+      "case": "fixed_weight_momentum",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "5aacda94d89800418ac60bf5f7bd95dbb0664640f2a0485603fbe255f7c54ed4",
+      "result_hash": "ece2f2571891940e7278fa09f7373f55c1c5ddeaad0684f2f2f77cfa74be929e",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10696.114421849673",
+        "total_return_pct": "6.9611442184967300",
+        "max_drawdown_pct": "5.8854548669615605851028362046138468143686961761142",
+        "fees_paid": "267.775269343327",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 15.058432672319771,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "24.997654815223091978652455895899708729766188164640",
+        "turnover": "26.7775269343327",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 289,
+        "execution_rejections": 3
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 3
+      },
+      "risk_summary": {
+        "decisions": 0,
+        "max_modeled_vol_pct": "0",
+        "max_stressed_vol_pct": "0",
+        "last": null
+      }
+    },
+    {
+      "case": "risk_momentum_84",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "bf77e31365cefacf39d296ada29f33c5be53aee37e99cd14e843a896abf7ef2a",
+      "result_hash": "d85dec81db9217cb82b8a30bfaea2ad4c5a58fc5d7866a4208ee598d408d0c00",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10273.291382950636",
+        "total_return_pct": "2.7329138295063600",
+        "max_drawdown_pct": "4.0335824081760958264576952570613970852088405144134",
+        "fees_paid": "169.645368421364",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 8.944504449386425,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "13.316290277566963786200439367369737140259769736752",
+        "turnover": "16.9645368421364",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 292,
+        "execution_rejections": 0
+      },
+      "execution_diagnostics": {},
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1790193600000,
+          "sample_end": 1791417600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000033480297766338289620006841345750265047145179369245"
+            ],
+            [
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000047348237348885484309560283157112612881897731892945"
+            ],
+            [
+              "0.000033480297766338289620006841345750265047145179369245",
+              "0.000047348237348885484309560283157112612881897731892945",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000033001061314093148644227390681571658317676000067562",
+              "0.000043990003483643654478220858983854301399727478909802"
+            ],
+            [
+              "0.000033001061314093148644227390681571658317676000067562",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000059909010036636220554545205537084385305234336676937"
+            ],
+            [
+              "0.000043990003483643654478220858983854301399727478909802",
+              "0.000059909010036636220554545205537084385305234336676937",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "risk_window_42",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "536600df64ba7aa653e9a304e99033118205e1a293c21aa09c5ed4593c29a920",
+      "result_hash": "d9942b458b08719dbe9a18cfcab135bc0dfcc01e9861bb281821e7494e5f6127",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10125.195492392634",
+        "total_return_pct": "1.2519549239263400",
+        "max_drawdown_pct": "4.5523775333899972454120935046530679494311434267255",
+        "fees_paid": "175.883433507366",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 9.148263611942214,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "13.507170696326166967437591217053796973821594197208",
+        "turnover": "17.5883433507366",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 291,
+        "execution_rejections": 1
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 1
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 42,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1790798400000,
+          "sample_end": 1791417600000,
+          "sample_returns": 42,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "26.521874863609024614784632685014802012141566015877",
+            "ETH-USDT": "35.553614455320506861611216008235503911315661326140",
+            "SOL-USDT": "37.954567493650648040039400203199984211490183114861"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "26.521874863609024614784632685014802012141566015877",
+            "ETH-USDT": "35.553614455320506861611216008235503911315661326140",
+            "SOL-USDT": "37.954567493650648040039400203199984211490183114861"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000032119171063056448311095001210784388984947029051951",
+              "0.000027469919321181701208274935198111990891685470656835",
+              "0.000026637484895146221219991458769479679157623039444220"
+            ],
+            [
+              "0.000027469919321181701208274935198111990891685470656835",
+              "0.000057719611910391566292279322044264762236569939598600",
+              "0.000036219254791629363572056274131616857381988022819165"
+            ],
+            [
+              "0.000026637484895146221219991458769479679157623039444220",
+              "0.000036219254791629363572056274131616857381988022819165",
+              "0.000065778501992241207075303676057314636693746756966501"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000032119171063056448311095001210784388984947029051951",
+              "0.000032292757312774363489357481145117148674122548320965",
+              "0.000034473503067431688363147914840869871166670505516515"
+            ],
+            [
+              "0.000032292757312774363489357481145117148674122548320965",
+              "0.000057719611910391566292279322044264762236569939598600",
+              "0.000046213084229030667814646002866634379792176521620622"
+            ],
+            [
+              "0.000034473503067431688363147914840869871166670505516515",
+              "0.000046213084229030667814646002866634379792176521620622",
+              "0.000065778501992241207075303676057314636693746756966501"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "risk_window_126",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "66359e46051c561ce7020192d5e2f0cc419abf156a4aa05711d19c8416dd5375",
+      "result_hash": "4c9b643d75d683306d0af8f61cc572d9f3452d2d6791134124ee0c786a5db5e8",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10254.752114351865",
+        "total_return_pct": "2.5475211435186500",
+        "max_drawdown_pct": "3.8468528797372533339209573590418813311773522581881",
+        "fees_paid": "167.046771673135",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 8.41405822426277,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "13.143510350305440655104275179503930578068768380352",
+        "turnover": "16.7046771673135",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 289,
+        "execution_rejections": 3
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 3
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 126,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1789588800000,
+          "sample_end": 1791417600000,
+          "sample_returns": 126,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "34.293022385701458710934902291376880062068913812251",
+            "ETH-USDT": "40.800497533699554054851077470864825371826046680738",
+            "SOL-USDT": "55.843293999805465525861778926540170842741617969571"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "34.293022385701458710934902291376880062068913812251",
+            "ETH-USDT": "40.800497533699554054851077470864825371826046680738",
+            "SOL-USDT": "55.843293999805465525861778926540170842741617969571"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000053699149970147094373423732485620855511023903409639",
+              "0.000041771418003657833165569080692090755880909633113460",
+              "0.000054525372568441094281045470727916898861814199029662"
+            ],
+            [
+              "0.000041771418003657833165569080692090755880909633113460",
+              "0.000076012812739608374112684586389976390786578826229058",
+              "0.000066262559090143497409385856373345390278941052476988"
+            ],
+            [
+              "0.000054525372568441094281045470727916898861814199029662",
+              "0.000066262559090143497409385856373345390278941052476988",
+              "0.00014239604953190452549475642427293162377016243964093"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000053699149970147094373423732485620855511023903409639",
+              "0.000047916862166812190529897844756787678241933949828014",
+              "0.000065583401754336876025588564615100504512986563554295"
+            ],
+            [
+              "0.000047916862166812190529897844756787678241933949828014",
+              "0.000076012812739608374112684586389976390786578826229058",
+              "0.000078028567777832945254165918384704890122455017990085"
+            ],
+            [
+              "0.000065583401754336876025588564615100504512986563554295",
+              "0.000078028567777832945254165918384704890122455017990085",
+              "0.00014239604953190452549475642427293162377016243964093"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "risk_no_stress",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "10442c3b6be3a9f1298dc86f6c0fa3278bc9a7f0801537899fe05cd4c6770293",
+      "result_hash": "b892fc63823238c5923d3f05e7556f683f67466c0e1257f56cb5c7d435e524b2",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10272.664832467693",
+        "total_return_pct": "2.7266483246769300",
+        "max_drawdown_pct": "4.1933684028358362920056855375574807817909012463342",
+        "fees_paid": "172.326866487307",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 9.099522775083871,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "13.645182943821617411719278343129350311512921889010",
+        "turnover": "17.2326866487307",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 291,
+        "execution_rejections": 1
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 1
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1790193600000,
+          "sample_end": 1791417600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000033480297766338289620006841345750265047145179369245"
+            ],
+            [
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000047348237348885484309560283157112612881897731892945"
+            ],
+            [
+              "0.000033480297766338289620006841345750265047145179369245",
+              "0.000047348237348885484309560283157112612881897731892945",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0E-54",
+              "0E-54"
+            ],
+            [
+              "0E-54",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0E-54"
+            ],
+            [
+              "0E-54",
+              "0E-54",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "inverse_vol_without_target",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 10,
+      "slippage_bps": 5,
+      "input_hash": "49fdc04579f4a6e738169bf0c11b59c7f510f9e7fc941b2fba23176747eaf18d",
+      "result_hash": "dfea7f7357308c110704f792fec18e95b18a1c114d7caf06b5f5d62cf3dd9fa2",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10628.617661067215",
+        "total_return_pct": "6.2861766106721500",
+        "max_drawdown_pct": "5.4681436591923623455930352712717212056756866633910",
+        "fees_paid": "266.153636515785",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 13.921783500177606,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "23.574328137693165781649858600112887334238819777246",
+        "turnover": "26.6153636515785",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 288,
+        "execution_rejections": 4
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 4
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "67.053450194716331709620031204819732013016942564665",
+        "max_stressed_vol_pct": "68.539165225344223259544924946759492608068573312168",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1790193600000,
+          "sample_end": 1791417600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000033480297766338289620006841345750265047145179369245"
+            ],
+            [
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000047348237348885484309560283157112612881897731892945"
+            ],
+            [
+              "0.000033480297766338289620006841345750265047145179369245",
+              "0.000047348237348885484309560283157112612881897731892945",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000033001061314093148644227390681571658317676000067562",
+              "0.000043990003483643654478220858983854301399727478909802"
+            ],
+            [
+              "0.000033001061314093148644227390681571658317676000067562",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000059909010036636220554545205537084385305234336676937"
+            ],
+            [
+              "0.000043990003483643654478220858983854301399727478909802",
+              "0.000059909010036636220554545205537084385305234336676937",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "static_equal_weight",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "2e6350058876cbb543ea5ae72cfc81ddf2746bbd7c37acb8084f79814d877796",
+      "result_hash": "993c8d1716f2316325c089ad2e8017b16dc06d85245d4cb468056df38680bcb5",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "11025.614566459910",
+        "total_return_pct": "10.256145664599100",
+        "max_drawdown_pct": "14.321266027616982709258135958159534538184832018669",
+        "fees_paid": "24.843363181090",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 18.412091123944744,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "39.971748416921366859967839361658250918829056670805",
+        "turnover": "1.2421681590545",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 531,
+        "execution_rejections": 18
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 18
+      },
+      "risk_summary": {
+        "decisions": 0,
+        "max_modeled_vol_pct": "0",
+        "max_stressed_vol_pct": "0",
+        "last": null
+      }
+    },
+    {
+      "case": "fixed_weight_momentum",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "0a9a772ace6f2a211296b305142dbd7b9311d8f89f6f2cfcc6fa586ffbe9b3dd",
+      "result_hash": "b4e05e4428d0d41b2fd66962609b07f4723f5bd0579848ae2833d44422d78df3",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10287.820645491358",
+        "total_return_pct": "2.8782064549135800",
+        "max_drawdown_pct": "7.1214688991840662872030416610788091062482620391356",
+        "fees_paid": "525.334620773642",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 15.062180045450477,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "25.003786571938106216248312643980262063956176778774",
+        "turnover": "26.2667310386821",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 287,
+        "execution_rejections": 5
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 5
+      },
+      "risk_summary": {
+        "decisions": 0,
+        "max_modeled_vol_pct": "0",
+        "max_stressed_vol_pct": "0",
+        "last": null
+      }
+    },
+    {
+      "case": "risk_momentum_84",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "138d91a4eb528d726a49389441f7c9a323617557ce8424e411acb624ad0ffe86",
+      "result_hash": "ec677ce775d15896bf600c1532b6bfc9eeb0707b127240b5f995feb993b6e3da",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10016.918797415894",
+        "total_return_pct": "0.1691879741589400",
+        "max_drawdown_pct": "5.3916599578480006971599870924431804934111348196709",
+        "fees_paid": "335.097802395106",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 8.97364947859564,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "13.318520390067384057359449733594635302309887120606",
+        "turnover": "16.7548901197553",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 292,
+        "execution_rejections": 0
+      },
+      "execution_diagnostics": {},
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1790193600000,
+          "sample_end": 1791417600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000033480297766338289620006841345750265047145179369245"
+            ],
+            [
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000047348237348885484309560283157112612881897731892945"
+            ],
+            [
+              "0.000033480297766338289620006841345750265047145179369245",
+              "0.000047348237348885484309560283157112612881897731892945",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000033001061314093148644227390681571658317676000067562",
+              "0.000043990003483643654478220858983854301399727478909802"
+            ],
+            [
+              "0.000033001061314093148644227390681571658317676000067562",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000059909010036636220554545205537084385305234336676937"
+            ],
+            [
+              "0.000043990003483643654478220858983854301399727478909802",
+              "0.000059909010036636220554545205537084385305234336676937",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "risk_window_42",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "177caafe5d2d87d07f9e95f4c2fdd9c7580a9606ae8b2a3a64323b7ab1d9f0ce",
+      "result_hash": "8946566a07dc285a5b49184aed65b807fc9d1409104045a1ca440c73d302ee61",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "9861.858993974676",
+        "total_return_pct": "-1.3814100602532400",
+        "max_drawdown_pct": "6.0476871415727675238695655722910804612350286018347",
+        "fees_paid": "347.243639871324",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 9.185229424891345,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "13.509606376530393911756244759590500452795122954188",
+        "turnover": "17.3621819935662",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 291,
+        "execution_rejections": 1
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 1
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 42,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1790798400000,
+          "sample_end": 1791417600000,
+          "sample_returns": 42,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "26.521874863609024614784632685014802012141566015877",
+            "ETH-USDT": "35.553614455320506861611216008235503911315661326140",
+            "SOL-USDT": "37.954567493650648040039400203199984211490183114861"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "26.521874863609024614784632685014802012141566015877",
+            "ETH-USDT": "35.553614455320506861611216008235503911315661326140",
+            "SOL-USDT": "37.954567493650648040039400203199984211490183114861"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000032119171063056448311095001210784388984947029051951",
+              "0.000027469919321181701208274935198111990891685470656835",
+              "0.000026637484895146221219991458769479679157623039444220"
+            ],
+            [
+              "0.000027469919321181701208274935198111990891685470656835",
+              "0.000057719611910391566292279322044264762236569939598600",
+              "0.000036219254791629363572056274131616857381988022819165"
+            ],
+            [
+              "0.000026637484895146221219991458769479679157623039444220",
+              "0.000036219254791629363572056274131616857381988022819165",
+              "0.000065778501992241207075303676057314636693746756966501"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000032119171063056448311095001210784388984947029051951",
+              "0.000032292757312774363489357481145117148674122548320965",
+              "0.000034473503067431688363147914840869871166670505516515"
+            ],
+            [
+              "0.000032292757312774363489357481145117148674122548320965",
+              "0.000057719611910391566292279322044264762236569939598600",
+              "0.000046213084229030667814646002866634379792176521620622"
+            ],
+            [
+              "0.000034473503067431688363147914840869871166670505516515",
+              "0.000046213084229030667814646002866634379792176521620622",
+              "0.000065778501992241207075303676057314636693746756966501"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "risk_window_126",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "88dc2768d05218075b2810e73fd5886bb24bef0e91aa9785f39a71e9bb16ea57",
+      "result_hash": "210790deb4c0c4f3a432556a1cdfcecb660046190f59ab13043772384733b044",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10002.608018337638",
+        "total_return_pct": "0.0260801833763800",
+        "max_drawdown_pct": "5.1865912895771233486918463951299248707903691041837",
+        "fees_paid": "330.019006399362",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 8.442488681408717,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "13.145653898101318829988232041993338522505521019702",
+        "turnover": "16.5009503199681",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 289,
+        "execution_rejections": 3
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 3
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 126,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1789588800000,
+          "sample_end": 1791417600000,
+          "sample_returns": 126,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "34.293022385701458710934902291376880062068913812251",
+            "ETH-USDT": "40.800497533699554054851077470864825371826046680738",
+            "SOL-USDT": "55.843293999805465525861778926540170842741617969571"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "34.293022385701458710934902291376880062068913812251",
+            "ETH-USDT": "40.800497533699554054851077470864825371826046680738",
+            "SOL-USDT": "55.843293999805465525861778926540170842741617969571"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000053699149970147094373423732485620855511023903409639",
+              "0.000041771418003657833165569080692090755880909633113460",
+              "0.000054525372568441094281045470727916898861814199029662"
+            ],
+            [
+              "0.000041771418003657833165569080692090755880909633113460",
+              "0.000076012812739608374112684586389976390786578826229058",
+              "0.000066262559090143497409385856373345390278941052476988"
+            ],
+            [
+              "0.000054525372568441094281045470727916898861814199029662",
+              "0.000066262559090143497409385856373345390278941052476988",
+              "0.00014239604953190452549475642427293162377016243964093"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000053699149970147094373423732485620855511023903409639",
+              "0.000047916862166812190529897844756787678241933949828014",
+              "0.000065583401754336876025588564615100504512986563554295"
+            ],
+            [
+              "0.000047916862166812190529897844756787678241933949828014",
+              "0.000076012812739608374112684586389976390786578826229058",
+              "0.000078028567777832945254165918384704890122455017990085"
+            ],
+            [
+              "0.000065583401754336876025588564615100504512986563554295",
+              "0.000078028567777832945254165918384704890122455017990085",
+              "0.00014239604953190452549475642427293162377016243964093"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "risk_no_stress",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "ff09c357a8241af72ad83a4a3b2555d981c3ce0212ec46b5c9fd4a99ce59de80",
+      "result_hash": "8052545478f632ecb08277754b7d9b964b27f643e5d2abaf8669a7c6d34cbbe3",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10012.296594570582",
+        "total_return_pct": "0.1229659457058200",
+        "max_drawdown_pct": "5.5144866645402860698642979499960083073794907622775",
+        "fees_paid": "340.323774618418",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 9.12841868485077,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "13.647468735592412344249129820649131239275192899187",
+        "turnover": "17.0161887309209",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 290,
+        "execution_rejections": 2
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 2
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "max_stressed_vol_pct": "20.000000000000000000000000000000000000000000000000",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1790193600000,
+          "sample_end": 1791417600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000033480297766338289620006841345750265047145179369245"
+            ],
+            [
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000047348237348885484309560283157112612881897731892945"
+            ],
+            [
+              "0.000033480297766338289620006841345750265047145179369245",
+              "0.000047348237348885484309560283157112612881897731892945",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0E-54",
+              "0E-54"
+            ],
+            [
+              "0E-54",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0E-54"
+            ],
+            [
+              "0E-54",
+              "0E-54",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    },
+    {
+      "case": "inverse_vol_without_target",
+      "window": "check_B",
+      "start": 1775678400000,
+      "end": 1791446400000,
+      "fee_bps": 20,
+      "slippage_bps": 10,
+      "input_hash": "25acaba1cacf63c6fdb3242b07bdd6ae5fb185971e3c2d888b5d00eb0388ba1a",
+      "result_hash": "448b9aea94a1286ea1fc7eecc572f3a46988c9a97ce3ab54a24378f4382fca41",
+      "metrics": {
+        "initial_cash": "10000",
+        "final_equity": "10223.569283678898",
+        "total_return_pct": "2.2356928367889800",
+        "max_drawdown_pct": "6.8564610822845685471409187632562805855660695593085",
+        "fees_paid": "522.181522904102",
+        "funding_paid": "0",
+        "insurance_debt": "0",
+        "complete_utc_days": 182,
+        "realized_annual_vol_pct": 13.924509768878531,
+        "realized_vol_reason": null,
+        "mean_gross_exposure_pct": "23.580162035686349995646967897730299884906036342410",
+        "turnover": "26.1090761452051",
+        "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+        "orders": 290,
+        "execution_rejections": 2
+      },
+      "execution_diagnostics": {
+        "rebalance_minimum": 2
+      },
+      "risk_summary": {
+        "decisions": 183,
+        "max_modeled_vol_pct": "67.053450194716331709620031204819732013016942564665",
+        "max_stressed_vol_pct": "68.539165225344223259544924946759492608068573312168",
+        "last": {
+          "schema_version": 1,
+          "symbols": [
+            "BTC-USDT",
+            "ETH-USDT",
+            "SOL-USDT"
+          ],
+          "decision_bar_ts": 1791403200000,
+          "available_at": 1791417600000,
+          "required_returns": 84,
+          "weights": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "reason": "no_eligible_positive_momentum",
+          "selected": [],
+          "excluded": {
+            "BTC-USDT": "nonpositive_momentum",
+            "ETH-USDT": "nonpositive_momentum",
+            "SOL-USDT": "nonpositive_momentum"
+          },
+          "cash_weight": "1",
+          "sample_start": 1790193600000,
+          "sample_end": 1791417600000,
+          "sample_returns": 84,
+          "momentum": {
+            "BTC-USDT": "-0.00353271528754436822517532026443940568104627689599",
+            "ETH-USDT": "-0.04144466164013776412547705482639858512519780322070",
+            "SOL-USDT": "-0.01557606027258105477016845847794802336409040887158"
+          },
+          "asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "floored_asset_vol_pct": {
+            "BTC-USDT": "26.600285984123335348114180610955597721060162441827",
+            "ETH-USDT": "36.226339481713594505261247514283423486296539148905",
+            "SOL-USDT": "48.289259088758184164045912074637541222876177386021"
+          },
+          "annualizer": "46.797435827190361135777061756298454414659312404816",
+          "covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000033480297766338289620006841345750265047145179369245"
+            ],
+            [
+              "0.000028876283118390369871991225956616132243700776599900",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000047348237348885484309560283157112612881897731892945"
+            ],
+            [
+              "0.000033480297766338289620006841345750265047145179369245",
+              "0.000047348237348885484309560283157112612881897731892945",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "stress_covariance": [
+            [
+              "0.000032309370522244217320527945675004015156461421048907",
+              "0.000033001061314093148644227390681571658317676000067562",
+              "0.000043990003483643654478220858983854301399727478909802"
+            ],
+            [
+              "0.000033001061314093148644227390681571658317676000067562",
+              "0.000059924551244034757212796785534700293878414489843647",
+              "0.000059909010036636220554545205537084385305234336676937"
+            ],
+            [
+              "0.000043990003483643654478220858983854301399727478909802",
+              "0.000059909010036636220554545205537084385305234336676937",
+              "0.00010647728508407373948916156749888080557613476767954"
+            ]
+          ],
+          "estimator": "sample_N_minus_1_simple_close_returns_fixed_diagonal_shrinkage_not_Ledoit_Wolf",
+          "weights_before_governor": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "ceiling_policy": "cap_without_redistribution_remainder_cash",
+          "governor_scale": "1",
+          "modeled_vol_pct": "0E-48",
+          "stressed_vol_pct": "0E-48",
+          "risk_contribution_pct": {
+            "BTC-USDT": "0",
+            "ETH-USDT": "0",
+            "SOL-USDT": "0"
+          },
+          "risk_scope": "allocated_sleeve_before_execution_not_account_or_realized_risk_bound",
+          "initial_governor_scale": "1"
+        }
+      }
+    }
+  ],
+  "all_cases_completed": true,
+  "completed_at": 1791474916625
+}

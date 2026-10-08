@@ -35,12 +35,19 @@ class ManagedLeg(InputModel):
 class PortfolioDefinition(InputModel):
     schema_version: Literal[1] = 1
     bar: Literal["1m", "5m", "15m", "1H", "4H", "1Dutc"] = "1H"
-    mode: Literal["fixed_weights", "independent_signals", "momentum", "funding_carry"] = "fixed_weights"
+    mode: Literal["fixed_weights", "independent_signals", "momentum", "risk_momentum", "funding_carry"] = (
+        "fixed_weights"
+    )
     legs: list[ManagedLeg] = Field(min_length=2, max_length=10)
     capital_pct: Decimal = Field(default=100, gt=0, le=100)
     rebalance_bars: int = Field(default=24, ge=1, le=1000)
     lookback: int = Field(default=20, ge=2, le=400)
     top_k: int = Field(default=1, ge=1, le=10)
+    risk_window: int = Field(default=84, ge=10, le=400)
+    vol_target_pct: Decimal = Field(default=20, gt=0, le=100)
+    vol_floor_pct: Decimal = Field(default=20, gt=0, le=200)
+    covariance_shrinkage: Decimal = Field(default=".25", ge=0, le=1)
+    correlation_stress: Decimal = Field(default=".75", ge=0, le=1)
     carry_threshold: Decimal = Field(default=0, ge="-.01", le=".01")
     carry_window: int = Field(default=1, ge=1, le=30)
     carry_cost_settlements: int = Field(default=0, ge=0, le=300)
@@ -57,6 +64,16 @@ class PortfolioDefinition(InputModel):
             self.top_k > len(self.legs) or any(leg.weight < 0 for leg in self.legs)
         ):
             raise ValueError("Momentum uses nonnegative weights and top_k within the universe.")
+        if self.mode == "risk_momentum" and (
+            self.top_k > len(self.legs)
+            or any(
+                not 0 <= leg.weight <= 1 or leg.leverage != 1 or leg.direction != "long_only"
+                for leg in self.legs
+            )
+        ):
+            raise ValueError(
+                "Risk momentum requires long-only unlevered legs, weight ceilings in [0,1], and top_k within the universe."
+            )
         if self.mode == "funding_carry" and (
             len(self.legs) != 2
             or self.legs[0].inst_id.endswith("-SWAP")
@@ -227,6 +244,11 @@ class PortfolioRegistry:
             "rebalance_bars",
             "lookback",
             "top_k",
+            "risk_window",
+            "vol_target_pct",
+            "vol_floor_pct",
+            "covariance_shrinkage",
+            "correlation_stress",
             "carry_window",
             "carry_cost_settlements",
             "carry_buffer_bps",
@@ -236,7 +258,16 @@ class PortfolioRegistry:
         ):
             observed = (
                 canonical(D(str(config[key])))
-                if key in {"carry_threshold", "carry_buffer_bps", "capital_pct"}
+                if key
+                in {
+                    "carry_threshold",
+                    "carry_buffer_bps",
+                    "capital_pct",
+                    "vol_target_pct",
+                    "vol_floor_pct",
+                    "covariance_shrinkage",
+                    "correlation_stress",
+                }
                 else config[key]
             )
             if observed != definition[key]:

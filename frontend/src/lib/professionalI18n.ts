@@ -1,4 +1,44 @@
 export const professionalZh: Record<string, string> = {
+  'Modeled sleeve volatility': '分配资金模型波动率',
+  'Stressed sleeve volatility': '分配资金压力波动率',
+  'Portfolio performance': '组合表现',
+  'Realized account volatility': '实际账户年化波动率',
+  'Mean gross account exposure': '平均账户总敞口',
+  'Executed turnover': '实际换手倍数',
+  'Full performance metrics': '完整表现指标',
+  'Net equity includes trading fees, funding and marked open inventory. Turnover is executed absolute notional divided by initial account equity. Volatility uses complete UTC daily returns, annualized with 365 days.':
+    '净值包含交易费用、资金费和未平仓市值。换手为实际成交绝对名义额除以初始账户权益。波动率用完整 UTC 日收益，按 365 日年化。',
+  'Annualized volatility needs at least 30 complete UTC days and positive equity. Short samples remain unreported.':
+    '年化波动率至少需要 30 个完整 UTC 日及正权益；短样本不报告该指标。',
+  'Between scheduled rebalances: risk weights are a model reference. Recorded quantity targets retain inventory except protective reductions.':
+    '当前位于计划调仓之间：风险权重仅为模型参考。记录的数量目标保留现有库存，保护性减仓除外。',
+
+  'Risk-budgeted momentum': '风险预算动量轮动',
+  'Portfolio risk budget': '组合风险预算',
+  'Portfolio risk evidence': '组合风险证据',
+  'What sets the position size': '仓位规模的依据',
+  'Risk decision': '风险决策时点',
+  'Risk estimation bars': '风险估计 K 线数',
+  'Sleeve volatility target (%)': '分配资金波动率目标（%）',
+  'Asset volatility floor (%)': '资产波动率下限（%）',
+  'Diagonal shrinkage (0–1)': '对角收缩系数（0–1）',
+  'Stress correlation (0–1)': '压力相关系数（0–1）',
+  'Modeled volatility': '模型年化波动率',
+  'Stressed volatility': '压力年化波动率',
+  'Cash allocation': '现金比例',
+  'Target weight (%)': '目标权重（%）',
+  'Floored asset volatility (%)': '含下限的资产年化波动率（%）',
+  'Risk contribution (vol pts)': '风险贡献（波动百分点）',
+  'Covariance and decision evidence': '协方差与决策证据',
+  'Waiting for the full risk estimation window; target weights remain zero.':
+    '等待完整风险估计窗口；目标权重保持为零。',
+  'Positive momentum selects markets. Inverse volatility sets weights within each leg ceiling; excess stays in cash. The larger of shrunk-covariance risk and a correlation stress sets a common downward scale. Targets refer to allocated capital, before execution.':
+    '正动量筛选市场，波动率倒数配置权重，并受逐腿权重上限约束；剩余资金留在现金。收缩协方差风险与相关性压力风险取较大值，统一向下调整仓位。目标针对执行前的分配资金。',
+  'Long-only, leverage one. Leg weights are ceilings in [0,1]. This is inverse-volatility allocation, not an equal-risk optimizer. Scheduled rebalances, price gaps, residuals and estimation error can exceed the risk target.':
+    '只做多，杠杆为一。逐腿权重表示 [0,1] 范围内的上限。这是波动率倒数配置，并非等风险优化器。定时调仓、跳空、残差和估计误差都可能使风险超出目标。',
+  'Risk is estimated from confirmed closes available at this decision. Values describe allocated capital before fills; target risk is not a guarantee. Costs, lot residuals, price drift and correlation changes affect the result.':
+    '风险只用决策时已知的已确认收盘价估计。数值描述成交前的分配资金；风险目标并非保证。成本、手数残差、价格漂移及相关性变化会影响结果。',
+
   'Research library': '研究库',
   'My strategy versions': '我的策略版本',
   'Strategy view': '策略视图',

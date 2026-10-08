@@ -3,6 +3,7 @@ import { ArrowUpRight, ArrowRight } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import dossiers from '../../../examples/strategy-dossiers.json';
 import evidence from '../../../examples/strategy-evidence.json';
+import riskEvidence from '../../../examples/portfolio-risk-evidence.json';
 
 type Copy = { en: string; zh: string };
 export default function StrategyResearchLibrary({
@@ -24,7 +25,7 @@ export default function StrategyResearchLibrary({
       aria-label={label('Strategy research library', '策略研究库')}
     >
       <header className="strategy-research-intro">
-        <span className="eyebrow">{label('RESEARCH NOTES / 01–05', '研究笔记 / 01–05')}</span>
+        <span className="eyebrow">{label('RESEARCH NOTES / 01–06', '研究笔记 / 01–06')}</span>
         <h2>{label('A mechanism before a signal.', '先理解收益机制，再构建信号。')}</h2>
         <p>
           {label(
@@ -178,6 +179,119 @@ export default function StrategyResearchLibrary({
               </a>
             </section>
           )}
+          {selected === 'risk-rotation' && (
+            <section className="strategy-observed-evidence">
+              <div className="section-heading">
+                <h4>{label('Observed OKX portfolio checks', 'OKX 组合实际检验')}</h4>
+                <select
+                  aria-label={label('Portfolio evidence cost', '组合证据成本')}
+                  value={cost}
+                  onChange={(e) => setCost(Number(e.target.value))}
+                >
+                  <option value={10}>10 + 5 bps</option>
+                  <option value={20}>20 + 10 bps</option>
+                </select>
+              </div>
+              <p>
+                {label(
+                  'Published OKX captures, independent of the workspace source. Two adjacent six-month checks; same 40% capital ceiling and daily clock. The risk model holds substantially less exposure. Lower drawdown alone is not evidence of alpha.',
+                  '此处为发布的 OKX 冻结数据证据，与工作空间数据源独立。两个相邻半年时段，同为 40% 资金上限、每日调仓。风险模型实际仓位明显更低；回撤更小不能单独证明超额收益。',
+                )}
+              </p>
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-label={label('Risk allocation comparison', '风险配置对照')}
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      {[
+                        'Window / model',
+                        'Net %',
+                        'Drawdown %',
+                        'Realized vol %',
+                        'Mean gross %',
+                        'Turnover ×',
+                      ].map((v, i) => (
+                        <th key={v}>
+                          {label(
+                            v,
+                            [
+                              '时段／模型',
+                              '净收益 %',
+                              '回撤 %',
+                              '实际年化波动 %',
+                              '平均总敞口 %',
+                              '换手倍数',
+                            ][i],
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {riskEvidence.rows
+                      .filter(
+                        (r) =>
+                          r.fee_bps === cost &&
+                          [
+                            'static_equal_weight',
+                            'fixed_weight_momentum',
+                            'risk_momentum_84',
+                          ].includes(r.case),
+                      )
+                      .map((r) => (
+                        <tr key={r.window + r.case}>
+                          <td>
+                            <small>
+                              {r.window.replace('check_', '')} ·{' '}
+                              {label(
+                                (
+                                  {
+                                    static_equal_weight: 'Static basket',
+                                    fixed_weight_momentum: 'Fixed momentum',
+                                    risk_momentum_84: 'Risk budget',
+                                  } as Record<string, string>
+                                )[r.case],
+                                (
+                                  {
+                                    static_equal_weight: '静态组合',
+                                    fixed_weight_momentum: '固定动量',
+                                    risk_momentum_84: '风险预算',
+                                  } as Record<string, string>
+                                )[r.case],
+                              )}
+                            </small>
+                          </td>
+                          {[
+                            r.return_pct,
+                            r.drawdown_pct,
+                            r.vol_pct,
+                            r.exposure_pct,
+                            r.turnover,
+                          ].map((v, i) => (
+                            <td key={i}>{v?.toFixed(2) ?? '—'}</td>
+                          ))}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              <a
+                href="https://github.com/billpwchan/tidebench/blob/main/docs/portfolio-risk-research.md"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {label(
+                  'All 28 cases, limitations and reproducible methods',
+                  '全部 28 案例、局限与复现方法',
+                )}
+                <ArrowUpRight size={12} />
+              </a>
+            </section>
+          )}
           <div className="strategy-dossier-sources">
             <span>{label('Original sources', '原始来源')}</span>
             {d.sources.map((source) => (
@@ -200,8 +314,8 @@ export default function StrategyResearchLibrary({
           ) : (
             <p className="quiet-copy">
               {label(
-                'Open Research → Portfolio research and load the matching portfolio starting point. Both legs use one book and one capital balance.',
-                '在策略研究 → 组合研究中加载对应组合配方。两条腿使用同一账本与资金余额。',
+                'Open Research → Portfolio research and load the matching portfolio starting point. All legs use one book and one capital balance.',
+                '在策略研究 → 组合研究中加载对应组合配方。所有组合腿使用同一账本与资金余额。',
               )}
             </p>
           )}

@@ -1,5 +1,15 @@
 # Verification record
 
+## v0.9.0 portfolio risk allocation
+
+The full local backend suite passed **729 tests** (110.19 seconds), and the subsequently added covariance-work admission refusal test passed separately: **730 total tests**. Formula and independent covariance checks, future perturbation, zero/invalid histories, ceiling cash, stress scaling, contribution reconciliation, frozen holdout controls, historical replay and managed restart idempotency are covered. Ruff, locked package synchronization, Prettier, TypeScript and production build passed. The existing Starlette/HTTPX deprecation remains visible.
+
+All **24 desktop/mobile Chromium workflows passed** (2.4 minutes), including the new risk recipe → immutable version → study → decision selection → revised controls path. Its screenshot review led to a concise, unit-labeled performance summary and styled decision selection instead of raw technical metric strings. Final browser and CI results are linked in the release.
+
+[The two-year OKX experiment](portfolio-risk-research.md) captured 4,380 4H rows per BTC/ETH/SOL market and discloses all 28 pre-declared cases. All **28 frozen-capture replays matched** their ordered input/result hashes with plan, runner and implementation identities checked. Its negative/cost-sensitive results are part of acceptance evidence, not profit or target-volatility guarantees. All 128 recorded execution adjustments were below-minimum rebalance deferrals; other execution error codes totaled zero.
+
+Schema remains 7. Primary operational account/users are preserved across the release upgrade; all browser/research QA uses separate stores.
+
 ## v0.8.0 strategy research
 
 Local validation passed **705 backend tests** (120.83 seconds), **22 desktop/mobile Chromium workflows** (2.2 minutes), Ruff lint/format, Prettier, TypeScript and the production build. Formula, causality, captured replay, durable forward restart and historical/managed cost-aware carry counterexamples are included. The existing Starlette/HTTPX deprecation warning remains visible. Immutable-binding checks additionally reject changes to every new carry control.
