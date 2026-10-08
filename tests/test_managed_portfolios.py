@@ -754,3 +754,37 @@ async def test_deferred_minimum_rebalance_cannot_bypass_reviewed_residual_limit(
     assert batch["body"]["reduction_skips"] or batch["additions"]["skipped"]
     assert not r.book.positions("example")
     assert r.book.contribution_report("example", {})["reconciled"]
+
+
+async def test_changed_observation_parser_requires_review_before_new_group_commands(runtime, monkeypatch):
+    from pathlib import Path
+
+    from tidebench.provenance import research_identity
+
+    run = await research(runtime)
+    release = approve(runtime, run)
+    group = runtime.portfolio_releases.activate(release["id"], "trader")["group_id"]
+    await runtime.managed_portfolios.evaluate(group)
+    before_orders = runtime.book.orders("example")
+    before_positions = runtime.book.positions("example")
+    assert len(before_orders) == 2
+    clock = runtime.clock.status()
+    runtime.clock.change(step_ms=HOUR, expected_revision=clock["revision"], actor="trader")
+    original_read = Path.read_bytes
+
+    def installed_upgrade(path):
+        original = original_read(path)
+        return (
+            original + b"\n# independently installed parser revision\n"
+            if path.name == "instrument_observations.py"
+            else original
+        )
+
+    monkeypatch.setattr(Path, "read_bytes", installed_upgrade)
+    runtime.engine_identity = research_identity()
+    with pytest.raises(PlatformError) as blocked:
+        await runtime.managed_portfolios.evaluate(group)
+    assert blocked.value.code == "portfolio_implementation_changed"
+    assert runtime.book.orders("example") == before_orders
+    assert runtime.book.positions("example") == before_positions
+    assert len(runtime.managed_portfolios.history(group)) == 1

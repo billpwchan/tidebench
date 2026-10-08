@@ -4,6 +4,7 @@ A newly announced instrument with blank rules could previously fail a healthy ma
 
 - **Data library → Instrument evidence** adds capture, raw inspection, exact JSON export, prior-response comparison and UTC review with an explicit maximum observation age. Desktop and mobile layouts are bilingual.
 - Before the first observation and after the selected age, coverage stays unknown. Announced listing/expiry times do not become retrospective knowledge. Omission blocks old cached rules without inventing a delisting or settlement; known expiry also blocks an otherwise fresh cache.
+- Observation/parser/market/package/storage modules join the research and managed-release code identity; changed installed rules require a new reviewed implementation. Existing managed releases must be stopped and reviewed under a changed fingerprint; inventory is retained.
 - Nanosecond receipt ordering is represented as a JSON string to preserve exported hashes in browsers. Raw rows, parser identity and unsupported or malformed members remain auditable.
 - Schema 7 verified recovery retains newer immutable observations before replacing financial state. Corrupt or conflicting observation identities fail before replacement. Existing one-use research facts retain their schema-6 recovery controls.
 - Local validation passed 684 backend regressions and 20 desktop/mobile Chromium workflows, including actual capture/export/time review and recovery conflicts.

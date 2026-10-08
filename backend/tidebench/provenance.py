@@ -16,6 +16,11 @@ def research_identity() -> dict:
     for name in (
         "engine.py",
         "schemas.py",
+        "catalog.py",
+        "instrument_observations.py",
+        "market.py",
+        "data_packages.py",
+        "store.py",
         "pro_api.py",
         "derivatives.py",
         "pro_research.py",
