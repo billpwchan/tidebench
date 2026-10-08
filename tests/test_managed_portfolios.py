@@ -73,7 +73,15 @@ async def research(r, **definition_changes):
     }
     run = r.portfolios.create(config, "researcher", tiers)
     await r.offload(r.portfolios.compute, run["id"])
-    run = r.portfolios.get(run["id"])
+    # API integration fixtures run the real queue worker. It may claim the
+    # request first; compute correctly returns rather than executing it twice.
+    # Await that owner's terminal result instead of assuming this caller won.
+    async with asyncio.timeout(15):
+        while True:
+            run = r.portfolios.get(run["id"])
+            if run["status"] not in {"queued", "running"}:
+                break
+            await asyncio.sleep(0.025)
     assert run["status"] == "completed", run["error"]
     return run
 
