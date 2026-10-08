@@ -1,6 +1,6 @@
 # Scope and release acceptance
 
-The professional workspace ships public OKX data, historical research and persistent local spot / linear USDT perpetual simulation. Authentication, recovery and operating controls below are implemented in the application. This document records their evidence; it is not a list of promised future replacements for missing core functionality.
+The workspace ships public OKX data, single-market historical research and persistent local spot / linear USDT perpetual simulation. Authentication, recovery and operating controls below are implemented. These controls do not establish a complete professional strategy platform. The [red-team review](audit/README.md) records reproduced v0.3.0 defects, fixes and substantial remaining gaps in strategy expression, portfolio semantics, promotion and attribution.
 
 | Control | Implemented behavior | Evidence |
 |---|---|---|
@@ -9,15 +9,15 @@ The professional workspace ships public OKX data, historical research and persis
 | Captured portfolio analysis | Asset/market gross and net exposure, concentration, isolated margin, custom price shocks, deterministic capture/replay | `test_portfolio_analytics.py`; read-only API and rendered workflow acceptance |
 | Research reproducibility | Installed module identity, canonical full-result hash and explicit replay divergence failure | `test_pro_service.py`; API and browser replay acceptance |
 | Research causality | Confirmed closes, next-open orders, prefix/future perturbation checks and explicit costs | `test_engine.py`, `test_pro_research.py` |
-| OOS evaluation | Train-only candidate selection, purged windows, independent test folds, bounded grids/cost stress | `test_pro_research.py`; all five modes exercised through the rendered UI |
+| OOS evaluation | Train-only candidate selection, purged windows, independent test folds, bounded grids/cost stress; explicit fixed/candidate selection in the UI after the red-team fix | `test_pro_research.py`; browser submission verifies two training candidates. The original v0.3.0 OOS UI only submitted fixed parameters |
 | Derivative accounting | Contract units, signed P&L, actual funding events, isolated tiers, explicit gap liabilities | `test_derivatives.py`, `test_pro_execution.py` |
 | Durable orders | Transactional risk, cash/margin reservations, canonical idempotency, cancellation and native asset journal | Concurrency, rollback, exact balance replay and source/freshness tests |
-| Forward strategies | Shared directional policy, persisted close/open intents, per-fill ownership and stop checks | Real Store/book crash/restart and stop-race tests in `test_pro_service.py` |
+| Forward strategies | Three reference rules, persisted close/open intents, per-fill ownership and stop checks; flat/no-pending admission and separate history preparation after the red-team fixes | Real Store/book crash/restart, stop-race and blocked-history protective-stop tests in `test_pro_service.py` |
 | Access | Salted bounded scrypt, server sessions, expiry, CSRF, five roles, password reset and revocation | `test_platform.py`, `test_pro_boundaries.py`; actual browser user/password workflows |
 | Recovery | Online checksummed backups, retention, schema matching, maintenance/drain, pre-halted restore image | Actual SQLite mutate/restore tests, concurrent recovery and canceled-drain tests |
 | Operations | Readiness, independent feed ages, job checkpoints, disk/WAL sizes, audit and Prometheus request metrics | API acceptance and measured HTTP workload |
 | Deployment | Locked source build, non-root image, private Compose binding, schema upgrade record and rollback runbook | CI verify + container startup/auth/account smoke |
-| Product usability | Connected data→research→execution workflow, bilingual controls, responsive layout, large-table pagination | Desktop/mobile browser acceptance and recorded workflow review |
+| Product usability | Data-package→research handoff, separate local execution workspace, bilingual controls, responsive layout, large-table pagination | Desktop/mobile browser acceptance. Research results are not version-bound to deployments; those configurations are still entered separately |
 
 Detailed results, environment and scripts are in the [verification record](verification.md). Backups, role controls and deployment procedures are described in the [operations runbook](operations.md).
 

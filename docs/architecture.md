@@ -55,6 +55,10 @@ The portfolio combines spot inventory and isolated linear perpetual positions. S
 
 A reversal has durable close/open command identities under one persisted signal intent. A restart can resume an unfinished phase without duplicating a committed fill. Old intents are superseded when a newer confirmed bar is observed; historical catch-up fills are not invented. Stops are checked in each economic transaction. Limit and stop orders reserve cash and are evaluated from observed prices; matching, queue priority and partial fills are outside this local model.
 
+The red-team fixes separate strategy supervision from risk/order polling. Historical preparation uses a deployment lock rather than holding the economic market lock. Up to four evaluations run concurrently, each with a 60-second deadline; the strategy supervisor owns and drains its children at shutdown/restore. Economic execution rechecks deployment status, and fill transactions retain their own stop checks. Readiness now expects five supervisors; it still checks task liveness rather than a complete progress/deadline SLO. Quote and funding I/O inside the economic path remain a hardening target.
+
+Starting a deployment transactionally requires no existing position or pending order for its source/market. Inventory adoption is unsupported; users must explicitly close and cancel first. A username never grants pending-order or liquidation authority. The shared net book still supports only one running strategy per source/market, with no multi-strategy virtual capital attribution. See the [audit](audit/README.md) for limits of these fixes.
+
 ## Recovery and security
 
 Password/session controls and role checks apply to every API route. Cookie mutations require CSRF; exact hosts/origins and bounded request bodies apply before dispatch. No arbitrary provider URLs or user code are accepted. Exchange secrets are outside this product's API and storage boundary.

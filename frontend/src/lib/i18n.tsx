@@ -190,6 +190,13 @@ const zh: Record<string, string> = {
   'Funding paid': '已付资金费',
   'Deploy strategy': '部署策略',
   'Start strategy': '启动策略',
+  'Start requires a flat market with no pending orders. Close positions and cancel orders first.':
+    '启动前该市场必须空仓且无挂单。请先平仓并取消挂单。',
+  'Parameter selection': '参数选择',
+  'Fixed parameters': '固定参数',
+  'Choose on training data': '仅在训练集选择',
+  'Candidates are ranked on training data only. Test data is reserved for evaluation.':
+    '候选参数仅在训练集排序，测试集保留用于评估。',
   Stop: '停止',
   'Last evaluation': '最近评估',
   'Last error': '最近错误',

@@ -1,0 +1,111 @@
+{
+  "audited_version": "0.3.1",
+  "stage": "working-tree-observation",
+  "implementation_sha256": {
+    "backend/tidebench/__init__.py": "697bcfde222b640068116a64c4bd36b0c0dc11ec28cf50a3c88d8d84d017a576",
+    "backend/tidebench/pro_service.py": "6f0ed030397ac06cf700156ccee63902b3d420214520272b97a7f7e992e8249e",
+    "backend/tidebench/pro_execution.py": "2d5abc9f3f4f53016bc0aa685314cd7d54a0d8630650f542a649cd1f0a160659",
+    "backend/tidebench/main.py": "6746842050a986fefd8ba15f9358088aaf6c2c80ca7bfae08a8febf3e26b686b",
+    "backend/tidebench/schemas.py": "c01c33b0ecd1de1e7d2c39ceb72514ce4c241b084abea05a7593f5ae8d85e504",
+    "frontend/src/pages/ProResearch.tsx": "f138c908d548bedcb30543ee80f513c8d9dea30aac80b160f0c36b8c2aeb4cce",
+    "frontend/src/pages/Portfolio.tsx": "bfd2f0ac3f03f5d7a2c0d9ba12e5d6dc6bbb622d5ac2cba76add3c87d1e915ff"
+  },
+  "data_source": "isolated synthetic fixtures",
+  "venue_requests": 0,
+  "observations": [
+    {
+      "id": "RT-02",
+      "observation": "starting_strategy_adopts_and_reverses_existing_manual_inventory",
+      "manual_quantity_before": "100",
+      "quantity_after": "100",
+      "strategy_close_orders": 0,
+      "explicit_adoption_field_in_saved_config": false,
+      "deployment_admission_error": "deployment_inventory"
+    },
+    {
+      "id": "RT-06",
+      "observation": "example_strategy_clock_does_not_advance",
+      "history_jobs_after_first_and_second_evaluation": [
+        1,
+        1
+      ],
+      "last_evaluated_bar": 1767222000000
+    },
+    {
+      "id": "RT-03",
+      "observation": "preexisting_manual_pending_order_fills_after_strategy_takes_market",
+      "active_strategy": null,
+      "deployment_admission_error": "deployment_pending_orders",
+      "pending_order_status_after": "pending",
+      "quantity_after": "0"
+    },
+    {
+      "id": "RT-01",
+      "observation": "strategy_history_wait_blocks_pending_order_and_risk_polling",
+      "injected_wait_ms": 6000,
+      "quote_reads_during_wait": 1,
+      "stop_order_status_during_triggered_price": "filled",
+      "task_alive": true
+    },
+    {
+      "id": "RT-10",
+      "observation": "reserved_actor_usernames_bypass_manual_strategy_ownership",
+      "outcomes": [
+        {
+          "username": "pending-order",
+          "manual_order_accepted": false,
+          "error": "Stop the strategy before adding manual risk to its market."
+        },
+        {
+          "username": "risk-engine",
+          "manual_order_accepted": false,
+          "error": "Stop the strategy before adding manual risk to its market."
+        }
+      ],
+      "caveat": "These names satisfy the workspace username policy; this is a local simulation ownership bypass, not exchange trading access."
+    },
+    {
+      "id": "RT-07",
+      "observation": "execution_per_market_refresh_revisits_entire_portfolio",
+      "held_markets": 3,
+      "logical_snapshot_dispatches": 9,
+      "caveat": "Logical calls, not measured venue HTTP calls; the 1.5s provider cache can coalesce fast repeats."
+    },
+    {
+      "id": "RT-04",
+      "observation": "five_overlapping_forward_history_captures_duplicate_records",
+      "windows": 5,
+      "bars_per_window": 2000,
+      "stored_records": 10000,
+      "distinct_bar_timestamps": 2004,
+      "database_allocated_bytes": 3346432,
+      "caveat": "Local synthetic catalog measurement; no cloud/storage capacity extrapolation is claimed."
+    },
+    {
+      "id": "RT-05",
+      "observation": "oos_api_supports_candidates_but_ui_omits_grid_in_oos_modes",
+      "training_candidates_without_grid": 1,
+      "training_candidates_with_grid": 2,
+      "ui_evidence": "Inspect ProResearch and browser acceptance separately; this observation measures engine candidate handling only."
+    },
+    {
+      "id": "RT-08",
+      "observation": "research_artifact_contains_full_result_and_input_arrays_per_candidate",
+      "cases": 4,
+      "bars_per_case": 240,
+      "json_bytes": 751615,
+      "bytes_per_bar_case": 782.9,
+      "caveat": "Small measured artifact only; no OOM at the maximum budget was injected."
+    },
+    {
+      "id": "RT-09",
+      "observation": "only_three_builtin_strategy_kinds_are_supported",
+      "rejected_examples": [
+        "trend_breakout",
+        "funding_carry",
+        "cross_sectional_momentum"
+      ],
+      "caveat": "These are absent capabilities; adding names alone would not implement their required data and portfolio semantics."
+    }
+  ]
+}

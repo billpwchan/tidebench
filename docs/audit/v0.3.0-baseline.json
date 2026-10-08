@@ -1,0 +1,100 @@
+{
+  "audited_version": "0.3.0",
+  "data_source": "isolated synthetic fixtures",
+  "venue_requests": 0,
+  "observations": [
+    {
+      "id": "RT-02",
+      "observation": "starting_strategy_adopts_and_reverses_existing_manual_inventory",
+      "manual_quantity_before": "100",
+      "quantity_after": "-1000.0",
+      "strategy_close_orders": 1,
+      "explicit_adoption_field_in_saved_config": false
+    },
+    {
+      "id": "RT-06",
+      "observation": "example_strategy_clock_does_not_advance",
+      "history_jobs_after_first_and_second_evaluation": [
+        1,
+        1
+      ],
+      "last_evaluated_bar": 1767222000000
+    },
+    {
+      "id": "RT-03",
+      "observation": "preexisting_manual_pending_order_fills_after_strategy_takes_market",
+      "active_strategy": "running",
+      "pending_order_status_after": "filled",
+      "quantity_after": "100"
+    },
+    {
+      "id": "RT-01",
+      "observation": "strategy_history_wait_blocks_pending_order_and_risk_polling",
+      "injected_wait_ms": 6000,
+      "quote_reads_during_wait": 0,
+      "stop_order_status_during_triggered_price": "pending",
+      "task_alive": true
+    },
+    {
+      "id": "RT-10",
+      "observation": "reserved_actor_usernames_bypass_manual_strategy_ownership",
+      "outcomes": [
+        {
+          "username": "pending-order",
+          "manual_order_accepted": true
+        },
+        {
+          "username": "risk-engine",
+          "manual_order_accepted": true
+        }
+      ],
+      "caveat": "These names satisfy the workspace username policy; this is a local simulation ownership bypass, not exchange trading access."
+    },
+    {
+      "id": "RT-07",
+      "observation": "execution_per_market_refresh_revisits_entire_portfolio",
+      "held_markets": 3,
+      "logical_snapshot_dispatches": 9,
+      "caveat": "Logical calls, not measured venue HTTP calls; the 1.5s provider cache can coalesce fast repeats."
+    },
+    {
+      "id": "RT-04",
+      "observation": "five_overlapping_forward_history_captures_duplicate_records",
+      "windows": 5,
+      "bars_per_window": 2000,
+      "stored_records": 10000,
+      "distinct_bar_timestamps": 2004,
+      "database_allocated_bytes": 3342336,
+      "caveat": "Local synthetic catalog measurement; no cloud/storage capacity extrapolation is claimed."
+    },
+    {
+      "id": "RT-05",
+      "observation": "oos_api_supports_candidates_but_ui_omits_grid_in_oos_modes",
+      "training_candidates_without_grid": 1,
+      "training_candidates_with_grid": 2,
+      "ui_evidence": "ProResearch constructs train_test/walk_forward options without grid; parameter controls render only in grid mode."
+    },
+    {
+      "id": "RT-08",
+      "observation": "research_artifact_contains_full_result_and_input_arrays_per_candidate",
+      "cases": 4,
+      "bars_per_case": 240,
+      "json_bytes": 751615,
+      "bytes_per_bar_case": 782.9,
+      "caveat": "Small measured artifact only; no OOM at the maximum budget was injected."
+    },
+    {
+      "id": "RT-09",
+      "observation": "only_three_builtin_strategy_kinds_are_supported",
+      "rejected_examples": [
+        "trend_breakout",
+        "funding_carry",
+        "cross_sectional_momentum"
+      ],
+      "caveat": "These are absent capabilities; adding names alone would not implement their required data and portfolio semantics."
+    }
+  ],
+  "audited_commit": "53e16cceca1f70cf47fc219d3f5c720ac7ea523c",
+  "observed_on": "2026-10-08",
+  "stage": "baseline-before-fixes"
+}

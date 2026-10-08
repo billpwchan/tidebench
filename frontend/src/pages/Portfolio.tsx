@@ -767,6 +767,11 @@ export default function Portfolio({
                 </Field>
               )}
               <StrategyFields value={strategy} onChange={setStrategy} />
+              <p className="form-footnote pro-form-note">
+                {t(
+                  'Start requires a flat market with no pending orders. Close positions and cancel orders first.',
+                )}
+              </p>
               {deploy.isError && <ErrorBox error={deploy.error} />}
               <button
                 className="button button-citrus full-width"

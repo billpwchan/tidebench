@@ -1,5 +1,11 @@
 # Verification record
 
+## 2026-10-08 red-team correction
+
+The v0.3.0 evidence below described specific implemented behavior and was insufficient to establish product completeness. The [red-team assessment](audit/README.md) records ten concrete observations, including execution/ownership defects now fixed and substantial strategy/portfolio gaps still open. Accompanying local validation passed 466 backend tests, eight desktop/mobile Chromium flows (including actual OOS candidate submission), Ruff, Prettier and the production build. The offline [before](audit/v0.3.0-baseline.json)/[after](audit/post-fix-observations.json) observations preserve the injected-fault evidence and its limits. For the published v0.3.1 build, use its actual CI run as independent evidence.
+
+## v0.3.0 baseline evidence
+
 Observed 2026-10-07 UTC / 2026-10-08 Singapore. Checks apply to the professional workspace and its explicit public-data / local-execution scope.
 
 ## Automated acceptance

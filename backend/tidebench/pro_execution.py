@@ -671,7 +671,7 @@ class SimulationBook:
                         raise PlatformError(
                             "strategy_stopped", "The strategy no longer owns this market.", 409
                         )
-                elif actor not in {"pending-order", "risk-engine"} and not order.get("reduce_only"):
+                elif pending_id is None and not liquidation and not order.get("reduce_only"):
                     if conn.execute(
                         "SELECT 1 FROM pro_deployments WHERE source=? AND inst_id=? AND status='running'",
                         (order["source"], order["inst_id"]),

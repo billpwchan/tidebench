@@ -15,6 +15,8 @@ English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Re
 
 ## A connected trading workflow
 
+Current strategies are three reference rules: SMA crossover, RSI reversion and buy-and-hold. Research is single-market; multi-asset strategies, version-bound research-to-deployment promotion and forward portfolio performance attribution are not implemented. The [red-team review](docs/audit/README.md) records reproduced defects, bounded fixes and remaining product gaps.
+
 | Workspace | What you can do |
 |---|---|
 | Overview | Monitor actual positions, pending orders, asset exposure, risk attention and active research from one desk |

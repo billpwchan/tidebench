@@ -37,6 +37,7 @@ class ProfessionalRuntime:
         self.snapshots, self.market_errors = {}, {}
         self.funding_checks = {}
         self.locks = defaultdict(asyncio.Lock)
+        self.strategy_locks = defaultdict(asyncio.Lock)
         self.wake = asyncio.Event()
         with store.write() as conn:
             conn.executescript("""
@@ -67,6 +68,7 @@ class ProfessionalRuntime:
             asyncio.create_task(self.jobs_loop(), name="professional-research"),
             asyncio.create_task(self.catalog_loop(), name="professional-catalog"),
             asyncio.create_task(self.execution_loop(), name="professional-execution"),
+            asyncio.create_task(self.strategy_loop(), name="professional-strategies"),
             asyncio.create_task(self.backup_loop(), name="professional-backups"),
         ]
 
@@ -628,6 +630,26 @@ class ProfessionalRuntime:
         with self.store.write() as conn:
             if self.book.risk(config["source"], conn)["halted"]:
                 raise PlatformError("execution_halted", "Resume new risk before starting a strategy.", 409)
+            if conn.execute(
+                "SELECT 1 FROM pro_positions WHERE source=? AND inst_id=?",
+                (config["source"], config["inst_id"]),
+            ).fetchone():
+                raise PlatformError(
+                    "deployment_inventory",
+                    "Close the existing position before starting a strategy; inventory adoption is not supported.",
+                    409,
+                )
+            if any(
+                json.loads(row[0])["inst_id"] == config["inst_id"]
+                for row in conn.execute(
+                    "SELECT payload FROM pro_orders WHERE source=? AND status='pending'", (config["source"],)
+                )
+            ):
+                raise PlatformError(
+                    "deployment_pending_orders",
+                    "Cancel this market's pending orders before starting a strategy.",
+                    409,
+                )
             if (
                 conn.execute("SELECT COUNT(*) FROM pro_deployments WHERE status='running'").fetchone()[0]
                 >= 20
@@ -678,7 +700,9 @@ class ProfessionalRuntime:
 
             config = deployment["config"]
             source, symbol, identifier = config["source"], config["inst_id"], deployment["id"]
-            async with self.locks[(source, symbol)]:
+            # History transport must never hold the economic market lock. A
+            # separate deployment lock still serializes retries of one signal.
+            async with self.strategy_locks[identifier]:
                 with self.store.read() as conn:
                     active = conn.execute(
                         "SELECT * FROM pro_deployments WHERE id=?", (identifier,)
@@ -716,6 +740,13 @@ class ProfessionalRuntime:
                     signal = directional_signal(candles, StrategyConfig(**strategy), config["direction"])
                     target = None if signal is None else D(signal) * D(str(config["allocation"]))
                     with self.store.write() as conn:
+                        active = conn.execute(
+                            "SELECT status FROM pro_deployments WHERE id=?", (identifier,)
+                        ).fetchone()
+                        if not active or active["status"] != "running":
+                            raise PlatformError(
+                                "strategy_stopped", "The strategy no longer owns this market.", 409
+                            )
                         conn.execute(
                             "INSERT OR IGNORE INTO pro_strategy_intents VALUES(?,?,?,'pending',?)",
                             (identifier, latest, str(target) if target is not None else None, now_ms()),
@@ -726,6 +757,18 @@ class ProfessionalRuntime:
                         )
                 else:
                     target = D(intent["target"]) if intent["target"] is not None else None
+                await self.execute_strategy_intent(config, identifier, latest, end, target)
+
+    async def execute_strategy_intent(self, config, identifier, latest, end, target):
+        source, symbol = config["source"], config["inst_id"]
+        with localcontext(ACCOUNTING_CONTEXT):
+            async with self.locks[(source, symbol)]:
+                with self.store.read() as conn:
+                    active = conn.execute(
+                        "SELECT status FROM pro_deployments WHERE id=?", (identifier,)
+                    ).fetchone()
+                if not active or active["status"] != "running":
+                    raise PlatformError("strategy_stopped", "The strategy no longer owns this market.", 409)
                 snapshots = await self.snapshots_for(source, [symbol])
                 await self.sync_funding(source, symbol, snapshots)
                 snapshot = snapshots[symbol]
@@ -808,7 +851,6 @@ class ProfessionalRuntime:
 
     async def execution_loop(self):
         with localcontext(ACCOUNTING_CONTEXT):
-            last_strategy = 0
             while True:
                 for source in ("okx", "example"):
                     symbols = (
@@ -897,21 +939,58 @@ class ProfessionalRuntime:
                             raise
                         except Exception as exc:
                             self.market_errors[(source, symbol)] = {"error": str(exc)[:300], "at": now_ms()}
-                if now_ms() - last_strategy >= 20000:
-                    for deployment in self.deployments():
-                        if deployment["status"] == "running":
-                            try:
-                                await self.evaluate(deployment)
-                            except asyncio.CancelledError:
-                                raise
-                            except Exception as exc:
-                                with self.store.write() as conn:
-                                    conn.execute(
-                                        "UPDATE pro_deployments SET last_error=?,updated_at=? WHERE id=?",
-                                        (str(exc)[:500], now_ms(), deployment["id"]),
-                                    )
-                    last_strategy = now_ms()
                 await asyncio.sleep(5)
+
+    async def strategy_loop(self):
+        # Bounded concurrency isolates a slow history request from other
+        # deployments and from quote/risk/order polling. Children are owned and
+        # drained here so restore/shutdown cannot leave economic tasks behind.
+        slots = asyncio.Semaphore(4)
+        pending, scheduled = {}, {}
+
+        async def run(deployment):
+            async with slots:
+                try:
+                    async with asyncio.timeout(60):
+                        await self.evaluate(deployment)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    message = (
+                        "Strategy evaluation exceeded 60 seconds."
+                        if isinstance(exc, TimeoutError)
+                        else str(exc)
+                    )
+                    with self.store.write() as conn:
+                        conn.execute(
+                            "UPDATE pro_deployments SET last_error=?,updated_at=? WHERE id=? AND status='running'",
+                            (message[:500], now_ms(), deployment["id"]),
+                        )
+
+        try:
+            while True:
+                for identifier, task in list(pending.items()):
+                    if task.done():
+                        if not task.cancelled():
+                            await task
+                        del pending[identifier]
+                running = {row["id"]: row for row in self.deployments() if row["status"] == "running"}
+                for identifier, task in pending.items():
+                    if identifier not in running:
+                        task.cancel()
+                scheduled = {key: value for key, value in scheduled.items() if key in running}
+                for identifier, deployment in running.items():
+                    if identifier not in pending and now_ms() - scheduled.get(identifier, 0) >= 20000:
+                        pending[identifier] = asyncio.create_task(run(deployment))
+                        scheduled[identifier] = now_ms()
+                await asyncio.sleep(1)
+        finally:
+            for task in pending.values():
+                task.cancel()
+            await asyncio.gather(*pending.values(), return_exceptions=True)
+
+    def workers_healthy(self):
+        return len(self.tasks) == 5 and all(not task.done() for task in self.tasks)
 
     async def backup_loop(self):
         while True:
@@ -949,10 +1028,7 @@ class ProfessionalRuntime:
         storage = self.backups.storage()
         checks = {
             "database": "ok",
-            "workers": "ok"
-            if not self.settings.worker_enabled
-            or (len(self.tasks) == 4 and all(not task.done() for task in self.tasks))
-            else "failed",
+            "workers": "ok" if not self.settings.worker_enabled or self.workers_healthy() else "failed",
             "disk": "ok" if storage["disk_free_bytes"] > 100000000 else "low",
             "backup": "ok" if backups and now_ms() - backups[0]["created_at"] < 90000000 else "overdue",
             "execution": "degraded" if self.market_errors else "ok",

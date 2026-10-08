@@ -102,6 +102,9 @@ export default function ProResearch({
   const [slippage, setSlippage] = useState('5');
   const [liqFee, setLiqFee] = useState('50');
   const [mode, setMode] = useState<ResearchMode>('single');
+  const [selectOnTraining, setSelectOnTraining] = useState(false);
+  const oosMode = mode === 'train_test' || mode === 'walk_forward';
+  const showGrid = mode === 'grid' || (oosMode && selectOnTraining);
   const [trainFraction, setTrainFraction] = useState(0.7);
   const [trainBars, setTrainBars] = useState(240);
   const [testBars, setTestBars] = useState(120);
@@ -293,8 +296,9 @@ export default function ProResearch({
         step_bars: stepBars,
         purge_bars: purgeBars,
       };
-    if (mode === 'grid')
+    if (showGrid)
       options = {
+        ...options,
         grid:
           strategy.kind === 'sma_cross'
             ? { fast: candidates(fastGrid), slow: candidates(slowGrid) }
@@ -1243,7 +1247,21 @@ export default function ProResearch({
                 </Field>
               </div>
             )}
-            {mode === 'grid' && strategy.kind === 'sma_cross' && (
+            {oosMode && (
+              <Field
+                label="Parameter selection"
+                hint="Candidates are ranked on training data only. Test data is reserved for evaluation."
+              >
+                <select
+                  value={selectOnTraining ? 'training' : 'fixed'}
+                  onChange={(e) => setSelectOnTraining(e.target.value === 'training')}
+                >
+                  <option value="fixed">{t('Fixed parameters')}</option>
+                  <option value="training">{t('Choose on training data')}</option>
+                </select>
+              </Field>
+            )}
+            {showGrid && strategy.kind === 'sma_cross' && (
               <div className="form-grid">
                 <Field label="Fast windows">
                   <input required value={fastGrid} onChange={(e) => setFastGrid(e.target.value)} />
@@ -1253,7 +1271,7 @@ export default function ProResearch({
                 </Field>
               </div>
             )}
-            {mode === 'grid' && strategy.kind === 'rsi_reversion' && (
+            {showGrid && strategy.kind === 'rsi_reversion' && (
               <>
                 <Field label="RSI periods">
                   <input required value={rsiGrid} onChange={(e) => setRsiGrid(e.target.value)} />
@@ -1276,7 +1294,7 @@ export default function ProResearch({
                 </div>
               </>
             )}
-            {mode === 'grid' && strategy.kind === 'buy_hold' && (
+            {showGrid && strategy.kind === 'buy_hold' && (
               <Field label="Allocation fractions" hint="Comma-separated fractions, from 0.01 to 1.">
                 <input
                   required

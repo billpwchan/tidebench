@@ -146,8 +146,10 @@ async def runtime(tmp_path):
     await client.aclose()
 
 
-def initial_long(runtime):
-    return runtime.book.submit(command(), "initial-position", {SYMBOL: runtime.catalog.quote})
+def initial_long(runtime, deployed=None):
+    actor = f"strategy:{deployed['id']}" if deployed else "manual"
+    key = f"{actor}:open:{END - 2 * HOUR}" if deployed else "initial-position"
+    return runtime.book.submit(command(), key, {SYMBOL: runtime.catalog.quote}, actor)
 
 
 def deployment(runtime, direction="short_only"):
@@ -180,12 +182,16 @@ def restart(runtime):
 
 
 async def test_reverse_closes_then_opens_once_and_cursor_matches_intent(runtime):
-    initial_long(runtime)
     deployed = deployment(runtime)
+    initial = initial_long(runtime, deployed)
     await runtime.evaluate(deployed)
     orders = runtime.book.orders("example")
     closes = [row for row in orders if row.get("reduce_only")]
-    opens = [row for row in orders if row["actor"].startswith("strategy:") and not row.get("reduce_only")]
+    opens = [
+        row
+        for row in orders
+        if row["actor"].startswith("strategy:") and not row.get("reduce_only") and row["id"] != initial["id"]
+    ]
     assert len(closes) == len(opens) == 1
     assert closes[0]["side"] == "sell" and opens[0]["side"] == "sell"
     assert D(runtime.book.positions("example")[0]["quantity"]) < 0
@@ -197,8 +203,8 @@ async def test_reverse_closes_then_opens_once_and_cursor_matches_intent(runtime)
 
 @pytest.mark.parametrize("phase", ["close", "open"])
 async def test_crash_after_committed_phase_recovers_without_duplicate_fill(runtime, monkeypatch, phase):
-    initial_long(runtime)
     deployed = deployment(runtime)
+    initial_long(runtime, deployed)
     original = runtime.book.submit
     tripped = False
 
@@ -223,8 +229,8 @@ async def test_crash_after_committed_phase_recovers_without_duplicate_fill(runti
 
 
 async def test_stop_after_close_prevents_restart_opening_pending_intent(runtime, monkeypatch):
-    initial_long(runtime)
     deployed = deployment(runtime)
+    initial_long(runtime, deployed)
     original = runtime.book.submit
 
     def crash(order, key, *args, **kwargs):
@@ -246,8 +252,8 @@ async def test_stop_after_close_prevents_restart_opening_pending_intent(runtime,
 
 
 async def test_stop_during_history_await_blocks_every_economic_mutation(runtime, monkeypatch):
-    initial_long(runtime)
     deployed = deployment(runtime)
+    initial_long(runtime, deployed)
     entered, release = asyncio.Event(), asyncio.Event()
     original = runtime.catalog.run_job
 
@@ -268,8 +274,8 @@ async def test_stop_during_history_await_blocks_every_economic_mutation(runtime,
 
 
 async def test_stop_between_phases_is_checked_inside_open_transaction(runtime, monkeypatch):
-    initial_long(runtime)
     deployed = deployment(runtime)
+    initial_long(runtime, deployed)
     original = runtime.offload
 
     async def stop_before_open(function, *args, **kwargs):
@@ -283,6 +289,114 @@ async def test_stop_between_phases_is_checked_inside_open_transaction(runtime, m
         await runtime.evaluate(deployed)
     assert not runtime.book.positions("example")
     assert len(runtime.book.orders("example")) == 2
+
+
+def test_deployment_rejects_unacknowledged_inventory_without_mutation(runtime):
+    initial_long(runtime)
+    with pytest.raises(PlatformError, match="Close the existing position") as error:
+        deployment(runtime)
+    assert error.value.code == "deployment_inventory"
+    assert not runtime.deployments()
+    assert D(runtime.book.positions("example")[0]["quantity"]) == 100
+    assert len(runtime.book.orders("example")) == 1
+
+
+def test_deployment_rejects_existing_pending_and_preserves_reservation(runtime):
+    pending = runtime.book.submit(
+        command(order_type="limit", limit_price="95"), "manual-before-deploy", {SYMBOL: quote()}
+    )
+    before = runtime.book.account("example", {SYMBOL: quote()})["reserved_cash"]
+    with pytest.raises(PlatformError, match="Cancel this market's pending"):
+        deployment(runtime)
+    assert not runtime.deployments()
+    assert runtime.book.pending()[0]["id"] == pending["id"]
+    assert runtime.book.account("example", {SYMBOL: quote()})["reserved_cash"] == before
+    runtime.book.cancel(pending["id"], "test")
+    assert deployment(runtime)["status"] == "running"
+
+
+@pytest.mark.parametrize("actor", ["pending-order", "risk-engine"])
+def test_username_does_not_grant_internal_execution_authority(runtime, actor):
+    deployment(runtime)
+    with pytest.raises(PlatformError, match="Stop the strategy before adding manual risk"):
+        runtime.book.submit(command(), f"manual-{actor}", {SYMBOL: quote()}, actor)
+    assert not runtime.book.positions("example")
+    assert not runtime.book.orders("example")
+
+
+async def test_hanging_history_does_not_block_same_market_protective_stop(runtime, monkeypatch):
+    deployed = deployment(runtime)
+    initial_long(runtime, deployed)
+    pending = runtime.book.submit(
+        command(side="sell", reduce_only=True, order_type="stop_market", stop_price="95"),
+        "protective-stop-test",
+        {SYMBOL: quote()},
+    )
+    entered, release, filled = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    original_history, original_submit = runtime.catalog.run_job, runtime.book.submit
+
+    async def hung(identifier):
+        entered.set()
+        await release.wait()
+        return await original_history(identifier)
+
+    def observe_fill(*args, **kwargs):
+        result = original_submit(*args, **kwargs)
+        if result["id"] == pending["id"] and result["status"] == "filled":
+            loop.call_soon_threadsafe(filled.set)
+        return result
+
+    loop = asyncio.get_running_loop()
+    monkeypatch.setattr(runtime.catalog, "run_job", hung)
+    monkeypatch.setattr(runtime.book, "submit", observe_fill)
+    risk_task, strategy_task = (
+        asyncio.create_task(runtime.execution_loop()),
+        asyncio.create_task(runtime.strategy_loop()),
+    )
+    try:
+        await asyncio.wait_for(entered.wait(), 2)
+        runtime.catalog.quote = quote() | {"bid": "90", "ask": "90", "mark": "90", "last": "90"}
+        await asyncio.wait_for(filled.wait(), 7)
+        assert not release.is_set()
+        assert not runtime.book.positions("example")
+        assert not risk_task.done() and not strategy_task.done()
+    finally:
+        risk_task.cancel()
+        strategy_task.cancel()
+        await asyncio.gather(risk_task, strategy_task, return_exceptions=True)
+
+
+async def test_concurrent_evaluations_prepare_and_fill_a_signal_once(runtime):
+    deployed = deployment(runtime)
+    await asyncio.gather(runtime.evaluate(deployed), runtime.evaluate(deployed))
+    assert runtime.catalog.job_counter == 1
+    assert len(runtime.book.orders("example")) == 1
+    assert durable_intent(runtime, deployed["id"])["status"] == "completed"
+
+
+async def test_stopping_a_waiting_strategy_keeps_scheduler_alive(runtime, monkeypatch):
+    deployed = deployment(runtime)
+    entered, canceled = asyncio.Event(), asyncio.Event()
+
+    async def hang(identifier):
+        entered.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            canceled.set()
+
+    monkeypatch.setattr(runtime.catalog, "run_job", hang)
+    task = asyncio.create_task(runtime.strategy_loop())
+    try:
+        await asyncio.wait_for(entered.wait(), 2)
+        runtime.stop_deployment(deployed["id"], "test")
+        await asyncio.wait_for(canceled.wait(), 2)
+        await asyncio.sleep(1.1)
+        assert not task.done()
+        assert not runtime.book.orders("example")
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 async def test_funding_boundary_bypasses_periodic_ttl_and_manual_commands_force_reconcile(runtime):
@@ -368,7 +482,7 @@ async def test_running_research_is_requeued_after_restart_and_saved_snapshot_reu
     async def idle():
         await blocker.wait()
 
-    for method in ("catalog_loop", "execution_loop", "backup_loop"):
+    for method in ("catalog_loop", "execution_loop", "strategy_loop", "backup_loop"):
         monkeypatch.setattr(recovered, method, idle)
     await recovered.start()
     try:

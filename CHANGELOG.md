@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 · 2026-10-08
+
+- Publish a deep red-team assessment, isolated baseline/post-fix observations and explicit remaining strategy/platform gaps; narrow product maturity claims.
+- Separate strategy history preparation from risk/order polling and the economic market lock; bound concurrent evaluations, enforce deadlines and drain child tasks on shutdown/recovery.
+- Require flat inventory and no pending orders when starting a strategy, transactionally; preserve existing positions, reservations and orders when admission is rejected.
+- Remove internal execution authority derived from the `pending-order` and `risk-engine` username strings.
+- Expose fixed versus training-only candidate selection in train/test and walk-forward forms; verify actual two-candidate OOS submission in desktop/mobile browsers.
+- Add runtime regressions for blocked history with a protective stop, inventory/order ownership, duplicate evaluation and stopped child supervision. Existing resource/strategy/portfolio limitations remain open in the audit.
+
 ## 0.3.0 · 2026-10-08
 
 - One-action immutable research packages with atomic owned downloads, exact-time funding marks, bounded preparation, cancellation fencing and strict research handoff.

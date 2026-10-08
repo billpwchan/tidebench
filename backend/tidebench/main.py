@@ -339,9 +339,7 @@ def _build_app(settings, market, store):
     def ready():
         with store.read() as conn:
             conn.execute("SELECT 1").fetchone()
-        workers = not settings.worker_enabled or (
-            len(professional.tasks) == 4 and all(not task.done() for task in professional.tasks)
-        )
+        workers = not settings.worker_enabled or professional.workers_healthy()
         return JSONResponse(
             {
                 "status": "ready" if workers else "degraded",

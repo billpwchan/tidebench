@@ -121,6 +121,33 @@ test('versioned research, saved results, replay and JSON export', async ({
   const a = await (await request.get(`/api/v1/pro/research/runs/${run.id}`)).json();
   const b = await (await request.get(`/api/v1/pro/research/runs/${replayed.id}`)).json();
   expect(b.result).toEqual(a.result);
+  // Exercise the rendered OOS configuration, not a hand-crafted engine request.
+  await page.getByLabel('Mode', { exact: true }).selectOption('train_test');
+  await page.getByLabel('Parameter selection', { exact: true }).selectOption('training');
+  await page.getByLabel('Fast windows', { exact: true }).fill('5,8');
+  await page.getByLabel('Slow windows', { exact: true }).fill('20');
+  const selectedRequest = page.waitForResponse(
+    (r) => r.url().endsWith('/pro/research/runs') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Run research', exact: true }).click();
+  const selectedRun = await (await selectedRequest).json();
+  expect(selectedRun.config.options.grid).toEqual({ fast: [5, 8], slow: [20] });
+  await expect
+    .poll(async () => {
+      const selectedResult = await (
+        await request.get(`/api/v1/pro/research/runs/${selectedRun.id}`)
+      ).json();
+      return selectedResult.status;
+    })
+    .toBe('completed');
+  const selectedResult = await (
+    await request.get(`/api/v1/pro/research/runs/${selectedRun.id}`)
+  ).json();
+  expect(selectedResult.result.folds[0].training_experiments).toHaveLength(2);
+  await page.getByLabel('Mode', { exact: true }).selectOption('walk_forward');
+  await expect(page.getByLabel('Fast windows', { exact: true })).toHaveValue('5,8');
+  await page.getByLabel('Parameter selection', { exact: true }).selectOption('fixed');
+  await expect(page.getByLabel('Fast windows', { exact: true })).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
 

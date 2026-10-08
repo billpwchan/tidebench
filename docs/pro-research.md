@@ -34,6 +34,8 @@ The shared `directional_signal` policy returns `+1` for long, `-1` for short, `0
 
 `long_only` maps the negative regime to flat; `short_only` maps the positive regime to flat. A reversal closes existing inventory before opening the opposite side. Allocation applies when entering a regime, not as an instruction to rebalance on every bar. Zero allocation or an order below minimum size creates an attributed skipped order.
 
+Forward deployment requires a flat market and no pending orders at admission. It does not adopt existing manual or stopped-strategy inventory. Once running, a strategy can reverse its own position with the durable close/open phases below. These three rules are reference policies, not a validated alpha library or a user strategy SDK.
+
 Every fill references an order and, when applicable, the originating closed-bar signal. Funding and risk liquidations have their own attribution and phase labels. Repeated entry fees, slippage, closing costs and remaining open inventory stay visible in the result.
 
 This is a full-fill market-order approximation. OHLCV cannot establish market depth, queue priority, partial fills, participation capacity, spread history or market impact. Configured cost sensitivity is useful but does not replace those observations.
