@@ -940,8 +940,42 @@ class BackupService:
             except PlatformError as exc:
                 raise PlatformError("backup_integrity", exc.message, 409) from None
         if version >= 8:
+            cls._validate_portfolio_allowance(conn)
             cls._validate_temporal_evidence(conn)
         return tables
+
+    @staticmethod
+    def _validate_portfolio_allowance(conn):
+        from .portfolio_execution import checked_allowance_lineage
+
+        def records(query, values=()):
+            cursor = conn.execute(query, values)
+            names = [column[0] for column in cursor.description]
+            return [dict(zip(names, row, strict=True)) for row in cursor]
+
+        try:
+            batches = {row["id"]: row for row in records("SELECT * FROM portfolio_batches")}
+            groups = {row["id"]: row for row in records("SELECT id,source FROM managed_portfolios")}
+            by_batch = {}
+            for event in records(
+                "SELECT source,details FROM audit WHERE kind='portfolio.allowance_superseded' ORDER BY id"
+            ):
+                details = json.loads(event["details"])
+                batch_id = details["batch_id"]
+                if batch_id not in batches:
+                    raise PlatformError(
+                        "backup_integrity", "Allowance plan has no matching financial batch.", 409
+                    )
+                by_batch.setdefault(batch_id, []).append(event)
+            for identifier, batch in batches.items():
+                commands = records("SELECT * FROM portfolio_commands WHERE batch_id=?", (identifier,))
+                checked_allowance_lineage(
+                    batch, commands, by_batch.get(identifier, []), source=groups[batch["group_id"]]["source"]
+                )
+        except (PlatformError, ValueError, KeyError, TypeError) as exc:
+            raise PlatformError(
+                "backup_integrity", "Portfolio allowance lineage cannot be restored: " + str(exc), 409
+            ) from None
 
     @staticmethod
     def _validate_temporal_evidence(conn):

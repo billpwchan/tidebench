@@ -30,7 +30,11 @@ from .historical_lifecycle import (
 )
 from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights, funding_carry_evidence
-from .portfolio_execution import EXECUTION_CONTRACT, execute_batch, resume_compensation
+from .portfolio_execution import (
+    SUPPORTED_EXECUTION_CONTRACTS,
+    execute_batch,
+    resume_compensation,
+)
 from .portfolio_risk import constrain_risk_weights, realized_portfolio_metrics, risk_momentum_weights
 from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import SimulationBook, base_size, number, tier_for
@@ -79,7 +83,7 @@ class PortfolioInput(InputModel):
     capital_pct: Decimal = Field(default=100, gt=0, le=100)
     failure_policy: Literal["reduce_group"] = "reduce_group"
     max_residual_pct: Decimal = Field(default=2, ge=".01", le=100)
-    execution_contract: Literal["reduce_group_v1"] = "reduce_group_v1"
+    execution_contract: Literal["reduce_group_v1", "reduce_group_v2_allowance"] = "reduce_group_v2_allowance"
     initial_cash: Money = D(10000)
     fee_bps: Decimal = Field(default=10, ge=0, le=100)
     slippage_bps: Decimal = Field(default=5, ge=0, le=100)
@@ -683,11 +687,14 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
     source, interval = manifest["source"], CATALOG_BARS[manifest["bar"]]
     lifecycle = config.get("universe_mode") == "historical_lifecycle"
     count = (manifest["end"] - manifest["start"]) // interval if lifecycle else len(legs[0]["candles"])
-    strict_execution = config.get("execution_contract") == EXECUTION_CONTRACT
-    if config.get("execution_contract") not in (None, EXECUTION_CONTRACT):
+    strict_execution = config.get("execution_contract") in SUPPORTED_EXECUTION_CONTRACTS
+    if (
+        config.get("execution_contract") is not None
+        and config.get("execution_contract") not in SUPPORTED_EXECUTION_CONTRACTS
+    ):
         raise PlatformError("portfolio_execution_contract", "Unsupported portfolio execution contract.", 422)
     # Missing contract denotes retained pre-upgrade captured inputs. New API inputs
-    # always carry reduce_group_v1; this branch never rewrites stored evidence.
+    # always carry an explicit versioned contract; this branch never rewrites stored evidence.
     execution_status, compensation = "running", None
     if not lifecycle and any(
         len(leg["candles"]) != count or [c.ts for c in leg["candles"]] != [c.ts for c in leg["marks"]]
@@ -1085,6 +1092,10 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                             s, q, reduce, quotes, key, propagate=True
                         ),
                         f"rebalance:{index}",
+                        policy_state=lambda: {
+                            "risk": book.risk(source),
+                            "capital": book.capital.policy(source),
+                        },
                     )
                     decision.update(
                         executed_at=ts,
@@ -1388,7 +1399,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             "mode": config["mode"],
             **(
                 {
-                    "execution_contract": EXECUTION_CONTRACT,
+                    "execution_contract": config["execution_contract"],
                     "execution_policy": {
                         k: config[k]
                         for k in (
@@ -1439,7 +1450,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 "capital": "one shared SimulationBook, one USDT cash balance, native-asset double entry",
                 "weights": "signed notional / pre-rebalance equity; reductions first, common cash scaling, lot rounding",
                 "fills": (
-                    "sequential next-open market fills; shared reduce_group_v1 preflight, residual limit and compensated failure; actual costs retained"
+                    f"sequential next-open market fills; shared {config['execution_contract']} preflight, residual limit and compensated failure; actual costs retained"
                     if strict_execution
                     else "sequential next-open market fills; no atomic multi-leg guarantee; residuals retained"
                 ),

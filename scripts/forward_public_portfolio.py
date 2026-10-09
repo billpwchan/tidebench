@@ -19,6 +19,7 @@ from tidebench.platform import PlatformError
 from tidebench.portfolio_registry import PortfolioDefinition
 from tidebench.portfolio_research import PortfolioInput
 from tidebench.pro_service import ProfessionalRuntime
+from tidebench.provenance import research_identity
 from tidebench.store import Store, encode, now_ms
 from tidebench.strategy_registry import digest
 
@@ -104,12 +105,24 @@ async def main(options):
         release = runtime.portfolio_releases.activate(release["id"], "acceptance-trader")
         group_id = release["group_id"]
         forward_origin, reconstructed = time.monotonic(), False
+        reconstruction_before = None
+        reconstruction_verified = False
         while True:
             await runtime.execution_once()
+            evaluated = False
             try:
                 await runtime.managed_portfolios.evaluate(group_id)
+                evaluated = True
             except PlatformError as exc:
-                if exc.code not in {"strategy_data", "market_unavailable", "stale_quote", "stale_mark"}:
+                if exc.code not in {
+                    "strategy_data",
+                    "market_unavailable",
+                    "stale_quote",
+                    "stale_mark",
+                    "portfolio_quote_missing",
+                    "portfolio_market_unavailable",
+                    "portfolio_quote_before_signal",
+                }:
                     raise
                 report["waiting_issues"].append({"at": now_ms(), "code": exc.code, "message": exc.message})
                 with runtime.store.write() as conn:
@@ -118,6 +131,25 @@ async def main(options):
                         (exc.message, now_ms(), group_id),
                     )
                 print(f"Waiting for verified public inputs: {exc.code}", flush=True)
+            if reconstruction_before is not None and evaluated:
+                before_bar, before = reconstruction_before
+                after_bar = runtime.managed_portfolios.get(group_id)["last_bar"]
+                after = {o["id"]: o for o in runtime.book.orders("okx")}
+                if any(after.get(key) != value for key, value in before.items()):
+                    raise RuntimeError("Controller reconstruction changed a committed original fill.")
+                if after_bar == before_bar and set(before) != set(after):
+                    raise RuntimeError("Controller reconstruction duplicated a same-boundary fill.")
+                report["controller_reconstruction"] = {
+                    "before_bar": before_bar,
+                    "after_bar": after_bar,
+                    "retained_fills": len(before),
+                    "unchanged_original_fills": True,
+                    "same_boundary": before_bar == after_bar,
+                    "actual_evaluation_verified": True,
+                    "new_boundary_fills": len(set(after) - set(before)),
+                }
+                reconstruction_verified = True
+                reconstruction_before = None
             history = runtime.managed_portfolios.history(group_id)
             if history:
                 latest = history[0]
@@ -140,11 +172,13 @@ async def main(options):
                     raise RuntimeError(f"Forward decision failed: {latest.get('error')}")
             elapsed = time.monotonic() - forward_origin
             if not reconstructed and history and elapsed >= options.duration_seconds / 2:
-                before = [o["id"] for o in runtime.book.orders("okx")]
+                reconstruction_before = (
+                    runtime.managed_portfolios.get(group_id)["last_bar"],
+                    {o["id"]: o for o in runtime.book.orders("okx")},
+                )
                 runtime.managed_portfolios = type(runtime.managed_portfolios)(runtime)
-                await runtime.managed_portfolios.evaluate(group_id)
-                if before != [o["id"] for o in runtime.book.orders("okx")]:
-                    raise RuntimeError("Controller reconstruction duplicated a same-boundary fill.")
+                # The next normal evaluation verifies retained fills and keys;
+                # a new real-minute boundary is recorded rather than called a duplicate.
                 reconstructed = True
             if elapsed >= options.duration_seconds:
                 break
@@ -195,6 +229,9 @@ async def main(options):
             report["strategy_order_count"]
             and len(report["decisions"]) >= 2
             and reconstructed
+            and reconstruction_verified
+            and report["driver_sha256"] == hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+            and report["implementation"] == research_identity()
             and not runtime.book.positions("okx")
         )
         if not report["passed"]:
@@ -207,9 +244,22 @@ async def main(options):
     finally:
         report["elapsed_seconds"] = round(time.monotonic() - origin, 3)
         report["ended_at"] = now_ms()
+        report["driver_sha256_at_end"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+        report["driver_changed_during_observation"] = (
+            report["driver_sha256"] != report["driver_sha256_at_end"]
+        )
+        report["implementation_at_end"] = research_identity()
+        report["implementation_changed_during_observation"] = (
+            report["implementation"] != report["implementation_at_end"]
+        )
+        if report["implementation_changed_during_observation"]:
+            report["passed"] = False
+            report["error"] = "Installed research implementation changed during public observation."
         await runtime.stop()
         await runtime.market.close()
         (root / "summary.json").write_text(json.dumps(encode(report), indent=2, allow_nan=False) + "\n")
+        if report["implementation_changed_during_observation"]:
+            raise RuntimeError(report["error"])
 
 
 if __name__ == "__main__":

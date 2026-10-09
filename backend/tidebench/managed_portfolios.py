@@ -16,6 +16,9 @@ from .engine import ACCOUNTING_CONTEXT, StrategyConfig
 from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights, funding_carry_evidence
 from .portfolio_execution import (
+    EXECUTION_CONTRACT,
+    allowance_replan,
+    checked_allowance_lineage,
     compensation_quantities,
     portfolio_commands,
     portfolio_residuals,
@@ -407,6 +410,18 @@ class ManagedPortfolios:
             "residuals": json.loads(row["residuals"]) if row["residuals"] else None,
         }
         result["additions"] = verified(row, "additions", "additions_hash") if row["additions"] else None
+        with nullcontext(conn) if conn is not None else self.store.read() as connection:
+            evidence = connection.execute(
+                "SELECT source,details FROM audit WHERE kind='portfolio.allowance_superseded' AND json_extract(details,'$.batch_id')=? ORDER BY id",
+                (identifier,),
+            ).fetchall()
+            command_rows = connection.execute(
+                "SELECT * FROM portfolio_commands WHERE batch_id=?", (identifier,)
+            ).fetchall()
+            source = connection.execute(
+                "SELECT source FROM managed_portfolios WHERE id=?", (row["group_id"],)
+            ).fetchone()[0]
+        result["allowance_replans"] = checked_allowance_lineage(row, command_rows, evidence, source=source)
         return result
 
     def commands(self, batch_id, conn=None):
@@ -438,10 +453,14 @@ class ManagedPortfolios:
             ]
         return [self.batch(i) | {"commands": self.commands(i)} for i in ids]
 
-    def _commands(self, conn, batch, group, phase, quantities, quotes=None, policy=None):
+    def _commands(self, conn, batch, group, phase, quantities, quotes=None, policy=None, sequence_offset=0):
         by_symbol = {leg["inst_id"]: leg for leg in group["manifest"]["legs"]}
         for command in portfolio_commands(phase, quantities, quotes, policy):
-            sequence, symbol, quantity = command["sequence"], command["inst_id"], command["quantity"]
+            sequence, symbol, quantity = (
+                command["sequence"] + sequence_offset,
+                command["inst_id"],
+                command["quantity"],
+            )
             leg = by_symbol[symbol]
             payload = {
                 "source": group["source"],
@@ -815,6 +834,7 @@ class ManagedPortfolios:
                                     and c["key"] not in {old["key"] for old in commands}
                                 )
                                 continue
+                    superseded = False
                     for quote_attempt in range(3):
                         extra = {payload["inst_id"]}
                         if phase == "add":
@@ -861,6 +881,23 @@ class ManagedPortfolios:
                             )
                             break
                         except PlatformError as exc:
+                            if (
+                                exc.code == "portfolio_capital_limit"
+                                and phase == "add"
+                                and group["manifest"]["definition"]["execution_contract"]
+                                == EXECUTION_CONTRACT
+                            ):
+                                replacements = await self._replan_additions(group, batch, exc)
+                                if replacements is not None:
+                                    for old_command in commands:
+                                        if (
+                                            old_command["phase"] == "add"
+                                            and old_command["status"] == "pending"
+                                        ):
+                                            old_command["status"] = "superseded"
+                                    commands.extend(replacements)
+                                    superseded = True
+                                    break
                             # Another market can open after snapshots_for enumerates inventory.
                             # No order is committed when admission rejects incomplete valuation.
                             missing = {p["inst_id"] for p in r.book.positions(group["source"])} - set(quotes)
@@ -872,11 +909,130 @@ class ManagedPortfolios:
                                     "Concurrent inventory changed the valuation inputs; the frozen command remains pending for retry.",
                                     409,
                                 ) from None
+            if not order and superseded:
+                continue
             with self.store.write() as conn:
                 conn.execute(
                     "UPDATE portfolio_commands SET status='completed',order_id=?,error=NULL,updated_at=? WHERE id=?",
                     (order["id"], now_ms(), command["id"]),
                 )
+
+    async def _replan_additions(self, group, batch, failure):
+        """V2 preserves original commands and records a smaller linked plan."""
+        r, source = self.runtime, group["source"]
+        symbols = {leg["inst_id"] for leg in group["manifest"]["legs"]}
+        extra = symbols | {p["inst_id"] for p in r.book.deferred_funding.pending(source)}
+        quotes = await r.snapshots_for(source, extra)
+        self._quotes(group, batch["body"]["available_at"], quotes)
+        for symbol in sorted(symbols):
+            await r.sync_funding(source, symbol, quotes, protective=True)
+        await self._sync_other_funding(group, quotes)
+        with self.store.write() as conn:
+            self._active(group["id"], conn)
+            current = self.batch(batch["id"], conn)
+            original = current["additions"]
+            prior = current["allowance_replans"]
+            pending = [
+                c
+                for c in self.commands(batch["id"], conn)
+                if c["phase"] == "add" and c["status"] == "pending"
+            ]
+            if any(c["order"] for c in pending):
+                # A committed but not yet projected order must be reconciled,
+                # never superseded as though its economic effect was absent.
+                return None
+            remaining = {}
+            for command in pending:
+                payload = command["payload"]
+                signed = D(payload["quantity"]) * (1 if payload["side"] == "buy" else -1)
+                remaining[payload["inst_id"]] = remaining.get(payload["inst_id"], D(0)) + signed
+            account = r.book.account(source, quotes, conn)
+            if account["pending_funding"]:
+                raise PlatformError(
+                    "funding_pending",
+                    "Unsettled funding blocks new risk; protective reductions remain available.",
+                    409,
+                )
+            fresh = self.capital.addition_budget(conn, source, "portfolio:" + group["id"], account)
+            policy = r.book.risk(source, conn)
+            previous = prior[-1] if prior else original
+            revised = allowance_replan(
+                batch["body"]["targets"],
+                batch["body"]["capital"],
+                {p["inst_id"]: D(p["quantity"]) for p in account["positions"]},
+                quotes,
+                remaining,
+                previous["capital_budget"],
+                fresh,
+                {leg["inst_id"]: leg["leverage"] for leg in group["manifest"]["legs"]},
+                policy,
+                original["policy_hash"],
+                digest(self.capital.policy(source, conn)),
+                original.get("capital_policy_hash"),
+                len(prior),
+                max_residual_pct=group["manifest"]["definition"]["max_residual_pct"],
+            )
+            if revised is None:
+                return None
+            replacement_plan = portfolio_commands("add", revised["quantities"], quotes, policy)
+            completed = [
+                c
+                for c in self.commands(batch["id"], conn)
+                if c["phase"] == "add" and c["status"] == "completed"
+            ]
+            for symbol in remaining:
+                if (
+                    sum(c["payload"]["inst_id"] == symbol for c in completed)
+                    + sum(c["inst_id"] == symbol for c in replacement_plan)
+                    > 20
+                ):
+                    return None
+            offset = conn.execute(
+                "SELECT COALESCE(MAX(sequence),-1)+1 FROM portfolio_commands WHERE batch_id=? AND phase='add'",
+                (batch["id"],),
+            ).fetchone()[0]
+            revised |= {
+                "group_id": group["id"],
+                "batch_id": batch["id"],
+                "original_additions_hash": current["additions_hash"],
+                "parent_plan_hash": prior[-1]["content_hash"] if prior else current["additions_hash"],
+                "failure": {"code": failure.code, "message": failure.message},
+                "superseded_commands": [
+                    {"id": c["id"], "key": c["key"], "payload_hash": c["payload_hash"]} for c in pending
+                ],
+                "replacement_sequence_offset": offset,
+            }
+            for command in pending:
+                conn.execute(
+                    "UPDATE portfolio_commands SET status='superseded',error=?,updated_at=? WHERE id=? AND status='pending'",
+                    (
+                        f"[portfolio_capital_limit] Unfilled quantity superseded under {EXECUTION_CONTRACT}; original payload retained",
+                        now_ms(),
+                        command["id"],
+                    ),
+                )
+            self._commands(
+                conn, batch, group, "add", revised["quantities"], quotes, policy, sequence_offset=offset
+            )
+            replacements = [
+                c for c in self.commands(batch["id"], conn) if c["phase"] == "add" and c["sequence"] >= offset
+            ]
+            revised["replacement_commands"] = [
+                {"id": c["id"], "key": c["key"], "payload_hash": c["payload_hash"]} for c in replacements
+            ]
+            self.store.audit(
+                conn,
+                source,
+                "portfolio.allowance_superseded",
+                "Smaller unfilled additions captured under the reviewed v2 allowance contract",
+                {
+                    "group_id": group["id"],
+                    "batch_id": batch["id"],
+                    "plan": revised,
+                    "content_hash": digest(revised),
+                },
+            )
+            return replacements
 
     async def _sync_other_funding(self, group, quotes):
         """Reconcile account obligations without cross-group execution locks.
@@ -950,6 +1106,7 @@ class ManagedPortfolios:
                         "skipped": plan.skipped,
                         "available_cash": account["available_cash"],
                         "capital_budget": capital_budget,
+                        "capital_policy_hash": digest(self.capital.policy(group["source"], conn)),
                         "quotes": {s: quotes[s] for s in symbols},
                         "policy_hash": digest(policy),
                     }

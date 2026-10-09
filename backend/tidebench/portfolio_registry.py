@@ -55,7 +55,7 @@ class PortfolioDefinition(InputModel):
     carry_max_age_hours: int = Field(default=0, ge=0, le=168)
     max_residual_pct: Decimal = Field(default=2, ge=".01", le=100)
     failure_policy: Literal["reduce_group"] = "reduce_group"
-    execution_contract: Literal["reduce_group_v1"] = "reduce_group_v1"
+    execution_contract: Literal["reduce_group_v1", "reduce_group_v2_allowance"] = "reduce_group_v2_allowance"
 
     @model_validator(mode="after")
     def construction(self):
