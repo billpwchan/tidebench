@@ -1064,6 +1064,7 @@ class ProfessionalRuntime:
     async def poll_market(self, source, symbol, snapshots):
         with localcontext(ACCOUNTING_CONTEXT):
             async with self.locks[(source, symbol)]:
+                await self.offload(self.book.reconcile_pending_reductions, source, symbol)
                 await self.sync_funding(source, symbol, snapshots, periodic=True, protective=True)
                 account = await self.offload(self.book.observe, source, snapshots, record_performance=False)
                 for position in account["positions"]:

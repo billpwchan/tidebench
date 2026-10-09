@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Play, Square } from 'lucide-react';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
-import type { ManagedPortfolio } from '../proApi';
+import type { ManagedPortfolio, RecordData } from '../proApi';
 import { useSession } from './AuthGate';
 import { DataTable, JsonDetails, RecordGrid, valueText } from './ProWorkspace';
 import { Empty, ErrorBox, Loading, Status } from './workspace';
@@ -12,13 +12,20 @@ import { date, number, quantityText } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { canTrade } from '../lib/permissions';
 
+type ProtectionCallbacks = {
+  onProtectPosition?: (position: RecordData) => void;
+  onInspectPositions?: () => void;
+};
+
 export default function ManagedPortfolios({
   source,
   initialGroupId,
+  onProtectPosition,
+  onInspectPositions,
 }: {
   source: Source;
   initialGroupId?: string;
-}) {
+} & ProtectionCallbacks) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const allowed = canTrade(useSession()?.user?.role);
@@ -41,6 +48,7 @@ export default function ManagedPortfolios({
       'portfolio-releases',
       'pro-deployments',
       'pro-account',
+      'contributions',
     ])
       void qc.invalidateQueries({ queryKey: [key] });
   };
@@ -97,7 +105,14 @@ export default function ManagedPortfolios({
               </button>
             ))}
           </div>
-          <GroupEvidence key={group.id} group={group} allowed={allowed} onChange={refresh} />
+          <GroupEvidence
+            key={group.id}
+            group={group}
+            allowed={allowed}
+            onChange={refresh}
+            onProtectPosition={onProtectPosition}
+            onInspectPositions={onInspectPositions}
+          />
         </>
       )}
       {releases.isError && <ErrorBox error={releases.error} />}
@@ -133,7 +148,9 @@ export default function ManagedPortfolios({
   );
 }
 
-function GroupEvidence(props: { group: ManagedPortfolio; allowed: boolean; onChange: () => void }) {
+function GroupEvidence(
+  props: { group: ManagedPortfolio; allowed: boolean; onChange: () => void } & ProtectionCallbacks,
+) {
   return props.group.manifest ? (
     <VerifiedGroupEvidence {...props} group={{ ...props.group, manifest: props.group.manifest }} />
   ) : (
@@ -145,11 +162,12 @@ function GroupIntegrityError({
   group,
   allowed,
   onChange,
+  onInspectPositions,
 }: {
   group: ManagedPortfolio;
   allowed: boolean;
   onChange: () => void;
-}) {
+} & ProtectionCallbacks) {
   const { t } = useI18n();
   const stop = useMutation({
     mutationFn: () => proApi.stopPortfolio(group.id),
@@ -192,6 +210,16 @@ function GroupIntegrityError({
           status: t(group.status),
         }}
       />
+      <p className="inline-warning">
+        {t(
+          'Group ownership is unavailable. Account net positions remain separate and can be inspected for protection.',
+        )}
+      </p>
+      {onInspectPositions && (
+        <button type="button" className="button button-secondary" onClick={onInspectPositions}>
+          {t('Inspect account positions')}
+        </button>
+      )}
       {group.last_error && <ErrorBox error={new Error(group.last_error)} />}
       {stop.isError && <ErrorBox error={stop.error} />}
     </section>
@@ -202,11 +230,13 @@ function VerifiedGroupEvidence({
   group,
   allowed,
   onChange,
+  onProtectPosition,
+  onInspectPositions,
 }: {
   group: ManagedPortfolio & { manifest: NonNullable<ManagedPortfolio['manifest']> };
   allowed: boolean;
   onChange: () => void;
-}) {
+} & ProtectionCallbacks) {
   const { t } = useI18n();
   const [before, setBefore] = useState<number>();
   const [selectedBatch, setSelectedBatch] = useState('');
@@ -220,6 +250,28 @@ function VerifiedGroupEvidence({
     queryFn: () => proApi.account(group.source),
     refetchInterval: 5000,
   });
+  const contributions = useQuery({
+    queryKey: ['contributions', group.source],
+    queryFn: () => proApi.contributions(group.source),
+    refetchInterval: 5000,
+  });
+  // A successful report has verified sleeve hashes and economic quantities.
+  // Monetary P&L can remain unavailable when marks or funding are incomplete.
+  const ownershipKnown = contributions.isSuccess;
+  const groupOwner = `portfolio:${group.id}`;
+  const owner = ownershipKnown
+    ? contributions.data.owners.find((row) => row.owner === groupOwner)
+    : undefined;
+  const ownedQuantity = (symbol: string) =>
+    owner?.markets.find((row) => row.inst_id === symbol)?.quantity ?? '0';
+  const inventoryOwners = (symbol: string) =>
+    ownershipKnown
+      ? contributions.data.owners.flatMap((row) =>
+          row.markets
+            .filter((market) => market.inst_id === symbol && Number(market.quantity) !== 0)
+            .map((market) => ({ owner: row.owner, quantity: market.quantity })),
+        )
+      : [];
   const batch = history.data?.items.find((b) => b.id === selectedBatch) ?? history.data?.items[0];
   const adjustments = [
     ...(batch?.body.reduction_skips ?? []),
@@ -286,24 +338,115 @@ function VerifiedGroupEvidence({
           { key: 'leverage', label: 'Leverage' },
           {
             key: 'quantity',
-            label: 'Actual inventory',
+            label: 'Group-owned inventory',
+            render: (r) =>
+              contributions.isPending
+                ? '…'
+                : ownershipKnown
+                  ? quantityText(ownedQuantity(r.inst_id))
+                  : t('Unknown'),
+          },
+          {
+            key: 'account_quantity',
+            label: 'Account net inventory',
             render: (r) => {
               const position = account.data?.positions?.find((p) => p.inst_id === r.inst_id);
               return account.isPending
                 ? '…'
                 : account.isError
-                  ? '—'
+                  ? t('Unknown')
                   : quantityText(position?.quantity ?? '0');
             },
+          },
+          {
+            key: 'inventory_owners',
+            label: 'Current inventory owners',
+            render: (r) =>
+              ownershipKnown ? (
+                <div className="table-stacked">
+                  {inventoryOwners(r.inst_id).length ? (
+                    inventoryOwners(r.inst_id).map((row) => (
+                      <small key={row.owner}>
+                        {row.owner} · {quantityText(row.quantity)}
+                      </small>
+                    ))
+                  ) : (
+                    <span>{t('No inventory')}</span>
+                  )}
+                </div>
+              ) : (
+                t('Unknown')
+              ),
           },
           {
             key: 'unit',
             label: 'Units',
             render: (r) => t(r.inst_id.endsWith('-SWAP') ? 'Contracts' : 'Base units'),
           },
+          ...(onProtectPosition
+            ? [
+                {
+                  key: 'protection',
+                  label: 'Actions',
+                  render: (r: (typeof group.manifest.legs)[number]) => {
+                    const position = account.data?.positions?.find((p) => p.inst_id === r.inst_id);
+                    if (
+                      !ownershipKnown ||
+                      Number(ownedQuantity(r.inst_id)) === 0 ||
+                      account.isError ||
+                      !position ||
+                      Number(position.quantity) === 0
+                    )
+                      return '—';
+                    return (
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        disabled={!allowed}
+                        onClick={() => onProtectPosition(position)}
+                      >
+                        {t('Reduce account net position')}
+                      </button>
+                    );
+                  },
+                },
+              ]
+            : []),
         ]}
       />
+      <p className="snapshot-footnote">
+        {t('Inventory ownership observed')}: {date(contributions.data?.as_of, true)}
+        {' · '}
+        {t('Account snapshot')}: {date(account.data?.as_of, true)}
+      </p>
+      <p className="quiet-copy">
+        {t(
+          'Reducing an account net position affects every current inventory owner in that market. It does not exclusively close this portfolio.',
+        )}
+      </p>
+      {ownershipKnown && !contributions.data.reconciled && (
+        <p className="inline-warning">
+          {t(
+            'Group inventory quantities are verified; monetary valuation or reconciliation remains incomplete.',
+          )}
+        </p>
+      )}
+      {!ownershipKnown && !contributions.isPending && (
+        <p className="inline-warning">
+          {t(
+            'Group ownership is unavailable. Account net positions remain separate and can be inspected for protection.',
+          )}
+        </p>
+      )}
+      {contributions.isError && (
+        <ErrorBox error={contributions.error} onRetry={() => void contributions.refetch()} />
+      )}
       {account.isError && <ErrorBox error={account.error} />}
+      {onInspectPositions && (
+        <button type="button" className="text-button" onClick={onInspectPositions}>
+          {t('Inspect account positions')}
+        </button>
+      )}
       <div className="section-heading">
         <h3>{t('Persisted execution batches')}</h3>
         <div className="portfolio-release-actions">

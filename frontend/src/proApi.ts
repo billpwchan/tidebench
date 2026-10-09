@@ -470,7 +470,23 @@ export type PortfolioProject = {
   versions?: PortfolioVersion[];
   version?: PortfolioVersion;
 };
+export type ActualCapitalAdmission = {
+  equity?: string | null;
+  as_of?: number | null;
+  valuation_status?: string;
+  capital_committed_or_used_pct: string;
+  gross_committed_or_used_pct: string;
+  base_asset_gross_pct: Record<string, string>;
+  owners: {
+    owner: string;
+    actual_capital_pct: string;
+    promised_capital_pct: string;
+    base_asset_gross_pct: Record<string, string>;
+  }[];
+  policy: { capital_limit_pct: string; max_base_asset_gross_pct: string };
+};
 export type CapitalAdmission = {
+  actual_admission?: ActualCapitalAdmission | null;
   committed_capital_pct: string;
   remaining_declared_capital_pct: string;
   proposed_capital_pct: string;
@@ -506,6 +522,7 @@ export type PortfolioReleasePreview = {
   capital_basis: string;
   execution_model: string;
   research_evidence: RecordData;
+  evaluation?: RecordData;
 };
 export type PortfolioRelease = {
   id: string;
@@ -786,14 +803,22 @@ export const proApi = {
     ),
   changeClock: (body: { speed?: number; step_ms?: number; expected_revision: number }) =>
     request('/pro/execution/clock', { method: 'POST', body: JSON.stringify(body) }),
-  performance: (source: Source, before?: number) =>
+  performance: (source: Source, before?: number, window: RecordData = {}) =>
     request<{
       items: { id: number; market_ts: number; observed_at: number; body: RecordData }[];
       summary: RecordData;
       window: RecordData;
       acceptance: RecordData;
       next_before?: number;
-    }>(`/pro/execution/performance?${q({ source, ...(before === undefined ? {} : { before }) })}`),
+    }>(
+      `/pro/execution/performance?${q({ source, ...window, ...(before === undefined ? {} : { before }) })}`,
+    ),
+  performanceSnapshots: (source: Source, before?: string) =>
+    request<{ items: RecordData[]; next_before?: string }>(
+      `/pro/execution/performance/snapshots?${q({ source, ...(before ? { before } : {}) })}`,
+    ),
+  performanceSnapshot: (id: string) =>
+    request<RecordData>('/pro/execution/performance/snapshots/' + id),
   freezePerformance: (body: RecordData) =>
     post<RecordData>('/pro/execution/performance/snapshots', body),
   verifyPerformance: (id: string) =>

@@ -15,6 +15,7 @@ import { defaultStrategy, downloadCsv } from '../api';
 import type { Source, Strategy } from '../api';
 import { useSession } from '../components/AuthGate';
 const ForwardPerformance = lazy(() => import('../components/ForwardPerformance'));
+const ProtectiveExit = lazy(() => import('../components/ProtectiveExit'));
 import ManagedPortfolios from '../components/ManagedPortfolios';
 const Contributions = lazy(() => import('../components/Contributions'));
 import SimulationClock from '../components/SimulationClock';
@@ -59,8 +60,16 @@ export default function Portfolio({
   const canOperate = canTrade(useSession()?.user?.role);
   const qc = useQueryClient();
   const now = useNow();
-  const [table, setTable] = useState(initialView.split(':')[0]);
-  useEffect(() => setTable(initialView.split(':')[0]), [initialView]);
+  const protectiveLink = useRef('');
+  const [protection, setProtection] = useState<{ source: Source; position: RecordData }>();
+  const [table, setTable] = useState(
+    initialView.startsWith('protect:') ? 'positions' : initialView.split(':')[0],
+  );
+  useEffect(
+    () => setTable(initialView.startsWith('protect:') ? 'positions' : initialView.split(':')[0]),
+    [initialView],
+  );
+  useEffect(() => setProtection(undefined), [source]);
   const initialGroupId = initialView.startsWith('managed:') ? initialView.slice(8) : undefined;
   const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
   const [symbol, setSymbol] = useState('BTC-USDT');
@@ -169,9 +178,29 @@ export default function Portfolio({
   };
   useDialogFocus(deployOpen, '.deployment-dialog', () => setDeployOpen(false));
   const a = account.data;
+  useEffect(() => {
+    const link = source + ':' + initialView;
+    if (!initialView.startsWith('protect:') || !account.data || protectiveLink.current === link)
+      return;
+    const selected = account.data.positions?.find((p) => p.inst_id === initialView.slice(8));
+    if (selected) {
+      protectiveLink.current = link;
+      setProtection({ source, position: selected });
+    }
+  }, [initialView, source, account.data]);
   const instrument = (market.data?.instrument ?? {}) as RecordData;
   return (
     <>
+      {protection?.source === source && (
+        <Suspense fallback={<Loading />}>
+          <ProtectiveExit
+            key={source + ':' + String(protection.position.inst_id)}
+            source={source}
+            position={protection.position}
+            onClose={() => setProtection(undefined)}
+          />
+        </Suspense>
+      )}
       <PageHeading
         eyebrow="PORTFOLIO & EXECUTION"
         title="Portfolio"
@@ -259,7 +288,12 @@ export default function Portfolio({
               </Suspense>
             )}
             {table === 'managed' && (
-              <ManagedPortfolios source={source} initialGroupId={initialGroupId} />
+              <ManagedPortfolios
+                source={source}
+                initialGroupId={initialGroupId}
+                onProtectPosition={(position) => setProtection({ source, position })}
+                onInspectPositions={() => setTable('positions')}
+              />
             )}
             {table === 'contributions' && (
               <Suspense fallback={<Loading />}>
@@ -349,6 +383,19 @@ export default function Portfolio({
                         <span className={tone(p.unrealized_pnl)}>{number(p.unrealized_pnl)}</span>
                       ),
                     },
+                    {
+                      key: 'protect',
+                      label: 'Actions',
+                      render: (p) => (
+                        <button
+                          className="text-button"
+                          disabled={!canOperate}
+                          onClick={() => setProtection({ source, position: p })}
+                        >
+                          {t('Reduce account position')}
+                        </button>
+                      ),
+                    },
                   ]}
                 />
               ))}{' '}
@@ -374,7 +421,25 @@ export default function Portfolio({
                     },
                     { key: 'side', label: 'Side' },
                     { key: 'order_type', label: 'Order type' },
-                    { key: 'quantity', label: 'Quantity', render: (o) => quantityText(o.quantity) },
+                    {
+                      key: 'quantity',
+                      label: 'Requested / filled',
+                      render: (o) => (
+                        <div className="table-stacked">
+                          <span>
+                            {quantityText(o.requested_quantity ?? o.quantity)} /{' '}
+                            {quantityText(
+                              o.filled_quantity ?? (o.status === 'filled' ? o.quantity : '0'),
+                            )}
+                          </span>
+                          {o.canceled_quantity != null && (
+                            <small>
+                              {t('Canceled remainder')}: {quantityText(o.canceled_quantity)}
+                            </small>
+                          )}
+                        </div>
+                      ),
+                    },
                     {
                       key: 'limit_price',
                       label: 'Limit / trigger',

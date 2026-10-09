@@ -295,7 +295,13 @@ class PortfolioReleases:
             "liquidity_review": liquidity_review,
             "execution_model": "post-close observed bid/ask, sequential local full fills; durable reduce-group compensation may also fail; no exchange order",
         }
-        return preview | {"preview_hash": digest(preview)}
+        identity = json.loads(dumps(preview))
+        actual = identity.get("capital_admission", {}).get("actual_admission")
+        if actual is not None:
+            # Display-only account read time is not an economic condition.
+            # Equity, owners, quantities and policies remain hash-bound.
+            actual.pop("as_of", None)
+        return preview | {"preview_hash": digest(identity)}
 
     def approve(self, body, actor):
         if not 12 <= len(body["review"].strip()) <= 2000:

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.0 · 2026-10-09
+
+- Native-position protective exits stop controllers and cancel working entries before preview, recheck identity before submission and retain idempotent receipts. Shared net reductions disclose all affected owners.
+- Pending reduce-only protection binds position generation, clips same-generation remaining inventory and records canceled remainder; flat/reversed/reopened inventory cancels dependent orders.
+- Perpetual additions validate independent funding schedule provenance and clocks. Schedule gaps make equity provisional without disabling protection. Real public OKX native-lot margin boundaries now map explicitly with raw response preservation and strict genuine-gap rejection.
+- Pure financial preview/fill parity includes spot proceeds, isolated margin release, realized P&L, fees and insurance debt.
+- Protected single-strategy attempts remain counted after older restore. Completed-fold releases disclose post-test selection and bind selection evidence.
+- Portfolio review exposes economic/rejection evidence and effective actual/promise capital by owner. Group inventory uses verified owner quantities instead of matching account positions by symbol.
+- UTC-selected full-account observation windows, visible acceptance values/thresholds and persistent hash-checked frozen report inventory support explicit full recomputation.
+- Independent counterexamples, actual public-data paper paths, all declared strategy cost/parameter checks and adverse attempts retain their original source identities.
+
 ## 0.10.0 · 2026-10-09
 
 - Versioned v2 allowance continuation replaces only unfilled additions with smaller immutable commands after measured shared-equity drift, at most three times under unchanged policies. Existing v1 batches retain frozen-order compensation; all hard guards, minimum legs and residual limits remain binding.

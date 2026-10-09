@@ -72,9 +72,9 @@ class ReleasePreviewInput(InputModel):
 
 class ReleaseInput(ReleasePreviewInput):
     preview_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
-    acknowledgements: list[Literal["in_sample_selection", "execution_cost_difference", "no_oos_evidence"]] = (
-        Field(default_factory=list, max_length=3)
-    )
+    acknowledgements: list[
+        Literal["in_sample_selection", "execution_cost_difference", "no_oos_evidence", "post_test_selection"]
+    ] = Field(default_factory=list, max_length=4)
     review: str = Field(min_length=12, max_length=2000)
 
 
@@ -260,7 +260,10 @@ class StrategyRegistry:
                     422,
                 )
             selected["strategy"] = fold["selected_strategy"]
-            scope = "training_selected_independent_oos_fold"
+            # Training chose this strategy, but an operator chooses the fold
+            # only after the completed run makes every test outcome available.
+            # That selection cannot establish independent final validation.
+            scope = "training_selected_test_exposed_fold"
         selected["strategy"] = canonical(ProStrategyInput.model_validate(selected["strategy"]).model_dump())
         return selected, scope
 
@@ -282,6 +285,22 @@ class StrategyRegistry:
                 409,
             )
         selected, scope = self.select(run, selection)
+        selection_evidence = {
+            "source_result_hash": manifest["result_hash"],
+            "selection": selection,
+            "selected_strategy_hash": digest(selected["strategy"]),
+            "independent_final_validation": False,
+        }
+        if run["config"]["mode"] in {"train_test", "walk_forward"}:
+            fold = next(item for item in run["result"]["folds"] if item["id"] == selection)
+            selection_evidence.update(
+                selection_policy="operator_selected_after_test_results_available",
+                selected_fold_id=fold["id"],
+                test_result_hash=digest(fold["test_result"]),
+                available_fold_ids=[item["id"] for item in run["result"]["folds"]],
+                test_results_available=True,
+                scope="Training-only parameter choice; completed chronological fold selection is not a pre-registered final test. No inference about whether the operator actually inspected test scores is made.",
+            )
         dataset = runtime.catalog.get_dataset(run["config"]["dataset_id"])
         parent = (
             self.version(run["config"]["strategy_version_id"])
@@ -341,7 +360,9 @@ class StrategyRegistry:
         required = (["in_sample_selection"] if scope == "in_sample_selection" else []) + (
             ["execution_cost_difference"] if differences else []
         )
-        if run["config"]["mode"] not in {"train_test", "walk_forward"}:
+        if run["config"]["mode"] in {"train_test", "walk_forward"}:
+            required.append("post_test_selection")
+        else:
             required.append("no_oos_evidence")
         blockers = (
             (["execution_halted"] if risk["halted"] else [])
@@ -368,6 +389,7 @@ class StrategyRegistry:
             "result_hash": manifest["result_hash"],
             "selection": selection,
             "selection_scope": scope,
+            "selection_evidence": selection_evidence,
             "research_governance": evidence,
             "base_strategy_version_id": parent["id"] if parent else None,
             "definition": definition,

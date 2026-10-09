@@ -1,6 +1,6 @@
 # Architecture
 
-Tidebench is a single-workspace modular monolith for public market ingestion, reproducible research and local spot / linear USDT perpetual paper execution. Named users share the account and research library under role-based permissions. One process owns one SQLite WAL database; a canonical file lease enforces that boundary. Current workspace schema is 5.
+Tidebench is a single-workspace modular monolith for public market ingestion, reproducible research and local spot / linear USDT perpetual paper execution. Named users share the account and research library under role-based permissions. One process owns one SQLite WAL database; a canonical file lease enforces that boundary. Current workspace schema is 8.
 
 ```mermaid
 flowchart TD
@@ -93,3 +93,16 @@ Recovery persists a halt/stop latch, drains requests/workers/owned computation, 
 ## Instrument observations (v0.7 / schema 7)
 
 `InstrumentObservations` stores immutable canonical REST data arrays independently of the latest economic metadata cache. It retains receipt ordering, unavailable rows and parser identity; current instrument lookup binds the newest response rather than falling back to an omitted old member. Time review uses only already received observations under an explicit age policy. Backup verification validates complete identities/hashes; same-schema recovery unions newer observations before financial replacement. This is forward evidence, not historical universe reconstruction. See [instrument evidence](instrument-evidence.md).
+
+
+## Trading desk contracts added in v0.11
+
+Protective account exits bind the source, instrument, native units and position generation. The UI stops all market controllers and cancels working entry orders before preview, then rereads controllers, orders and inventory before submission. Backend reduce-only admission remains transactional. A managed leg stop stops its entire group; reductions affect the account net position and allocate across owners.
+
+Pending reduce-only orders preserve their original command and bind its position generation. At trigger, `position_bound_reduce_only_clip_v1` fills no more than current reducible same-generation inventory and records the canceled remainder. Flatness, reversal or a new generation cancels the dependent protection. Legacy orders with no generation cancel explicitly.
+
+Perpetual additions require a separately clocked source/instrument-matched funding schedule, not merely a fresh ticker or mark. An unknown schedule makes existing account equity provisional, blocks additions and breaks continuous observed returns while retaining protective reductions. Catalog tier parsing retains raw source records and explicitly maps adjacent native-lot lower bounds to the engine's exclusive lower boundary; actual gaps, overlaps and decreasing maintenance rates remain invalid.
+
+Release approval binds current equity, economic owner usage and risk policy. Account read time is display-only and excluded from the preview hash. The research ledger is reconstructed from protected attempt facts after restore, with current runs supplying optional status. A completed chronological fold selected for deployment carries a post-test-selection disclosure and hash-bound selection evidence; its training-only parameter choice does not establish an independent final selection.
+
+Forward UTC queries resolve a half-open observed wall-time range into fixed source ID boundaries. Pagination retains that boundary and includes intervening clock regressions. The snapshot inventory hash-checks stored content, while full observation/audit recomputation remains an explicit separate action. See [operator workflow](professional-workflows-v0.11.md) and [forward contract](forward-evidence.md).

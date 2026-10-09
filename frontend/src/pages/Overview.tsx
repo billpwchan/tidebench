@@ -149,6 +149,17 @@ export default function Overview({
       view: 'ledger',
       severity: 'bad',
     });
+  if (a?.economic_status === 'funding_schedule_unavailable')
+    alerts.push({
+      key: 'funding-schedule',
+      title: t('Funding schedule needs attention'),
+      detail: t(
+        'A current settlement schedule is unavailable. Equity is provisional and new perpetual risk is blocked; reduce-only protection remains available.',
+      ),
+      page: 'execution',
+      view: 'positions',
+      severity: 'bad',
+    });
   const strategyErrors = independentStrategies.filter(
     (s) =>
       s.status !== 'stopped' && (s.last_error || ['failed', 'blocked', 'error'].includes(s.status)),
@@ -194,7 +205,7 @@ export default function Overview({
     issues.length ||
     risk.data?.halted ||
     strategyErrors.length ||
-    a?.economic_status === 'funding_pending' ||
+    (a && a.economic_status !== 'complete') ||
     (a && !['fresh', 'example'].includes(a.valuation_status ?? '')) ||
     (analytics.data && analytics.data.status !== 'available')
   );
@@ -387,6 +398,19 @@ export default function Overview({
                       label: 'Unrealized P&L',
                       render: (p) => (
                         <span className={tone(p.unrealized_pnl)}>{number(p.unrealized_pnl)}</span>
+                      ),
+                    },
+                    {
+                      key: 'protect',
+                      label: 'Actions',
+                      render: (p) => (
+                        <button
+                          className="text-button"
+                          disabled={!canOperate}
+                          onClick={() => navigate('execution', 'protect:' + String(p.inst_id))}
+                        >
+                          {t('Reduce account position')}
+                        </button>
                       ),
                     },
                   ]}

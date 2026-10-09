@@ -1660,3 +1660,42 @@ async def test_real_repeated_equity_drift_is_bounded_at_three_linked_replans(run
     )
     assert any(c["phase"] == "compensate" and c["order"] for c in batch["commands"])
     assert r.book.contribution_report("example", await r.snapshots_for("example"))["reconciled"]
+
+
+async def test_release_read_time_is_display_only_but_actual_capital_changes_are_bound(runtime, monkeypatch):
+    r = runtime
+    run = await research(r)
+    monkeypatch.setattr(r.book, "now", lambda: 1_000_000)
+    first = r.portfolio_releases.preview(run["id"])
+    monkeypatch.setattr(r.book, "now", lambda: 1_060_000)
+    later = r.portfolio_releases.preview(run["id"])
+    assert first["capital_admission"]["actual_admission"]["as_of"] == 1_000_000
+    assert later["capital_admission"]["actual_admission"]["as_of"] == 1_060_000
+    assert first["preview_hash"] == later["preview_hash"]
+    command = {
+        "run_id": run["id"],
+        "preview_hash": first["preview_hash"],
+        "review": "Reviewed current equity and every capital owner before approval.",
+        "acknowledgements": first["required_acknowledgements"],
+    }
+    assert r.portfolio_releases.approve(command, "trader")["status"] == "approved"
+    await r.submit(
+        {
+            "source": "example",
+            "inst_id": "SOL-USDT",
+            "side": "buy",
+            "quantity": "1",
+            "leverage": 1,
+            "reduce_only": False,
+            "order_type": "market",
+            "margin_mode": "isolated",
+        },
+        "manual-capital-change",
+        "trader",
+    )
+    changed = r.portfolio_releases.preview(run["id"])
+    assert changed["preview_hash"] != first["preview_hash"]
+    assert changed["capital_admission"]["actual_admission"]["owners"]
+    with pytest.raises(PlatformError) as error:
+        r.portfolio_releases.approve(command, "trader")
+    assert error.value.code == "portfolio_release_changed"

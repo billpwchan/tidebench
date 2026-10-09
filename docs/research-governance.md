@@ -39,3 +39,12 @@ This protection applies to in-app recovery within the surviving workspace. Resto
 5. `POST /api/v1/pro/research/portfolios/{run_id}/replay`: captured-input reproduction.
 
 All mutations require the existing authenticated researcher/trader/admin role and CSRF or configured bearer authentication. Execution approval remains a trader/admin action. No exchange order adapter or private credential is introduced.
+
+
+## Retained single-strategy attempts and deployment selection (v0.11)
+
+Single-strategy governance reads the protected `research_trials` ledger after recovery. If an admitted attempt survives but the older restored financial database lacks its run/result, its status is `evidence_unavailable`; it still counts. Current runs add status without duplicating the fact. Pre-upgrade runs without protected facts stay explicitly legacy. Counts distinguish admitted attempts, primary evaluations, replays, complete run configurations and per-attempt candidate configurations; none is an effective independent-hypothesis count. The displayed list is bounded to 100 recent attempts while totals include retained history. External work and relabeled projects cannot be inferred.
+
+Walk-forward parameters remain selected using each fold's training data. Choosing a completed fold for a paper release occurs after test results are available. The release therefore records `training_selected_test_exposed_fold` and requires `post_test_selection`; it binds the selected strategy, source result, test result and available fold IDs. That acknowledgement permits an inspectable local-paper experiment and makes no inference that the operator actually inspected the scores. It cannot convert the chosen fold into a pre-registered final validation. The independently sealed final-evaluation protocol remains a separate research operation.
+
+This design addresses selection after test exposure rather than adjusting returns to manufacture independent evidence. See the primary methodological discussion in Bailey, Borwein, López de Prado and Zhu, [The Probability of Backtest Overfitting](https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf).

@@ -1,0 +1,103 @@
+.protection-dialog {
+  width: min(680px, calc(100vw - 32px));
+}
+.protection-market {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 550;
+}
+.protection-market span {
+  display: block;
+  margin-top: 5px;
+  color: #73847b;
+  font-size: 11px;
+  font-weight: 400;
+}
+.protection-position {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 22px 0;
+  border-bottom: 1px solid #edf1ef;
+}
+.protection-position span {
+  display: block;
+  font-size: 11px;
+  color: #73847b;
+  margin-bottom: 8px;
+}
+.protection-position strong {
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+}
+.protection-position small {
+  font-size: 10px;
+  font-weight: 400;
+  color: #73847b;
+}
+.protection-step {
+  padding: 4px 0 18px;
+  border-bottom: 1px solid #edf1ef;
+}
+.protection-step .section-heading {
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.protection-step .section-heading h3 {
+  margin-bottom: 0;
+}
+.protection-step > .button {
+  margin-top: 12px;
+}
+.protection-quantity {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.protection-quantity .field {
+  flex: 1;
+  min-width: 180px;
+  margin-bottom: 0;
+}
+.protection-quantity .text-button {
+  font-size: 11px;
+}
+.protection-preview {
+  padding-top: 16px;
+}
+.protection-receipt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px 0;
+  color: #345f4b;
+}
+.protection-receipt p {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+.protection-owners {
+  margin-top: 18px;
+  font-size: 12px;
+}
+.protection-owners summary {
+  cursor: pointer;
+  color: #73847b;
+}
+@media (max-width: 500px) {
+  .protection-dialog {
+    padding: 20px;
+  }
+  .protection-position {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .protection-quantity {
+    gap: 10px;
+  }
+}

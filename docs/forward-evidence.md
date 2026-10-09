@@ -27,6 +27,7 @@ API query parameters:
 |---|---|
 | `limit`, `before` | Displayed observation page only |
 | `window_start`, `window_end` | Inclusive frozen source observation IDs |
+| `observed_start`, `observed_end` | Paired half-open actual observation UTC milliseconds; mutually exclusive with ID boundaries |
 | `max_gap_ms` | Largest allowed interval between actual wall observations; default 60 seconds |
 
 ## Financial calculation
@@ -103,3 +104,14 @@ are not merged into an older restored ID timeline. The automatic before-restore
 safety backup preserves the later financial observations and their original reports;
 restore and inspect that matching state if replay is needed. A fresh acceptance
 window should begin after the financial restore boundary.
+
+
+## Operator window selection and saved reports (v0.11)
+
+Execution → Forward performance accepts paired **Observed from (UTC)** and **Observed until (UTC, exclusive)** fields. A matched time query resolves to fixed source IDs; later pages and freezing use those IDs. Every intervening ID remains included, even when a recorded clock regresses. An empty UTC window shows zero observations and cannot freeze; it never falls back to the whole account. Resolve the first time query before using `before` pagination. The displayed chart stays a page view of the fixed full-window calculation.
+
+The acceptance table displays every actual value against its requirement. Frozen reports show their own IDs, wall-time boundaries, P&L, count and coverage separately from current metrics. These are **shared-account** observations including manual activity and all strategy owners; choosing a time window does not create a strategy attribution report.
+
+`GET /api/v1/pro/execution/performance/snapshots?source=okx&limit=20` provides a bounded, source-isolated inventory. `before` uses the returned `created_at:id` cursor. Each listed body is content-checked; `stored_content_valid` and `not_recomputed` mean exactly that. An unavailable or corrupt stored row cannot be opened as valid evidence. Opening a saved report and verifying it are separate operations; `GET .../{id}/verify` recomputes its pinned inputs. New observations do not alter it. UTC selection is resolved into IDs; the UI freeze uses those exact ID boundaries rather than claiming to retain an independently interpreted time filter.
+
+A missing current funding schedule joins missing marks, pending settled obligations, coverage gaps and financial restore boundaries as incomplete economic evidence. None is interpolated into a continuous return.

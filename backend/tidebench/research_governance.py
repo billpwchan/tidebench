@@ -274,37 +274,78 @@ class ResearchGovernance:
                 )
 
     def trials(self, project_id):
-        def recorded():
-            with self.store.read() as conn:
-                yield from conn.execute(
-                    "SELECT r.id,r.status,r.config,r.created_at,r.error FROM pro_runs r JOIN strategy_versions v ON v.id=json_extract(r.config,'$.strategy_version_id') WHERE v.project_id=? ORDER BY r.created_at DESC,r.id DESC",
-                    (project_id,),
-                )
+        from .research_protocol import ResearchFacts
 
-        items = []
-        total, run_count = 0, 0
-        for row in recorded():
-            run_count += 1
-            config = json.loads(row["config"])
-            if config.get("mode") in {"grid", "train_test", "walk_forward"}:
-                grid = config.get("options", {}).get("grid", {})
-                candidates = 1
-                for values in grid.values():
-                    candidates *= len(values)
-            elif config.get("mode") == "cost_stress":
-                candidates = max(1, len(config.get("options", {}).get("fee_bps", []))) * max(
-                    1, len(config.get("options", {}).get("slippage_bps", []))
-                )
-            else:
-                candidates = 1
-            total += candidates
-            if len(items) < 100:
-                items.append(dict(row) | {"config": config, "candidate_configurations": candidates})
+        # Protected facts survive restoration even when their run/artifact does
+        # not. Current runs supply status, never a second copy of the attempt.
+        records = {}
+        with self.store.read() as conn:
+            if hasattr(self, "facts"):
+                for row in conn.execute(
+                    "SELECT * FROM research_trials WHERE kind='single' AND project_id=?",
+                    (project_id,),
+                ):
+                    fact = self.facts.checked(row)
+                    run = conn.execute(
+                        "SELECT status,error FROM pro_runs WHERE id=?", (fact["run_id"],)
+                    ).fetchone()
+                    records[fact["run_id"]] = {
+                        "id": fact["run_id"],
+                        "trial_id": fact["id"],
+                        "run_id": fact["run_id"],
+                        "project_id": fact["project_id"],
+                        "version_id": fact["version_id"],
+                        "status": run["status"] if run else "evidence_unavailable",
+                        "error": run["error"] if run else None,
+                        "config": json.loads(fact["config"]),
+                        "config_hash": fact["config_hash"],
+                        "created_at": fact["created_at"],
+                        "candidate_configurations": fact["candidate_count"],
+                        "attempt_type": fact["attempt_type"],
+                        "replay_of": fact["replay_of"],
+                        "root_run_id": fact["root_run_id"],
+                        "fact_protected": True,
+                    }
+            # Retained pre-upgrade runs without a fact remain visible. They do
+            # not erase or duplicate protected history and are labeled legacy.
+            for row in conn.execute(
+                "SELECT r.id,r.status,r.config,r.created_at,r.error,r.manifest FROM pro_runs r JOIN strategy_versions v ON v.id=json_extract(r.config,'$.strategy_version_id') WHERE v.project_id=?",
+                (project_id,),
+            ):
+                if row["id"] in records:
+                    continue
+                config = json.loads(row["config"])
+                manifest = json.loads(row["manifest"]) if row["manifest"] else {}
+                replay_of = manifest.get("replay_of")
+                records[row["id"]] = {
+                    "id": row["id"],
+                    "trial_id": None,
+                    "run_id": row["id"],
+                    "project_id": project_id,
+                    "version_id": config.get("strategy_version_id"),
+                    "status": row["status"],
+                    "error": row["error"],
+                    "config": config,
+                    "config_hash": digest(ResearchFacts.economic(config)),
+                    "created_at": row["created_at"],
+                    "candidate_configurations": ResearchFacts.candidates("single", config),
+                    "attempt_type": "replay" if replay_of else "evaluation",
+                    "replay_of": replay_of,
+                    "root_run_id": replay_of or row["id"],
+                    "fact_protected": False,
+                }
+        items = sorted(records.values(), key=lambda r: (r["created_at"], r["id"]), reverse=True)
         return {
             "project_id": project_id,
-            "run_count": run_count,
-            "candidate_configurations": total,
-            "items": items,
-            "scope": "all recorded version-bound runs in this project, including queued/failed/replayed attempts; candidates count distinct configurations per run, not each OOS fold. External trials and relabelled projects are not detectable.",
+            "run_count": len(items),
+            "recorded_attempts": len(items),
+            "primary_evaluations": sum(r["attempt_type"] == "evaluation" for r in items),
+            "replay_attempts": sum(r["attempt_type"] == "replay" for r in items),
+            "candidate_configurations": sum(r["candidate_configurations"] for r in items),
+            "distinct_configurations": len({r["config_hash"] for r in items}),
+            "evidence_unavailable": sum(r["status"] == "evidence_unavailable" for r in items),
+            "legacy_attempts": sum(not r["fact_protected"] for r in items),
+            "items": items[:100],
+            "scope": "All retained admitted version-bound project attempts, including queued/failed/replayed work and attempts whose run evidence is unavailable after restore. Replays are not independent primary evaluations. Candidate counts sum each run's configurations, not OOS folds; distinct_configurations counts complete run configurations, not effective independent hypotheses. Legacy current runs without protected facts are labeled. Unbound/external trials and relabelled projects cannot be assigned to this project.",
             "holdouts": self.list(project_id),
         }

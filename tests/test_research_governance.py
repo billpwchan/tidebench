@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 import httpx
 import pytest
 from tidebench.config import Settings
+from tidebench.main import create_app
 from tidebench.market import MarketService
 from tidebench.platform import PlatformError
 from tidebench.portfolio_research import PortfolioInput
@@ -75,6 +76,10 @@ async def test_exact_one_use_evaluation_then_immutable_replay(setup):
     assert runtime.run(replay["id"])["manifest"]["replay_verified"]
     trials = runtime.governance.trials(version["project_id"])
     assert trials["run_count"] == 2 and trials["candidate_configurations"] == 2
+    assert trials["recorded_attempts"] == 2
+    assert trials["primary_evaluations"] == 1 and trials["replay_attempts"] == 1
+    assert trials["distinct_configurations"] == 1
+    assert trials["legacy_attempts"] == trials["evidence_unavailable"] == 0
 
 
 async def test_cost_parameter_drift_cannot_consume_holdout(setup):
@@ -241,3 +246,85 @@ async def test_existing_hourly_seal_cannot_be_reserved_again_at_five_minutes(set
         seal(runtime, finer_version, finer)
     assert error.value.code == "holdout_overlap"
     assert len(runtime.governance.list()) == 1
+
+
+async def test_single_trials_survive_restore_with_missing_run_evidence(tmp_path):
+    settings = Settings(data_dir=tmp_path, worker_enabled=False, _env_file=None)
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: pytest.fail("Unexpected venue request"))
+    )
+    runtime = create_app(settings, MarketService(client=client)).state.professional
+    try:
+        version = runtime.registry.create_project(
+            "Retained single trials",
+            "Restore must preserve the full extent of admitted research and replay attempts.",
+            {"strategy": {"kind": "sma_cross", "fast": 5, "slow": 20}},
+            "researcher",
+        )["version"]
+        job = runtime.catalog.create_job("BTC-USDT", "trade", "1H", START, END, "example")
+        job = await runtime.catalog.run_job(job["id"])
+        backup = runtime.backups.create()
+        config = encode(
+            ResearchInput(
+                dataset_id=job["dataset_id"],
+                strategy_version_id=version["id"],
+                strategy=version["definition"]["strategy"],
+                mode="grid",
+                options={"grid": {"fast": [5, 8], "slow": [20]}},
+            ).model_dump()
+        )
+        run = runtime.create_run(config)
+        await runtime.perform_run(run["id"])
+        replay = runtime.replay(run["id"])
+        before = runtime.governance.trials(version["project_id"])
+        assert before["run_count"] == 2 and before["candidate_configurations"] == 4
+        assert before["primary_evaluations"] == before["replay_attempts"] == 1
+        runtime.backups.restore(backup["id"])
+        after = runtime.governance.trials(version["project_id"])
+        for key in (
+            "run_count",
+            "recorded_attempts",
+            "candidate_configurations",
+            "primary_evaluations",
+            "replay_attempts",
+            "distinct_configurations",
+        ):
+            assert after[key] == before[key]
+        assert after["evidence_unavailable"] == 2
+        assert all(
+            item["fact_protected"] and item["status"] == "evidence_unavailable" for item in after["items"]
+        )
+        assert {item["run_id"] for item in after["items"]} == {run["id"], replay["id"]}
+        assert next(item for item in after["items"] if item["replay_of"])["root_run_id"] == run["id"]
+    finally:
+        await runtime.stop()
+        await client.aclose()
+
+
+async def test_single_trial_counts_union_legacy_without_duplicates_and_validate_facts(setup):
+    runtime, version, dataset = setup
+    config = encode(
+        ResearchInput(
+            dataset_id=dataset, strategy_version_id=version["id"], strategy=version["definition"]["strategy"]
+        ).model_dump()
+    )
+    protected = runtime.create_run(config)
+    legacy = runtime.create_run(config)
+    with runtime.store.write() as conn:
+        conn.execute("DELETE FROM research_trials WHERE run_id=?", (legacy["id"],))
+        conn.execute(
+            "UPDATE pro_runs SET status='failed',error='adverse computation failure' WHERE id=?",
+            (protected["id"],),
+        )
+    evidence = runtime.governance.trials(version["project_id"])
+    assert evidence["run_count"] == evidence["primary_evaluations"] == 2
+    assert evidence["candidate_configurations"] == 2
+    assert evidence["legacy_attempts"] == 1 and evidence["distinct_configurations"] == 1
+    assert len({item["id"] for item in evidence["items"]}) == 2
+    item = next(item for item in evidence["items"] if item["id"] == protected["id"])
+    assert item["status"] == "failed" and item["error"] == "adverse computation failure"
+    with runtime.store.write() as conn:
+        conn.execute("UPDATE research_trials SET content_hash=? WHERE run_id=?", ("0" * 64, protected["id"]))
+    with pytest.raises(PlatformError) as error:
+        runtime.governance.trials(version["project_id"])
+    assert error.value.code == "governance_integrity"

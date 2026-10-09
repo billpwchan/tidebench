@@ -17,7 +17,10 @@ import ClassicPaper from './pages/Paper';
 import ClassicResearch from './pages/Research';
 import SettingsPage from './pages/Settings';
 import DataLibrary from './pages/DataLibrary';
-import Portfolio, { ExecutionRisk } from './pages/Portfolio';
+const Portfolio = lazy(() => import('./pages/Portfolio'));
+const ExecutionRisk = lazy(() =>
+  import('./pages/Portfolio').then((module) => ({ default: module.ExecutionRisk })),
+);
 const Operations = lazy(() => import('./pages/Operations'));
 const ProResearch = lazy(() => import('./pages/ProResearch'));
 const PortfolioResearch = lazy(() => import('./pages/PortfolioResearch'));

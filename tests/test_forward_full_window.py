@@ -230,10 +230,17 @@ def test_legacy_unbound_clock_record_is_disclosed_and_does_not_pass_acceptance(b
     assert not report["acceptance"]["checks"]["bound_observation_clocks"]
 
 
-def test_performance_snapshot_api_freeze_read_verify_and_window_validation(client):
+def test_performance_snapshot_api_freeze_read_verify_and_window_validation(client, monkeypatch):
     initial = client.get("/api/v1/pro/execution/performance", params={"source": "example"})
     assert initial.status_code == 200
     assert initial.json()["summary"]["scope"] == "entire_frozen_observation_window"
+    assert (
+        client.post("/api/v1/pro/execution/performance/snapshots", json={"source": "example"}).status_code
+        == 422
+    )
+    book = client.app.state.professional.book
+    record(book, monkeypatch, 1000, 1000)
+    record(book, monkeypatch, 2000, 2000)
     frozen = client.post("/api/v1/pro/execution/performance/snapshots", json={"source": "example"})
     assert frozen.status_code == 201, frozen.text
     identifier = frozen.json()["id"]
@@ -313,3 +320,165 @@ def test_ledger_sequence_rollback_without_restore_audit_is_financial_discontinui
     assert summary["fees_paid_change"] is None
     assert D(summary["endpoint_equity_minus_flow_delta"]) == -1000
     assert not report["acceptance"]["checks"]["no_financial_discontinuity"]
+
+
+def test_utc_wall_range_resolves_whole_ids_preserving_clock_regression(book, monkeypatch):
+    record(book, monkeypatch, 1000, 1000)
+    first = record(book, monkeypatch, 2000, 2000)
+    regression = record(book, monkeypatch, 500, 3000, equity="8000")
+    last = record(book, monkeypatch, 3000, 4000)
+    record(book, monkeypatch, 4000, 5000)
+    report = book.performance.report("example", observed_start=2000, observed_end=4000, limit=2)
+    window = report["window"]
+    assert window["requested_observed_range"] == {"start": 2000, "end": 4000}
+    assert (window["range_start_id"], window["range_end_id"]) == (first, last)
+    assert report["summary"]["observations"] == 3
+    assert report["summary"]["clock_regressions"] == 1
+    assert report["summary"]["return"] is None
+    assert {item["id"] for item in report["items"]} == {regression, last}
+    record(book, monkeypatch, 3500, 6000)
+    page = book.performance.report(
+        "example", window_start=first, window_end=last, before=report["next_before"], limit=2
+    )
+    assert [item["id"] for item in page["items"]] == [first]
+    assert page["summary"]["observations"] == 3
+    frozen = book.performance.freeze("example", "reviewer", window_start=first, window_end=last)
+    assert frozen["body"]["window"]["count"] == 3
+    assert book.performance.verify(frozen["id"])["verified"]
+
+
+def test_wall_range_empty_never_falls_back_or_freezes(book, monkeypatch):
+    record(book, monkeypatch, 1000, 1000)
+    empty = book.performance.report("example", observed_start=2000, observed_end=3000)
+    assert empty["summary"]["observations"] == 0 and empty["items"] == []
+    assert empty["window"]["range_start_id"] == 1 and empty["window"]["range_end_id"] == 0
+    assert not empty["acceptance"]["passed"]
+    with pytest.raises(PlatformError) as exc:
+        book.performance.freeze("example", "reviewer", observed_start=2000, observed_end=3000)
+    assert exc.value.code == "performance_window_empty"
+    record(book, monkeypatch, 2500, 4000)
+    still_empty = book.performance.report("example", window_start=1, window_end=0)
+    assert still_empty["summary"]["observations"] == 0
+
+
+@pytest.mark.parametrize(
+    "options,code",
+    [
+        ({"observed_start": 1000}, "performance_observed_range"),
+        ({"observed_end": 2000}, "performance_observed_range"),
+        ({"observed_start": 2000, "observed_end": 1000}, "performance_observed_range"),
+        ({"observed_start": 1000, "observed_end": 2000, "window_start": 1}, "performance_window_mixed"),
+        ({"observed_start": 1000, "observed_end": 2000, "window_end": 0}, "performance_window_mixed"),
+        ({"observed_start": 1000, "observed_end": 2000, "before": 2}, "performance_time_page_requires_ids"),
+    ],
+)
+def test_wall_range_invalid_or_unpinned_page_is_rejected(book, options, code):
+    with pytest.raises(PlatformError) as exc:
+        book.performance.report("example", **options)
+    assert exc.value.code == code
+
+
+def test_frozen_wall_range_verification_keeps_original_ids_after_append(book, monkeypatch):
+    record(book, monkeypatch, 1000, 1000)
+    record(book, monkeypatch, 2000, 2000)
+    frozen = book.performance.freeze("example", "reviewer", observed_start=1000, observed_end=3000)
+    assert frozen["body"]["window"]["requested_observed_range"] == {"start": 1000, "end": 3000}
+    record(book, monkeypatch, 2500, 3000)
+    verified = book.performance.verify(frozen["id"])
+    assert verified["verified"]
+    assert verified["recomputed_window"]["count"] == 2
+    assert book.performance.snapshot(frozen["id"])["content_hash"] == frozen["content_hash"]
+
+
+def test_snapshot_list_is_bounded_source_scoped_and_discloses_corruption(book, monkeypatch):
+    record(book, monkeypatch, 1000, 1000)
+    record(book, monkeypatch, 2000, 2000)
+    first = book.performance.freeze("example", "reviewer")
+    second = book.performance.freeze("example", "reviewer")
+    third = book.performance.freeze("example", "reviewer")
+    record(book, monkeypatch, 1000, 1000, source="okx")
+    book.performance.freeze("okx", "reviewer")
+    page = book.performance.snapshots("example", limit=2)
+    assert len(page["items"]) == 2 and page["next_before"]
+    assert all(
+        item["source"] == "example"
+        and item["integrity_status"] == "stored_content_valid"
+        and item["verification_status"] == "not_recomputed"
+        and "body" not in item
+        and "segments" not in item["summary"]
+        for item in page["items"]
+    )
+    following = book.performance.snapshots("example", limit=2, before=page["next_before"])
+    assert following["next_before"] is None
+    assert {item["id"] for item in page["items"] + following["items"]} == {
+        first["id"],
+        second["id"],
+        third["id"],
+    }
+    with book.store.write() as conn:
+        conn.execute("UPDATE forward_performance_snapshots SET body='{}' WHERE id=?", (first["id"],))
+    listed = book.performance.snapshots("example")
+    bad = next(item for item in listed["items"] if item["id"] == first["id"])
+    assert bad["status"] == bad["integrity_status"] == "unavailable"
+    assert bad["error"]["code"] == "performance_snapshot_integrity"
+    assert "summary" not in bad and "verified" not in bad
+    with pytest.raises(PlatformError):
+        book.performance.snapshot(first["id"])
+
+
+@pytest.mark.parametrize(
+    "options",
+    [{"limit": 0}, {"limit": 101}, {"before": "bad"}, {"before": "1:xyz"}, {"before": "-1:" + "a" * 32}],
+)
+def test_snapshot_list_invalid_page_is_rejected(book, options):
+    with pytest.raises(PlatformError):
+        book.performance.snapshots("example", **options)
+
+
+def test_performance_utc_range_and_snapshot_list_api(client, monkeypatch):
+    book = client.app.state.professional.book
+    record(book, monkeypatch, 1000, 1000)
+    record(book, monkeypatch, 2000, 2000)
+    report = client.get(
+        "/api/v1/pro/execution/performance",
+        params={"source": "example", "observed_start": 1000, "observed_end": 2000},
+    )
+    assert report.status_code == 200
+    assert report.json()["window"]["count"] == 1
+    for params in ({"observed_start": 1000}, {"observed_start": 1000, "observed_end": 2000, "window_end": 2}):
+        assert client.get("/api/v1/pro/execution/performance", params=params).status_code == 422
+    frozen = client.post(
+        "/api/v1/pro/execution/performance/snapshots",
+        json={"source": "example", "observed_start": 1000, "observed_end": 3000},
+    )
+    assert frozen.status_code == 201, frozen.text
+    listed = client.get(
+        "/api/v1/pro/execution/performance/snapshots", params={"source": "example", "limit": 1}
+    )
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["items"][0]["id"] == frozen.json()["id"]
+    assert listed.json()["items"][0]["integrity_status"] == "stored_content_valid"
+    assert client.get("/api/v1/pro/execution/performance/snapshots").status_code == 422
+    assert (
+        client.get("/api/v1/pro/execution/performance/snapshots", params={"source": "invalid"}).status_code
+        == 422
+    )
+    assert (
+        client.get(
+            "/api/v1/pro/execution/performance/snapshots", params={"source": "example", "limit": 101}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get(
+            "/api/v1/pro/execution/performance/snapshots", params={"source": "example", "before": "bad"}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            "/api/v1/pro/execution/performance/snapshots",
+            json={"source": "example", "observed_start": 9000, "observed_end": 10000},
+        ).status_code
+        == 422
+    )

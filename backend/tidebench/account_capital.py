@@ -599,6 +599,9 @@ class AccountCapital:
                 )
             return encode(
                 {
+                    "equity": account["equity"],
+                    "as_of": account.get("as_of"),
+                    "valuation_status": account.get("valuation_status"),
                     "capital_committed_or_used_pct": capital_total,
                     "base_asset_gross_pct": assets,
                     "gross_committed_or_used_pct": sum(assets.values(), D(0)),

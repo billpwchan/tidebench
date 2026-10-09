@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { professionalZh } from './professionalI18n';
+import { deskZh } from './deskI18n';
 export type Language = 'en' | 'zh-CN';
 const zh: Record<string, string> = {
   Overview: '总览',
@@ -689,7 +690,7 @@ const zh: Record<string, string> = {
   'Some snapshots could not be refreshed. Timestamped values may be from the previous successful capture.':
     '部分快照刷新失败；带时间戳的值可能来自上一次成功捕获。',
 };
-Object.assign(zh, professionalZh);
+Object.assign(zh, professionalZh, deskZh);
 const zhLower = Object.fromEntries(
   Object.entries(zh).map(([key, value]) => [key.toLowerCase(), value]),
 );

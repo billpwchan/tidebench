@@ -42,8 +42,11 @@ def snapshot(symbol=SYMBOL, source="example", price="100", ts=1_000_000, **chang
         "last": price,
         "mark": price,
         "instrument": meta,
-        "funding_time": 2_000_000,
-        "next_funding_time": 3_000_000,
+        "funding_time": ts + 1_000_000,
+        "next_funding_time": ts + 2_000_000,
+        "funding_ts": ts,
+        "funding_source": source,
+        "funding_inst_id": symbol,
         "margin_tiers": [
             {
                 "tier": 1,

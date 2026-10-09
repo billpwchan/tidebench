@@ -19,6 +19,13 @@ from .store import Store, dumps, new_id, now_ms
 
 D = Decimal
 ZERO = D(0)
+FUNDING_SCHEDULE_POLICY = {
+    "name": "observed_funding_schedule_v1",
+    "max_age_ms": 180_000,
+    "max_future_skew_ms": 5_000,
+    "scope": "local_model_admission_not_venue_acceptance",
+}
+PENDING_REDUCTION_POLICY = "position_bound_reduce_only_clip_v1"
 DEFAULT_RISK = {
     "max_order_notional": "2500",
     "max_gross_exposure_pct": 200,
@@ -109,6 +116,98 @@ def tier_for(metadata, quantity, tiers):
         parsed.append(MarginTier.from_record(record))
     tier = select_margin_tier(quantity, parsed)
     return {"mmr": str(tier.mmr), "imr": str(tier.imr), "max_leverage": str(tier.max_leverage)}
+
+
+def _fill_projection(values, account):
+    """Pure financial projection shared by read-only preview and committed fills."""
+    meta, qty, signed, old, row = (values[k] for k in ("metadata", "qty", "signed", "old", "row"))
+    price, fee, notional, cash = (values[k] for k in ("price", "fee", "notional", "cash"))
+    deficit = ZERO
+    realized, debt = number(account["realized"]), number(account["debt"])
+    cash_before = cash
+    old_margin, old_basis = (
+        number(row["margin"]) if row else ZERO,
+        number(row["basis"]) if row else ZERO,
+    )
+    entry = number(row["entry_price"]) if row else price
+    new_qty = number(old + signed)
+    if _exact_sum([new_qty, old.copy_negate()]) != signed:
+        raise PlatformError(
+            "accounting_domain",
+            "Accounting precision cannot represent the inventory change.",
+            422,
+        )
+    if _floor_lot(abs(new_qty), number(meta["lot_size"])) != abs(new_qty):
+        raise PlatformError(
+            "accounting_domain",
+            "The resulting quantity cannot resolve the contract lot.",
+            422,
+        )
+    journal = []
+    if meta["inst_type"] == "SPOT":
+        base = meta.get("base") or meta["inst_id"].split("-")[0]
+        if signed > 0:
+            cash -= notional + fee
+            basis = old_basis + notional + fee
+            entry = basis / new_qty
+        else:
+            removed = old_basis * qty / old if new_qty else old_basis
+            cash += notional - fee
+            realized += notional - fee - removed
+            basis = old_basis - removed if new_qty else ZERO
+        margin = ZERO
+        journal.extend(
+            [
+                (base, "inventory", signed),
+                (base, "venue_clearing", -signed),
+                ("USDT", "cash", -notional if signed > 0 else notional),
+                ("USDT", "venue_clearing", notional if signed > 0 else -notional),
+            ]
+        )
+    else:
+        basis = ZERO
+        if values["reducing"]:
+            released = old_margin * qty / abs(old) if new_qty else old_margin
+            profit = (price - entry) * (qty if old > 0 else -qty) * base_size(meta)
+            release_net = released + profit - fee
+            deficit = max(-release_net, ZERO)
+            cash += max(release_net, ZERO)
+            if deficit:
+                debt += deficit
+                journal.append(("USDT", "insurance_liability", -deficit))
+            realized += profit - fee
+            margin = old_margin - released if new_qty else ZERO
+            journal.extend(
+                [
+                    ("USDT", "margin", -released),
+                    ("USDT", "cash", released + profit),
+                    ("USDT", "derivative_pnl", -profit),
+                ]
+            )
+        else:
+            required = values["required"]
+            margin = old_margin + required
+            entry = (abs(old) * entry + qty * price) / abs(new_qty)
+            cash -= required + fee
+            realized -= fee
+            journal.extend([("USDT", "cash", -required), ("USDT", "margin", required)])
+    journal.extend([("USDT", "cash", -fee), ("USDT", "fee_expense", fee)])
+    if cash < 0:
+        raise PlatformError("insufficient_cash", "The fill would overdraw available cash.", 409)
+    for amount in (cash, realized, debt, margin, basis, entry, number(account["fees"]) + fee):
+        number(amount)
+    journal = _cash_journal(journal, cash_before, cash)
+    return {
+        "cash": cash,
+        "realized": realized,
+        "debt": debt,
+        "margin": margin,
+        "basis": basis,
+        "entry": entry,
+        "new_qty": new_qty,
+        "deficit": deficit,
+        "journal": journal,
+    }
 
 
 class SimulationBook:
@@ -302,6 +401,53 @@ class SimulationBook:
             raise PlatformError("invalid_market", "A fresh, valid bid/ask and mark are required.", 409)
         return bid, ask, mark
 
+    def funding_schedule(self, snapshot):
+        """Independent funding provenance/clock; index is not a risk dependency."""
+        if snapshot.get("source") == "example":
+            return {"policy": FUNDING_SCHEDULE_POLICY, "state": "synthetic"}
+        symbol = snapshot.get("instrument", {}).get("inst_id")
+        if (
+            snapshot.get("funding_source") != snapshot.get("source")
+            or snapshot.get("funding_inst_id") != symbol
+        ):
+            raise PlatformError(
+                "funding_schedule_unavailable",
+                "A source- and instrument-matched funding observation is required.",
+                409,
+            )
+        fields = ("funding_ts", "funding_time", "next_funding_time")
+        if any(type(snapshot.get(field)) is not int or snapshot[field] <= 0 for field in fields):
+            raise PlatformError(
+                "funding_schedule_unavailable",
+                "Funding observation and schedule timestamps must be positive integers.",
+                409,
+            )
+        at = self.now()
+        age = at - snapshot["funding_ts"]
+        if not -FUNDING_SCHEDULE_POLICY["max_future_skew_ms"] <= age <= FUNDING_SCHEDULE_POLICY["max_age_ms"]:
+            raise PlatformError(
+                "funding_schedule_unavailable",
+                "The independent funding observation is stale or ahead of the local clock.",
+                409,
+            )
+        if snapshot["next_funding_time"] <= snapshot["funding_time"]:
+            raise PlatformError(
+                "funding_schedule_unavailable", "The observed funding schedule does not advance.", 409
+            )
+        future = [snapshot[field] for field in fields[1:] if snapshot[field] > max(at, int(snapshot["ts"]))]
+        if not future:
+            raise PlatformError(
+                "funding_schedule_unavailable",
+                "No future funding boundary is available for new perpetual risk.",
+                409,
+            )
+        return {
+            "policy": FUNDING_SCHEDULE_POLICY,
+            "state": "available",
+            "funding_ts": snapshot["funding_ts"],
+            "future_boundaries": future,
+        }
+
     @_accounted
     def account(self, source, snapshots, conn=None):
         with localcontext(ACCOUNTING_CONTEXT):
@@ -317,7 +463,7 @@ class SimulationBook:
             rows = conn.execute(
                 "SELECT * FROM pro_positions WHERE source=? AND quantity!='0'", (source,)
             ).fetchall()
-            output = []
+            output, unavailable_schedules = [], []
             for row in rows:
                 meta, qty = json.loads(row["metadata"]), number(row["quantity"])
                 if qty == ZERO:
@@ -384,6 +530,20 @@ class SimulationBook:
                             mm = ZERO
                             equity += value
                         pnl += upnl
+                schedule_status = None
+                if meta["inst_type"] == "SWAP" and source != "example":
+                    try:
+                        self.funding_schedule(snapshot or {})
+                        schedule_status = "available"
+                    except PlatformError as exc:
+                        schedule_status = "unavailable"
+                        unavailable_schedules.append(
+                            {
+                                "inst_id": row["inst_id"],
+                                "reason": exc.message,
+                                "policy": FUNDING_SCHEDULE_POLICY,
+                            }
+                        )
                 if mark is None:
                     status = "unavailable"
                 used += max(ZERO, margin)
@@ -405,6 +565,7 @@ class SimulationBook:
                         "liquidation_price": str(liq) if liq is not None else None,
                         "liquidation_price_kind": "estimate",
                         "instrument": meta,
+                        "funding_schedule_status": schedule_status,
                         "as_of": snapshot.get("ts") if snapshot else None,
                     }
                 )
@@ -449,14 +610,20 @@ class SimulationBook:
                 "cash": str(cash),
                 "available_cash": str(cash - reserved),
                 "reserved_cash": str(reserved),
-                "equity": str(equity) if status != "unavailable" and not pending_funding else None,
+                "equity": str(equity)
+                if status != "unavailable" and not pending_funding and not unavailable_schedules
+                else None,
                 "equity_before_pending_funding": str(equity) if status != "unavailable" else None,
                 "economic_status": "funding_pending"
                 if pending_funding
+                else "funding_schedule_unavailable"
+                if unavailable_schedules
                 else "complete"
                 if status in {"fresh", "example"}
                 else "valuation_incomplete",
                 "pending_funding": pending_funding,
+                "unavailable_funding_schedules": unavailable_schedules,
+                "funding_schedule_policy": FUNDING_SCHEDULE_POLICY,
                 "used_margin": str(used),
                 "maintenance_margin": str(maintenance) if status != "unavailable" else None,
                 "unrealized_pnl": str(pnl) if status != "unavailable" else None,
@@ -473,14 +640,17 @@ class SimulationBook:
             }
 
     def orders(self, source, limit=200):
+        """All bounded working orders plus a bounded page of terminal history."""
         with self.store.read() as conn:
-            return [
-                json.loads(row[0])
-                for row in conn.execute(
-                    "SELECT body FROM pro_orders WHERE source=? ORDER BY created_at DESC LIMIT ?",
-                    (source, limit),
-                )
-            ]
+            working = conn.execute(
+                "SELECT id,body,created_at FROM pro_orders WHERE source=? AND status='pending'", (source,)
+            ).fetchall()
+            history = conn.execute(
+                "SELECT id,body,created_at FROM pro_orders WHERE source=? AND status!='pending' ORDER BY created_at DESC,id DESC LIMIT ?",
+                (source, min(200, max(0, limit))),
+            ).fetchall()
+            rows = sorted([*working, *history], key=lambda row: (row["created_at"], row["id"]), reverse=True)
+            return [json.loads(row["body"]) for row in rows]
 
     def ledger(self, source, limit=500):
         with self.store.read() as conn:
@@ -508,13 +678,19 @@ class SimulationBook:
     def preview(self, order, snapshots):
         with localcontext(ACCOUNTING_CONTEXT), self.store.read() as conn:
             values = self._prepare(conn, order, snapshots)
+            account = conn.execute("SELECT * FROM pro_accounts WHERE source=?", (order["source"],)).fetchone()
+            projection = _fill_projection(values, account)
             return {
                 "order": order,
                 "estimated_price": str(values["price"]),
                 "notional": str(values["notional"]),
                 "fee": str(values["fee"]),
                 "required_margin": str(values["required"]),
-                "estimated_cash_after": str(values["cash"] - values["required"] - values["fee"]),
+                "estimated_cash_after": str(projection["cash"]),
+                "estimated_margin_after": str(projection["margin"]),
+                "estimated_position_after": str(projection["new_qty"]),
+                "estimated_insurance_debt_after": str(projection["debt"]),
+                "estimated_liability_created": str(projection["deficit"]),
                 "warnings": [
                     "Local full-fill model; no venue order is sent.",
                     "Liquidation estimates use current tiers and exclude future funding and execution gaps.",
@@ -624,6 +800,14 @@ class SimulationBook:
                 raise PlatformError(
                     "funding_pending",
                     "Unsettled funding blocks new risk; protective reductions remain available.",
+                    409,
+                )
+            if meta["inst_type"] == "SWAP":
+                self.funding_schedule(snapshot)
+            if account["unavailable_funding_schedules"]:
+                raise PlatformError(
+                    "funding_schedule_unavailable",
+                    "An existing perpetual position lacks a usable independent funding schedule.",
                     409,
                 )
             if account["valuation_status"] not in {"fresh", "example"} or account["equity"] is None:
@@ -865,9 +1049,35 @@ class SimulationBook:
                     not previous or previous["id"] != pending_id or previous["status"] != "pending"
                 ):
                     raise PlatformError("order_not_pending", "This order is no longer pending.", 409)
+                if pending_id and previous["payload"] != payload:
+                    raise PlatformError(
+                        "idempotency_conflict", "The pending command payload cannot change.", 409
+                    )
+                effective_order = order
+                reduction_evidence = None
+                if pending_id and order.get("reduce_only"):
+                    cancellation = self._pending_reduction_cancellation(conn, previous, actor)
+                    if cancellation:
+                        return cancellation
+                    held = conn.execute(
+                        "SELECT quantity FROM pro_positions WHERE source=? AND inst_id=?",
+                        (order["source"], order["inst_id"]),
+                    ).fetchone()
+                    requested, reducible = number(order["quantity"]), abs(number(held["quantity"]))
+                    actual = min(requested, reducible)
+                    effective_order = order | {"quantity": str(actual)}
+                    reduction_evidence = {
+                        "requested_quantity": str(requested),
+                        "filled_quantity": str(actual),
+                        "canceled_quantity": str(requested - actual),
+                        "pending_reduction_policy": PENDING_REDUCTION_POLICY,
+                        "protected_position_generation": json.loads(previous["body"])[
+                            "protected_position_generation"
+                        ],
+                    }
                 values = self._prepare(
                     conn,
-                    order,
+                    effective_order,
                     snapshots,
                     exclude_reservation=number(previous["reservation"]) if previous else ZERO,
                     exclude_order_id=pending_id,
@@ -911,6 +1121,16 @@ class SimulationBook:
                     "quote_mark": str(values["mark"]),
                     "risk_snapshot": values["risk"],
                 }
+                if reduction_evidence:
+                    result.update(reduction_evidence, quantity=str(qty))
+                if pending and order.get("reduce_only"):
+                    result.update(
+                        requested_quantity=str(qty),
+                        filled_quantity="0",
+                        canceled_quantity="0",
+                        pending_reduction_policy=PENDING_REDUCTION_POLICY,
+                        protected_position_generation=json.loads(row["metadata"]).get("position_generation"),
+                    )
                 if pending:
                     if (
                         conn.execute(
@@ -954,83 +1174,22 @@ class SimulationBook:
                             if not values["reducing"] and not liquidation:
                                 raise
                             contribution_error = exc.message
-                    realized, debt = number(account["realized"]), number(account["debt"])
-                    cash_before = cash
-                    old_margin, old_basis = (
-                        number(row["margin"]) if row else ZERO,
-                        number(row["basis"]) if row else ZERO,
+                    projection = _fill_projection(values, account)
+                    cash, realized, debt, margin, basis, entry, new_qty, journal = (
+                        projection[field]
+                        for field in (
+                            "cash",
+                            "realized",
+                            "debt",
+                            "margin",
+                            "basis",
+                            "entry",
+                            "new_qty",
+                            "journal",
+                        )
                     )
-                    entry = number(row["entry_price"]) if row else price
-                    new_qty = number(old + signed)
-                    if _exact_sum([new_qty, old.copy_negate()]) != signed:
-                        raise PlatformError(
-                            "accounting_domain",
-                            "Accounting precision cannot represent the inventory change.",
-                            422,
-                        )
-                    if _floor_lot(abs(new_qty), number(meta["lot_size"])) != abs(new_qty):
-                        raise PlatformError(
-                            "accounting_domain",
-                            "The resulting quantity cannot resolve the contract lot.",
-                            422,
-                        )
-                    journal = []
-                    if meta["inst_type"] == "SPOT":
-                        base = meta.get("base") or order["inst_id"].split("-")[0]
-                        if signed > 0:
-                            cash -= notional + fee
-                            basis = old_basis + notional + fee
-                            entry = basis / new_qty
-                        else:
-                            removed = old_basis * qty / old if new_qty else old_basis
-                            cash += notional - fee
-                            realized += notional - fee - removed
-                            basis = old_basis - removed if new_qty else ZERO
-                        margin = ZERO
-                        journal.extend(
-                            [
-                                (base, "inventory", signed),
-                                (base, "venue_clearing", -signed),
-                                ("USDT", "cash", -notional if signed > 0 else notional),
-                                ("USDT", "venue_clearing", notional if signed > 0 else -notional),
-                            ]
-                        )
-                    else:
-                        basis = ZERO
-                        if values["reducing"]:
-                            released = old_margin * qty / abs(old) if new_qty else old_margin
-                            profit = (price - entry) * (qty if old > 0 else -qty) * base_size(meta)
-                            release_net = released + profit - fee
-                            deficit = max(-release_net, ZERO)
-                            cash += max(release_net, ZERO)
-                            if deficit:
-                                debt += deficit
-                                journal.append(("USDT", "insurance_liability", -deficit))
-                                conn.execute("UPDATE pro_risk SET halted=1 WHERE source=?", (source,))
-                            realized += profit - fee
-                            margin = old_margin - released if new_qty else ZERO
-                            journal.extend(
-                                [
-                                    ("USDT", "margin", -released),
-                                    ("USDT", "cash", released + profit),
-                                    ("USDT", "derivative_pnl", -profit),
-                                ]
-                            )
-                        else:
-                            required = values["required"]
-                            margin = old_margin + required
-                            entry = (abs(old) * entry + qty * price) / abs(new_qty)
-                            cash -= required + fee
-                            realized -= fee
-                            journal.extend([("USDT", "cash", -required), ("USDT", "margin", required)])
-                    journal.extend([("USDT", "cash", -fee), ("USDT", "fee_expense", fee)])
-                    if cash < 0:
-                        raise PlatformError(
-                            "insufficient_cash", "The fill would overdraw available cash.", 409
-                        )
-                    for amount in (cash, realized, debt, margin, basis, entry, number(account["fees"]) + fee):
-                        number(amount)
-                    journal = _cash_journal(journal, cash_before, cash)
+                    if projection["deficit"]:
+                        conn.execute("UPDATE pro_risk SET halted=1 WHERE source=?", (source,))
                     self.post(
                         conn,
                         source,
@@ -1093,6 +1252,9 @@ class SimulationBook:
                             row["leverage"] if row and values["reducing"] else str(order.get("leverage", 1)),
                             cursor,
                         ),
+                    )
+                    self._cancel_invalid_pending_reductions(
+                        conn, source, order["inst_id"], actor, exclude_id=identifier
                     )
                     conn.execute(
                         "UPDATE pro_accounts SET cash=?,realized=?,fees=?,debt=? WHERE source=?",
@@ -1178,6 +1340,65 @@ class SimulationBook:
                     )
                 return result
 
+    def _pending_reduction_cancellation(self, conn, pending, actor):
+        command, body = json.loads(pending["payload"]), json.loads(pending["body"])
+        if pending["status"] != "pending" or not command.get("reduce_only"):
+            return None
+        held = conn.execute(
+            "SELECT quantity,metadata FROM pro_positions WHERE source=? AND inst_id=?",
+            (pending["source"], command["inst_id"]),
+        ).fetchone()
+        qty = number(held["quantity"]) if held else ZERO
+        generation = json.loads(held["metadata"]).get("position_generation") if held and qty else None
+        protected = body.get("protected_position_generation")
+        reason = (
+            "position_closed"
+            if not qty
+            else "position_direction_changed"
+            if (qty > 0) == (command["side"] == "buy")
+            else "position_identity_unavailable"
+            if not protected or not generation
+            else "position_generation_changed"
+            if protected != generation
+            else None
+        )
+        if reason is None:
+            return None
+        body.update(
+            status="canceled",
+            updated_at=self.now(),
+            cancellation_reason=reason,
+            requested_quantity=str(number(command["quantity"])),
+            filled_quantity="0",
+            canceled_quantity=str(number(command["quantity"])),
+            pending_reduction_policy=PENDING_REDUCTION_POLICY,
+        )
+        conn.execute(
+            "UPDATE pro_orders SET status='canceled',reservation='0',body=?,updated_at=? WHERE id=?",
+            (dumps(body), self.now(), pending["id"]),
+        )
+        self.store.audit(
+            conn,
+            pending["source"],
+            "pro.order_canceled",
+            "Invalidated protective order canceled",
+            {"order_id": pending["id"], "actor": actor, "reason": reason},
+        )
+        return body
+
+    def _cancel_invalid_pending_reductions(self, conn, source, symbol, actor, *, exclude_id=None):
+        for pending in conn.execute(
+            "SELECT * FROM pro_orders WHERE source=? AND status='pending' AND (? IS NULL OR id!=?)",
+            (source, exclude_id, exclude_id),
+        ).fetchall():
+            command = json.loads(pending["payload"])
+            if command.get("inst_id") == symbol and command.get("reduce_only"):
+                self._pending_reduction_cancellation(conn, pending, actor)
+
+    def reconcile_pending_reductions(self, source, symbol, actor="risk-engine"):
+        with self.store.write() as conn:
+            self._cancel_invalid_pending_reductions(conn, source, symbol, actor)
+
     def _reconcile_capital_after_protection(self, conn, source, reference):
         # Capital diagnostics must never roll back an economic risk reduction.
         conn.execute("SAVEPOINT protective_capital")
@@ -1203,7 +1424,9 @@ class SimulationBook:
             body = json.loads(row["body"])
             if row["status"] != "pending":
                 return body
-            body.update(status="canceled", updated_at=self.now())
+            body.update(status="canceled", updated_at=self.now(), cancellation_reason="operator_canceled")
+            if body.get("pending_reduction_policy"):
+                body.update(filled_quantity="0", canceled_quantity=body["requested_quantity"])
             conn.execute(
                 "UPDATE pro_orders SET status='canceled',reservation='0',body=?,updated_at=? WHERE id=?",
                 (dumps(body), self.now(), identifier),

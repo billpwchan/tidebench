@@ -6,6 +6,7 @@ from decimal import Decimal
 import httpx
 import pytest
 from tidebench.catalog import CATALOG_BARS, CatalogService
+from tidebench.engine import EngineError
 from tidebench.market import EXAMPLE_ANCHOR, MarketError, MarketService
 from tidebench.store import Store, now_ms
 
@@ -652,3 +653,64 @@ async def test_professional_snapshot_cache_does_not_relabel_provider_failure(ser
             await service.get_market_snapshot("BTC-USDT", "okx")
     assert calls == 2
     assert ("professional-quote", "okx", "BTC-USDT") not in service.market._cache
+
+
+async def test_actual_native_lot_tier_bounds_preserve_raw_and_select_exact_boundary(service):
+    from tidebench.pro_execution import tier_for
+
+    source_rows = [
+        {"tier": "1", "minSz": "0", "maxSz": "1000", "mmr": ".004", "imr": ".01", "maxLever": "100"},
+        {"tier": "2", "minSz": "1000.01", "maxSz": "5000", "mmr": ".005", "imr": ".015", "maxLever": "66.66"},
+        {"tier": "3", "minSz": "5000.01", "maxSz": "20000", "mmr": ".0075", "imr": ".02", "maxLever": "50"},
+    ]
+
+    async def get(path, params):
+        return [raw_instrument(True)] if path.endswith("/instruments") else source_rows
+
+    service.market._get = get
+    instrument = await service.get_instrument("BTC-USDT-SWAP")
+    report = await service.get_margin_tiers("BTC-USDT-SWAP")
+    rows = report["tiers"]
+    assert [row["source_record"] for row in rows] == source_rows
+    assert rows[1]["min_size"] == Decimal(1000) and rows[2]["min_size"] == Decimal(5000)
+    assert rows[1]["boundary_mapping"] == "adjacent_native_lot_to_exclusive_lower_v1"
+    assert tier_for(instrument, Decimal("1000"), rows)["mmr"] == "0.004"
+    assert tier_for(instrument, Decimal("1000.01"), rows)["mmr"] == "0.005"
+    assert tier_for(instrument, Decimal("5000"), rows)["mmr"] == "0.005"
+    assert tier_for(instrument, Decimal("5000.01"), rows)["mmr"] == "0.0075"
+    assert source_rows[1]["minSz"] == "1000.01"
+    with pytest.raises(EngineError, match="exceeds"):
+        tier_for(instrument, Decimal("20000.01"), rows)
+
+
+@pytest.mark.parametrize(
+    "low,high,second_tier,mmr",
+    [
+        ("1000.02", "5000", "2", ".005"),
+        ("999.99", "5000", "2", ".005"),
+        ("1000.005", "5000", "2", ".005"),
+        ("1000.01", "5000", "1", ".005"),
+        ("1000.01", "5000", "2", ".003"),
+    ],
+)
+async def test_native_lot_mapping_does_not_bridge_real_gaps_overlap_or_corruption(
+    service, low, high, second_tier, mmr
+):
+    async def get(path, params):
+        if path.endswith("/instruments"):
+            return [raw_instrument(True)]
+        return [
+            {"tier": "1", "minSz": "0", "maxSz": "1000", "mmr": ".004", "imr": ".01", "maxLever": "100"},
+            {
+                "tier": second_tier,
+                "minSz": low,
+                "maxSz": high,
+                "mmr": mmr,
+                "imr": ".015",
+                "maxLever": "66.66",
+            },
+        ]
+
+    service.market._get = get
+    with pytest.raises(MarketError, match="Unusable margin tier coverage"):
+        await service.get_margin_tiers("BTC-USDT-SWAP")

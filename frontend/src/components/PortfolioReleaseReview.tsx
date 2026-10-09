@@ -1,13 +1,14 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Play, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { proApi } from '../proApi';
+import { proApi, type PortfolioReleasePreview, type RecordData } from '../proApi';
 import { useSession } from './AuthGate';
 import { DataTable, JsonDetails, RecordGrid } from './ProWorkspace';
 import { ErrorBox, Field, Status } from './workspace';
 import { useI18n } from '../lib/i18n';
 import { canTrade } from '../lib/permissions';
-import { number } from '../lib/format';
+import { date, number } from '../lib/format';
+import PortfolioResearchSummary from './PortfolioResearchSummary';
 import PortfolioExecutionPolicy from './PortfolioExecutionPolicy';
 import { LiquidityReleaseEvidence } from './LiquidityEvidence';
 
@@ -127,59 +128,13 @@ export default function PortfolioReleaseReview({
             contract={p.definition.execution_contract}
             residual={p.definition.max_residual_pct}
           />
-          {p.capital_admission && (
-            <section className="capital-admission" aria-label={t('Account capital admission')}>
-              <h3>{t('Account capital admission')}</h3>
-              <RecordGrid
-                value={{
-                  [t('Committed capital')]: `${number(p.capital_admission.committed_capital_pct)}%`,
-                  [t('Proposed capital')]: `${number(p.capital_admission.proposed_capital_pct)}%`,
-                  [t('Projected committed capital')]:
-                    `${number(p.capital_admission.projected_committed_capital_pct)}%`,
-                  [t('Remaining declared capital')]:
-                    `${number(p.capital_admission.remaining_declared_capital_pct)}%`,
-                  [t('Projected promised gross exposure')]:
-                    `${number(p.capital_admission.projected_promised_gross_pct)}%`,
-                }}
-              />
-              <DataTable
-                rows={Object.entries(p.capital_admission.projected_base_asset_gross_pct).map(
-                  ([asset, exposure]) => ({ asset, exposure }),
-                )}
-                columns={[
-                  { key: 'asset', label: 'Underlying asset' },
-                  {
-                    key: 'exposure',
-                    label: 'Projected promised gross exposure',
-                    render: (row) => `${number(row.exposure)}%`,
-                  },
-                  {
-                    key: 'limit',
-                    label: 'Underlying asset gross limit (%)',
-                    render: () =>
-                      `${number(p.capital_admission!.policy.max_base_asset_gross_pct)}%`,
-                  },
-                ]}
-              />
-              <p className="quiet-copy">
-                {t(
-                  'Absolute spot and perpetual exposure share one budget per underlying. Opposite directions are not netted. Declared commitments are checked before activation; actual capital use is checked again for new risk orders.',
-                )}
-              </p>
-              <p className="quiet-copy">
-                {t(
-                  'Stopping a group retains its commitment until inventory, working orders and deferred funding are cleared.',
-                )}
-              </p>
-            </section>
-          )}
+          <ReleaseResearchEvidence preview={p} />
+          {p.capital_admission && <CapitalAdmissionEvidence preview={p} />}
           <LiquidityReleaseEvidence
             symbols={p.definition.legs.map((leg) => leg.inst_id)}
             source={p.source}
             review={p.liquidity_review}
           />
-          <h3>{t('Research evidence')}</h3>
-          <RecordGrid value={p.research_evidence} />
           <h3>{t('Account risk policy')}</h3>
           <RecordGrid value={p.risk_policy} />
           <DataTable
@@ -287,6 +242,9 @@ export default function PortfolioReleaseReview({
                   !allowed ||
                   approve.isPending ||
                   p.blockers.length > 0 ||
+                  !p.metrics ||
+                  !p.result_hash ||
+                  !p.version_id ||
                   !p.required_acknowledgements.every((a) => checks.includes(a))
                 }
               >
@@ -320,6 +278,333 @@ export default function PortfolioReleaseReview({
           <JsonDetails value={p} label="Approval evidence" />
         </>
       )}
+    </section>
+  );
+}
+
+const percentage = (value: unknown) => (value == null ? '—' : `${number(value)}%`);
+
+function CapitalAdmissionEvidence({ preview: p }: { preview: PortfolioReleasePreview }) {
+  const { t } = useI18n();
+  const admission = p.capital_admission!;
+  const actual = admission.actual_admission;
+  const projected = actual ? Number(actual.capital_committed_or_used_pct) : null;
+  const limit = Number(admission.policy.capital_limit_pct);
+  const proposed = actual?.owners.find((row) => row.owner === 'proposed');
+  const proposedEffective = proposed
+    ? Math.max(Number(proposed.actual_capital_pct), Number(proposed.promised_capital_pct))
+    : null;
+  const currentEffective =
+    projected != null && proposedEffective != null ? projected - proposedEffective : null;
+  const assets = actual?.base_asset_gross_pct;
+  return (
+    <section className="capital-admission" aria-label={t('Account capital admission')}>
+      <h3>{t('Effective account capital budget')}</h3>
+      {actual ? (
+        <>
+          <p className="snapshot-footnote">
+            {t('Account valuation used for this review')}: {date(actual.as_of, true)}
+            {' · '}
+            {t(actual.valuation_status ?? 'unavailable')}
+            {' · '}
+            {t('Source')}: {t(p.source === 'example' ? 'Example · synthetic' : 'OKX public')}
+          </p>
+          {actual.as_of == null && (
+            <p className="inline-warning">
+              {t('The preview does not provide an account valuation timestamp.')}
+            </p>
+          )}
+          <RecordGrid
+            value={{
+              [t('Account equity basis')]:
+                actual.equity == null ? '—' : `${number(actual.equity)} USDT`,
+              [t('Existing effective capital')]: percentage(currentEffective),
+              [t('Proposed capital')]: percentage(admission.proposed_capital_pct),
+              [t('Projected effective capital')]: percentage(projected),
+              [t('Remaining budget after proposal')]: percentage(
+                projected == null ? null : Math.max(0, limit - projected),
+              ),
+              [t('Account capital limit')]: percentage(limit),
+              [t('Projected effective gross exposure')]: percentage(
+                actual.gross_committed_or_used_pct,
+              ),
+              ...(projected != null && projected > limit
+                ? {
+                    [t('Budget excess')]: percentage(projected - limit),
+                  }
+                : {}),
+            }}
+          />
+          <p className="quiet-copy">
+            {t(
+              'Effective capital sums the greater of actual use including pending new-risk orders and the declared promise for each owner. Percentages use this captured account equity. The proposed portfolio is included below.',
+            )}
+          </p>
+          <DataTable
+            rows={actual.owners}
+            columns={[
+              {
+                key: 'owner',
+                label: 'Inventory owner',
+                render: (row) => (row.owner === 'proposed' ? t('Proposed portfolio') : row.owner),
+              },
+              {
+                key: 'actual_capital_pct',
+                label: 'Actual use including pending orders (%)',
+                render: (row) => percentage(row.actual_capital_pct),
+              },
+              {
+                key: 'promised_capital_pct',
+                label: 'Declared promise (%)',
+                render: (row) => percentage(row.promised_capital_pct),
+              },
+              {
+                key: 'effective_capital_pct',
+                label: 'Effective capital (%)',
+                render: (row) =>
+                  percentage(
+                    Math.max(Number(row.actual_capital_pct), Number(row.promised_capital_pct)),
+                  ),
+              },
+            ]}
+          />
+          <DataTable
+            rows={Object.entries(assets ?? {}).map(([asset, exposure]) => ({ asset, exposure }))}
+            columns={[
+              { key: 'asset', label: 'Underlying asset' },
+              {
+                key: 'exposure',
+                label: 'Projected effective gross exposure',
+                render: (row) => percentage(row.exposure),
+              },
+              {
+                key: 'limit',
+                label: 'Underlying asset gross limit (%)',
+                render: () => percentage(admission.policy.max_base_asset_gross_pct),
+              },
+            ]}
+          />
+        </>
+      ) : (
+        <p className="inline-warning">
+          {t(
+            'Effective account usage is unavailable in this preview. Declared promises alone do not establish remaining risk capacity.',
+          )}
+        </p>
+      )}
+      <p className="quiet-copy">
+        {t(
+          'Capital promises and budget headroom are not available cash. Spot inventory uses marked value; perpetual capital uses posted initial margin. Gross limits also apply without direction netting.',
+        )}
+      </p>
+      <details>
+        <summary>{t('Declared portfolio commitments')}</summary>
+        <RecordGrid
+          value={{
+            [t('Committed capital')]: percentage(admission.committed_capital_pct),
+            [t('Projected committed capital')]: percentage(
+              admission.projected_committed_capital_pct,
+            ),
+            [t('Remaining declared capital')]: percentage(admission.remaining_declared_capital_pct),
+            [t('Projected promised gross exposure')]: percentage(
+              admission.projected_promised_gross_pct,
+            ),
+          }}
+        />
+      </details>
+      <p className="quiet-copy">
+        {t(
+          'Stopping a group retains its commitment until inventory, working orders and deferred funding are cleared.',
+        )}
+      </p>
+    </section>
+  );
+}
+
+function ReleaseResearchEvidence({ preview: p }: { preview: PortfolioReleasePreview }) {
+  const { t } = useI18n();
+  const study = useQuery({
+    queryKey: ['portfolio-run', p.run_id],
+    queryFn: () => proApi.portfolioRun(p.run_id),
+  });
+  const matchingStudy =
+    study.data?.manifest.result_hash === p.result_hash &&
+    study.data.config.portfolio_version_id === p.version_id
+      ? study.data
+      : undefined;
+  const metrics = p.metrics ?? {};
+  const evaluation = p.evaluation ?? {};
+  const mode = String(evaluation.mode ?? 'full');
+  const rejection = evaluation.rejection as RecordData | undefined;
+  const rejectionStatus = rejection?.status ?? p.research_evidence.rejection_status;
+  const checks = Array.isArray(rejection?.checks) ? (rejection.checks as RecordData[]) : [];
+  const scope =
+    mode === 'sealed_holdout'
+      ? t('One-use portfolio holdout')
+      : mode === 'train_test'
+        ? t('Chronological test · not a one-use holdout')
+        : t('Development window · not independent evidence');
+  const windows: RecordData[] =
+    mode === 'train_test'
+      ? [
+          {
+            window: t('Development'),
+            start: evaluation.train_start,
+            end: evaluation.train_end,
+            ...((evaluation.train_metrics as RecordData) ?? {}),
+          },
+          {
+            window: t('Independent test'),
+            start: evaluation.test_start,
+            end: evaluation.test_end,
+            ...metrics,
+          },
+        ]
+      : [
+          {
+            window: scope,
+            start: evaluation.test_start ?? matchingStudy?.manifest.start,
+            end: evaluation.test_end ?? matchingStudy?.manifest.end,
+            ...metrics,
+          },
+        ];
+  const financialWindow = windows.at(-1)!;
+  return (
+    <section className="release-research-evidence" aria-label={t('Research decision evidence')}>
+      <h3>{t('Research decision evidence')}</h3>
+      <p className="strategy-hypothesis">{p.hypothesis}</p>
+      <RecordGrid
+        value={{
+          [t('Immutable portfolio version')]: p.version_id,
+          [t('Research run')]: p.run_id,
+          [t('Evaluation scope')]: scope,
+          [t('Financial window start')]: date(Number(financialWindow.start), true),
+          [t('Financial window end')]: date(Number(financialWindow.end), true),
+          [t('Research source')]: t(p.source === 'example' ? 'Example · synthetic' : 'OKX public'),
+        }}
+      />
+      <p className="quiet-copy">
+        {t(
+          'These metrics belong to the financial evaluation window above, not the live paper account.',
+        )}
+      </p>
+      {(!p.metrics || !p.result_hash || !p.version_id) && (
+        <p className="inline-warning">
+          {t('Bound research evidence is incomplete. Refresh the review before approval.')}
+        </p>
+      )}
+      <PortfolioResearchSummary metrics={metrics} />
+      <RecordGrid
+        value={{
+          [t('Final equity (USDT)')]:
+            metrics.final_equity == null ? '—' : `${number(metrics.final_equity)} USDT`,
+          [t('Funding (USDT)')]:
+            metrics.funding_paid == null ? '—' : `${number(metrics.funding_paid)} USDT`,
+          [t('Recorded fills')]: metrics.orders,
+        }}
+      />
+      <DataTable
+        rows={windows}
+        columns={[
+          { key: 'window', label: 'Window' },
+          { key: 'start', label: 'Start', render: (row) => date(Number(row.start), true) },
+          { key: 'end', label: 'End', render: (row) => date(Number(row.end), true) },
+          {
+            key: 'total_return_pct',
+            label: 'Net return %',
+            render: (row) => number(row.total_return_pct),
+          },
+          {
+            key: 'max_drawdown_pct',
+            label: 'Max drawdown %',
+            render: (row) => number(row.max_drawdown_pct),
+          },
+          { key: 'fees_paid', label: 'Fees (USDT)', render: (row) => number(row.fees_paid) },
+        ]}
+      />
+      {financialWindow.start == null || financialWindow.end == null ? (
+        <p className="inline-warning">
+          {t(
+            'Evaluation window boundaries are unavailable. Inspect the bound input manifest before review.',
+          )}
+        </p>
+      ) : null}
+      {study.isError && <ErrorBox error={study.error} onRetry={() => void study.refetch()} />}
+      <div className="portfolio-release-actions">
+        <span>{t('Pre-registered rejection assessment')}</span>
+        <Status
+          type={
+            rejectionStatus === 'passed'
+              ? 'good'
+              : rejectionStatus === 'rejected'
+                ? 'bad'
+                : 'warning'
+          }
+        >
+          {t(
+            rejectionStatus == null
+              ? 'No pre-registered rejection assessment'
+              : String(rejectionStatus),
+          )}
+        </Status>
+      </div>
+      <p className="quiet-copy">
+        {t(
+          'A completed computation or paper approval does not establish investment edge. Rejected or inconclusive research remains visible when approved for supervised paper study.',
+        )}
+      </p>
+      {!!checks.length && (
+        <DataTable
+          rows={checks}
+          columns={[
+            {
+              key: 'metric',
+              label: 'Criterion',
+              render: (row) =>
+                t(
+                  (
+                    {
+                      return_vs_cash_pct: 'Return above cash (%)',
+                      max_drawdown_pct: 'Maximum drawdown (%)',
+                      zero_debt: 'Insurance debt (USDT)',
+                      execution_status: 'Execution state',
+                      lifecycle_economics: 'Lifecycle economics',
+                    } as Record<string, string>
+                  )[String(row.metric)] ?? String(row.metric),
+                ),
+            },
+            {
+              key: 'actual',
+              label: 'Actual',
+              render: (row) =>
+                ['execution_status', 'lifecycle_economics'].includes(String(row.metric))
+                  ? t(String(row.actual))
+                  : number(row.actual, 4),
+            },
+            {
+              key: 'threshold',
+              label: 'Threshold',
+              render: (row) =>
+                ['execution_status', 'lifecycle_economics'].includes(String(row.metric))
+                  ? t(String(row.threshold))
+                  : number(row.threshold, 4),
+            },
+            {
+              key: 'passed',
+              label: 'Assessment',
+              render: (row) => (
+                <Status type={row.passed === true ? 'good' : 'bad'}>
+                  {t(row.passed === true ? 'passed' : 'rejected')}
+                </Status>
+              ),
+            },
+          ]}
+        />
+      )}
+      <JsonDetails
+        value={{ research_evidence: p.research_evidence, evaluation }}
+        label="Research evidence"
+      />
     </section>
   );
 }

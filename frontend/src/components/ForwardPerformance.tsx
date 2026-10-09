@@ -7,7 +7,7 @@ import { proApi } from '../proApi';
 import { date, number } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { DataTable, JsonDetails } from './ProWorkspace';
-import { Empty, ErrorBox, Loading, Metric } from './workspace';
+import { Empty, ErrorBox, Loading, Metric, Field, Status } from './workspace';
 import { useSession } from './AuthGate';
 import { canTrade } from '../lib/permissions';
 
@@ -15,10 +15,20 @@ export default function ForwardPerformance({ source }: { source: Source }) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const mayFreeze = canTrade(useSession()?.user?.role);
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [requested, setRequested] = useState<RecordData>({});
+  const [resolved, setResolved] = useState<RecordData>();
+  const [snapshotBefore, setSnapshotBefore] = useState<string>();
   const [snapshot, setSnapshot] = useState<RecordData>();
+  const sourceRef = useRef(source);
+  sourceRef.current = source;
   const freeze = useMutation({
     mutationFn: proApi.freezePerformance,
-    onSuccess: (data) => setSnapshot(data),
+    onSuccess: (data) => {
+      if (data.source === sourceRef.current) setSnapshot(data);
+      void snapshots.refetch();
+    },
   });
   const verify = useMutation({ mutationFn: proApi.verifyPerformance });
   const ref = useRef<HTMLDivElement>(null);
@@ -26,6 +36,11 @@ export default function ForwardPerformance({ source }: { source: Source }) {
   const [decisionBefore, setDecisionBefore] = useState<number>();
   useEffect(() => {
     setBefore(undefined);
+    setRequested({});
+    setResolved(undefined);
+    setStart('');
+    setEnd('');
+    setSnapshotBefore(undefined);
     setDecisionBefore(undefined);
     setSelected('');
     setSnapshot(undefined);
@@ -33,9 +48,34 @@ export default function ForwardPerformance({ source }: { source: Source }) {
     verify.reset();
   }, [source]);
   const report = useQuery({
-    queryKey: ['forward-performance', source, before],
-    queryFn: () => proApi.performance(source, before),
-    refetchInterval: before ? false : 5000,
+    queryKey: ['forward-performance', source, before, resolved ?? requested],
+    queryFn: () => proApi.performance(source, before, resolved ?? requested),
+    refetchInterval: before || Object.keys(requested).length ? false : 5000,
+  });
+  useEffect(() => {
+    const window = report.data?.window;
+    if (
+      !resolved &&
+      requested.observed_start !== undefined &&
+      window &&
+      Number(report.data?.summary.observations) > 0
+    )
+      setResolved({
+        window_start: window.range_start_id,
+        window_end: window.range_end_id,
+        max_gap_ms: window.max_gap_ms,
+      });
+  }, [report.data, requested, resolved]);
+  const snapshots = useQuery({
+    queryKey: ['performance-snapshots', source, snapshotBefore],
+    queryFn: () => proApi.performanceSnapshots(source, snapshotBefore),
+  });
+  const openSnapshot = useMutation({
+    mutationFn: proApi.performanceSnapshot,
+    onSuccess: (data) => {
+      if (data.source === sourceRef.current) setSnapshot(data);
+      verify.reset();
+    },
   });
   const deployments = useQuery({
     queryKey: ['pro-deployments', source],
@@ -87,8 +127,112 @@ export default function ForwardPerformance({ source }: { source: Source }) {
     };
   }, [items]);
   const summary = report.data?.summary;
+  const targets = (report.data?.acceptance.targets ?? {}) as RecordData;
+  const criteria: Record<string, [string, string]> = {
+    public_okx_observations: [source + ' · ' + number(summary?.market_updates, 0), 'OKX · ≥ 2'],
+    market_clock_progress: [number(summary?.market_wall_ratio, 3), '0.5–2.0'],
+    bound_observation_clocks: [
+      number(summary?.legacy_clock_observations, 0),
+      '0 legacy · ≥ 1 observation',
+    ],
+    real_wall_duration: [
+      number(Number(summary?.wall_elapsed_ms ?? 0) / 86400000, 3) + ' d',
+      '≥ ' + number(Number(targets.min_wall_ms ?? 0) / 86400000, 0) + ' d',
+    ],
+    observation_count: [
+      number(summary?.observations, 0),
+      '≥ ' + number(targets.min_observations, 0),
+    ],
+    observation_coverage: [
+      number(summary?.wall_coverage_pct, 2) + '%',
+      '≥ ' + number(targets.min_coverage_pct, 2) + '%',
+    ],
+    economic_coverage: [
+      number(summary?.economic_wall_coverage_pct, 2) + '%',
+      '≥ ' + number(targets.min_economic_coverage_pct, 2) + '%',
+    ],
+    fresh_final_observation: [
+      summary?.last_observed_at == null
+        ? '—'
+        : number(
+            (Number(report.data?.acceptance.as_of) - Number(summary.last_observed_at)) / 1000,
+            1,
+          ) + ' s',
+      '0–' + number(Number(report.data?.window.max_gap_ms ?? 0) / 1000, 0) + ' s',
+    ],
+    no_pending_funding: [number(summary?.pending_funding_observations, 0), '0'],
+    observed_recovery: [
+      number(
+        Object.values((summary?.recovery_counts ?? {}) as RecordData).reduce<number>(
+          (total, count) => total + Number(count),
+          0,
+        ),
+        0,
+      ),
+      '≥ ' + number(targets.min_recoveries, 0),
+    ],
+    no_clock_regression: [number(summary?.clock_regressions, 0), '0'],
+    no_financial_discontinuity: [number(summary?.financial_discontinuities, 0), '0'],
+  };
+  const frozenBody = snapshot?.body as RecordData | undefined;
+  const frozenSummary = frozenBody?.summary as RecordData | undefined;
+  const frozenWindow = frozenBody?.window as RecordData | undefined;
   return (
     <>
+      <h3>{t('Account observation window')}</h3>
+      <p className="quiet-copy">
+        {t(
+          'These are shared-account results, including manual activity and every strategy. A selected observation window is not a strategy return.',
+        )}
+      </p>
+      <form
+        className="form-grid"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setBefore(undefined);
+          setResolved(undefined);
+          setSnapshot(undefined);
+          verify.reset();
+          setRequested({
+            observed_start: Date.parse(start + 'Z'),
+            observed_end: Date.parse(end + 'Z'),
+          });
+        }}
+      >
+        <Field label="Observed from (UTC)">
+          <input
+            required
+            type="datetime-local"
+            value={start}
+            onChange={(event) => setStart(event.target.value)}
+          />
+        </Field>
+        <Field label="Observed until (UTC, exclusive)">
+          <input
+            required
+            type="datetime-local"
+            value={end}
+            min={start}
+            onChange={(event) => setEnd(event.target.value)}
+          />
+        </Field>
+        <div className="toolbar">
+          <button className="button button-secondary">{t('Review fixed account window')}</button>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => {
+              setBefore(undefined);
+              setRequested({});
+              setResolved(undefined);
+              setStart('');
+              setEnd('');
+            }}
+          >
+            {t('All account observations')}
+          </button>
+        </div>
+      </form>
       <p className="quiet-copy">
         {text(
           'Statistics cover the complete observation window. The chart and detail table display the current page of up to 500 records; paging does not change the measured window. Missing prices or unsettled funding remain gaps.',
@@ -143,6 +287,51 @@ export default function ForwardPerformance({ source }: { source: Source }) {
               unit="%"
             />
           </div>
+          <section aria-label={t('Observation acceptance')} className="forward-acceptance">
+            <div className="section-heading">
+              <h3>{t('Observation acceptance')}</h3>
+              <Status type={report.data?.acceptance.passed ? 'good' : 'warning'}>
+                {t(
+                  report.data?.acceptance.passed
+                    ? 'Observed targets met'
+                    : 'Observation targets not met',
+                )}
+              </Status>
+            </div>
+            <p className="quiet-copy">
+              {date(Number(summary?.first_observed_at))} → {date(Number(summary?.last_observed_at))}{' '}
+              · {t('Actual observation time, not accelerated market time')}
+            </p>
+            <DataTable
+              rows={Object.entries((report.data?.acceptance.checks ?? {}) as RecordData).map(
+                ([criterion, passed]) => ({
+                  criterion,
+                  passed,
+                  actual: criteria[criterion]?.[0] ?? '—',
+                  target: criteria[criterion]?.[1] ?? '—',
+                }),
+              )}
+              columns={[
+                { key: 'criterion', label: 'Criterion', render: (row) => t(String(row.criterion)) },
+                { key: 'actual', label: 'Observed value' },
+                { key: 'target', label: 'Required value' },
+                {
+                  key: 'passed',
+                  label: 'Result',
+                  render: (row) => (
+                    <Status type={row.passed ? 'neutral' : 'warning'}>
+                      {t(row.passed ? 'Met' : 'Not met')}
+                    </Status>
+                  ),
+                },
+              ]}
+            />
+            <p className="quiet-copy">
+              {t(
+                'Passing these observations does not establish profitable edge, venue capacity or HTTP availability.',
+              )}
+            </p>
+          </section>
           <div className="toolbar">
             {mayFreeze && (
               <button
@@ -180,11 +369,38 @@ export default function ForwardPerformance({ source }: { source: Source }) {
           {freeze.isError && <ErrorBox error={freeze.error} />}
           {verify.isError && <ErrorBox error={verify.error} />}
           {snapshot && (
-            <p className="quiet-copy">
-              {text('Frozen evidence', '已冻结证据')} · {String(snapshot.id).slice(0, 12)} ·{' '}
-              {date(Number(snapshot.created_at), true)}{' '}
-              <JsonDetails value={snapshot} label={text('Frozen report', '冻结报告')} />
-            </p>
+            <section aria-label={t('Selected frozen account window')}>
+              <h3>{t('Selected frozen account window')}</h3>
+              <p className="quiet-copy">
+                {t('This saved report is separate from the current observation metrics above.')} ·{' '}
+                {String(frozenWindow?.range_start_id ?? '—')}–
+                {String(frozenWindow?.range_end_id ?? '—')}
+                <br />
+                {date(Number(frozenSummary?.first_observed_at))} →{' '}
+                {date(Number(frozenSummary?.last_observed_at))}
+              </p>
+              <div className="pro-metric-strip">
+                <Metric
+                  label="Observed net P&L"
+                  value={number(frozenSummary?.net_pnl)}
+                  unit="USDT"
+                />
+                <Metric
+                  label="Window observations"
+                  value={number(frozenSummary?.observations, 0)}
+                />
+                <Metric
+                  label="Economic coverage"
+                  value={number(frozenSummary?.economic_wall_coverage_pct, 2)}
+                  unit="%"
+                />
+              </div>
+              <p className="quiet-copy">
+                {text('Frozen evidence', '已冻结证据')} · {String(snapshot.id).slice(0, 12)} ·{' '}
+                {date(Number(snapshot.created_at), true)}{' '}
+                <JsonDetails value={snapshot} label={text('Frozen report', '冻结报告')} />
+              </p>
+            </section>
           )}
           {verify.data && (
             <p className={verify.data.verified ? 'quiet-copy' : 'warning-banner'}>
@@ -245,6 +461,68 @@ export default function ForwardPerformance({ source }: { source: Source }) {
           </div>
         </>
       )}
+      <section className="forward-frozen-history" aria-label={t('Frozen account windows')}>
+        <h3>{t('Frozen account windows')}</h3>
+        <p className="quiet-copy">
+          {t(
+            'Saved content hashes are checked when listed. Full recomputation is a separate verification action; later observations do not change a frozen report.',
+          )}
+        </p>
+        {snapshots.isPending ? (
+          <Loading />
+        ) : snapshots.isError ? (
+          <ErrorBox error={snapshots.error} />
+        ) : (
+          <DataTable
+            rows={snapshots.data?.items ?? []}
+            empty="No frozen account windows"
+            columns={[
+              {
+                key: 'created_at',
+                label: 'Frozen at',
+                render: (row) => date(Number(row.created_at)),
+              },
+              {
+                key: 'status',
+                label: 'Stored content',
+                render: (row) =>
+                  t(
+                    row.status === 'available'
+                      ? 'Hash valid · not recomputed'
+                      : 'Evidence unavailable',
+                  ),
+              },
+              {
+                key: 'actions',
+                label: 'Actions',
+                render: (row) => (
+                  <button
+                    className="text-button"
+                    disabled={row.status !== 'available' || openSnapshot.isPending}
+                    onClick={() => openSnapshot.mutate(String(row.id))}
+                  >
+                    {t('Open frozen window')}
+                  </button>
+                ),
+              },
+            ]}
+          />
+        )}
+        {snapshots.data?.next_before && (
+          <button
+            className="text-button"
+            onClick={() => setSnapshotBefore(snapshots.data?.next_before)}
+          >
+            {t('Older frozen windows')}
+          </button>
+        )}
+        {snapshotBefore && (
+          <button className="text-button" onClick={() => setSnapshotBefore(undefined)}>
+            {t('Latest')}
+          </button>
+        )}
+        {openSnapshot.isError && <ErrorBox error={openSnapshot.error} />}
+      </section>
       <div className="section-heading forward-decisions-heading">
         <h3>{t('Decision journal')}</h3>
         <select

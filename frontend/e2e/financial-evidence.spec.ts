@@ -74,8 +74,49 @@ test('real local-paper account freezes a whole observation window and verifies i
   await expect(
     page.getByText('Recorded observation window and hashes match the frozen evidence.'),
   ).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Observation acceptance', exact: true }),
+  ).toContainText('Observation targets not met');
+  await page.reload();
+  await page.getByLabel('Market source', { exact: true }).selectOption('example');
+  const reopenNav = page.getByRole('button', { name: /^(Open navigation|展开导航)$/ });
+  await page
+    .getByRole('navigation')
+    .getByRole('button', { name: 'Execution', exact: true })
+    .waitFor({ state: 'attached' });
+  if (await reopenNav.isVisible()) await reopenNav.click();
+  await page
+    .getByRole('navigation')
+    .getByRole('button', { name: 'Execution', exact: true })
+    .click();
+  await page.getByRole('tab', { name: 'Forward performance', exact: true }).click();
+  const history = page.getByRole('region', { name: 'Frozen account windows', exact: true });
+  await expect(history).toContainText('Hash valid · not recomputed');
+  await history.getByRole('button', { name: 'Open frozen window', exact: true }).first().click();
+  const reopenedVerify = page.waitForResponse((r) =>
+    r.url().includes(`/performance/snapshots/${frozen.id}/verify`),
+  );
+  await page.getByRole('button', { name: 'Verify frozen window', exact: true }).click();
+  expect((await (await reopenedVerify).json()).verified).toBe(true);
+  await page.getByLabel('Observed from (UTC)', { exact: true }).fill('2020-01-01T00:00');
+  await page
+    .getByLabel('Observed until (UTC, exclusive)', { exact: true })
+    .fill('2020-01-02T00:00');
+  await page.getByRole('button', { name: 'Review fixed account window', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Freeze window evidence', exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole('heading', { name: 'No forward observations', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'All account observations', exact: true }).click();
+  await history.getByRole('button', { name: 'Open frozen window', exact: true }).first().click();
   await page.getByLabel('Interface language', { exact: true }).selectOption('zh-CN');
-  await expect(page.getByText('窗口观察数', { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole('region', { name: '已选冻结账户窗口', exact: true })
+      .getByText('窗口观察数', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: '验证冻结窗口', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,

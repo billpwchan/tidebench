@@ -42,8 +42,10 @@ class CapitalPolicyInput(InputModel):
 
 class PerformanceSnapshotInput(InputModel):
     source: Source = "okx"
-    window_start: int = Field(default=1, ge=1, lt=2**63)
-    window_end: int | None = Field(default=None, ge=1, lt=2**63)
+    window_start: int | None = Field(default=None, ge=1, lt=2**63)
+    window_end: int | None = Field(default=None, ge=0, lt=2**63)
+    observed_start: int | None = Field(default=None, ge=0, lt=2**63)
+    observed_end: int | None = Field(default=None, ge=0, lt=2**63)
     max_gap_ms: int = Field(default=60000, ge=1000, le=86400000)
 
 
@@ -768,8 +770,10 @@ def professional_router(app, access, runtime, supervisor, settings):
         source: Source = "okx",
         limit: int = Query(default=500, ge=1, le=5000),
         before: int = Query(default=2**63 - 1, ge=1, lt=2**63),
-        window_start: int = Query(default=1, ge=1, lt=2**63),
-        window_end: int | None = Query(default=None, ge=1, lt=2**63),
+        window_start: int | None = Query(default=None, ge=1, lt=2**63),
+        window_end: int | None = Query(default=None, ge=0, lt=2**63),
+        observed_start: int | None = Query(default=None, ge=0, lt=2**63),
+        observed_end: int | None = Query(default=None, ge=0, lt=2**63),
         max_gap_ms: int = Query(default=60000, ge=1000, le=86400000),
     ):
         return runtime.book.performance.report(
@@ -778,8 +782,18 @@ def professional_router(app, access, runtime, supervisor, settings):
             before=before,
             window_start=window_start,
             window_end=window_end,
+            observed_start=observed_start,
+            observed_end=observed_end,
             max_gap_ms=max_gap_ms,
         )
+
+    @router.get("/pro/execution/performance/snapshots")
+    def performance_snapshots(
+        source: Source,
+        limit: int = Query(default=20, ge=1, le=100),
+        before: str | None = Query(default=None, max_length=80),
+    ):
+        return runtime.book.performance.snapshots(source, limit=limit, before=before)
 
     @router.post("/pro/execution/performance/snapshots", status_code=201)
     def freeze_performance(body: PerformanceSnapshotInput, request: Request):

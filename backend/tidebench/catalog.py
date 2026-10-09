@@ -11,7 +11,8 @@ from contextlib import suppress
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from .engine import Candle
+from .derivatives import MarginTier, validate_margin_tiers
+from .engine import Candle, EngineError
 from .instrument_observations import InstrumentObservations
 from .market import (
     BAR_MS,
@@ -1052,7 +1053,7 @@ class CatalogService:
         _source(source)
         if _symbol(inst_id) != "SWAP" or td_mode not in ("isolated", "cross"):
             raise MarketError("invalid_margin_request", "Margin tiers require SWAP and isolated/cross mode.")
-        await self.get_instrument(inst_id, source)
+        instrument = await self.get_instrument(inst_id, source)
         if source == "example":
             tiers = [
                 {
@@ -1099,11 +1100,30 @@ class CatalogService:
                         "mmr": mmr,
                         "imr": imr,
                         "max_leverage": _decimal(row.get("maxLever"), "maxLever", positive=True),
+                        "source_record": dict(row),
                     }
                 )
             if not tiers:
                 raise MarketError("no_margin_data", "OKX returned no margin tiers.")
             tiers.sort(key=lambda item: item["tier"])
+            previous = Decimal(0)
+            lot = instrument["lot_size"]
+            for tier in tiers:
+                raw_min = tier["min_size"]
+                # Some actual OKX responses list the first admissible next-lot
+                # quantity, e.g. 1000.01 after 1000 with lotSz=.01. Preserve
+                # that response and bind a (previous,max] model boundary only
+                # when there is no admissible lot quantity in the interval.
+                if raw_min == previous + lot and previous > 0 and previous % lot == 0:
+                    tier["min_size"] = previous
+                    tier["boundary_mapping"] = "adjacent_native_lot_to_exclusive_lower_v1"
+                else:
+                    tier["boundary_mapping"] = "shared_exclusive_lower_v1"
+                previous = tier["max_size"]
+            try:
+                validate_margin_tiers([MarginTier.from_record(tier) for tier in tiers])
+            except EngineError as exc:
+                raise MarketError("invalid_upstream_data", f"Unusable margin tier coverage: {exc}") from None
         return {
             "source": source,
             "synthetic": source == "example",
@@ -1112,7 +1132,7 @@ class CatalogService:
             "observed_at": EXAMPLE_ANCHOR if source == "example" else now_ms(),
             "unit": "contracts",
             "historical": False,
-            "boundary_policy": "Model convention: minimum exclusive, maximum inclusive (min,max]; not exchange-verified boundary semantics.",
+            "boundary_policy": "Model convention: minimum exclusive, maximum inclusive (min,max]; raw source records are preserved. A next lower bound exactly one native lot above the previous maximum is mapped to that maximum; larger gaps and overlaps are rejected. Not an exchange acceptance claim.",
             "tiers": tiers,
         }
 
@@ -1179,6 +1199,8 @@ class CatalogService:
             "next_funding_time": next_time,
             "current_interval_ms": next_time - funding_time,
             "funding_ts": _timestamp(f.get("ts")),
+            "funding_inst_id": f["instId"],
+            "funding_source": source,
             "settled_funding_rate": _signed(f["settFundingRate"], "settFundingRate")
             if f.get("settFundingRate")
             else None,

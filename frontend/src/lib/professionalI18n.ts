@@ -1,4 +1,59 @@
 export const professionalZh: Record<string, string> = {
+  'Research run': '研究记录',
+  'Group inventory quantities are verified; monetary valuation or reconciliation remains incomplete.':
+    '组合库存数量已通过校验；金额估值或损益对账仍不完整。',
+  // Trading desk review: captured admission and verified inventory ownership.
+  'Effective account capital budget': '账户有效资本预算',
+  'Account valuation used for this review': '本次审阅使用的账户估值时间',
+  'The preview does not provide an account valuation timestamp.': '本次预览未提供账户估值时间。',
+  'Account equity basis': '账户权益分母',
+  'Existing effective capital': '已有有效资本占用',
+  'Projected effective capital': '拟议后有效资本占用',
+  'Remaining budget after proposal': '拟议后剩余预算',
+  'Account capital limit': '账户资本上限',
+  'Projected effective gross exposure': '拟议后有效总敞口',
+  'Budget excess': '超出预算',
+  'Effective capital sums the greater of actual use including pending new-risk orders and the declared promise for each owner. Percentages use this captured account equity. The proposed portfolio is included below.':
+    '有效资本逐所有者取实际使用（含待执行新增风险订单）与声明承诺的较大值，再汇总。比例使用本次捕获的账户权益；下表包含拟议组合。',
+  'Proposed portfolio': '拟议组合',
+  'Actual use including pending orders (%)': '实际使用（含待执行订单，%）',
+  'Declared promise (%)': '声明承诺（%）',
+  'Effective capital (%)': '有效资本（%）',
+  'Effective account usage is unavailable in this preview. Declared promises alone do not establish remaining risk capacity.':
+    '本次预览无法提供账户有效使用量。仅凭声明承诺无法确定剩余风险容量。',
+  'Capital promises and budget headroom are not available cash. Spot inventory uses marked value; perpetual capital uses posted initial margin. Gross limits also apply without direction netting.':
+    '资本承诺与预算余量不是可用现金。现货库存使用标记价值；永续资本使用已缴初始保证金。总敞口限制同样适用，且不按方向净额抵消。',
+  'Declared portfolio commitments': '组合声明承诺明细',
+  'Research decision evidence': '研究决策证据',
+  'Chronological test · not a one-use holdout': '按时间划分的测试 · 非一次性保留集',
+  'Development window · not independent evidence': '开发窗口 · 非独立证据',
+  'Financial window start': '财务评估窗口开始',
+  'Financial window end': '财务评估窗口结束',
+  'Research source': '研究数据源',
+  'These metrics belong to the financial evaluation window above, not the live paper account.':
+    '这些指标属于上方财务评估窗口，不代表当前模拟账户的表现。',
+  'Final equity (USDT)': '最终权益（USDT）',
+  'Funding (USDT)': '资金费（USDT）',
+  'Recorded fills': '记录的成交数',
+  'Evaluation window boundaries are unavailable. Inspect the bound input manifest before review.':
+    '评估窗口边界暂不可用。请在审阅前检查绑定的输入清单。',
+  'Pre-registered rejection assessment': '预登记淘汰标准评估',
+  'No pre-registered rejection assessment': '未提供预登记淘汰评估',
+  'A completed computation or paper approval does not establish investment edge. Rejected or inconclusive research remains visible when approved for supervised paper study.':
+    '计算完成或获准模拟交易并不证明投资优势。即使获准开展有人监督的模拟研究，未通过或尚无结论的研究结果仍明确保留。',
+  'Lifecycle economics': '生命周期经济核算',
+  'Group-owned inventory': '本组合归属库存',
+  'Account net inventory': '账户净库存',
+  'Current inventory owners': '当前库存所有者',
+  'No inventory': '无库存',
+  'Reduce account net position': '减少账户净仓',
+  'Inventory ownership observed': '库存归属观测时间',
+  'Group ownership is unavailable. Account net positions remain separate and can be inspected for protection.':
+    '组合归属暂不可核定。账户净仓单独显示，仍可检查并采取保护措施。',
+  'Reducing an account net position affects every current inventory owner in that market. It does not exclusively close this portfolio.':
+    '减少账户净仓会影响该市场所有当前库存所有者，并非仅平仓本组合。',
+  'Inspect account positions': '检查账户持仓',
+
   'Execution policy': '执行策略',
   'Portfolio execution policy': '组合执行策略',
   'Bounded allowance replans': '额度变化下的受限重规划',

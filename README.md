@@ -17,10 +17,12 @@ Instrument evidence preserves full forward REST data-array observations, includi
 
 ## A trading desk with evidence you can inspect
 
-Account capital promises, settlement-time funding obligations, shared group failure contracts, current economic incidents and frozen whole-window forward reports connect research to the actual paper account. Post-fill fees and spread losses count at admission; a stopped controller does not erase inventory. Attributed lifecycle events and immutable public order-book cost reports make data limitations inspectable. [Professional workflows](docs/professional-workflows-v0.10.md) · [Historical lifecycle](docs/historical-lifecycle.md) · [Forward evidence](docs/forward-evidence.md) · [Independent reviews](docs/audit/README.md).
+Account capital promises, settlement-time funding obligations, shared group failure contracts, current economic incidents and frozen whole-window forward reports connect research to the actual paper account. Post-fill fees and spread losses count at admission; a stopped controller does not erase inventory. Attributed lifecycle events and immutable public order-book cost reports make data limitations inspectable. [Professional workflows](docs/professional-workflows-v0.11.md) · [Historical lifecycle](docs/historical-lifecycle.md) · [Forward evidence](docs/forward-evidence.md) · [Independent reviews](docs/audit/README.md).
 
 
 New portfolio studies can explicitly choose bounded smaller continuations after shared-account allowance drift, with immutable original orders and unchanged hard guards. Existing frozen-order versions keep their recorded behavior. [Execution policy choices](docs/portfolio-execution-contracts.md).
+
+Protect an actual position from the desk: stop its controllers, cancel working entries, review an exact native-unit reduce-only exit and inspect the receipt. Pending protection follows the remaining original inventory, with requested/filled/canceled amounts preserved. Portfolio review shows actual account capital owners and economic research evidence before approval. UTC-selected forward windows persist and can be independently recomputed; post-test fold selection and recovery-retained trials stay explicit. [v0.11 before/after audit](docs/audit/red-team-0.11.0.zh-CN.md).
 
 ## Strategies with evidence, including failed hypotheses
 

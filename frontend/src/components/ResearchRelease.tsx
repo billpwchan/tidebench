@@ -11,6 +11,8 @@ import { proApi } from '../proApi';
 import type { PaperRelease, ProRun } from '../proApi';
 
 const acknowledgementText: Record<string, string> = {
+  post_test_selection:
+    'This fold is selected after its test results became available. Its displayed test performance is not independent validation of this deployment choice.',
   in_sample_selection:
     'This candidate was selected in sample; its ranking is not out-of-sample evidence.',
   no_oos_evidence:
@@ -144,6 +146,13 @@ export default function ResearchRelease({
                       leverage: data.definition.leverage,
                     }}
                   />
+                  {data.selection_scope === 'training_selected_test_exposed_fold' && (
+                    <p className="inline-warning">
+                      {t(
+                        'The parameters were chosen on training data, but this deployment fold is selected after test results became available. A new independent final evaluation is needed to validate that choice.',
+                      )}
+                    </p>
+                  )}
                   <h3>{t('Research governance')}</h3>
                   <RecordGrid value={data.research_governance as Record<string, unknown>} />
                   <h3>{t('Strategy definition')}</h3>

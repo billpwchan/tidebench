@@ -107,6 +107,15 @@ def checked_snapshot(row):
                 or any(c not in "0123456789abcdef" for c in window[key])
             ):
                 raise ValueError
+        requested = window.get("requested_observed_range")
+        if requested is not None and (
+            not isinstance(requested, dict)
+            or set(requested) != {"start", "end"}
+            or type(requested["start"]) is not int
+            or type(requested["end"]) is not int
+            or not 0 <= requested["start"] < requested["end"] < 2**63
+        ):
+            raise ValueError
         return body
     except (ValueError, KeyError, TypeError):
         raise PlatformError(
@@ -229,12 +238,46 @@ class ForwardPerformance:
         *,
         limit=500,
         before=2**63 - 1,
-        window_start=1,
+        window_start=None,
         window_end=None,
+        observed_start=None,
+        observed_end=None,
         max_gap_ms=DEFAULT_GAP_MS,
         as_of=None,
         audit_end=None,
+        _requested_observed_range=None,
     ):
+        requested = _requested_observed_range
+        if observed_start is not None or observed_end is not None:
+            if (
+                type(observed_start) is not int
+                or type(observed_end) is not int
+                or not 0 <= observed_start < observed_end < 2**63
+            ):
+                raise PlatformError(
+                    "performance_observed_range", "Supply an ordered pair of UTC wall-time boundaries.", 422
+                )
+            if window_start is not None or window_end is not None:
+                raise PlatformError(
+                    "performance_window_mixed",
+                    "Use either wall-time boundaries or resolved observation IDs.",
+                    422,
+                )
+            if before != 2**63 - 1:
+                raise PlatformError(
+                    "performance_time_page_requires_ids",
+                    "Resolve wall time once, then paginate with the returned fixed observation IDs.",
+                    422,
+                )
+            first_id, last_id = conn.execute(
+                "SELECT MIN(id),MAX(id) FROM forward_equity WHERE source=? AND observed_at>=? AND observed_at<?",
+                (source, observed_start, observed_end),
+            ).fetchone()
+            # Include all source rows between these IDs. Filtering every row by
+            # wall time would hide intervening clock regressions/economic gaps.
+            window_start, window_end = (first_id, last_id) if first_id is not None else (1, 0)
+            requested = {"start": observed_start, "end": observed_end}
+        window_start = 1 if window_start is None else window_start
         if (
             source not in {"okx", "example"}
             or not 1 <= limit <= 5000
@@ -528,6 +571,8 @@ class ForwardPerformance:
                 "recovery_evidence_hash": audit_hash.hexdigest(),
                 "max_gap_ms": max_gap_ms,
             }
+            if requested is not None:
+                window["requested_observed_range"] = requested
             assessment = acceptance(summary, window, TARGETS, now_ms() if as_of is None else as_of)
             return encode(
                 {
@@ -543,7 +588,17 @@ class ForwardPerformance:
         with self.store.read() as conn:
             return self._report(conn, source, **options)
 
-    def freeze(self, source, actor, *, window_start=1, window_end=None, max_gap_ms=DEFAULT_GAP_MS):
+    def freeze(
+        self,
+        source,
+        actor,
+        *,
+        window_start=None,
+        window_end=None,
+        observed_start=None,
+        observed_end=None,
+        max_gap_ms=DEFAULT_GAP_MS,
+    ):
         identifier, created_at = new_id(), now_ms()
         with self.store.write() as conn:
             report = self._report(
@@ -551,9 +606,17 @@ class ForwardPerformance:
                 source,
                 window_start=window_start,
                 window_end=window_end,
+                observed_start=observed_start,
+                observed_end=observed_end,
                 max_gap_ms=max_gap_ms,
                 as_of=created_at,
             )
+            if report["window"]["count"] == 0:
+                raise PlatformError(
+                    "performance_window_empty",
+                    "No observations belong to this window; nothing can be frozen.",
+                    422,
+                )
             body = {
                 "id": identifier,
                 "source": source,
@@ -573,6 +636,75 @@ class ForwardPerformance:
                 {"snapshot_id": identifier, "window": body["window"], "actor": actor},
             )
         return self.snapshot(identifier)
+
+    def snapshots(self, source, *, limit=20, before=None):
+        """Bounded saved summaries. Content validity is not numerical replay."""
+        if source not in {"okx", "example"} or type(limit) is not int or not 1 <= limit <= 100:
+            raise PlatformError("performance_snapshot_page", "Choose a source and 1–100 snapshots.", 422)
+        boundary, boundary_id = 2**63 - 1, "z"
+        if before is not None:
+            try:
+                timestamp, boundary_id = before.split(":", 1)
+                boundary = int(timestamp)
+                if (
+                    not timestamp.isdecimal()
+                    or not 0 <= boundary < 2**63
+                    or len(boundary_id) != 32
+                    or any(c not in "0123456789abcdef" for c in boundary_id)
+                ):
+                    raise ValueError
+            except (ValueError, AttributeError):
+                raise PlatformError(
+                    "performance_snapshot_cursor", "Invalid snapshot page cursor.", 422
+                ) from None
+        fields = (
+            "observations",
+            "return",
+            "max_drawdown",
+            "net_pnl",
+            "net_pnl_basis",
+            "wall_elapsed_ms",
+            "wall_coverage_pct",
+            "economic_wall_coverage_pct",
+            "first_observed_at",
+            "last_observed_at",
+            "clock_regressions",
+            "pending_funding_observations",
+        )
+        with self.store.read() as conn:
+            rows = conn.execute(
+                "SELECT * FROM forward_performance_snapshots WHERE source=? AND (created_at<? OR (created_at=? AND id<?)) ORDER BY created_at DESC,id DESC LIMIT ?",
+                (source, boundary, boundary, boundary_id, limit + 1),
+            ).fetchall()
+        items = []
+        for row in rows[:limit]:
+            item = {k: row[k] for k in ("id", "source", "created_at", "content_hash")}
+            try:
+                body = checked_snapshot(row)
+                item.update(
+                    status="available",
+                    integrity_status="stored_content_valid",
+                    verification_status="not_recomputed",
+                    window=body["window"],
+                    summary={k: body["summary"].get(k) for k in fields},
+                    acceptance=body["acceptance"],
+                )
+            except PlatformError as exc:
+                item.update(
+                    status="unavailable",
+                    integrity_status="unavailable",
+                    verification_status="unavailable",
+                    error={"code": exc.code, "message": exc.message},
+                )
+            items.append(item)
+        return {
+            "source": source,
+            "items": items,
+            "next_before": f"{rows[limit - 1]['created_at']}:{rows[limit - 1]['id']}"
+            if len(rows) > limit
+            else None,
+            "scope": "Bounded stored-content summaries; content hashes do not establish recomputed verification. Use the separate verification endpoint.",
+        }
 
     def snapshot(self, identifier):
         with self.store.read() as conn:
@@ -599,6 +731,7 @@ class ForwardPerformance:
                 max_gap_ms=window["max_gap_ms"],
                 as_of=body["created_at"],
                 audit_end=window["audit_end_id"],
+                _requested_observed_range=window.get("requested_observed_range"),
             )
         # total_observations is a live account count, not part of the frozen
         # measurement. New observations after the boundary never alter evidence.

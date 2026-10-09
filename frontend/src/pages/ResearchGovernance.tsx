@@ -134,7 +134,10 @@ function SingleResearchGovernance({
           <h2>{t('Project trial history')}</h2>
           <RecordGrid
             value={{
-              recorded_runs: evidence.data.run_count,
+              [t('Recorded attempts')]: evidence.data.recorded_attempts ?? evidence.data.run_count,
+              [t('Primary evaluations')]: evidence.data.primary_evaluations,
+              [t('Replay attempts')]: evidence.data.replay_attempts,
+              [t('Distinct configurations')]: evidence.data.distinct_configurations,
               candidate_configurations: evidence.data.candidate_configurations,
             }}
           />
@@ -147,7 +150,12 @@ function SingleResearchGovernance({
             rows={(evidence.data.items ?? []) as Record<string, unknown>[]}
             columns={[
               { key: 'id', label: 'Run' },
-              { key: 'status', label: 'Status' },
+              { key: 'status', label: 'Status', render: (r) => t(String(r.status)) },
+              {
+                key: 'attempt_type',
+                label: 'Attempt',
+                render: (r) => t(String(r.attempt_type ?? 'legacy')),
+              },
               { key: 'candidate_configurations', label: 'Candidates' },
               { key: 'created_at', label: 'Created', render: (r) => date(Number(r.created_at)) },
               { key: 'details', label: 'Evidence', render: (r) => <JsonDetails value={r} /> },

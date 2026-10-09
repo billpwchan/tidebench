@@ -12,7 +12,7 @@ from tidebench.platform import PlatformError
 from tidebench.pro_api import ResearchInput
 from tidebench.pro_service import ProfessionalRuntime
 from tidebench.store import Store, dumps, encode
-from tidebench.strategy_registry import StrategyDefinition
+from tidebench.strategy_registry import ReleaseInput, StrategyDefinition, digest
 
 END = 1767225600000
 HOUR = 3_600_000
@@ -163,17 +163,42 @@ async def test_grid_release_preserves_explicit_candidate_and_requires_ack(runtim
     assert selected["parent_id"] == run["config"]["strategy_version_id"]
 
 
-async def test_oos_release_uses_training_selection_and_does_not_choose_test_winner(runtime):
+async def test_oos_release_preserves_training_choice_and_acknowledges_test_exposed_selection(runtime):
     run = await research(
         runtime,
         "walk_forward",
         {"train_bars": 160, "test_bars": 80, "step_bars": 80, "grid": {"fast": [5, 8], "slow": [20]}},
     )
-    fold = run["result"]["folds"][-1]
+    fold = max(run["result"]["folds"], key=lambda f: f["test_result"]["metrics"]["total_return_pct"])
     preview = runtime.registry.preview_release(runtime, run["id"], fold["id"])
     assert preview["definition"]["strategy"] == fold["selected_strategy"]
-    assert preview["selection_scope"] == "training_selected_independent_oos_fold"
-    assert "no_oos_evidence" not in preview["required_acknowledgements"]
+    assert preview["selection_scope"] == "training_selected_test_exposed_fold"
+    assert preview["required_acknowledgements"] == ["post_test_selection"]
+    source = preview["selection_evidence"]
+    assert source["source_result_hash"] == run["manifest"]["result_hash"]
+    assert source["test_result_hash"] == digest(fold["test_result"])
+    assert source["selected_strategy_hash"] == digest(preview["definition"]["strategy"])
+    assert source["selected_fold_id"] == fold["id"]
+    assert source["available_fold_ids"] == [f["id"] for f in run["result"]["folds"]]
+    assert source["test_results_available"] and not source["independent_final_validation"]
+    with pytest.raises(PlatformError, match="acknowledge"):
+        approve(runtime, run, fold["id"], acknowledgements=[])
+    release = approve(runtime, run, fold["id"])
+    assert release["preview"]["selection_evidence"] == source
+    assert release["acknowledgements"] == ["post_test_selection"]
+    other = next(f for f in run["result"]["folds"] if f["id"] != fold["id"])
+    with pytest.raises(PlatformError, match="Review a fresh release preview"):
+        runtime.registry.approve_release(
+            runtime,
+            {
+                "run_id": run["id"],
+                "selection": other["id"],
+                "preview_hash": preview["preview_hash"],
+                "acknowledgements": ["post_test_selection"],
+                "review": "A fold change needs a new review.",
+            },
+            "trader",
+        )
     with pytest.raises(PlatformError, match="existing OOS fold"):
         runtime.registry.preview_release(runtime, run["id"], "best-test")
 
@@ -249,3 +274,25 @@ async def test_legacy_research_gets_a_captured_version_at_release(runtime):
     assert version["definition"]["strategy"] == release["config"]["strategy"]
     assert version["created_by"] == "trader"
     assert version["parent_id"] is None
+
+
+async def test_one_chronological_fold_is_not_independent_final_validation(runtime):
+    run = await research(
+        runtime, "train_test", {"train_bars": 300, "test_bars": 100, "grid": {"fast": [5, 8], "slow": [20]}}
+    )
+    preview = runtime.registry.preview_release(runtime, run["id"], "fold-1")
+    assert preview["required_acknowledgements"] == ["post_test_selection"]
+    assert preview["selection_evidence"]["available_fold_ids"] == ["fold-1"]
+    assert not preview["selection_evidence"]["independent_final_validation"]
+    body = ReleaseInput.model_validate(
+        {
+            "run_id": run["id"],
+            "selection": "fold-1",
+            "preview_hash": preview["preview_hash"],
+            "acknowledgements": ["post_test_selection"],
+            "review": "Chronological testing informed this decision.",
+        }
+    )
+    release = runtime.registry.approve_release(runtime, body.model_dump(), "trader")
+    assert release["status"] == "approved"
+    assert release["preview"]["selection_evidence"]["source_result_hash"] == run["manifest"]["result_hash"]
