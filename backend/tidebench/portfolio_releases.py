@@ -71,6 +71,57 @@ class PortfolioReleases:
                 )
             ]
 
+    @staticmethod
+    def liquidity_review(source, symbols, connection):
+        from .liquidity_evidence import checked_evidence
+
+        reports = []
+        if source == "okx":
+            for symbol in symbols:
+                row = connection.execute(
+                    "SELECT * FROM liquidity_calibrations WHERE inst_id=? ORDER BY created_at DESC,id DESC LIMIT 1",
+                    (symbol,),
+                ).fetchone()
+                if row is None:
+                    continue
+                report = checked_evidence(row, "liquidity_calibrations")
+                for pinned in report["captures"]:
+                    capture = connection.execute(
+                        "SELECT * FROM liquidity_captures WHERE id=?", (pinned["id"],)
+                    ).fetchone()
+                    if (
+                        capture is None
+                        or checked_evidence(capture, "liquidity_captures")["content_hash"]
+                        != pinned["content_hash"]
+                    ):
+                        raise PlatformError(
+                            "portfolio_liquidity_integrity",
+                            "Pinned liquidity evidence is missing or changed.",
+                            409,
+                        )
+                reports.append(
+                    {
+                        "id": report["id"],
+                        "inst_id": symbol,
+                        "content_hash": report["content_hash"],
+                        "created_at": report["created_at"],
+                        "status_at_freeze": report["status"],
+                        "independent_window": report["independent_window"],
+                        "declared_sizes": {
+                            key: report["input"][key] for key in ("child_notional", "sleeve_notional")
+                        },
+                        "conditions": report["conditions"],
+                    }
+                )
+        return {
+            "role": "informational_local_paper_review",
+            "scope": "Pins the exact public observed-window reports reviewed with this release; no venue execution, historical cost, future capacity or fill guarantee. Missing or old reports are not replaced with model estimates.",
+            "reports": reports,
+            "missing_markets": [
+                symbol for symbol in symbols if symbol not in {r["inst_id"] for r in reports}
+            ],
+        }
+
     def preview(self, run_id, conn=None):
         r = self.runtime
         run = r.portfolios.get(run_id)
@@ -130,6 +181,21 @@ class PortfolioReleases:
             count = connection.execute(
                 "SELECT COUNT(*) FROM pro_deployments WHERE status='running'"
             ).fetchone()[0]
+            liquidity_review = self.liquidity_review(run["source"], symbols, connection)
+            capital_admission = r.managed_portfolios.capital.preview(
+                run["source"],
+                version["definition"],
+                connection,
+                account=r.book.account(
+                    run["source"],
+                    {
+                        symbol: snapshot
+                        for (source, symbol), snapshot in r.snapshots.items()
+                        if source == run["source"]
+                    },
+                    connection,
+                ),
+            )
         differences = [
             {"field": key, "research": str(config[key]), "execution": str(risk[key])}
             for key in ("fee_bps", "slippage_bps", "liquidation_fee_bps")
@@ -140,9 +206,29 @@ class PortfolioReleases:
             for ckey, rkey in (
                 ("max_gross_pct", "max_gross_exposure_pct"),
                 ("max_daily_loss_pct", "max_daily_loss_pct"),
+                ("max_order_notional", "max_order_notional"),
             )
             if Decimal(str(config[ckey])) != Decimal(str(risk[rkey]))
         ]
+        if Decimal(str(config["max_base_asset_gross_pct"])) != Decimal(
+            capital_admission["policy"]["max_base_asset_gross_pct"]
+        ):
+            risk_differences.append(
+                {
+                    "field": "max_base_asset_gross_pct",
+                    "research": str(config["max_base_asset_gross_pct"]),
+                    "execution": capital_admission["policy"]["max_base_asset_gross_pct"],
+                }
+            )
+        lifecycle_scenario = config.get("universe_mode") == "historical_lifecycle"
+        if lifecycle_scenario:
+            risk_differences.append(
+                {
+                    "field": "lifecycle_execution_support",
+                    "research": "attributed_lifecycle_v1",
+                    "execution": "current_market_rules_only; historical settlement and unit conversion not executable by managed controller",
+                }
+            )
         evidence = r.protocol.verify_run(run)
         required = (
             ["sequential_leg_risk"]
@@ -153,7 +239,20 @@ class PortfolioReleases:
             + (["holdout_inconclusive"] if evidence.get("rejection_status") == "inconclusive" else [])
         )
         blockers = (
-            (["execution_halted"] if risk["halted"] else [])
+            capital_admission["blockers"]
+            + (
+                ["research_economics_incomplete"]
+                if run["result"].get("economic_state") == "incomplete_lifecycle"
+                or run["result"].get("metrics", {}).get("final_equity") is None
+                else []
+            )
+            + (["historical_lifecycle_forward_unsupported"] if lifecycle_scenario else [])
+            + (
+                ["research_execution_failed"]
+                if run["result"].get("execution_status") in {"failed", "compensating"}
+                else []
+            )
+            + (["execution_halted"] if risk["halted"] else [])
             + (["existing_inventory"] if inventory else [])
             + (["pending_orders"] if pending else [])
             + (["strategy_ownership"] if owners else [])
@@ -190,7 +289,10 @@ class PortfolioReleases:
             "research_evidence": evidence,
             "evaluation": run["result"].get("evaluation", {"mode": config["evaluation"]}),
             "metrics": run["result"]["metrics"],
-            "capital_basis": "current complete account equity × declared capital percentage; cash and risk are shared with the whole account",
+            "capital_basis": "current complete account equity × declared capital percentage; durable promises are admitted before deployment and retained until verified terminal flatness",
+            "capital_admission": capital_admission,
+            "capital_policy_hash": digest(capital_admission["policy"]),
+            "liquidity_review": liquidity_review,
             "execution_model": "post-close observed bid/ask, sequential local full fills; durable reduce-group compensation may also fail; no exchange order",
         }
         return preview | {"preview_hash": digest(preview)}

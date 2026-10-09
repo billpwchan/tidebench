@@ -246,20 +246,24 @@ def test_concurrent_funding_posts_one_economic_event(book):
     assert_ledger(book)
 
 
-def test_expected_settlement_survives_restart_and_late_publication_blocks_fill(book):
+def test_expected_settlement_survives_restart_and_late_publication_preserves_protection(book):
     submit(book)
     restarted = SimulationBook(Store(book.store.path))
     quote = snapshot(ts=2_000_001, funding_time=3_000_000, next_funding_time=4_000_000)
     meta = json.loads(restarted.positions("example")[0]["metadata"])
     assert meta["expected_funding_time"] == 2_000_000
-    with pytest.raises(PlatformError, match="realized historical rate"):
-        restarted.settle_funding("example", SYMBOL, [], {SYMBOL: quote})
-    with pytest.raises(PlatformError, match="reconcile"):
-        submit(restarted, order(side="sell", reduce_only=True), quote, key="late-close-01")
+    assert restarted.settle_funding("example", SYMBOL, [], {SYMBOL: quote}) == []
+    assert restarted.account("example", {SYMBOL: quote})["economic_status"] == "funding_pending"
+    with pytest.raises(PlatformError, match="settlement"):
+        submit(restarted, order(), quote, key="late-new-risk")
+    close = submit(restarted, order(side="sell", reduce_only=True), quote, key="late-close-01")
+    assert close["status"] == "filled" and not restarted.positions("example")
     event = {"ts": 2_000_000, "rate": ".001", "mark_price": "100"}
-    restarted.settle_funding("example", SYMBOL, [event], {SYMBOL: quote})
-    assert json.loads(restarted.positions("example")[0]["metadata"])["expected_funding_time"] == 3_000_000
-    submit(restarted, order(side="sell", reduce_only=True), quote, key="late-close-01")
+    settled = restarted.settle_funding("example", SYMBOL, [event], {SYMBOL: quote})
+    assert D(settled[0]["quantity"]) == 100
+    assert D(settled[0]["payment"]) == D(".1")
+    assert restarted.settle_funding("example", SYMBOL, [event], {SYMBOL: quote}) == []
+    assert submit(restarted, order(side="sell", reduce_only=True), quote, key="late-close-01") == close
     assert_ledger(restarted)
 
 
@@ -576,6 +580,8 @@ def test_overdraw_oversell_and_cross_margin_fail_closed(book):
 
 
 def test_pending_admission_cap_and_cancelled_order_cannot_fill(book):
+    # Isolate the pending-count cap from the independent underlying exposure cap.
+    book.capital.set_policy("example", {"max_base_asset_gross_pct": "1000"}, "test")
     for index in range(100):
         pending = submit(book, order(order_type="limit", limit_price="90"), key=f"pending-{index:04}")
     with pytest.raises(PlatformError, match="100 pending"):

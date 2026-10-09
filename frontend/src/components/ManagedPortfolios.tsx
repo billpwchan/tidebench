@@ -1,6 +1,6 @@
 import PortfolioRiskEvidence from './PortfolioRiskEvidence';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Play, Square } from 'lucide-react';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
@@ -12,7 +12,13 @@ import { date, number, quantityText } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { canTrade } from '../lib/permissions';
 
-export default function ManagedPortfolios({ source }: { source: Source }) {
+export default function ManagedPortfolios({
+  source,
+  initialGroupId,
+}: {
+  source: Source;
+  initialGroupId?: string;
+}) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const allowed = canTrade(useSession()?.user?.role);
@@ -26,7 +32,8 @@ export default function ManagedPortfolios({ source }: { source: Source }) {
     queryFn: () => proApi.portfolioReleases(source),
     refetchInterval: 10000,
   });
-  const [selected, setSelected] = useState('');
+  const [selected, setSelected] = useState(initialGroupId ?? '');
+  useEffect(() => setSelected(initialGroupId ?? ''), [initialGroupId]);
   const group = groups.data?.items.find((g) => g.id === selected) ?? groups.data?.items[0];
   const refresh = () => {
     for (const key of [
@@ -231,7 +238,7 @@ function VerifiedGroupEvidence({
         },
       ]
     : [];
-  const active = ['running', 'compensating'].includes(group.status);
+  const active = ['running', 'compensating', 'failed'].includes(group.status);
   return (
     <section className="managed-group-evidence">
       <PortfolioRiskEvidence decisions={riskDecision} />

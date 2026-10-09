@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
@@ -14,9 +14,9 @@ import {
 import { defaultStrategy, downloadCsv } from '../api';
 import type { Source, Strategy } from '../api';
 import { useSession } from '../components/AuthGate';
-import ForwardPerformance from '../components/ForwardPerformance';
+const ForwardPerformance = lazy(() => import('../components/ForwardPerformance'));
 import ManagedPortfolios from '../components/ManagedPortfolios';
-import Contributions from '../components/Contributions';
+const Contributions = lazy(() => import('../components/Contributions'));
 import SimulationClock from '../components/SimulationClock';
 import ReleaseHistory from '../components/ReleaseHistory';
 import PortfolioAnalytics from '../components/PortfolioAnalytics';
@@ -46,6 +46,8 @@ import {
   valueText,
 } from '../components/ProWorkspace';
 
+const AccountCapitalPolicy = lazy(() => import('../components/AccountCapitalPolicy'));
+
 export default function Portfolio({
   source,
   initialView = 'positions',
@@ -57,8 +59,9 @@ export default function Portfolio({
   const canOperate = canTrade(useSession()?.user?.role);
   const qc = useQueryClient();
   const now = useNow();
-  const [table, setTable] = useState(initialView);
-  useEffect(() => setTable(initialView), [initialView]);
+  const [table, setTable] = useState(initialView.split(':')[0]);
+  useEffect(() => setTable(initialView.split(':')[0]), [initialView]);
+  const initialGroupId = initialView.startsWith('managed:') ? initialView.slice(8) : undefined;
   const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
   const [symbol, setSymbol] = useState('BTC-USDT');
   const [side, setSide] = useState<'buy' | 'sell'>('buy');
@@ -250,9 +253,19 @@ export default function Portfolio({
                 { key: 'releases', label: 'Paper releases' },
               ]}
             />
-            {table === 'performance' && <ForwardPerformance source={source} />}
-            {table === 'managed' && <ManagedPortfolios source={source} />}
-            {table === 'contributions' && <Contributions source={source} />}
+            {table === 'performance' && (
+              <Suspense fallback={<Loading />}>
+                <ForwardPerformance source={source} />
+              </Suspense>
+            )}
+            {table === 'managed' && (
+              <ManagedPortfolios source={source} initialGroupId={initialGroupId} />
+            )}
+            {table === 'contributions' && (
+              <Suspense fallback={<Loading />}>
+                <Contributions source={source} />
+              </Suspense>
+            )}
             {table === 'releases' && <ReleaseHistory source={source} />}
             {table === 'analytics' && <PortfolioAnalytics source={source} />}
             {table === 'positions' &&
@@ -945,6 +958,12 @@ export function ExecutionRisk({
               </button>
               {save.isError && <ErrorBox error={save.error} />}
             </form>
+            <Suspense fallback={<Loading />}>
+              <AccountCapitalPolicy
+                source={source}
+                onSaved={() => setNotice(t('Capital policy saved'))}
+              />
+            </Suspense>
             <form
               className="halt-form"
               onSubmit={(e) => {

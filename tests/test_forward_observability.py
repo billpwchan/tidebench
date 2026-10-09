@@ -157,7 +157,9 @@ async def test_performance_records_costs_real_marks_and_explicit_valuation_gaps(
     current = await runtime.catalog.get_market_snapshot(symbol, "example")
     runtime.book.observe("example", {symbol: current})
     report = runtime.book.performance.report("example")
-    assert report["summary"]["total_observations"] == 3
+    # Repeated account observations now retain their distinct wall-clock
+    # evidence, even before a new market tick or economic command.
+    assert report["summary"]["total_observations"] == initial["summary"]["total_observations"] + 1
     assert report["summary"]["complete_valuation_chain"]
     # A partial valuation is recorded as a gap, never interpolated into returns.
     runtime.book.observe(

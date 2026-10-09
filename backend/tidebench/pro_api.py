@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import Field, model_validator
 
 from .engine import ACCOUNTING_CONTEXT
+from .liquidity_evidence import LiquidityCalibrationInput, LiquidityCaptureInput
 from .platform import COOKIE, PlatformError
 from .portfolio_analytics import PriceShock, analyze_portfolio
 from .portfolio_registry import PortfolioProjectInput, PortfolioVersionInput
@@ -32,6 +33,18 @@ Direction = Literal["long_only", "long_short", "short_only"]
 Role = Literal["admin", "trader", "researcher", "viewer", "risk_operator"]
 ShockPercent = Annotated[Decimal, Field(gt=-100, le=1000)]
 AssetId = Annotated[str, Field(pattern=r"^[A-Z0-9]{1,24}$")]
+
+
+class CapitalPolicyInput(InputModel):
+    source: Source = "okx"
+    max_base_asset_gross_pct: Annotated[Decimal, Field(ge=1, le=1000)]
+
+
+class PerformanceSnapshotInput(InputModel):
+    source: Source = "okx"
+    window_start: int = Field(default=1, ge=1, lt=2**63)
+    window_end: int | None = Field(default=None, ge=1, lt=2**63)
+    max_gap_ms: int = Field(default=60000, ge=1000, le=86400000)
 
 
 class ClockInput(InputModel):
@@ -754,9 +767,31 @@ def professional_router(app, access, runtime, supervisor, settings):
     def performance(
         source: Source = "okx",
         limit: int = Query(default=500, ge=1, le=5000),
-        before: int = Query(default=2**63 - 1, ge=1),
+        before: int = Query(default=2**63 - 1, ge=1, lt=2**63),
+        window_start: int = Query(default=1, ge=1, lt=2**63),
+        window_end: int | None = Query(default=None, ge=1, lt=2**63),
+        max_gap_ms: int = Query(default=60000, ge=1000, le=86400000),
     ):
-        return runtime.book.performance.report(source, limit=limit, before=before)
+        return runtime.book.performance.report(
+            source,
+            limit=limit,
+            before=before,
+            window_start=window_start,
+            window_end=window_end,
+            max_gap_ms=max_gap_ms,
+        )
+
+    @router.post("/pro/execution/performance/snapshots", status_code=201)
+    def freeze_performance(body: PerformanceSnapshotInput, request: Request):
+        return runtime.book.performance.freeze(**body.model_dump(), actor=actor(request))
+
+    @router.get("/pro/execution/performance/snapshots/{identifier}")
+    def performance_snapshot(identifier: str):
+        return runtime.book.performance.snapshot(identifier)
+
+    @router.get("/pro/execution/performance/snapshots/{identifier}/verify")
+    def verify_performance_snapshot(identifier: str):
+        return runtime.book.performance.verify(identifier)
 
     @router.get("/pro/execution/deployments/{identifier}/decisions")
     def decisions(
@@ -816,6 +851,18 @@ def professional_router(app, access, runtime, supervisor, settings):
             raise PlatformError("source_mismatch", "Query and command sources must match.", 422)
         return runtime.book.set_risk(
             source, encode(body.model_dump(exclude_none=True, exclude={"source"})), actor(request)
+        )
+
+    @router.get("/pro/execution/capital-policy")
+    def capital_policy(source: Source = "okx"):
+        return runtime.book.capital.policy(source)
+
+    @router.put("/pro/execution/capital-policy")
+    def update_capital_policy(body: CapitalPolicyInput, request: Request, source: Source = "okx"):
+        if source != body.source:
+            raise PlatformError("source_mismatch", "Query and command sources must match.", 422)
+        return runtime.book.capital.set_policy(
+            source, encode(body.model_dump(exclude={"source"})), actor(request)
         )
 
     @router.post("/pro/execution/halt")
@@ -938,5 +985,37 @@ def professional_router(app, access, runtime, supervisor, settings):
                     raise
             finally:
                 app.state.maintenance = app.state.stopping or (critical_started and not critical_completed)
+
+    @router.post("/pro/research/liquidity/captures", status_code=201)
+    async def capture_liquidity(body: LiquidityCaptureInput, request: Request):
+        return await runtime.liquidity.capture(body, actor(request))
+
+    @router.get("/pro/research/liquidity/captures")
+    def liquidity_captures(inst_id: MarketId | None = None, limit: int = Query(default=100, ge=1, le=100)):
+        return {"items": runtime.liquidity.captures(inst_id, limit)}
+
+    @router.get("/pro/research/liquidity/captures/{identifier}")
+    def liquidity_capture(identifier: str):
+        return runtime.liquidity.get_capture(identifier)
+
+    @router.post("/pro/research/liquidity/calibrations", status_code=201)
+    async def calibrate_liquidity(body: LiquidityCalibrationInput, request: Request):
+        return await runtime.offload(runtime.liquidity.calibrate, body, actor(request))
+
+    @router.get("/pro/research/liquidity/calibrations")
+    def liquidity_calibrations(inst_id: MarketId | None = None, limit: int = Query(default=20, ge=1, le=20)):
+        return {"items": runtime.liquidity.calibrations(inst_id, limit)}
+
+    @router.get("/pro/research/liquidity/calibrations/{identifier}")
+    def liquidity_calibration(identifier: str):
+        return runtime.liquidity.get_calibration(identifier)
+
+    @router.get("/pro/research/liquidity/paper-comparison")
+    def liquidity_paper_comparison(
+        inst_id: MarketId,
+        limit: int = Query(default=50, ge=1, le=100),
+        max_age_ms: int = Query(default=2000, ge=1, le=60000),
+    ):
+        return {"items": runtime.liquidity.compare_paper(inst_id, limit, max_age_ms)}
 
     return router

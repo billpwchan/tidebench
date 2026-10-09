@@ -1,0 +1,34 @@
+{
+  "audit_scope": "isolated SQLite, synthetic example observations, no exchange requests or primary workspace mutation",
+  "input": {
+    "instrument": "BTC-USDT-SWAP",
+    "ct_val_base": "0.01",
+    "quantity_contracts": "100",
+    "leverage": "10",
+    "entry_price": "100",
+    "entry_ts": 1000000,
+    "funding_due_ts": 2000000,
+    "observed_ts": 2000001,
+    "observed_mark_bid_ask": "80",
+    "realized_funding_events": [],
+    "fee_bps": "0",
+    "slippage_bps": "0",
+    "liquidation_fee_bps": "0",
+    "maintenance_margin_rate": "0.004"
+  },
+  "observed": {
+    "margin": "10.00",
+    "unrealized_pnl": "-20.00",
+    "maintenance_margin": "0.32000",
+    "account_equity": "9980.00",
+    "reduce_only_result": "funding_pending",
+    "liquidation_true_result": "funding_pending",
+    "remaining_quantity": "100",
+    "insurance_debt": "0"
+  },
+  "code_evidence": [
+    "/Users/billpwchan/Documents/okx_algo/backend/tidebench/pro_execution.py:536",
+    "/Users/billpwchan/Documents/okx_algo/backend/tidebench/pro_service.py:1062"
+  ],
+  "acceptance": "A due-but-unpublished funding event preserves its original settlement-time quantity and ownership liability. Protective reduction and modeled liquidation do not erase this obligation; later publication books the original amount once after close/reopen and recovery. Unknown funding is not treated as zero or certified as complete account equity."
+}

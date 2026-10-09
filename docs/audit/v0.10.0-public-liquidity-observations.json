@@ -1,0 +1,2695 @@
+{
+  "collection_status": "completed",
+  "source": "OKX public REST",
+  "python": "3.13.15",
+  "platform": "macOS-15.8.1-arm64-arm-64bit-Mach-O",
+  "requested_rounds": 12,
+  "interval_seconds": 30,
+  "scope": "Current cached organic L2 observations, no authenticated API, no orders, no historical or live execution calibration.",
+  "implementation_sha256_at_start": {
+    "backend/tidebench/liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+    "backend/tidebench/market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+    "scripts/capture_liquidity.py": "8d0e67ac8f85a7898925988ce35713a2a11a2860b9e06d5dc32b29a9b1999c6d"
+  },
+  "implementation_sha256_at_end": {
+    "backend/tidebench/liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+    "backend/tidebench/market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+    "scripts/capture_liquidity.py": "8d0e67ac8f85a7898925988ce35713a2a11a2860b9e06d5dc32b29a9b1999c6d"
+  },
+  "implementation_changed_during_collection": false,
+  "captures": {
+    "BTC-USDT": [
+      {
+        "id": "88c5935a7c7f43ed90404f10c985b748",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526476466,
+        "content_hash": "24bdc37c8505db61c396daf65e0811d2c91a6c3d8133e9da3ee93b704ee805ea",
+        "raw_hash": "444c09dcf2bc96876b6a0428fec64025f8c70281758def2ff01a8430ddf8347e",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "3fa0be9520c16406cf9d5f3ab7de8930dc29812b9850001c7d97280b0a6b4c8e",
+        "status": "supported",
+        "book_age_at_capture_ms": 60
+      },
+      {
+        "id": "2bf1abca06de442c83ad27a8570ed537",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526506288,
+        "content_hash": "9b0f0919b8cbe800b722e2b7957bdff62433e6ede25cbb2a223aab9a494929b0",
+        "raw_hash": "3c2d81336c34c5cf3834146b3f161e370f0d5b273abf5ca968ffca3f99982cd3",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "d122df0132821097f019d5415aeae56ee9925f691709ada5634afc49ca75107c",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -118
+      },
+      {
+        "id": "42f21198ed904a4ebc3eb0874eb873e0",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526536237,
+        "content_hash": "8961354614ce051f9787d2e8c6bdeb06e9f2e43d027c1b7b0fee9c13d1e5d0e2",
+        "raw_hash": "e206fac4bd8c1942a22247be4d68efddd293f43c5312453c581375e30272aae5",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "dad58a7d7e0b3ba594e84972cf5743ca6cf81dbb6f1aee3650eed8b3c0eee390",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      },
+      {
+        "id": "53246f639db949c9b8bace9a6a29e05f",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526566237,
+        "content_hash": "9312ccd8c6bc1b78907b8f0e4614b45663df036ffbefb496b863cbdf4525075a",
+        "raw_hash": "412618c235cb764105bc20716d5e2ca488dca4385bbb91df91e8b4738daed6e6",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "1c38f238a82811787d201ee8f851fefa8a0e759b7e8002bced56785f93934f60",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      },
+      {
+        "id": "0d5a7ff660204a5982e52daa0a91e40f",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526596445,
+        "content_hash": "6db89424d51519821b14b86abdb75f09054e595d27f81de2b4c27e4cfb15792f",
+        "raw_hash": "45f3de12097828d146dfe8db6b6e869459a025d0d9d4b44f55d0622cc6a1d2ee",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "1132e105ffb0dec3323100d52258c8b460944b784a821ed9a2fa2487e5ff2ad9",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -111
+      },
+      {
+        "id": "53a81cff102b412f9946d27512d26d01",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526626279,
+        "content_hash": "895a5ee62615fa6f34dad4d400a9410d96d688089b1f618bfc1a93c48bb55fe7",
+        "raw_hash": "f7fe7142ebda5c2843d1dee14145ccfbfe45830b931766d7c1724364c1225d45",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "6903b9308dba1cca010ccb4b7ed3597ffca66f24d8041249fb3c40d443b1e1e9",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -127
+      },
+      {
+        "id": "21afee380f4b4e05b883b88c70579c05",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526656235,
+        "content_hash": "3dfd329addf11b15fe4b57416c593b9f8b8d4e4bc2220cdd99dacd8cf62ee77b",
+        "raw_hash": "28d3ece030a4a8fdc6152925afbe935bb59fc8107539ff43d5214b3bcb5d4d61",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "8d4c6e84f3e5ddcfb2044c27e4d860955a2c46bc204afb0eabd9709a8751da0e",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -121
+      },
+      {
+        "id": "9bd85c8315594fcab3f30c6e05403bff",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526686237,
+        "content_hash": "e6d597d8e40a75d165aa4afd26cedba8c447a9c3af72a55a2941bc34101b1881",
+        "raw_hash": "6add0b8dce26d41ee7f9b33309413acd0caa263dceca9a2f437d187ea29d1ea1",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "a9e255b938ddae15a005f091bdf99be1766efb2fb09199ed3b0c077c0f8bd746",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      },
+      {
+        "id": "908d2aa3329d4265b6664bfb1a6b9a36",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526716232,
+        "content_hash": "9eafcd3d3b1eed2f7f5d68a5661a875c856207c52b2eafe44246b098b7f119b0",
+        "raw_hash": "bde757fcc4dd76bff9d347041edd0b2b0f738e68b429913b17558da7e104d6de",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "0f5f04871a6a841ed5eb600194945284518615baa55a47b162970522fd11d936",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -124
+      },
+      {
+        "id": "4d6910e6264041d8a7732850b8c58934",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526746285,
+        "content_hash": "9d9bd98afc160d81848574d410d079a6fb6b5942fc000017aa30ef8336ccf229",
+        "raw_hash": "9d85243f06137b98297920cdc60204de38813a811d2bf4124d044f10f390b476",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "84d3195ab516d98561a53559ac22827972e4ee4e537f2503fe7605dd4e456cde",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -121
+      },
+      {
+        "id": "a2c051b8386441a3b502ea84df547060",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526776230,
+        "content_hash": "0368ff8ed19506eae33b13d3df152e49bb12b6a0a0f8b2e7e4b35cfe72304e53",
+        "raw_hash": "30ef6c33d14711202d4c1f382fe1c31e3e55423a6d243ed1155c19440b454a57",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "2cf1d1d50f39499e041e2e28872be1c1e9539f50aca79e252206026bfac1fa2c",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -126
+      },
+      {
+        "id": "0886f6c48cff41a6b9bac74db697cc8c",
+        "inst_id": "BTC-USDT",
+        "received_at": 1791526806284,
+        "content_hash": "81a2168fae6b6f3ec1e33d21be6374b36e51756de262b19441ffb2024db16457",
+        "raw_hash": "fc175d40843dfa61f427c51f0228fb0faa1deaa4f4dc080dfbdf7b05436c074a",
+        "metadata_hash": "fa0935333c72b989c413d127f653fc426d98393a72c502901392d5805ea2a9e0",
+        "evidence_hash": "bf36d75d6a4195a10f774cbd1609f0d2c5de3e2c2a765248d6ae4f11e5224595",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -122
+      }
+    ],
+    "ETH-USDT": [
+      {
+        "id": "733055c2aa5247f1a864de084b615dd2",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526476753,
+        "content_hash": "51adaa31a6208c7dd68ef46df65bd31b6f7629f3c69bc2e5314fa8160853f253",
+        "raw_hash": "fc264e120ef13ad2f216113e62724aacd33279b7f9eb9e7a84747ec15c1ea42e",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "9bfd130189ccac464954fea0baed7eedb0a758357afd42cad7676b46908cfa82",
+        "status": "supported",
+        "book_age_at_capture_ms": 53
+      },
+      {
+        "id": "0f28db54e87142428c7f8319e9cf4c91",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526506593,
+        "content_hash": "df2d6976b5b6fc44bdb7c26556a66352e6b115db06474f43b46e70bcc17b70e9",
+        "raw_hash": "e62d8a6dcddcada6688ed8dbcc20c43b760de85ce9e5d27423385c77c03b11f2",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "e7d79850b76aca91fd1639c24f7578d2817a9bf5f98412df167003ad65097fd3",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -107
+      },
+      {
+        "id": "097a43aed80f425fb8bf72d722d33361",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526536525,
+        "content_hash": "141b5774d1993374d81c8f7729b04e6f686f6cf32562798911225bb48ee8de12",
+        "raw_hash": "0e585f9e1c4d462f85acaa6e6f99100f7766b51ee078f310fb8c58186d2a61a6",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "e4edc83e65f777e9e92684c49eb5fb90c7d5ac906e2db5d867ab0655b1ccc12d",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -125
+      },
+      {
+        "id": "dafc3e891ff8418b8974ed65de616c07",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526566531,
+        "content_hash": "53a735f82c06627800f128c4ea1e29713cd6a6e816c40dd4579547ec66926008",
+        "raw_hash": "a481d35e06bb5473662d2b34e548a4edc62fc9e8d73937b73524eb080a2d595f",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "e4df03ab537d8f22ef21758ea332d15f1186023b48e6ca7457be2aad30332ac8",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      },
+      {
+        "id": "c0705334589c4b2c9062c007303de386",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526596734,
+        "content_hash": "554bb48319cc30d4fc9123465a929a7f3ef8283441a694cd27be9a458f2bcbcb",
+        "raw_hash": "efe3986a23c51de8263d8b5d0513c716a39b466a699f30431a31883ba8db5644",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "2aca18a4faf1f1838018b9940cc0b4f7105bc7341a3fcb4556e8c020f0542131",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -116
+      },
+      {
+        "id": "c9d8ac85832e4fe480398e081284f01f",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526626600,
+        "content_hash": "f6b1a1fae245212d56a4283ac2f9c5cf37291a3130210e5350543fef243ac246",
+        "raw_hash": "fbc5d8a17f994c39ce3d979e016707b14da70f77f4a46bfe601f060911177fd3",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "d911ddd1e0ea2d53715c991c44adbb01c851158d1fd7915f80887b97eb3c3eba",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -100
+      },
+      {
+        "id": "73e6dd4d68b4405295184be7dd6adfcf",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526656533,
+        "content_hash": "06bddf6ca4cbd39649ab3e4ac9a1c1004bcfd533f394293d2041cb8c2d2e0d26",
+        "raw_hash": "7c225ee1c3f0b4f588e51282ee5325c2c1d221b7099aaa5da500b76f9491cdf5",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "ba6b257861321fae3d528a80b7c6b799e609e6c45be624f7a936f43e0c42f6c6",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -117
+      },
+      {
+        "id": "a83036abe8ac453f8d9b69a228e5659c",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526686525,
+        "content_hash": "37d4a1c032b98a47b4c07e8f579f2a7f52a30819ee71518febfb4b188cb81a94",
+        "raw_hash": "0b0b9cca9e742da14f6bceb88c9c411d813917f78034ee9002f158617556e5c6",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "06c0bd69fc6cd5c1d9b0197079b00c0227fea1ee12fa87156f24edb70392dd9d",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -125
+      },
+      {
+        "id": "175bd7c822064686b425bb4cfd2cdbc7",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526716579,
+        "content_hash": "2cdd1a0b516ebd6d4b535e9354ecaad2307433406fa57d48ba7eded133da3804",
+        "raw_hash": "011bb973f4435a3a734ec2b916ff930181083ad6d22f250a844583127bd2bf6a",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "cbb03f3741bb593aae2ac54cb53cc47cedf03f7ae5391745d2731c38392d3513",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -121
+      },
+      {
+        "id": "a7c6bf83b42e4fc7a356bc15b27e381a",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526746579,
+        "content_hash": "e14ead0908fddaa0d94402a8e581ee6c5539db7e83e6960afff6fea3640b11bd",
+        "raw_hash": "6d75e98cc9ccd85262e684c35d5e66274ac3d0cdfcc6da994f0f9dc9c897e767",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "86d0d543a2bcb72236a84413c8529f01df2d548d8f4e4fdab14ed6d49066cf83",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -121
+      },
+      {
+        "id": "78fa90162bc54a34982faed9b801a544",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526776534,
+        "content_hash": "32bb99bd8f7ef3d551f2922a2a62cb5dd4ceea63b7cf11f5b50fe8b460777037",
+        "raw_hash": "8d259bb16bad6b462179f4a902b1a448686553032217123e6673f19b63e647e1",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "515dfeeb9d82814e9ed8db02be4d3153173f2f03b44639ea8d13c0eeebe7dfb9",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -116
+      },
+      {
+        "id": "082916b9e2df4147b052ebf23325df8b",
+        "inst_id": "ETH-USDT",
+        "received_at": 1791526806585,
+        "content_hash": "77719704e3eefb0615b559778a6c1db005867a0c061e726070689489e3bacd7c",
+        "raw_hash": "2559119ba41604539c494014eaf0bf00d2f7ef5cbce28de0409b2eacf1e0b7e0",
+        "metadata_hash": "2ab28c8bcc3f34a17b344d4656c4e2c9534622a5c934a65f063661dfce6ee1c3",
+        "evidence_hash": "dda2dd2be3bc22fd41560ab86549cd0931ef27edcb0d5aaa769a5f213e9fef1b",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -116
+      }
+    ],
+    "SOL-USDT": [
+      {
+        "id": "608fa9cd706c4a21ba2f00f73d50f80d",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526477069,
+        "content_hash": "c634dc014499acea1f8160242044060c32f5158dd293ff0866acfd26d37b270a",
+        "raw_hash": "c8f9f71d37f76e5f9b4d3cbb0e679c9cfa9228b9a05423ce0a0e32bc194e3aba",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "1faa2b690616d3a4ec199a18f66b88fd32bfebaf19808610043c809987553b37",
+        "status": "supported",
+        "book_age_at_capture_ms": 61
+      },
+      {
+        "id": "2c49ae37178b4fa39f74d6bb22f3bdfc",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526506892,
+        "content_hash": "4bbd67f776eb72d37335e10dec2202eb4f752be5023b913c1fc83d29d63f25fe",
+        "raw_hash": "9a3014c75dbac3698b73960f5cff6259eccf6bd01567f5a81ee4caffffdf1453",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "101620c3ce752a2086e89a277c70ae2c193a78d801c05734d4e3636e8840b6cc",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -116
+      },
+      {
+        "id": "0701e6a3c3254c9d97ba376f4888e86e",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526536785,
+        "content_hash": "8b30f16b4cebbfe3532d7e7df11d82c6720e2293198e7b75cc49be445b45bed5",
+        "raw_hash": "2c9c0e7b2b0623d7ccbfae0d939267908982a9a5a1d73d837f75b7ea880ecb1c",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "0fe6e11dc39cec20d24b845f7c14cb2da4337a7b6e4cc5454bffbeec916fb6a0",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -123
+      },
+      {
+        "id": "615bb5751a324fe2b90e3a80a4515621",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526566784,
+        "content_hash": "82a8bff3a4c6fd87410ddd96e60db600289c0b4149a45f491a76730857968b90",
+        "raw_hash": "45280f485a1963fbfc9d21eaf5c4ff6ce78bcc46f2f14160bfbcdb4a9fce2df1",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "98e458cbf71f8a5e40aaa259559ec09de8ee62531f103ca767602e92faca8372",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -124
+      },
+      {
+        "id": "ca2c637a854141f28e4ddc73f86d0671",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526597054,
+        "content_hash": "3b707bef6bfe921c02bcf1d592888ad904de683f1a15c8215b876575a116d93a",
+        "raw_hash": "a9c0b259c096d2d779d4231ab602ebaf4966c0c7da6ccf2da98f8142f71e45ef",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "f278f211a726ddb7f0b328fcaf5d72721dfa3b79d7bfa6c023e4aac2296dae57",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -104
+      },
+      {
+        "id": "b5c3a8d3a0f04839a8fd2ecf72761e2d",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526626895,
+        "content_hash": "1a0ef75c2f4f03ec2d3f983d765d55c883e3f41583d01f4714a1a14d35fc4027",
+        "raw_hash": "e6baee2456479f7561e03e6a857b48934bd5d36dd84d14ed7417c6e3aa08c337",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "23103adfd781bb2b45e554486fa93c92f73fb73a3c5291b22d44f5ec2992772d",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -113
+      },
+      {
+        "id": "6bd6bb623fc3415e8c4abe78656bf02c",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526656787,
+        "content_hash": "4a9cf1eb2f9750ee05b0820b9aa6f5ad86376285bc2c37e76b860a5a6808d7fb",
+        "raw_hash": "b1f5ec825c07ed65ac9d5d7b915f293aac30d45d092700eb72dc10a508d4550a",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "38ddfee63354d48d258ca2ae342262b0937a6dd19e2d5bc388466436463995bf",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -121
+      },
+      {
+        "id": "850384f043b04d5eb150abcac1d6f156",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526686781,
+        "content_hash": "a81cde15609f8df74ac3ef0df84d5cd47820a8e4f47a7958e6fac74e26d0044c",
+        "raw_hash": "2470c721e125fbd9d3f6d3401ee6fcfac860e6250038de0eade9ba44e973c27b",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "a121745d86e79a591ca2bd366f029ee0935dc3ce5fdd3be37211b08ea781b6d5",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -127
+      },
+      {
+        "id": "0d37507006d24420a9ae7e664b16dbd0",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526716834,
+        "content_hash": "6a8fbab611ea9c754cdf41477aaa67b3fe34007284c734a4d633fc086461c35c",
+        "raw_hash": "0fd2b5f4c08a1264c16fccc8e64a6db811aff13ad30cadabac3c5d8dfc8de62d",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "cb3f75d3b5de341a062d70153678c9f05f174f419ba4bf8632f7175da6411dd9",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -124
+      },
+      {
+        "id": "913f8eb1e2884c149a16d0c6ecb64001",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526746890,
+        "content_hash": "afad3e91fd7881c1091afb13b2cda6997a9d2cb8c7298f6626d3205c860c81ad",
+        "raw_hash": "a564942f62879522bf4780b215cacd6e542008c830f4b2d153b6ca20c3d22b34",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "aed051066e33a2c7ab5aad6205d92a6129ba5ce3a824bb9b8f6d108e2bdea698",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -118
+      },
+      {
+        "id": "4120ae8c86f14ecb94d18baab5b22ae8",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526776840,
+        "content_hash": "3bc81e04f24cea9ad31cebb872f81567b5980638cd7f4d74d0e8ddcf26f67124",
+        "raw_hash": "8c529a04e7b595f8c5e05427dbbec647611963c8c083698126d5d64c0bba4c71",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "34e1a7e3e16ed9404792cf1583152ab60ff4f4c6d0dbeeab0a3187b2879f6434",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -118
+      },
+      {
+        "id": "879153ecdb924ab1bc82f07038e9e0f9",
+        "inst_id": "SOL-USDT",
+        "received_at": 1791526806891,
+        "content_hash": "60819664c40c2904054f5a187b2037d9bb6b83b5be86e2fddf568d6fd45299a7",
+        "raw_hash": "4705c1ef0197b98a68f5386e17cedcdf1b011e5c4039aab8db08c31121aa12b6",
+        "metadata_hash": "9b6349b3761671367333c20581db98d704e49dc80d1bf2cb300984aafa50a154",
+        "evidence_hash": "3c8185d8e60971ad9962130a69c9391feec1c9a562435fbf4aa5f64b25b13402",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -117
+      }
+    ],
+    "BTC-USDT-SWAP": [
+      {
+        "id": "69e635522ea649b0a8439970daea70e8",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526477367,
+        "content_hash": "68470b64f4b14048ec36e7915bde4a8bb36ef5c29dc722f9e515e75b64a9f0b2",
+        "raw_hash": "27fdff35385e3998a99daa0fc0269197ef28a859205253cd0967f3efaf648edf",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "1c17846ec8f10af05c333230ab473c86f55feebd837b0c4323c499f5deebb21d",
+        "status": "supported",
+        "book_age_at_capture_ms": 61
+      },
+      {
+        "id": "4e3e93590ac5401688204488adaaa35f",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526507184,
+        "content_hash": "938a0ed2f45fe9968caa5de4ee8d8eaa69ab7688f4acfe85e012a117ecefe4c8",
+        "raw_hash": "c2d7deec12ddb2a70ab6d0e9b327dfd9f4d6fa485b1f5f71df989a73fee492a2",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "d1fad80777366664aee3966aaf8ccd8c0ddba8d98254d6c8adf6e1443e5779a1",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -122
+      },
+      {
+        "id": "b9f2c9e5b7db489083cf379af3c989a5",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526537033,
+        "content_hash": "8b330132b6d0fc332e720c68250299e1dcd40d969b0bc7da735e4503f6f09e64",
+        "raw_hash": "5feee73a2da9b1f611dd4377c700da8808b333407020ea8f0e997997ac70f62a",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "e4a99d7e79ac12e5a3d330aa7c5a6f63890e165267d98baf96fdc255d563a5da",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -123
+      },
+      {
+        "id": "ceedc68a33554bc4b2ab53f8abdbe177",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526567037,
+        "content_hash": "c122439554e6d626167a957ca69ce0b217f96c3ff3dda2d8023c88470e1ce86e",
+        "raw_hash": "27410f549d09079842c286b5ae043a3c070c7a83303ca9ef61956735a6dd1644",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "8d661d5ba346c974db0ee88289fc199667ff755e007956b08b332866a47b94a1",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      },
+      {
+        "id": "1a5cf5851d344c5fae9f85d5c7180160",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526597335,
+        "content_hash": "b619c17732530bf7b12413eb60e6392c365c6573e335321783ca03916a424ab7",
+        "raw_hash": "b49591078e1f05729ab03e02f27547d72cfb64934afe9687dc1abc4514a7fbcd",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "dee73d8870316a98771eed270f914397cc4ebc0743d49b4befcab6e9ff5ee354",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -121
+      },
+      {
+        "id": "70c3499695e04bc98fb8b283686c0509",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526627184,
+        "content_hash": "d39815aac1faea368dcd20c77ae1ef35e7897a6bf127db7bbec589e34134ca0e",
+        "raw_hash": "b35f58e2b3c7a54a0e914c22fe291a23e48cb5d6686c35860092838d840610c8",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "78769ebf0367631d8c02f5b305118e559b7774f22f1509e109972c67bac53121",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -122
+      },
+      {
+        "id": "eae4cc61a8ed463b9a3c039883773934",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526657041,
+        "content_hash": "9a20738fef2654cc3d7242ca91880ffa32a56521a5d702a048e12021bd83e149",
+        "raw_hash": "b1649d5587cfd690ec6a1652a9d061f2d6e63262ba52031e569ebf6bcb2512b3",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "220ba4307017b77ebb150731920d473d10a7b8212aedbbfbcefd13cfc78519ee",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -115
+      },
+      {
+        "id": "c485fdf931d14ee2945014a2d7c82e1f",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526687028,
+        "content_hash": "68334eafc60a47310375e6520babea133bdaafdeff1d65210484260685c7b26f",
+        "raw_hash": "fc40e7e143560f0d7a23cec0af6fe5c12f72757c26496c0db6da4c828d7af684",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "25dab8a32d79c980859ca1507a26a15ced00586df4a5c568dc34bdfd52e1b8b1",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -128
+      },
+      {
+        "id": "f31feefdf802464c81e271ead165111c",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526717138,
+        "content_hash": "876c01ee2af92e1abb1c297a69491dda5562aa570851784d912ad91e4438bf1f",
+        "raw_hash": "5a8ba08e408770937af65909ba2b62b92931596ddff4da890959a1e78f30b71f",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "41de1add67152103d1dde958ca7d6101c643d5fd0ac7a2086c2f79646917542f",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -118
+      },
+      {
+        "id": "e3fa43550a1842c7a7fae146b6920fa7",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526747190,
+        "content_hash": "291fe63e2efb1a9b89473e9695caeb686f7c63c860a89aa4128d0560850313f6",
+        "raw_hash": "9ce81211eea1be7dc808dd84c92610f1a193d371970cc90ced7b629e1384277d",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "4a77d40bd7a7750a39f25e68e3c91f5045634548256725f1ca406ed8afa3e3f4",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -116
+      },
+      {
+        "id": "14d52ff87e5241439ba66d44fb29f92e",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526777130,
+        "content_hash": "1747f994bc288f89cb86f1d10d7b5393120e6530bf5e0c00d1988575022c39f0",
+        "raw_hash": "28a3df4068d0a7c098ae992a86567e7f317d75b6315be18b23aea3b1c40f1b30",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "b6d61de92e9ff5a2bbdce355caec5a8d9c90b4f36690186e2a6d9a91907de5f2",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -126
+      },
+      {
+        "id": "26a01b901b9f44549ca8bb25e3fa38ce",
+        "inst_id": "BTC-USDT-SWAP",
+        "received_at": 1791526807199,
+        "content_hash": "748644118bfb3c9458ef283d4ec3d36969d413ce9d30d050b17a089c8661187a",
+        "raw_hash": "d6838567cdf1d218fef9362203f089c620104526db01d6370749e9a247a7161b",
+        "metadata_hash": "208f445710d433955bd2de2111b842e6065991ef4b59d68a7c348331daf1d6cf",
+        "evidence_hash": "536412f25a6112203ff50fb2d84206d1da3c7ac04a7c63f948fa1c14a097e3e4",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -107
+      }
+    ],
+    "ETH-USDT-SWAP": [
+      {
+        "id": "3d1731513feb4ea5b21a5eafeba602eb",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526477654,
+        "content_hash": "90877b1fdd89ea4452cd8086e5e1cc77d619fbeab35a3350fb6290591915c7bb",
+        "raw_hash": "288bc37ff65f0c9e693de1b45f5424afc2630a7e29a4f37d98536bb4f3691a34",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "1619338f00a994d39abea43c8ee0188bbf2c3ca38fda48ee0010238c6840f0cf",
+        "status": "supported",
+        "book_age_at_capture_ms": 54
+      },
+      {
+        "id": "819aea72c65647f6bcc889329fe71d8b",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526507481,
+        "content_hash": "ca138dea530f424cf15c02178f3e88ab2f40a293f956f459772023087db874de",
+        "raw_hash": "2a36fea7869c30cc11f2de95f95afe30164e9fe48361daf34921d0a7f7a38731",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "16b2800e6cdf1c2de3c8028d957f8cb7929eea7b4f49dff75cb5365a01ae4eda",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      },
+      {
+        "id": "e59ed9b65b084522b9181e6232698710",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526537285,
+        "content_hash": "bbb2f42ca2bdfbaf719aadabc881937c76bc6f2528a33785375863932e302102",
+        "raw_hash": "fa9607b74f3c20d6192c531e8738770954136c62e48e897f1bde227cffc27b18",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "7f229fdecaadc02fae946c838e8e9539cb0025ee7f0944c67f59a909c8cceee9",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -115
+      },
+      {
+        "id": "16b2746821a04647a3af1a4d9b52943e",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526567277,
+        "content_hash": "b21069e5e1c97ca45d30b7f9df6f003347af3ea854400a103a22980bcfe9c97b",
+        "raw_hash": "bd4cf6dfe3e2aac84f307f617c0a99709abaf044a4bbe5c849aa3f08b7e2baa6",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "4de232afbc1f7d02f5dc535e5e6cc8a065d227dfdbe65eff5b96be6c3043449e",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -123
+      },
+      {
+        "id": "e20cac4ef31442008bd1de871d03bc24",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526597627,
+        "content_hash": "83f6c11e78eb736532b4ddd81e67b0a374b4748a88347765de217d9d125c1c53",
+        "raw_hash": "600e8225099d04e096e918f6cf9594e2f332c4b18cabe7185be47b2583dfc327",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "f1df5f046d3383bc7974a5bdb8218b4cd817503d25280b2d67bc28c40c6c503c",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -123
+      },
+      {
+        "id": "1a6301020a7b47d4995e26ee67c7149c",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526627429,
+        "content_hash": "848ae37bb2cbb7ce2ea2ad38b5b186c41f046d355dd05c49b9f92cef4cb2b508",
+        "raw_hash": "17abdae47056e0e938377ffeb183c3bbe01f198ae5a20e7b95f06a5133345a54",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "230b47546739159ced07ffc34410269813c9fcc2bfd001a8017dc9300236e660",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -121
+      },
+      {
+        "id": "096a591f742b4053b511790eec3742ba",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526657325,
+        "content_hash": "283cfc6fba314f060fcc55de56ad126f903d8fef0a8a3be63d8d4978c52a668e",
+        "raw_hash": "918ea76a63be6fb05fbb2a0ae1177149b890eba8af10470ea7b3df060f35ddc3",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "e418993069bf2e68e11e5ee9859c5ddaf7ba92dab238ebaf56dfa1022e957f61",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -125
+      },
+      {
+        "id": "c0a87e80387d475ab679f9c467902aeb",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526687276,
+        "content_hash": "ea7e6b27a5f6eb0f89cffcb85deb33f2b7591d95f898c33e29c7723a5fafba59",
+        "raw_hash": "e5a5a3aabbb755ac1fe2b4374415c3e740c9e10c86539d9b0a24b9e4a3075275",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "f263d42b0cae6310df3c7fff3d5c0432cbf5af21917e7106775ce3309d89a634",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -124
+      },
+      {
+        "id": "3727fb4410fb436ebd67d2db458d9229",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526717440,
+        "content_hash": "3df4c662a72a6806e980dc1f742940932c234c03bd710a7b80f3ca1b0cb2e659",
+        "raw_hash": "cbbefdcdbe2e1f3c17326cccc839f14db9d6d70cefe44050727fcfbc41a42235",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "69d191c729299c14398c559662ed0c39d492eaadc9805dfec2b964781250f6cd",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -110
+      },
+      {
+        "id": "974ff3ad05ea44f39c31da26ff76037f",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526747481,
+        "content_hash": "11cb61e3c1d1391258506d5a01fbc0190879078c7177413c83f406530ccfd88c",
+        "raw_hash": "eadba0286029f343232df5e5fce9f9405066a2d1c3e9f17b46bb7f799a65b74b",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "ae1522c93bee4bd2f91d493fba4971b4e07c37c56f0520f29bae8f6235a2c8c1",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      },
+      {
+        "id": "34fc04fdb3914fdcb3a3c82560522c24",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526777371,
+        "content_hash": "8e291f64bd7aec33e45b26bb91977c38f39183f2fc1b00a4cf938e988c177097",
+        "raw_hash": "7192912d74469632b72cf09c7e886d490a5c5850157b7b3e7c1fb13e30341636",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "9f9fb0de3b0f76b17cd5d6ab693972ced7ca5efd96731af7ceb48573bb8773f1",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -129
+      },
+      {
+        "id": "0bfbe4bcc7ac495ba89b99dfe9a7b84f",
+        "inst_id": "ETH-USDT-SWAP",
+        "received_at": 1791526807482,
+        "content_hash": "55f645ba174ab0b7014956543244503cef14f0ee8314bd90b8601a17bf3e7654",
+        "raw_hash": "d540738703e827e8be0931131db6933f98ecb943c9a60b5062769e743b69119f",
+        "metadata_hash": "957f62c4fd9b8231170b003db742d04cf1c8b67a03fde194538811171adea687",
+        "evidence_hash": "c6f801bebc8c90a9191be3155620bd62a8d5fdc8edf2da0570bf8c81aa5cca8a",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      }
+    ],
+    "SOL-USDT-SWAP": [
+      {
+        "id": "8458db925a144b55b6d87319412d62e1",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526477911,
+        "content_hash": "4c58f378eea0f5a2629a143fb52a29e67d329100757c623120f2816ac68b0f87",
+        "raw_hash": "57d54c10a927858035abdcb3e196aded1819fd9154005cfe05ecc55813e9f0b3",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "f6fd02f372cffa12a8875bb81ce8599fee87a3882fc60cd9e128cca20ed07984",
+        "status": "supported",
+        "book_age_at_capture_ms": 53
+      },
+      {
+        "id": "e7c4a9f4bbd641c98608099cdae7dc75",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526507739,
+        "content_hash": "5eaf94b6e87725d1f6840747b1f58028c48ba6e77bb95958011b1fe0d5d1e9da",
+        "raw_hash": "2e11103494daa18fbc5edeef37b343957345cc7652e330b7d7c63b0c49518277",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "fe02aa3beef489a7a0da522079fc7d27cce4b0169a6018e926951b3937117d72",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -119
+      },
+      {
+        "id": "b5b338bb2e0440048670c1e2102a96dd",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526537552,
+        "content_hash": "9180eb1417638a47553d828d342ab7178a6c33632aa65e8102c8011e04a2e115",
+        "raw_hash": "731b770a4d8855f650d0fe832b9f6d5192a40d618d45e98e7557f287f1f2361a",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "b6df2db0ac7138b49bfa6a8d5310cd4c213736b6fc3a6dad0a4916df657ca65e",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -106
+      },
+      {
+        "id": "58451ecc324c4f048792a740cdf8bad5",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526567541,
+        "content_hash": "c3dd80f2db4b9fdf0db26dcc9c63bb251342a1b1b23787a3d95b14dd5643fe71",
+        "raw_hash": "1e578e37c748dab0609d37b39a05100721499f1710cbdb707533eab6b59c7261",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "7b85a7c0fcc8187df6c7a47711c15c054529853de96d8f3f68a4d1e001e95632",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -117
+      },
+      {
+        "id": "4d2c9a4682a24a33b67e5718cec75176",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526597951,
+        "content_hash": "0f40b8cbc601b02b4217a1fce80d4e1d58b88d3d742ee742aa27b2501eae33af",
+        "raw_hash": "741bad50b5df720ecc5d2072859eedbb45932fd3393beb68701d8fcc274c731f",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "eb3513e991f633526c8a47485e09bb2f6ef23e59183a9ba67659355ff1d4ec21",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -107
+      },
+      {
+        "id": "044e5c0314c2494c83bac63cc37924b4",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526627738,
+        "content_hash": "6fdbe5d677dc7db8209365996c6834dfab2b37664fea308adbce037cb8baf1a7",
+        "raw_hash": "e7ce9d8246a67a0699526f9fe1c862935a7f9bd0f8bb943ba7d01c0e18a0692e",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "3889b7d327d630774fc8402b66850cd69687af8daa8ca01d6d981c95e280ee6a",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -120
+      },
+      {
+        "id": "92d8cef5215c4c8b851497860a15122b",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526657583,
+        "content_hash": "798d256ab1a182718ba8da5b86242d3a06f737ebff33fd23bbb4d96eab8c6ee6",
+        "raw_hash": "2ad7168573c3073d03066ba4ce1ef0d8c65135af3f2a97ad5d2b3383f5adba34",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "3589262269ef1f9db336a995be593feb214ecdf313b8b0b651e1b7ffc5654e79",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -125
+      },
+      {
+        "id": "8bbfdebb86ba483b96e742ebc1236907",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526687532,
+        "content_hash": "c721f0611bf82d95c5998efe2e6724af09446e8c5e37124297e92200081c585d",
+        "raw_hash": "a321de2b5f6872517682527e19edc114e2266e27375b9c1ce2486cacd08e48ad",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "2b218ff00a2e6f002f79fa9e32316666c240a8751f0157e7a30bcf24ce331c72",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -126
+      },
+      {
+        "id": "cb7671253d674e66abb6ade22a4d1417",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526717695,
+        "content_hash": "1a4864a76436143c2fc1e6374c0c1ddcd2355b63c946cec9a228b3d7426813a5",
+        "raw_hash": "acc7afa83564353b467daa0af2765e9412b72ec946ad9e3e61b497f70514cdba",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "dffa2946c3ebb43ff16533f4428f094e55a89595916804e5340d76a9c624491e",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -113
+      },
+      {
+        "id": "ba2592f629954c9892463663be795622",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526747786,
+        "content_hash": "013e6ea0286f13a6d72ac66b49b8116a07388ec14fe4bcb5e7095f592d74185b",
+        "raw_hash": "d7e045c990acae40a5a89caa8625e27ea765f85270c53a4c184b63a600167059",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "13d28a4b5fc7850d05e76c8646572e6232dd921cf812a983ff27833a7f0ad813",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -122
+      },
+      {
+        "id": "9ce8b43e11f64d7bbeb700e36945c8db",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526777630,
+        "content_hash": "5667f50a2069f6f647d29a8c78635fce1d08578b58967ba236a420878729139d",
+        "raw_hash": "06d6598c889d4ec9ef5839ccdb4c545a3c4626c65568217996564a01fc903ccb",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "8c8bc8ff2caef92a30d74f2b3669a365d87e1fc474d232b76d64eed867859373",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -128
+      },
+      {
+        "id": "38ea53a2be054a62abf50af6efe64913",
+        "inst_id": "SOL-USDT-SWAP",
+        "received_at": 1791526807786,
+        "content_hash": "514ca7e560ab6e9ed815bdc36fc36bd05d655bcda6880b16d0dfdd79635e6505",
+        "raw_hash": "340f9828c9194638de9ea907b40f4ec5da297c1b974b23577211bfd46fb9a126",
+        "metadata_hash": "75fd437ca5f9771ebd291776f04e1dc81b397e575a16cdd8960441aca1723fba",
+        "evidence_hash": "4fa106e5414155bb502e368ac614ace559a83993b617c5bceee40c843c06d204",
+        "status": "clock_ahead",
+        "book_age_at_capture_ms": -122
+      }
+    ]
+  },
+  "errors": [],
+  "reports": [
+    {
+      "approved_observed_notional": null,
+      "captures": [
+        {
+          "content_hash": "24bdc37c8505db61c396daf65e0811d2c91a6c3d8133e9da3ee93b704ee805ea",
+          "id": "88c5935a7c7f43ed90404f10c985b748",
+          "known_at": 1791526476466
+        },
+        {
+          "content_hash": "9b0f0919b8cbe800b722e2b7957bdff62433e6ede25cbb2a223aab9a494929b0",
+          "id": "2bf1abca06de442c83ad27a8570ed537",
+          "known_at": 1791526506288
+        },
+        {
+          "content_hash": "8961354614ce051f9787d2e8c6bdeb06e9f2e43d027c1b7b0fee9c13d1e5d0e2",
+          "id": "42f21198ed904a4ebc3eb0874eb873e0",
+          "known_at": 1791526536237
+        },
+        {
+          "content_hash": "9312ccd8c6bc1b78907b8f0e4614b45663df036ffbefb496b863cbdf4525075a",
+          "id": "53246f639db949c9b8bace9a6a29e05f",
+          "known_at": 1791526566237
+        },
+        {
+          "content_hash": "6db89424d51519821b14b86abdb75f09054e595d27f81de2b4c27e4cfb15792f",
+          "id": "0d5a7ff660204a5982e52daa0a91e40f",
+          "known_at": 1791526596445
+        },
+        {
+          "content_hash": "895a5ee62615fa6f34dad4d400a9410d96d688089b1f618bfc1a93c48bb55fe7",
+          "id": "53a81cff102b412f9946d27512d26d01",
+          "known_at": 1791526626279
+        },
+        {
+          "content_hash": "3dfd329addf11b15fe4b57416c593b9f8b8d4e4bc2220cdd99dacd8cf62ee77b",
+          "id": "21afee380f4b4e05b883b88c70579c05",
+          "known_at": 1791526656235
+        },
+        {
+          "content_hash": "e6d597d8e40a75d165aa4afd26cedba8c447a9c3af72a55a2941bc34101b1881",
+          "id": "9bd85c8315594fcab3f30c6e05403bff",
+          "known_at": 1791526686237
+        },
+        {
+          "content_hash": "9eafcd3d3b1eed2f7f5d68a5661a875c856207c52b2eafe44246b098b7f119b0",
+          "id": "908d2aa3329d4265b6664bfb1a6b9a36",
+          "known_at": 1791526716232
+        },
+        {
+          "content_hash": "9d9bd98afc160d81848574d410d079a6fb6b5942fc000017aa30ef8336ccf229",
+          "id": "4d6910e6264041d8a7732850b8c58934",
+          "known_at": 1791526746285
+        },
+        {
+          "content_hash": "0368ff8ed19506eae33b13d3df152e49bb12b6a0a0f8b2e7e4b35cfe72304e53",
+          "id": "a2c051b8386441a3b502ea84df547060",
+          "known_at": 1791526776230
+        },
+        {
+          "content_hash": "81a2168fae6b6f3ec1e33d21be6374b36e51756de262b19441ffb2024db16457",
+          "id": "0886f6c48cff41a6b9bac74db697cc8c",
+          "known_at": 1791526806284
+        }
+      ],
+      "child_observed_pass": false,
+      "conditions": {
+        "boundary_coverage": true,
+        "cadence": true,
+        "elapsed": true,
+        "fresh_at_capture": false,
+        "samples": true,
+        "supported": false,
+        "timestamp_order": true
+      },
+      "content_hash": "ce4c29791521a27b01b856c9343ce7708300191dc6faeffa358b3e70b512997b",
+      "created_at": 1791526807811,
+      "created_by": "public-acceptance-collector",
+      "declared_child_notional": "2500",
+      "declared_sleeve_notional": "10000",
+      "declared_window": {
+        "end": 1791526806284,
+        "start": 1791526476466
+      },
+      "historical_capacity": "unknown",
+      "id": "399eec2dc20d4290b15ac7369326a507",
+      "independent_book_count": 12,
+      "independent_window": {
+        "elapsed_ms": 329818,
+        "end": 1791526806284,
+        "start": 1791526476466
+      },
+      "input": {
+        "capture_ids": [
+          "88c5935a7c7f43ed90404f10c985b748",
+          "2bf1abca06de442c83ad27a8570ed537",
+          "42f21198ed904a4ebc3eb0874eb873e0",
+          "53246f639db949c9b8bace9a6a29e05f",
+          "0d5a7ff660204a5982e52daa0a91e40f",
+          "53a81cff102b412f9946d27512d26d01",
+          "21afee380f4b4e05b883b88c70579c05",
+          "9bd85c8315594fcab3f30c6e05403bff",
+          "908d2aa3329d4265b6664bfb1a6b9a36",
+          "4d6910e6264041d8a7732850b8c58934",
+          "a2c051b8386441a3b502ea84df547060",
+          "0886f6c48cff41a6b9bac74db697cc8c"
+        ],
+        "child_notional": "2500",
+        "inst_id": "BTC-USDT",
+        "max_book_age_ms": 2000,
+        "max_gap_ms": 60000,
+        "max_participation_pct": "10",
+        "max_shortfall_bps": "10",
+        "minimum_elapsed_ms": 300000,
+        "minimum_samples": 12,
+        "review_max_age_ms": 300000,
+        "sleeve_notional": "10000",
+        "window_end": null,
+        "window_start": null
+      },
+      "input_hash": "86c9c8dd398e0c301bb00d0c3e0d70d4bf354ceef1562250b54bd58ca68d60b0",
+      "inst_id": "BTC-USDT",
+      "live_execution_calibration": "not_measured",
+      "maximum_observed_gap_ms": 30208,
+      "methodology": "okx_displayed_l2_v1",
+      "observed_window": {
+        "end": 1791526806284,
+        "start": 1791526476466
+      },
+      "repeated_or_missing_timestamp_count": 0,
+      "sample_count": 12,
+      "scenarios": [
+        {
+          "all_samples_pass": true,
+          "notional": "1000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.017256657377535706583029695702825134362786590524056",
+                "p90": "0.018066035654545080563273381910930309438210831219620",
+                "p95": "0.018662736300233636305149941242782099724532611201396",
+                "worst": "0.018662736300233636305149941242782099724532611201396"
+              },
+              "shortfall_bps": {
+                "median": "0.0060635643450289383608366506083270929150282410509370",
+                "p90": "0.020126546040202699320319922223656902106622795065142",
+                "p95": "0.17256929533614222424542024754327238989552039072039",
+                "worst": "0.17256929533614222424542024754327238989552039072039"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.014424273829524962001434515790771197048654361480788",
+                "p90": "0.015434511879427214357670865983453113838567779857018",
+                "p95": "0.015781012289276509555746352826871603114935292016475",
+                "worst": "0.015781012289276509555746352826871603114935292016475"
+              },
+              "shortfall_bps": {
+                "median": "0.0060635643450289383608366506083270929150282410509370",
+                "p90": "0.0060648441001499835945967090942943766159018999337113",
+                "p95": "0.0060655798360716393503278749180388524650819732786946",
+                "worst": "0.0060655798360716393503278749180388524650819732786946"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "2500",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.043141650558736763860383718099004706252684862600463",
+                "p90": "0.045165089136362701408183454777325773595527078049049",
+                "p95": "0.046656833054210464655441516302675421665812740415923",
+                "worst": "0.046656833054210464655441516302675421665812740415923"
+              },
+              "shortfall_bps": {
+                "median": "0.0060635643450289383608366506083270929150282410509370",
+                "p90": "0.063606061485825432971275190066462730373790112577581",
+                "p95": "0.31286402754453679158134867072247082505450348206742",
+                "worst": "0.31286402754453679158134867072247082505450348206742"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.036060672678112366964325615437566878904401610812730",
+                "p90": "0.038586266972810089833627225253617528495848698813278",
+                "p95": "0.039452537228309001249467234923827787299264386000363",
+                "worst": "0.039452537228309001249467234923827787299264386000363"
+              },
+              "shortfall_bps": {
+                "median": "0.0060635643450289383608366506083270929150282410509370",
+                "p90": "0.0060648441001499835945967090942943766159018999337113",
+                "p95": "0.0060655798360716393503278749180388524650819732786946",
+                "worst": "0.0060655798360716393503278749180388524650819732786946"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "10000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.17256655954556207102467799934436760293642913265992",
+                "p90": "0.18066035654545080563273381910930309438210831219620",
+                "p95": "0.18662728603860010197716604438502272079013823613830",
+                "worst": "0.18662728603860010197716604438502272079013823613830"
+              },
+              "shortfall_bps": {
+                "median": "0.0060635643450289383608366506083270929150282410509370",
+                "p90": "0.15688878500521019618162558926367692740694950060185",
+                "p95": "0.38301139364873407524931288231207004263399502780159",
+                "worst": "0.38301139364873407524931288231207004263399502780159"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.14424267881674942981804178771090640190037215036168",
+                "p90": "0.15434506789124035933450890101447011398339479525311",
+                "p95": "0.15781010988252964083726082255541847212550060824640",
+                "worst": "0.15781010988252964083726082255541847212550060824640"
+              },
+              "shortfall_bps": {
+                "median": "0.0060635643450289383608366506083270929150282410509370",
+                "p90": "0.0060655798360716393503278749180388524650819732786946",
+                "p95": "0.44260901347689741444812790969932563272313299700849",
+                "worst": "0.44260901347689741444812790969932563272313299700849"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "100000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "1.7256655527662357258299231203920248072899810088573",
+                "p90": "1.8066034760473100906014456718332795559965115910123",
+                "p95": "1.8662727834222647586973270758074289314461944855073",
+                "worst": "1.8662727834222647586973270758074289314461944855073"
+              },
+              "shortfall_bps": {
+                "median": "0.29996306708445207028401078604022192408846569378481",
+                "p90": "0.59530106162322851973621228345595213969896221892747",
+                "p95": "1.1164299518863474836331397050706394609448159590258",
+                "worst": "1.1164299518863474836331397050706394609448159590258"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "1.4424266811061939558270718107548139955486128676137",
+                "p90": "1.5434506152836138630423393116196248593310941983848",
+                "p95": "1.5781010077536482253311892855611018080880398990355",
+                "worst": "1.5781010077536482253311892855611018080880398990355"
+              },
+              "shortfall_bps": {
+                "median": "0.0060655798360716393503278749180388524650819732786946",
+                "p90": "0.16931497165831474387962367110771383721179057644524",
+                "p95": "1.2887389575097554638207199963145695292824125528123",
+                "worst": "1.2887389575097554638207199963145695292824125528123"
+              }
+            }
+          }
+        }
+      ],
+      "schema_version": 1,
+      "scope": "Observed cached organic L2 window only; no queue position, hidden liquidity, impact/replenishment, fees or executable guarantee. Both sides and every selected sample must pass; quantiles are descriptive. Historical backtest cost assumptions remain scenarios.",
+      "selection_audit": {
+        "all_available_count": 12,
+        "availability_as_of": 1791526807811,
+        "omitted_capture_ids": [],
+        "omitted_policy": "automatically_included_not_excluded",
+        "selected_count": 12,
+        "selection_policy": "all_available_captures_in_declared_window"
+      },
+      "sleeve_observed_pass": false,
+      "source": "okx",
+      "spread_bps": {
+        "median": "0.012127128690057876721673301216654185830056482101874",
+        "p90": "0.012129688200299967189193418188588753231803799867423",
+        "p95": "0.012131159672143278700655749836077704930163946557389",
+        "worst": "0.012131159672143278700655749836077704930163946557389"
+      },
+      "status": "unsupported",
+      "uncovered_edges": {
+        "end_ms": 0,
+        "max_allowed_ms": 60000,
+        "start_ms": 0
+      },
+      "latest_sample_age_ms": 1666,
+      "current_review_status": "unsupported"
+    },
+    {
+      "approved_observed_notional": null,
+      "captures": [
+        {
+          "content_hash": "51adaa31a6208c7dd68ef46df65bd31b6f7629f3c69bc2e5314fa8160853f253",
+          "id": "733055c2aa5247f1a864de084b615dd2",
+          "known_at": 1791526476753
+        },
+        {
+          "content_hash": "df2d6976b5b6fc44bdb7c26556a66352e6b115db06474f43b46e70bcc17b70e9",
+          "id": "0f28db54e87142428c7f8319e9cf4c91",
+          "known_at": 1791526506593
+        },
+        {
+          "content_hash": "141b5774d1993374d81c8f7729b04e6f686f6cf32562798911225bb48ee8de12",
+          "id": "097a43aed80f425fb8bf72d722d33361",
+          "known_at": 1791526536525
+        },
+        {
+          "content_hash": "53a735f82c06627800f128c4ea1e29713cd6a6e816c40dd4579547ec66926008",
+          "id": "dafc3e891ff8418b8974ed65de616c07",
+          "known_at": 1791526566531
+        },
+        {
+          "content_hash": "554bb48319cc30d4fc9123465a929a7f3ef8283441a694cd27be9a458f2bcbcb",
+          "id": "c0705334589c4b2c9062c007303de386",
+          "known_at": 1791526596734
+        },
+        {
+          "content_hash": "f6b1a1fae245212d56a4283ac2f9c5cf37291a3130210e5350543fef243ac246",
+          "id": "c9d8ac85832e4fe480398e081284f01f",
+          "known_at": 1791526626600
+        },
+        {
+          "content_hash": "06bddf6ca4cbd39649ab3e4ac9a1c1004bcfd533f394293d2041cb8c2d2e0d26",
+          "id": "73e6dd4d68b4405295184be7dd6adfcf",
+          "known_at": 1791526656533
+        },
+        {
+          "content_hash": "37d4a1c032b98a47b4c07e8f579f2a7f52a30819ee71518febfb4b188cb81a94",
+          "id": "a83036abe8ac453f8d9b69a228e5659c",
+          "known_at": 1791526686525
+        },
+        {
+          "content_hash": "2cdd1a0b516ebd6d4b535e9354ecaad2307433406fa57d48ba7eded133da3804",
+          "id": "175bd7c822064686b425bb4cfd2cdbc7",
+          "known_at": 1791526716579
+        },
+        {
+          "content_hash": "e14ead0908fddaa0d94402a8e581ee6c5539db7e83e6960afff6fea3640b11bd",
+          "id": "a7c6bf83b42e4fc7a356bc15b27e381a",
+          "known_at": 1791526746579
+        },
+        {
+          "content_hash": "32bb99bd8f7ef3d551f2922a2a62cb5dd4ceea63b7cf11f5b50fe8b460777037",
+          "id": "78fa90162bc54a34982faed9b801a544",
+          "known_at": 1791526776534
+        },
+        {
+          "content_hash": "77719704e3eefb0615b559778a6c1db005867a0c061e726070689489e3bacd7c",
+          "id": "082916b9e2df4147b052ebf23325df8b",
+          "known_at": 1791526806585
+        }
+      ],
+      "child_observed_pass": false,
+      "conditions": {
+        "boundary_coverage": true,
+        "cadence": true,
+        "elapsed": true,
+        "fresh_at_capture": false,
+        "samples": true,
+        "supported": false,
+        "timestamp_order": true
+      },
+      "content_hash": "2cb46d5397d74e0e4447e1968d869b7d38877fbb61358e812aecf4cf33458d39",
+      "created_at": 1791526807950,
+      "created_by": "public-acceptance-collector",
+      "declared_child_notional": "2500",
+      "declared_sleeve_notional": "10000",
+      "declared_window": {
+        "end": 1791526806585,
+        "start": 1791526476753
+      },
+      "historical_capacity": "unknown",
+      "id": "7b7f1992dd864318b05c57d701cef227",
+      "independent_book_count": 12,
+      "independent_window": {
+        "elapsed_ms": 329832,
+        "end": 1791526806585,
+        "start": 1791526476753
+      },
+      "input": {
+        "capture_ids": [
+          "733055c2aa5247f1a864de084b615dd2",
+          "0f28db54e87142428c7f8319e9cf4c91",
+          "097a43aed80f425fb8bf72d722d33361",
+          "dafc3e891ff8418b8974ed65de616c07",
+          "c0705334589c4b2c9062c007303de386",
+          "c9d8ac85832e4fe480398e081284f01f",
+          "73e6dd4d68b4405295184be7dd6adfcf",
+          "a83036abe8ac453f8d9b69a228e5659c",
+          "175bd7c822064686b425bb4cfd2cdbc7",
+          "a7c6bf83b42e4fc7a356bc15b27e381a",
+          "78fa90162bc54a34982faed9b801a544",
+          "082916b9e2df4147b052ebf23325df8b"
+        ],
+        "child_notional": "2500",
+        "inst_id": "ETH-USDT",
+        "max_book_age_ms": 2000,
+        "max_gap_ms": 60000,
+        "max_participation_pct": "10",
+        "max_shortfall_bps": "10",
+        "minimum_elapsed_ms": 300000,
+        "minimum_samples": 12,
+        "review_max_age_ms": 300000,
+        "sleeve_notional": "10000",
+        "window_end": null,
+        "window_start": null
+      },
+      "input_hash": "3b12ca5c2a00cfaed9f7666ecf2302dc2136e9c6536fd2d63ea4204e925a35b1",
+      "inst_id": "ETH-USDT",
+      "live_execution_calibration": "not_measured",
+      "maximum_observed_gap_ms": 30203,
+      "methodology": "okx_displayed_l2_v1",
+      "observed_window": {
+        "end": 1791526806585,
+        "start": 1791526476753
+      },
+      "repeated_or_missing_timestamp_count": 0,
+      "sample_count": 12,
+      "scenarios": [
+        {
+          "all_samples_pass": true,
+          "notional": "1000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.022395936464592448377495344257117458368965896917550",
+                "p90": "0.025673060115002233053691327221596386363335038554755",
+                "p95": "0.027736512303618556840529630658492990892570763866973",
+                "worst": "0.027736512303618556840529630658492990892570763866973"
+              },
+              "shortfall_bps": {
+                "median": "0.020028400271585107682694060177331456004614543422573",
+                "p90": "0.020030085187952304361150447972855228553287037129769",
+                "p95": "0.020031690133791658403594486477607575183940994653542",
+                "worst": "0.020031690133791658403594486477607575183940994653542"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.015488474879769360953184455815003810322341740200394",
+                "p90": "0.017036178295839447944845618357430666087983834882340",
+                "p95": "0.017971303319293541756910487456178401474437614193264",
+                "worst": "0.017971303319293541756910487456178401474437614193264"
+              },
+              "shortfall_bps": {
+                "median": "0.020028400271585107682694060177331456004614543422573",
+                "p90": "0.020030085187952304361150447972855228553287037129769",
+                "p95": "0.020031690133791658403594486477607575183940994653542",
+                "worst": "0.020031690133791658403594486477607575183940994653542"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "2500",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.055989813201580315961418244718808116401316956063756",
+                "p90": "0.064182650287505582634228318053990965908337596386886",
+                "p95": "0.069341246132468333158133236328498470638577694580175",
+                "worst": "0.069341246132468333158133236328498470638577694580175"
+              },
+              "shortfall_bps": {
+                "median": "0.020028400271585107682694060177331456004614543422573",
+                "p90": "0.020030085187952304361150447972855228553287037129769",
+                "p95": "0.020031690133791658403594486477607575183940994653542",
+                "worst": "0.020031690133791658403594486477607575183940994653542"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.038721206531936526781473491826379710617178804658495",
+                "p90": "0.042590445739598619862114045893576665219959587205850",
+                "p95": "0.044928258298233854392276218640446003686094035483160",
+                "worst": "0.044928258298233854392276218640446003686094035483160"
+              },
+              "shortfall_bps": {
+                "median": "0.020028400271585107682694060177331456004614543422573",
+                "p90": "0.020030085187952304361150447972855228553287037129769",
+                "p95": "0.020031690133791658403594486477607575183940994653542",
+                "worst": "0.020031690133791658403594486477607575183940994653542"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "10000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.22395919688651965388103274702726140656307225179479",
+                "p90": "0.25673053705070116055231062143366280102377692271164",
+                "p95": "0.27736491527671721474615126467852586936861234814619",
+                "worst": "0.27736491527671721474615126467852586936861234814619"
+              },
+              "shortfall_bps": {
+                "median": "0.020028400271585107682694060177331456004614543422573",
+                "p90": "0.020030085187952304361150447972855228553287037129769",
+                "p95": "0.020031690133791658403594486477607575183940994653542",
+                "worst": "0.020031690133791658403594486477607575183940994653542"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.15488471013266736073481985357229773360076849368891",
+                "p90": "0.17036169790550759501229288511040304866289440953286",
+                "p95": "0.17971298833577571745992353470923166976516450628111",
+                "worst": "0.17971298833577571745992353470923166976516450628111"
+              },
+              "shortfall_bps": {
+                "median": "0.020029042111061038505833458514846527464823994792449",
+                "p90": "0.054072692234221417537719529898715924096701701813171",
+                "p95": "0.092155791707678993563651165862864963855014775824946",
+                "worst": "0.092155791707678993563651165862864963855014775824946"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "100000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "2.2395915774265852690578458473368166523353535107262",
+                "p90": "2.5673052423083692655539009127720258850186223014445",
+                "p95": "2.7736488065013915580296042436079186277576313305893",
+                "worst": "2.7736488065013915580296042436079186277576313305893"
+              },
+              "shortfall_bps": {
+                "median": "0.77376881094920740705636530678204848408525942072811",
+                "p90": "1.0129983308288386632174892086453814296174993636773",
+                "p95": "1.1702284958675986716647894142417854372024568172490",
+                "worst": "1.1702284958675986716647894142417854372024568172490"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "1.5488469080015423633630750128342754878944403953140",
+                "p90": "1.7036165963170849701601940080164642316526963685211",
+                "p95": "1.7971294796433198736166032884193455928387403419474",
+                "worst": "1.7971294796433198736166032884193455928387403419474"
+              },
+              "shortfall_bps": {
+                "median": "0.57194296458972915180483903049000298594776798190883",
+                "p90": "1.0564975929584685711966164703369537360302766381749",
+                "p95": "1.0643322918319973079874022755196320622531448912924",
+                "worst": "1.0643322918319973079874022755196320622531448912924"
+              }
+            }
+          }
+        }
+      ],
+      "schema_version": 1,
+      "scope": "Observed cached organic L2 window only; no queue position, hidden liquidity, impact/replenishment, fees or executable guarantee. Both sides and every selected sample must pass; quantiles are descriptive. Historical backtest cost assumptions remain scenarios.",
+      "selection_audit": {
+        "all_available_count": 12,
+        "availability_as_of": 1791526807950,
+        "omitted_capture_ids": [],
+        "omitted_policy": "automatically_included_not_excluded",
+        "selected_count": 12,
+        "selection_policy": "all_available_captures_in_declared_window"
+      },
+      "sleeve_observed_pass": false,
+      "source": "okx",
+      "spread_bps": {
+        "median": "0.040056800543170215365388120354662912009229086845146",
+        "p90": "0.040060170375904608722300895945710457106574074259538",
+        "p95": "0.040063380267583316807188972955215150367881989307084",
+        "worst": "0.040063380267583316807188972955215150367881989307084"
+      },
+      "status": "unsupported",
+      "uncovered_edges": {
+        "end_ms": 0,
+        "max_allowed_ms": 60000,
+        "start_ms": 0
+      },
+      "latest_sample_age_ms": 1487,
+      "current_review_status": "unsupported"
+    },
+    {
+      "approved_observed_notional": null,
+      "captures": [
+        {
+          "content_hash": "c634dc014499acea1f8160242044060c32f5158dd293ff0866acfd26d37b270a",
+          "id": "608fa9cd706c4a21ba2f00f73d50f80d",
+          "known_at": 1791526477069
+        },
+        {
+          "content_hash": "4bbd67f776eb72d37335e10dec2202eb4f752be5023b913c1fc83d29d63f25fe",
+          "id": "2c49ae37178b4fa39f74d6bb22f3bdfc",
+          "known_at": 1791526506892
+        },
+        {
+          "content_hash": "8b30f16b4cebbfe3532d7e7df11d82c6720e2293198e7b75cc49be445b45bed5",
+          "id": "0701e6a3c3254c9d97ba376f4888e86e",
+          "known_at": 1791526536785
+        },
+        {
+          "content_hash": "82a8bff3a4c6fd87410ddd96e60db600289c0b4149a45f491a76730857968b90",
+          "id": "615bb5751a324fe2b90e3a80a4515621",
+          "known_at": 1791526566784
+        },
+        {
+          "content_hash": "3b707bef6bfe921c02bcf1d592888ad904de683f1a15c8215b876575a116d93a",
+          "id": "ca2c637a854141f28e4ddc73f86d0671",
+          "known_at": 1791526597054
+        },
+        {
+          "content_hash": "1a0ef75c2f4f03ec2d3f983d765d55c883e3f41583d01f4714a1a14d35fc4027",
+          "id": "b5c3a8d3a0f04839a8fd2ecf72761e2d",
+          "known_at": 1791526626895
+        },
+        {
+          "content_hash": "4a9cf1eb2f9750ee05b0820b9aa6f5ad86376285bc2c37e76b860a5a6808d7fb",
+          "id": "6bd6bb623fc3415e8c4abe78656bf02c",
+          "known_at": 1791526656787
+        },
+        {
+          "content_hash": "a81cde15609f8df74ac3ef0df84d5cd47820a8e4f47a7958e6fac74e26d0044c",
+          "id": "850384f043b04d5eb150abcac1d6f156",
+          "known_at": 1791526686781
+        },
+        {
+          "content_hash": "6a8fbab611ea9c754cdf41477aaa67b3fe34007284c734a4d633fc086461c35c",
+          "id": "0d37507006d24420a9ae7e664b16dbd0",
+          "known_at": 1791526716834
+        },
+        {
+          "content_hash": "afad3e91fd7881c1091afb13b2cda6997a9d2cb8c7298f6626d3205c860c81ad",
+          "id": "913f8eb1e2884c149a16d0c6ecb64001",
+          "known_at": 1791526746890
+        },
+        {
+          "content_hash": "3bc81e04f24cea9ad31cebb872f81567b5980638cd7f4d74d0e8ddcf26f67124",
+          "id": "4120ae8c86f14ecb94d18baab5b22ae8",
+          "known_at": 1791526776840
+        },
+        {
+          "content_hash": "60819664c40c2904054f5a187b2037d9bb6b83b5be86e2fddf568d6fd45299a7",
+          "id": "879153ecdb924ab1bc82f07038e9e0f9",
+          "known_at": 1791526806891
+        }
+      ],
+      "child_observed_pass": false,
+      "conditions": {
+        "boundary_coverage": true,
+        "cadence": true,
+        "elapsed": true,
+        "fresh_at_capture": false,
+        "samples": true,
+        "supported": false,
+        "timestamp_order": true
+      },
+      "content_hash": "951958e2216b94acbc6d07b94a071657bbe97282740f6c103982610c4f9bf80b",
+      "created_at": 1791526808072,
+      "created_by": "public-acceptance-collector",
+      "declared_child_notional": "2500",
+      "declared_sleeve_notional": "10000",
+      "declared_window": {
+        "end": 1791526806891,
+        "start": 1791526477069
+      },
+      "historical_capacity": "unknown",
+      "id": "58cd9d5326fe44d99a0367175274148f",
+      "independent_book_count": 12,
+      "independent_window": {
+        "elapsed_ms": 329822,
+        "end": 1791526806891,
+        "start": 1791526477069
+      },
+      "input": {
+        "capture_ids": [
+          "608fa9cd706c4a21ba2f00f73d50f80d",
+          "2c49ae37178b4fa39f74d6bb22f3bdfc",
+          "0701e6a3c3254c9d97ba376f4888e86e",
+          "615bb5751a324fe2b90e3a80a4515621",
+          "ca2c637a854141f28e4ddc73f86d0671",
+          "b5c3a8d3a0f04839a8fd2ecf72761e2d",
+          "6bd6bb623fc3415e8c4abe78656bf02c",
+          "850384f043b04d5eb150abcac1d6f156",
+          "0d37507006d24420a9ae7e664b16dbd0",
+          "913f8eb1e2884c149a16d0c6ecb64001",
+          "4120ae8c86f14ecb94d18baab5b22ae8",
+          "879153ecdb924ab1bc82f07038e9e0f9"
+        ],
+        "child_notional": "2500",
+        "inst_id": "SOL-USDT",
+        "max_book_age_ms": 2000,
+        "max_gap_ms": 60000,
+        "max_participation_pct": "10",
+        "max_shortfall_bps": "10",
+        "minimum_elapsed_ms": 300000,
+        "minimum_samples": 12,
+        "review_max_age_ms": 300000,
+        "sleeve_notional": "10000",
+        "window_end": null,
+        "window_start": null
+      },
+      "input_hash": "b134790656250fab81c84a50b4b85098b6f9bb5c94ee718a73418ea6a9851cae",
+      "inst_id": "SOL-USDT",
+      "live_execution_calibration": "not_measured",
+      "maximum_observed_gap_ms": 30270,
+      "methodology": "okx_displayed_l2_v1",
+      "observed_window": {
+        "end": 1791526806891,
+        "start": 1791526477069
+      },
+      "repeated_or_missing_timestamp_count": 0,
+      "sample_count": 12,
+      "scenarios": [
+        {
+          "all_samples_pass": true,
+          "notional": "1000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.027736020598889472189597544389204897638172642401440",
+                "p90": "0.030633315939854733415162924242681074729749025414060",
+                "p95": "0.030686654462967444498407320741562198394277143307920",
+                "worst": "0.030686654462967444498407320741562198394277143307920"
+              },
+              "shortfall_bps": {
+                "median": "0.45234541095580585334961776812774234405391957298593",
+                "p90": "0.45250916331055703878003529571473822344902484275307",
+                "p95": "0.45255011992578178033217178802552382676381409241073",
+                "worst": "0.45255011992578178033217178802552382676381409241073"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.032987705161295455206791366183221756589423393420347",
+                "p90": "0.036567573981098023178732031317983268080423241745507",
+                "p95": "0.037081947293282285754952024828243987837196929389330",
+                "worst": "0.037081947293282285754952024828243987837196929389330"
+              },
+              "shortfall_bps": {
+                "median": "0.45234541095580585334961776812774234405391957298593",
+                "p90": "0.45250916331055703878003529571473822344902484275307",
+                "p95": "0.45255011992578178033217178802552382676381409241073",
+                "worst": "0.45255011992578178033217178802552382676381409241073"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "2500",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.069340048430590736253207046246822648879966124264997",
+                "p90": "0.076583289849636833537907310606702686824372563535150",
+                "p95": "0.076716632766083200786984939100671911102309561740485",
+                "worst": "0.076716632766083200786984939100671911102309561740485"
+              },
+              "shortfall_bps": {
+                "median": "0.45234541095580585334961776812774234405391957298593",
+                "p90": "0.45250916331055703878003529571473822344902484275307",
+                "p95": "0.45255011992578178033217178802552382676381409241073",
+                "worst": "0.45255011992578178033217178802552382676381409241073"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.082469257436269094205846896643283335179285364413123",
+                "p90": "0.091418930911479866710799098430123387023377615098063",
+                "p95": "0.092704866183964656755872957858025702392844273184178",
+                "worst": "0.092704866183964656755872957858025702392844273184178"
+              },
+              "shortfall_bps": {
+                "median": "0.45234541095580585334961776812774234405391957298593",
+                "p90": "0.45255011992578178033217178802552382676381409241073",
+                "p95": "0.59203377729440563776456623541593230414918936982583",
+                "worst": "0.59203377729440563776456623541593230414918936982583"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "10000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.27736019065573000079204137026110100030439901532138",
+                "p90": "0.30633315601218748809054280451132192918037283327158",
+                "p95": "0.30686652767299739268890639364945405952585495043262",
+                "worst": "0.30686652767299739268890639364945405952585495043262"
+              },
+              "shortfall_bps": {
+                "median": "0.45238633793259443564804342908844152906582221216919",
+                "p90": "0.88257870170489241718478416044060833699498877415268",
+                "p95": "1.0646677686838584622830096725060451178578873383704",
+                "worst": "1.0646677686838584622830096725060451178578873383704"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.32987702974507637682338758657313334071714145765249",
+                "p90": "0.36567571960465427560716541385565876491582997112655",
+                "p95": "0.37081946473585862702349183143210280957137709273671",
+                "worst": "0.37081946473585862702349183143210280957137709273671"
+              },
+              "shortfall_bps": {
+                "median": "0.52237689435878236217459465043068506659633408040519",
+                "p90": "1.0825490753214699920883975357336818317730175826661",
+                "p95": "1.1658777046719388896492392743029765164353973200633",
+                "worst": "1.1658777046719388896492392743029765164353973200633"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "100000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "2.7736019034906670636996268878848204078285246714752",
+                "p90": "3.0633315364173559584778229797047975649839063866327",
+                "p95": "3.0686652597732968745938971227283726708416330216797",
+                "worst": "3.0686652597732968745938971227283726708416330216797"
+              },
+              "shortfall_bps": {
+                "median": "2.4590005144705394346169086656976311871056867034707",
+                "p90": "2.8975335512869475787537193961547553747998116620662",
+                "p95": "3.0971493492402345021965346162315595448478131547754",
+                "worst": "3.0971493492402345021965346162315595448478131547754"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "3.2987702974507637682338758657313334071714145765249",
+                "p90": "3.6567571758402167998914992392324137332698972649369",
+                "p95": "3.7081946309646578091828614806203539581125865250539",
+                "worst": "3.7081946309646578091828614806203539581125865250539"
+              },
+              "shortfall_bps": {
+                "median": "3.3262684511074577129438628284760518268585009023033",
+                "p90": "4.1132121983871313824403174240163927038215574874463",
+                "p95": "4.4238604647005947559830330830039012934881631488938",
+                "worst": "4.4238604647005947559830330830039012934881631488938"
+              }
+            }
+          }
+        }
+      ],
+      "schema_version": 1,
+      "scope": "Observed cached organic L2 window only; no queue position, hidden liquidity, impact/replenishment, fees or executable guarantee. Both sides and every selected sample must pass; quantiles are descriptive. Historical backtest cost assumptions remain scenarios.",
+      "selection_audit": {
+        "all_available_count": 12,
+        "availability_as_of": 1791526808072,
+        "omitted_capture_ids": [],
+        "omitted_policy": "automatically_included_not_excluded",
+        "selected_count": 12,
+        "selection_policy": "all_available_captures_in_declared_window"
+      },
+      "sleeve_observed_pass": false,
+      "source": "okx",
+      "spread_bps": {
+        "median": "0.90469082191161170669923553625548468810783914597186",
+        "p90": "0.90501832662111407756007059142947644689804968550613",
+        "p95": "0.90510023985156356066434357605104765352762818482147",
+        "worst": "0.90510023985156356066434357605104765352762818482147"
+      },
+      "status": "unsupported",
+      "uncovered_edges": {
+        "end_ms": 0,
+        "max_allowed_ms": 60000,
+        "start_ms": 0
+      },
+      "latest_sample_age_ms": 1379,
+      "current_review_status": "unsupported"
+    },
+    {
+      "approved_observed_notional": null,
+      "captures": [
+        {
+          "content_hash": "68470b64f4b14048ec36e7915bde4a8bb36ef5c29dc722f9e515e75b64a9f0b2",
+          "id": "69e635522ea649b0a8439970daea70e8",
+          "known_at": 1791526477367
+        },
+        {
+          "content_hash": "938a0ed2f45fe9968caa5de4ee8d8eaa69ab7688f4acfe85e012a117ecefe4c8",
+          "id": "4e3e93590ac5401688204488adaaa35f",
+          "known_at": 1791526507184
+        },
+        {
+          "content_hash": "8b330132b6d0fc332e720c68250299e1dcd40d969b0bc7da735e4503f6f09e64",
+          "id": "b9f2c9e5b7db489083cf379af3c989a5",
+          "known_at": 1791526537033
+        },
+        {
+          "content_hash": "c122439554e6d626167a957ca69ce0b217f96c3ff3dda2d8023c88470e1ce86e",
+          "id": "ceedc68a33554bc4b2ab53f8abdbe177",
+          "known_at": 1791526567037
+        },
+        {
+          "content_hash": "b619c17732530bf7b12413eb60e6392c365c6573e335321783ca03916a424ab7",
+          "id": "1a5cf5851d344c5fae9f85d5c7180160",
+          "known_at": 1791526597335
+        },
+        {
+          "content_hash": "d39815aac1faea368dcd20c77ae1ef35e7897a6bf127db7bbec589e34134ca0e",
+          "id": "70c3499695e04bc98fb8b283686c0509",
+          "known_at": 1791526627184
+        },
+        {
+          "content_hash": "9a20738fef2654cc3d7242ca91880ffa32a56521a5d702a048e12021bd83e149",
+          "id": "eae4cc61a8ed463b9a3c039883773934",
+          "known_at": 1791526657041
+        },
+        {
+          "content_hash": "68334eafc60a47310375e6520babea133bdaafdeff1d65210484260685c7b26f",
+          "id": "c485fdf931d14ee2945014a2d7c82e1f",
+          "known_at": 1791526687028
+        },
+        {
+          "content_hash": "876c01ee2af92e1abb1c297a69491dda5562aa570851784d912ad91e4438bf1f",
+          "id": "f31feefdf802464c81e271ead165111c",
+          "known_at": 1791526717138
+        },
+        {
+          "content_hash": "291fe63e2efb1a9b89473e9695caeb686f7c63c860a89aa4128d0560850313f6",
+          "id": "e3fa43550a1842c7a7fae146b6920fa7",
+          "known_at": 1791526747190
+        },
+        {
+          "content_hash": "1747f994bc288f89cb86f1d10d7b5393120e6530bf5e0c00d1988575022c39f0",
+          "id": "14d52ff87e5241439ba66d44fb29f92e",
+          "known_at": 1791526777130
+        },
+        {
+          "content_hash": "748644118bfb3c9458ef283d4ec3d36969d413ce9d30d050b17a089c8661187a",
+          "id": "26a01b901b9f44549ca8bb25e3fa38ce",
+          "known_at": 1791526807199
+        }
+      ],
+      "child_observed_pass": false,
+      "conditions": {
+        "boundary_coverage": true,
+        "cadence": true,
+        "elapsed": true,
+        "fresh_at_capture": false,
+        "samples": true,
+        "supported": false,
+        "timestamp_order": true
+      },
+      "content_hash": "c095f316e43dbc6ddaf7e0a421c36817ab2be296d43cfbf779ed92fa96cfe2f6",
+      "created_at": 1791526808270,
+      "created_by": "public-acceptance-collector",
+      "declared_child_notional": "2500",
+      "declared_sleeve_notional": "10000",
+      "declared_window": {
+        "end": 1791526807199,
+        "start": 1791526477367
+      },
+      "historical_capacity": "unknown",
+      "id": "05a1cf94219d4f1fa13b4bbd7fc510e2",
+      "independent_book_count": 12,
+      "independent_window": {
+        "elapsed_ms": 329832,
+        "end": 1791526807199,
+        "start": 1791526477367
+      },
+      "input": {
+        "capture_ids": [
+          "69e635522ea649b0a8439970daea70e8",
+          "4e3e93590ac5401688204488adaaa35f",
+          "b9f2c9e5b7db489083cf379af3c989a5",
+          "ceedc68a33554bc4b2ab53f8abdbe177",
+          "1a5cf5851d344c5fae9f85d5c7180160",
+          "70c3499695e04bc98fb8b283686c0509",
+          "eae4cc61a8ed463b9a3c039883773934",
+          "c485fdf931d14ee2945014a2d7c82e1f",
+          "f31feefdf802464c81e271ead165111c",
+          "e3fa43550a1842c7a7fae146b6920fa7",
+          "14d52ff87e5241439ba66d44fb29f92e",
+          "26a01b901b9f44549ca8bb25e3fa38ce"
+        ],
+        "child_notional": "2500",
+        "inst_id": "BTC-USDT-SWAP",
+        "max_book_age_ms": 2000,
+        "max_gap_ms": 60000,
+        "max_participation_pct": "10",
+        "max_shortfall_bps": "10",
+        "minimum_elapsed_ms": 300000,
+        "minimum_samples": 12,
+        "review_max_age_ms": 300000,
+        "sleeve_notional": "10000",
+        "window_end": null,
+        "window_start": null
+      },
+      "input_hash": "d2f09ba75789ed6c2e028a79c441dc78678b0490bb2df1fb4de38f155a2d7a90",
+      "inst_id": "BTC-USDT-SWAP",
+      "live_execution_calibration": "not_measured",
+      "maximum_observed_gap_ms": 30298,
+      "methodology": "okx_displayed_l2_v1",
+      "observed_window": {
+        "end": 1791526807199,
+        "start": 1791526477367
+      },
+      "repeated_or_missing_timestamp_count": 0,
+      "sample_count": 12,
+      "scenarios": [
+        {
+          "all_samples_pass": true,
+          "notional": "1000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.0069124554514909939770982418566175429053843495209442",
+                "p90": "0.0081698252193129310922118797294582468358668720283935",
+                "p95": "0.0083477080409639823767566964698090085454529281638669",
+                "worst": "0.0083477080409639823767566964698090085454529281638669"
+              },
+              "shortfall_bps": {
+                "median": "0.0060664408737373461626424931130729980896777688601097",
+                "p90": "0.0060679574830355078668034788813841739173701957705123",
+                "p95": "0.0060681784117271188713673608460497068766418215215229",
+                "worst": "0.0060681784117271188713673608460497068766418215215229"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.0055512909709162405747497255068624421949076460842695",
+                "p90": "0.0059481931875635956925330185666512111155153743729410",
+                "p95": "0.0064493005680670811840070033060594879255348954737540",
+                "worst": "0.0064493005680670811840070033060594879255348954737540"
+              },
+              "shortfall_bps": {
+                "median": "0.0060664408737373461626424931130729980896777688601097",
+                "p90": "0.0060679574830355078668034788813841739173701957705123",
+                "p95": "0.0060681784117271188713673608460497068766418215215229",
+                "worst": "0.0060681784117271188713673608460497068766418215215229"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "2500",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.017224479157813624336375946921407647895383952904648",
+                "p90": "0.020357597267796156164200093752092680640192861447800",
+                "p95": "0.020800846266008611824049473170671627850964673457504",
+                "worst": "0.020800846266008611824049473170671627850964673457504"
+              },
+              "shortfall_bps": {
+                "median": "0.0060664408737373461626424931130729980896777688601097",
+                "p90": "0.0060679574830355078668034788813841739173701957705123",
+                "p95": "0.0060681784117271188713673608460497068766418215215229",
+                "worst": "0.0060681784117271188713673608460497068766418215215229"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.013832725042283091268228824213821167436491183685393",
+                "p90": "0.014821727287043713856803587248048919500956342699787",
+                "p95": "0.016070388300757317048673188565918724011168919869026",
+                "worst": "0.016070388300757317048673188565918724011168919869026"
+              },
+              "shortfall_bps": {
+                "median": "0.0060664408737373461626424931130729980896777688601097",
+                "p90": "0.0060679574830355078668034788813841739173701957705123",
+                "p95": "0.0060681784117271188713673608460497068766418215215229",
+                "worst": "0.0060681784117271188713673608460497068766418215215229"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "10000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.068784597689426776132764472245358172845381969823166",
+                "p90": "0.081296457510212281524141163865264849661822808544834",
+                "p95": "0.083066537391231759060513356674984724378523399925692",
+                "worst": "0.083066537391231759060513356674984724378523399925692"
+              },
+              "shortfall_bps": {
+                "median": "0.0060664408737373461626424931130729980896777688601097",
+                "p90": "0.0060679574830355078668034788813841739173701957705123",
+                "p95": "0.0060681784117271188713673608460497068766418215215229",
+                "worst": "0.0060681784117271188713673608460497068766418215215229"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.055239895399117344735624317748614793644408871691010",
+                "p90": "0.059189397784444304678156430655037461428161184334019",
+                "p95": "0.064175826964208496372004114865214904439339041845388",
+                "worst": "0.064175826964208496372004114865214904439339041845388"
+              },
+              "shortfall_bps": {
+                "median": "0.0060664408737373461626424931130729980896777688601097",
+                "p90": "0.0060681784117271188713673608460497068766418215215229",
+                "p95": "0.0086160537870531531464868370032446549253316136806130",
+                "worst": "0.0086160537870531531464868370032446549253316136806130"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "100000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.68739270112695687647668746069249205350920433104996",
+                "p90": "0.81236188307774727114444518850867206857295921783968",
+                "p95": "0.83004955938470549354455315471518920217122517668745",
+                "worst": "0.83004955938470549354455315471518920217122517668745"
+              },
+              "shortfall_bps": {
+                "median": "0.0060664408737373461626424931130729980896777688601097",
+                "p90": "0.0060679574830355078668034788813841739173701957705123",
+                "p95": "0.0060681784117271188713673608460497068766418215215229",
+                "worst": "0.0060681784117271188713673608460497068766418215215229"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.55203493491111336600707926105946843203786526470785",
+                "p90": "0.59160144375325139453439055153889996455461928394480",
+                "p95": "0.64149395404503303416331955015599906538004882437709",
+                "worst": "0.64149395404503303416331955015599906538004882437709"
+              },
+              "shortfall_bps": {
+                "median": "0.0060664408737373461626424931130729980896777688601097",
+                "p90": "0.26828508583262113948395066458837569356021164972564",
+                "p95": "0.75765068083707344082514835886315881552610457074107",
+                "worst": "0.75765068083707344082514835886315881552610457074107"
+              }
+            }
+          }
+        }
+      ],
+      "schema_version": 1,
+      "scope": "Observed cached organic L2 window only; no queue position, hidden liquidity, impact/replenishment, fees or executable guarantee. Both sides and every selected sample must pass; quantiles are descriptive. Historical backtest cost assumptions remain scenarios.",
+      "selection_audit": {
+        "all_available_count": 12,
+        "availability_as_of": 1791526808270,
+        "omitted_capture_ids": [],
+        "omitted_policy": "automatically_included_not_excluded",
+        "selected_count": 12,
+        "selection_policy": "all_available_captures_in_declared_window"
+      },
+      "sleeve_observed_pass": false,
+      "source": "okx",
+      "spread_bps": {
+        "median": "0.012132881747474692325284986226145996179355537720219",
+        "p90": "0.012135914966071015733606957762768347834740391541025",
+        "p95": "0.012136356823454237742734721692099413753283643043046",
+        "worst": "0.012136356823454237742734721692099413753283643043046"
+      },
+      "status": "unsupported",
+      "uncovered_edges": {
+        "end_ms": 0,
+        "max_allowed_ms": 60000,
+        "start_ms": 0
+      },
+      "latest_sample_age_ms": 1231,
+      "current_review_status": "unsupported"
+    },
+    {
+      "approved_observed_notional": null,
+      "captures": [
+        {
+          "content_hash": "90877b1fdd89ea4452cd8086e5e1cc77d619fbeab35a3350fb6290591915c7bb",
+          "id": "3d1731513feb4ea5b21a5eafeba602eb",
+          "known_at": 1791526477654
+        },
+        {
+          "content_hash": "ca138dea530f424cf15c02178f3e88ab2f40a293f956f459772023087db874de",
+          "id": "819aea72c65647f6bcc889329fe71d8b",
+          "known_at": 1791526507481
+        },
+        {
+          "content_hash": "bbb2f42ca2bdfbaf719aadabc881937c76bc6f2528a33785375863932e302102",
+          "id": "e59ed9b65b084522b9181e6232698710",
+          "known_at": 1791526537285
+        },
+        {
+          "content_hash": "b21069e5e1c97ca45d30b7f9df6f003347af3ea854400a103a22980bcfe9c97b",
+          "id": "16b2746821a04647a3af1a4d9b52943e",
+          "known_at": 1791526567277
+        },
+        {
+          "content_hash": "83f6c11e78eb736532b4ddd81e67b0a374b4748a88347765de217d9d125c1c53",
+          "id": "e20cac4ef31442008bd1de871d03bc24",
+          "known_at": 1791526597627
+        },
+        {
+          "content_hash": "848ae37bb2cbb7ce2ea2ad38b5b186c41f046d355dd05c49b9f92cef4cb2b508",
+          "id": "1a6301020a7b47d4995e26ee67c7149c",
+          "known_at": 1791526627429
+        },
+        {
+          "content_hash": "283cfc6fba314f060fcc55de56ad126f903d8fef0a8a3be63d8d4978c52a668e",
+          "id": "096a591f742b4053b511790eec3742ba",
+          "known_at": 1791526657325
+        },
+        {
+          "content_hash": "ea7e6b27a5f6eb0f89cffcb85deb33f2b7591d95f898c33e29c7723a5fafba59",
+          "id": "c0a87e80387d475ab679f9c467902aeb",
+          "known_at": 1791526687276
+        },
+        {
+          "content_hash": "3df4c662a72a6806e980dc1f742940932c234c03bd710a7b80f3ca1b0cb2e659",
+          "id": "3727fb4410fb436ebd67d2db458d9229",
+          "known_at": 1791526717440
+        },
+        {
+          "content_hash": "11cb61e3c1d1391258506d5a01fbc0190879078c7177413c83f406530ccfd88c",
+          "id": "974ff3ad05ea44f39c31da26ff76037f",
+          "known_at": 1791526747481
+        },
+        {
+          "content_hash": "8e291f64bd7aec33e45b26bb91977c38f39183f2fc1b00a4cf938e988c177097",
+          "id": "34fc04fdb3914fdcb3a3c82560522c24",
+          "known_at": 1791526777371
+        },
+        {
+          "content_hash": "55f645ba174ab0b7014956543244503cef14f0ee8314bd90b8601a17bf3e7654",
+          "id": "0bfbe4bcc7ac495ba89b99dfe9a7b84f",
+          "known_at": 1791526807482
+        }
+      ],
+      "child_observed_pass": false,
+      "conditions": {
+        "boundary_coverage": true,
+        "cadence": true,
+        "elapsed": true,
+        "fresh_at_capture": false,
+        "samples": true,
+        "supported": false,
+        "timestamp_order": true
+      },
+      "content_hash": "ecf4f8ccf66094704c7900e42dd5dccb391b8d4aa145935917e4d81e38f33193",
+      "created_at": 1791526808431,
+      "created_by": "public-acceptance-collector",
+      "declared_child_notional": "2500",
+      "declared_sleeve_notional": "10000",
+      "declared_window": {
+        "end": 1791526807482,
+        "start": 1791526477654
+      },
+      "historical_capacity": "unknown",
+      "id": "7d56fe2920d24a6592c579208e38ce32",
+      "independent_book_count": 12,
+      "independent_window": {
+        "elapsed_ms": 329828,
+        "end": 1791526807482,
+        "start": 1791526477654
+      },
+      "input": {
+        "capture_ids": [
+          "3d1731513feb4ea5b21a5eafeba602eb",
+          "819aea72c65647f6bcc889329fe71d8b",
+          "e59ed9b65b084522b9181e6232698710",
+          "16b2746821a04647a3af1a4d9b52943e",
+          "e20cac4ef31442008bd1de871d03bc24",
+          "1a6301020a7b47d4995e26ee67c7149c",
+          "096a591f742b4053b511790eec3742ba",
+          "c0a87e80387d475ab679f9c467902aeb",
+          "3727fb4410fb436ebd67d2db458d9229",
+          "974ff3ad05ea44f39c31da26ff76037f",
+          "34fc04fdb3914fdcb3a3c82560522c24",
+          "0bfbe4bcc7ac495ba89b99dfe9a7b84f"
+        ],
+        "child_notional": "2500",
+        "inst_id": "ETH-USDT-SWAP",
+        "max_book_age_ms": 2000,
+        "max_gap_ms": 60000,
+        "max_participation_pct": "10",
+        "max_shortfall_bps": "10",
+        "minimum_elapsed_ms": 300000,
+        "minimum_samples": 12,
+        "review_max_age_ms": 300000,
+        "sleeve_notional": "10000",
+        "window_end": null,
+        "window_start": null
+      },
+      "input_hash": "7f86266a2e1586238d565bca17f835ce5dcfdd23154ebd55cca75808fa090606",
+      "inst_id": "ETH-USDT-SWAP",
+      "live_execution_calibration": "not_measured",
+      "maximum_observed_gap_ms": 30350,
+      "methodology": "okx_displayed_l2_v1",
+      "observed_window": {
+        "end": 1791526807482,
+        "start": 1791526477654
+      },
+      "repeated_or_missing_timestamp_count": 0,
+      "sample_count": 12,
+      "scenarios": [
+        {
+          "all_samples_pass": true,
+          "notional": "1000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.0038857308308709977093568301506355398631893284071440",
+                "p90": "0.0041117114050261314127573792915346937185149031594554",
+                "p95": "0.0042082392076504739358874231996344603788506700545266",
+                "worst": "0.0042082392076504739358874231996344603788506700545266"
+              },
+              "shortfall_bps": {
+                "median": "0.020039156511824104299801812742098059608474960071981",
+                "p90": "0.020040843238520103971894721442299406189814842649319",
+                "p95": "0.020042369569269435586830559803424439264605375764366",
+                "worst": "0.020042369569269435586830559803424439264605375764366"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.0047588519987534418604761557779939765513204805562327",
+                "p90": "0.0049482213673823612813647515363548661993538437314673",
+                "p95": "0.0051894465034712997078768680227988820301632372103761",
+                "worst": "0.0051894465034712997078768680227988820301632372103761"
+              },
+              "shortfall_bps": {
+                "median": "0.020039156511824104299801812742098059608474960071981",
+                "p90": "0.020040843238520103971894721442299406189814842649319",
+                "p95": "0.020042369569269435586830559803424439264605375764366",
+                "worst": "0.020042369569269435586830559803424439264605375764366"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "2500",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.0097094820262661838024327775833835684361987707330630",
+                "p90": "0.010274151690364547819408713341939558867710556024375",
+                "p95": "0.010525845200183105630162307903325096658322249537881",
+                "worst": "0.010525845200183105630162307903325096658322249537881"
+              },
+              "shortfall_bps": {
+                "median": "0.020039156511824104299801812742098059608474960071981",
+                "p90": "0.020040843238520103971894721442299406189814842649319",
+                "p95": "0.020042369569269435586830559803424439264605375764366",
+                "worst": "0.020042369569269435586830559803424439264605375764366"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.011891196266211842254855631146009886544696063634277",
+                "p90": "0.012364383566376872827749329275380488607861724236734",
+                "p95": "0.012967145627127786302475365982155809960657266046875",
+                "worst": "0.012967145627127786302475365982155809960657266046875"
+              },
+              "shortfall_bps": {
+                "median": "0.020039156511824104299801812742098059608474960071981",
+                "p90": "0.020040843238520103971894721442299406189814842649319",
+                "p95": "0.020042369569269435586830559803424439264605375764366",
+                "worst": "0.020042369569269435586830559803424439264605375764366"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "10000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.038837928105064735209731110333534273744795082932252",
+                "p90": "0.041096606761458191277634853367758235470842224097500",
+                "p95": "0.042071897714390897777986732187866712366115551742138",
+                "worst": "0.042071897714390897777986732187866712366115551742138"
+              },
+              "shortfall_bps": {
+                "median": "0.020039156511824104299801812742098059608474960071981",
+                "p90": "0.020040843238520103971894721442299406189814842649319",
+                "p95": "0.020042369569269435586830559803424439264605375764366",
+                "worst": "0.020042369569269435586830559803424439264605375764366"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.047552917603503844226753007986089436511573979024499",
+                "p90": "0.049445194561349430559672217970508600650401126763066",
+                "p95": "0.051855641245410219275467855778940449613127410229370",
+                "worst": "0.051855641245410219275467855778940449613127410229370"
+              },
+              "shortfall_bps": {
+                "median": "0.020039156511824104299801812742098059608474960071981",
+                "p90": "0.020040843238520103971894721442299406189814842649319",
+                "p95": "0.020042369569269435586830559803424439264605375764366",
+                "worst": "0.020042369569269435586830559803424439264605375764366"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "100000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.38836959094882473115539250774893217500440172875293",
+                "p90": "0.41095581397018035135137906390378800385126883722647",
+                "p95": "0.42063502224699824513276732341084399228202632699635",
+                "worst": "0.42063502224699824513276732341084399228202632699635"
+              },
+              "shortfall_bps": {
+                "median": "0.020039156511824104299801812742098059608474960071981",
+                "p90": "0.020040843238520103971894721442299406189814842649319",
+                "p95": "0.020042369569269435586830559803424439264605375764366",
+                "worst": "0.020042369569269435586830559803424439264605375764366"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.47552917603503844226753007986089436511573979024499",
+                "p90": "0.49445194561349430559672217970508600650401126763066",
+                "p95": "0.51854347119100126682024494963972170590177244833557",
+                "worst": "0.51854347119100126682024494963972170590177244833557"
+              },
+              "shortfall_bps": {
+                "median": "0.020039156511824104299801812742098059608474960071981",
+                "p90": "0.020040843238520103971894721442299406189814842649319",
+                "p95": "0.020042369569269435586830559803424439264605375764366",
+                "worst": "0.020042369569269435586830559803424439264605375764366"
+              }
+            }
+          }
+        }
+      ],
+      "schema_version": 1,
+      "scope": "Observed cached organic L2 window only; no queue position, hidden liquidity, impact/replenishment, fees or executable guarantee. Both sides and every selected sample must pass; quantiles are descriptive. Historical backtest cost assumptions remain scenarios.",
+      "selection_audit": {
+        "all_available_count": 12,
+        "availability_as_of": 1791526808431,
+        "omitted_capture_ids": [],
+        "omitted_policy": "automatically_included_not_excluded",
+        "selected_count": 12,
+        "selection_policy": "all_available_captures_in_declared_window"
+      },
+      "sleeve_observed_pass": false,
+      "source": "okx",
+      "spread_bps": {
+        "median": "0.040078313023648208599603625484196119216949920143961",
+        "p90": "0.040081686477040207943789442884598812379629685298639",
+        "p95": "0.040084739138538871173661119606848878529210751528732",
+        "worst": "0.040084739138538871173661119606848878529210751528732"
+      },
+      "status": "unsupported",
+      "uncovered_edges": {
+        "end_ms": 0,
+        "max_allowed_ms": 60000,
+        "start_ms": 0
+      },
+      "latest_sample_age_ms": 1060,
+      "current_review_status": "unsupported"
+    },
+    {
+      "approved_observed_notional": null,
+      "captures": [
+        {
+          "content_hash": "4c58f378eea0f5a2629a143fb52a29e67d329100757c623120f2816ac68b0f87",
+          "id": "8458db925a144b55b6d87319412d62e1",
+          "known_at": 1791526477911
+        },
+        {
+          "content_hash": "5eaf94b6e87725d1f6840747b1f58028c48ba6e77bb95958011b1fe0d5d1e9da",
+          "id": "e7c4a9f4bbd641c98608099cdae7dc75",
+          "known_at": 1791526507739
+        },
+        {
+          "content_hash": "9180eb1417638a47553d828d342ab7178a6c33632aa65e8102c8011e04a2e115",
+          "id": "b5b338bb2e0440048670c1e2102a96dd",
+          "known_at": 1791526537552
+        },
+        {
+          "content_hash": "c3dd80f2db4b9fdf0db26dcc9c63bb251342a1b1b23787a3d95b14dd5643fe71",
+          "id": "58451ecc324c4f048792a740cdf8bad5",
+          "known_at": 1791526567541
+        },
+        {
+          "content_hash": "0f40b8cbc601b02b4217a1fce80d4e1d58b88d3d742ee742aa27b2501eae33af",
+          "id": "4d2c9a4682a24a33b67e5718cec75176",
+          "known_at": 1791526597951
+        },
+        {
+          "content_hash": "6fdbe5d677dc7db8209365996c6834dfab2b37664fea308adbce037cb8baf1a7",
+          "id": "044e5c0314c2494c83bac63cc37924b4",
+          "known_at": 1791526627738
+        },
+        {
+          "content_hash": "798d256ab1a182718ba8da5b86242d3a06f737ebff33fd23bbb4d96eab8c6ee6",
+          "id": "92d8cef5215c4c8b851497860a15122b",
+          "known_at": 1791526657583
+        },
+        {
+          "content_hash": "c721f0611bf82d95c5998efe2e6724af09446e8c5e37124297e92200081c585d",
+          "id": "8bbfdebb86ba483b96e742ebc1236907",
+          "known_at": 1791526687532
+        },
+        {
+          "content_hash": "1a4864a76436143c2fc1e6374c0c1ddcd2355b63c946cec9a228b3d7426813a5",
+          "id": "cb7671253d674e66abb6ade22a4d1417",
+          "known_at": 1791526717695
+        },
+        {
+          "content_hash": "013e6ea0286f13a6d72ac66b49b8116a07388ec14fe4bcb5e7095f592d74185b",
+          "id": "ba2592f629954c9892463663be795622",
+          "known_at": 1791526747786
+        },
+        {
+          "content_hash": "5667f50a2069f6f647d29a8c78635fce1d08578b58967ba236a420878729139d",
+          "id": "9ce8b43e11f64d7bbeb700e36945c8db",
+          "known_at": 1791526777630
+        },
+        {
+          "content_hash": "514ca7e560ab6e9ed815bdc36fc36bd05d655bcda6880b16d0dfdd79635e6505",
+          "id": "38ea53a2be054a62abf50af6efe64913",
+          "known_at": 1791526807786
+        }
+      ],
+      "child_observed_pass": false,
+      "conditions": {
+        "boundary_coverage": true,
+        "cadence": true,
+        "elapsed": true,
+        "fresh_at_capture": false,
+        "samples": true,
+        "supported": false,
+        "timestamp_order": true
+      },
+      "content_hash": "93704e2005d158913a2cc90ee25f6d9e868c1541c153641a5d0706ab90844937",
+      "created_at": 1791526808542,
+      "created_by": "public-acceptance-collector",
+      "declared_child_notional": "2500",
+      "declared_sleeve_notional": "10000",
+      "declared_window": {
+        "end": 1791526807786,
+        "start": 1791526477911
+      },
+      "historical_capacity": "unknown",
+      "id": "fdc57725f58b431b8b6409502df9e1e9",
+      "independent_book_count": 12,
+      "independent_window": {
+        "elapsed_ms": 329875,
+        "end": 1791526807786,
+        "start": 1791526477911
+      },
+      "input": {
+        "capture_ids": [
+          "8458db925a144b55b6d87319412d62e1",
+          "e7c4a9f4bbd641c98608099cdae7dc75",
+          "b5b338bb2e0440048670c1e2102a96dd",
+          "58451ecc324c4f048792a740cdf8bad5",
+          "4d2c9a4682a24a33b67e5718cec75176",
+          "044e5c0314c2494c83bac63cc37924b4",
+          "92d8cef5215c4c8b851497860a15122b",
+          "8bbfdebb86ba483b96e742ebc1236907",
+          "cb7671253d674e66abb6ade22a4d1417",
+          "ba2592f629954c9892463663be795622",
+          "9ce8b43e11f64d7bbeb700e36945c8db",
+          "38ea53a2be054a62abf50af6efe64913"
+        ],
+        "child_notional": "2500",
+        "inst_id": "SOL-USDT-SWAP",
+        "max_book_age_ms": 2000,
+        "max_gap_ms": 60000,
+        "max_participation_pct": "10",
+        "max_shortfall_bps": "10",
+        "minimum_elapsed_ms": 300000,
+        "minimum_samples": 12,
+        "review_max_age_ms": 300000,
+        "sleeve_notional": "10000",
+        "window_end": null,
+        "window_start": null
+      },
+      "input_hash": "104fd98c9dae73ad717d8f0e96b4cd1ce4e77f7e514853e691515f4f96f88de3",
+      "inst_id": "SOL-USDT-SWAP",
+      "live_execution_calibration": "not_measured",
+      "maximum_observed_gap_ms": 30410,
+      "methodology": "okx_displayed_l2_v1",
+      "observed_window": {
+        "end": 1791526807786,
+        "start": 1791526477911
+      },
+      "repeated_or_missing_timestamp_count": 0,
+      "sample_count": 12,
+      "scenarios": [
+        {
+          "all_samples_pass": true,
+          "notional": "1000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.0062809467480398212023825724664231055094371224889298",
+                "p90": "0.0064379503101088184144138459419808507218391902337573",
+                "p95": "0.0064420134178749234033227990534079886370278114375744",
+                "worst": "0.0064420134178749234033227990534079886370278114375744"
+              },
+              "shortfall_bps": {
+                "median": "0.45263205540216358122482234191825465079436925723080",
+                "p90": "0.45275501426178294924616290125413138950513876941187",
+                "p95": "0.45283702395507856722365620613141330435176380020831",
+                "worst": "0.45283702395507856722365620613141330435176380020831"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.0061168653455137721290769312618269523940438745332346",
+                "p90": "0.0061980184811776235114237484671705122087623973196649",
+                "p95": "0.0062334119688114741014804972639036735574536195620705",
+                "worst": "0.0062334119688114741014804972639036735574536195620705"
+              },
+              "shortfall_bps": {
+                "median": "0.45263205540216358122482234191825465079436925723080",
+                "p90": "0.45275501426178294924616290125413138950513876941187",
+                "p95": "0.45283702395507856722365620613141330435176380020831",
+                "worst": "0.45283702395507856722365620613141330435176380020831"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "2500",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.015695434257794873291605015523158842023582389972337",
+                "p90": "0.016087769869852499878844312596738019905346497449477",
+                "p95": "0.016090812764515399185120854589251962787631277354559",
+                "worst": "0.016090812764515399185120854589251962787631277354559"
+              },
+              "shortfall_bps": {
+                "median": "0.45263205540216358122482234191825465079436925723080",
+                "p90": "0.45275501426178294924616290125413138950513876941187",
+                "p95": "0.45283702395507856722365620613141330435176380020831",
+                "worst": "0.45283702395507856722365620613141330435176380020831"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.015278660349776673651325712412267542238102966963256",
+                "p90": "0.015488205122942758973359124204938233598938264383798",
+                "p95": "0.015583529922028685253701243159759183893634048905176",
+                "worst": "0.015583529922028685253701243159759183893634048905176"
+              },
+              "shortfall_bps": {
+                "median": "0.45267303426734869403829613869901769951563985333394",
+                "p90": "0.45283702395507856722365620613141330435176380020831",
+                "p95": "0.65692759344065097144992678906930878078618174684346",
+                "worst": "0.65692759344065097144992678906930878078618174684346"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "10000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.062781737031179493166420062092635368094329559889347",
+                "p90": "0.064329761763151361043806343612309758923631555393162",
+                "p95": "0.064363251058061596740483418357007851150525109418238",
+                "worst": "0.064363251058061596740483418357007851150525109418238"
+              },
+              "shortfall_bps": {
+                "median": "0.45263205540216358122482234191825465079436925723080",
+                "p90": "0.45275501426178294924616290125413138950513876941187",
+                "p95": "0.68943024437634739576537434319819565570348581623874",
+                "worst": "0.68943024437634739576537434319819565570348581623874"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.061114641399106694605302849649070168952411867853023",
+                "p90": "0.061952820491771035893436496819752934395753057535193",
+                "p95": "0.062313479251131921564137818674586723410438667079108",
+                "worst": "0.062313479251131921564137818674586723410438667079108"
+              },
+              "shortfall_bps": {
+                "median": "0.45267303426734869403829613869901769951563985333394",
+                "p90": "0.45283702395507856722365620613141330435176380020831",
+                "p95": "1.1824696681931717486098682203247558054151271448613",
+                "worst": "1.1824696681931717486098682203247558054151271448613"
+              }
+            }
+          }
+        },
+        {
+          "all_samples_pass": true,
+          "notional": "100000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.62776190941335749394938929578316230694321226889357",
+                "p90": "0.64327629991525497196649252934845526853856111952687",
+                "p95": "0.64356851706984237545049653987087247188302896360518",
+                "worst": "0.64356851706984237545049653987087247188302896360518"
+              },
+              "shortfall_bps": {
+                "median": "0.70048744629362289271753638044644145579856139656967",
+                "p90": "1.1515373192710401873054573923031959572061192466157",
+                "p95": "1.7280986429357186264571869233675396285295613041706",
+                "worst": "1.7280986429357186264571869233675396285295613041706"
+              }
+            },
+            "sell": {
+              "all_samples_pass": true,
+              "complete_samples": 12,
+              "participation_pct": {
+                "median": "0.61113966248406306771734518861955177015061531884532",
+                "p90": "0.61947347627769996049276299249362496857378874402902",
+                "p95": "0.62312103221999733600760008410290055932832165176335",
+                "worst": "0.62312103221999733600760008410290055932832165176335"
+              },
+              "shortfall_bps": {
+                "median": "0.98608646788683660914623936216391887669191942339896",
+                "p90": "1.4920035700566865357678681242362159107903903762394",
+                "p95": "1.7496161330144296388979889435362273770920791274834",
+                "worst": "1.7496161330144296388979889435362273770920791274834"
+              }
+            }
+          }
+        }
+      ],
+      "schema_version": 1,
+      "scope": "Observed cached organic L2 window only; no queue position, hidden liquidity, impact/replenishment, fees or executable guarantee. Both sides and every selected sample must pass; quantiles are descriptive. Historical backtest cost assumptions remain scenarios.",
+      "selection_audit": {
+        "all_available_count": 12,
+        "availability_as_of": 1791526808542,
+        "omitted_capture_ids": [],
+        "omitted_policy": "automatically_included_not_excluded",
+        "selected_count": 12,
+        "selection_policy": "all_available_captures_in_declared_window"
+      },
+      "sleeve_observed_pass": false,
+      "source": "okx",
+      "spread_bps": {
+        "median": "0.90526411080432716244964468383650930158873851446159",
+        "p90": "0.90551002852356589849232580250826277901027753882374",
+        "p95": "0.90567404791015713444731241226282660870352760041661",
+        "worst": "0.90567404791015713444731241226282660870352760041661"
+      },
+      "status": "unsupported",
+      "uncovered_edges": {
+        "end_ms": 0,
+        "max_allowed_ms": 60000,
+        "start_ms": 0
+      },
+      "latest_sample_age_ms": 867,
+      "current_review_status": "unsupported"
+    }
+  ]
+}

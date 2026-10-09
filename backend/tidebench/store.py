@@ -134,7 +134,7 @@ class Store:
             row = conn.execute("SELECT version FROM schema_version").fetchone()
             if row is None:
                 conn.execute("INSERT INTO schema_version VALUES(1)")
-            elif row[0] not in {1, 2, 3, 4, 5, 6, 7}:
+            elif row[0] not in {1, 2, 3, 4, 5, 6, 7, 8}:
                 raise RuntimeError("Unsupported database schema. Back up your data before upgrading.")
             for source in ("okx", "example"):
                 conn.execute(

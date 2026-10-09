@@ -856,6 +856,7 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
         'Shared cash and measured costs must survive a final chronological interval without retuning.',
       definition: {
         capital_pct: '20',
+        max_residual_pct: '3',
         rebalance_bars: 4,
         legs: ['BTC-USDT', 'ETH-USDT'].map((inst_id) => ({
           inst_id,
@@ -886,6 +887,8 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
   await page
     .getByLabel('UTC final end', { exact: true })
     .fill(new Date(end).toISOString().slice(0, 16));
+  await page.getByLabel('Maximum order notional (USDT)', { exact: true }).fill('1800');
+  await page.getByLabel('Underlying asset gross limit (%)', { exact: true }).fill('80');
   await page.getByLabel('Minimum return versus cash %', { exact: true }).fill('0');
   await page.getByLabel('Maximum accepted drawdown %', { exact: true }).fill('10');
   await page
@@ -901,6 +904,11 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
   expect(previewResponse.ok()).toBeTruthy();
   const preview = await previewResponse.json();
   expect(preview.plan.warmup_bars).toBe(20);
+  expect(preview.plan.definition.failure_policy).toBe('reduce_group');
+  expect(preview.plan.definition.execution_contract).toBe('reduce_group_v1');
+  expect(preview.plan.definition.max_residual_pct).toBe('3');
+  expect(preview.plan.test_config.max_order_notional).toBe('1800');
+  expect(preview.plan.test_config.max_base_asset_gross_pct).toBe('80');
   expect(preview.input_hash).toMatch(/^[a-f0-9]{64}$/);
   await expect(
     page.getByRole('heading', { name: 'Review the captured contract', exact: true }),
@@ -915,6 +923,11 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
   );
   await page.getByRole('button', { name: 'Evaluate sealed portfolio', exact: true }).click();
   const run = await (await evaluationPromise).json();
+  expect(run.config.failure_policy).toBe('reduce_group');
+  expect(run.config.execution_contract).toBe('reduce_group_v1');
+  expect(run.config.max_residual_pct).toBe('3');
+  expect(run.config.max_order_notional).toBe('1800');
+  expect(run.config.max_base_asset_gross_pct).toBe('80');
   await expect
     .poll(
       async () =>
@@ -1001,8 +1014,29 @@ test('a failed view download preserves navigation and recovers after explicit re
 test('instrument observations expose causal coverage, exact exports and current-product scope', async ({
   page,
 }) => {
+  let releaseList!: () => void;
+  let listFetched!: () => void;
+  const listGate = new Promise<void>((resolve) => (releaseList = resolve));
+  const staleListReady = new Promise<void>((resolve) => (listFetched = resolve));
+  let held = false;
+  // Return a genuine pre-capture list late, as happens on a slow connection.
+  await page.route('**/pro/catalog/instrument-observations?*', async (route) => {
+    const url = new URL(route.request().url());
+    if (
+      route.request().method() === 'GET' &&
+      url.searchParams.get('source') === 'example' &&
+      !held
+    ) {
+      held = true;
+      const response = await route.fetch();
+      listFetched();
+      await listGate;
+      await route.fulfill({ response });
+    } else await route.fallback();
+  });
   await navigate(page, 'Data library');
   await page.getByRole('tab', { name: 'Instrument evidence', exact: true }).click();
+  await staleListReady;
   const desk = page.getByRole('region', { name: 'Instrument evidence', exact: true });
   const captured = page.waitForResponse(
     (r) => r.url().includes('/catalog/instrument-observations?') && r.request().method() === 'POST',
@@ -1011,6 +1045,11 @@ test('instrument observations expose causal coverage, exact exports and current-
   const response = await captured;
   expect(response.status()).toBe(201);
   const first = await response.json();
+  try {
+    await expect(desk.getByLabel('Stored observation', { exact: true })).toHaveValue(first.id);
+  } finally {
+    releaseList();
+  }
   await expect(desk.getByLabel('Stored observation', { exact: true })).toHaveValue(first.id);
   await expect(desk.getByText('Observed at this time', { exact: true })).toBeVisible();
   await desk.getByLabel('Filter observed instruments', { exact: true }).fill('BTC-USDT');
@@ -1133,6 +1172,9 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   await page.getByRole('button', { name: 'New portfolio study', exact: true }).click();
   await page.getByLabel('Portfolio starting point', { exact: true }).selectOption('risk-rotation');
   await expect(page.getByLabel('Risk estimation bars', { exact: true })).toHaveValue('84');
+  await page.getByLabel('Maximum execution residual %', { exact: true }).fill('3');
+  await page.getByLabel('Maximum order notional (USDT)', { exact: true }).fill('1750');
+  await page.getByLabel('Underlying asset gross limit (%)', { exact: true }).fill('75');
   await page.getByLabel('Sleeve volatility target (%)', { exact: true }).fill('15');
   const queued = page.waitForResponse(
     (r) => r.url().endsWith('/pro/research/portfolios') && r.request().method() === 'POST',
@@ -1143,6 +1185,17 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   const run = await response.json();
   expect(run.config.mode).toBe('risk_momentum');
   expect(run.config.vol_target_pct).toBe('15');
+  expect(run.config.failure_policy).toBe('reduce_group');
+  expect(run.config.execution_contract).toBe('reduce_group_v1');
+  expect(run.config.max_residual_pct).toBe('3');
+  expect(run.config.max_order_notional).toBe('1750');
+  expect(run.config.max_base_asset_gross_pct).toBe('75');
+  const savedVersion = await (
+    await request.get(`/api/v1/pro/portfolio-versions/${run.config.portfolio_version_id}`)
+  ).json();
+  expect(savedVersion.definition.failure_policy).toBe(run.config.failure_policy);
+  expect(savedVersion.definition.execution_contract).toBe(run.config.execution_contract);
+  expect(savedVersion.definition.max_residual_pct).toBe(run.config.max_residual_pct);
   await expect
     .poll(
       async () =>
@@ -1165,6 +1218,10 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   await page.getByRole('button', { name: 'Revise & research', exact: true }).click();
   await expect(page.getByLabel('Sleeve volatility target (%)', { exact: true })).toHaveValue('15');
   await expect(page.getByLabel('Stress correlation (0–1)', { exact: true })).toHaveValue('0.75');
+  await expect(page.getByLabel('Maximum execution residual %', { exact: true })).toHaveValue('3');
+  await expect(page.getByLabel('Maximum order notional (USDT)', { exact: true })).toHaveValue(
+    '1750',
+  );
   await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
   await page.reload();
   await navigate(page, '策略研究');
@@ -1182,4 +1239,808 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
       animations: 'disabled',
     });
   }
+});
+
+test('trading desk surfaces unresolved group risk even when members and service health are normal', async ({
+  page,
+}, testInfo) => {
+  const now = Date.now();
+  let recovered = false;
+  const manifest = (name: string, ids: string[] = []) => ({
+    name,
+    version_revision: 1,
+    definition: { construction_mode: 'static', capital_pct: '40', bar: '1H' },
+    legs: ids.map((id, index) => ({
+      deployment_id: id,
+      inst_id: index === 0 ? 'BTC-USDT' : 'ETH-USDT',
+      weight: '.5',
+      leverage: '1',
+      direction: 'long_only',
+    })),
+  });
+  const groupRows = () => [
+    {
+      id: 'normal-first',
+      source: 'example',
+      status: 'running',
+      manifest: manifest('Normal first group'),
+      created_at: now,
+    },
+    {
+      id: 'blocked-group',
+      source: 'example',
+      status: recovered ? 'stopped' : 'compensating',
+      manifest: manifest('Blocked recovery basket', ['member-btc', 'member-eth']),
+      created_at: now - 86_400_000,
+      last_error: 'Historical leg failure retained for audit',
+      attention: recovered
+        ? null
+        : {
+            phase: 'compensating',
+            since: now - 4_200_000,
+            as_of: now,
+            error: 'Reduction could not complete; current inventory remains exposed.',
+            inventory_notional: '1250',
+            valuation_status: 'fresh',
+            inventory: [{ inst_id: 'BTC-USDT', quantity: '.02', market_value: '1250' }],
+            residual_notional: '1250',
+            batch_id: 'blocked-batch',
+            incident_id: 'group-incident',
+          },
+    },
+    {
+      id: 'preparation-group',
+      source: 'example',
+      status: recovered ? 'stopped' : 'running',
+      manifest: manifest('History preparation basket'),
+      created_at: now - 86_400_000,
+      last_error: recovered ? 'Old history preparation failure' : 'Confirmed history is missing.',
+      attention: null,
+    },
+    {
+      id: 'old-stopped',
+      source: 'example',
+      status: 'stopped',
+      manifest: manifest('Historical stopped basket'),
+      created_at: now - 86_400_000,
+      last_error: 'Old completed failure',
+      attention: null,
+    },
+  ];
+  const incidentRows = () => [
+    {
+      id: 'group-incident',
+      kind: 'managed_portfolio',
+      subject: 'blocked-group',
+      status: recovered ? 'resolved' : 'acknowledged',
+      first_seen: now - 4_200_000,
+      last_seen: now,
+      details: { source: 'example', error: 'Reduction could not complete.' },
+      ack_actor: 'qaoperator',
+      ack_at: now - 60_000,
+      ack_reason: 'Investigating retained inventory; acknowledgement does not assert recovery.',
+    },
+    {
+      id: 'other-source',
+      kind: 'managed_portfolio',
+      subject: 'other-source-group',
+      status: 'open',
+      first_seen: now - 60_000,
+      last_seen: now,
+      details: { source: 'okx', error: 'Other-source-only error' },
+    },
+    {
+      id: 'resolved-old',
+      kind: 'managed_portfolio',
+      subject: 'old-stopped',
+      status: 'resolved',
+      first_seen: now - 86_400_000,
+      last_seen: now,
+      details: { source: 'example', error: 'Old resolved error' },
+    },
+    {
+      id: 'shared-backup',
+      kind: 'backup_failure',
+      subject: 'workspace',
+      status: recovered ? 'resolved' : 'open',
+      first_seen: now - 60_000,
+      last_seen: now,
+      details: { error: 'Shared workspace backup failure' },
+    },
+  ];
+  await page.route('**/api/v1/pro/ops', (route) =>
+    route.fulfill({
+      json: {
+        health: { status: 'ok', checks: { database: 'ok', workers: 'ok' } },
+        incidents: incidentRows(),
+        feeds: [],
+        jobs: [],
+        workers: [],
+        storage: {},
+      },
+    }),
+  );
+  await page.route('**/api/v1/pro/execution/portfolios?*', (route) =>
+    route.fulfill({ json: { items: groupRows() } }),
+  );
+  const [accountFixture, analyticsFixture] = await Promise.all([
+    page.request
+      .get('/api/v1/pro/execution/account?source=example')
+      .then((response) => response.json()),
+    page.request
+      .get('/api/v1/pro/execution/analytics?source=example')
+      .then((response) => response.json()),
+  ]);
+  await page.route('**/api/v1/pro/execution/account?*', (route) =>
+    route.fulfill({
+      json: {
+        ...accountFixture,
+        equity: '10000',
+        available_cash: recovered ? '10000' : '8750',
+        cash: recovered ? '10000' : '8750',
+        positions: recovered
+          ? []
+          : [
+              {
+                inst_id: 'BTC-USDT',
+                inst_type: 'SPOT',
+                side: 'long',
+                quantity: '.02',
+                mark: '62500',
+                market_value: '1250',
+                margin: '0',
+                unrealized_pnl: '0',
+                as_of: now,
+              },
+            ],
+      },
+    }),
+  );
+  await page.route('**/api/v1/pro/execution/analytics?*', (route) =>
+    route.fulfill({
+      json: {
+        ...analyticsFixture,
+        status: 'available',
+        summary: {
+          ...analyticsFixture.summary,
+          gross_notional: recovered ? '0' : '1250',
+          net_notional: recovered ? '0' : '1250',
+        },
+        assets: recovered
+          ? []
+          : [
+              {
+                asset: 'BTC',
+                long_notional: '1250',
+                short_notional: '0',
+                gross_notional: '1250',
+                net_notional: '1250',
+                gross_share_pct: '100',
+              },
+            ],
+      },
+    }),
+  );
+  await page.route('**/api/v1/pro/execution/portfolios/*/batches*', (route) =>
+    route.fulfill({ json: { items: [] } }),
+  );
+  await page.route('**/api/v1/pro/execution/deployments?*', (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            id: 'member-btc',
+            group_id: 'blocked-group',
+            source: 'example',
+            inst_id: 'BTC-USDT',
+            status: 'running',
+            last_error: null,
+          },
+          {
+            id: 'member-eth',
+            group_id: 'blocked-group',
+            source: 'example',
+            inst_id: 'ETH-USDT',
+            status: 'running',
+            last_error: null,
+          },
+        ],
+      },
+    }),
+  );
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  const desk = page.getByRole('region', { name: 'Unresolved conditions', exact: true });
+  await expect(desk.locator('.desk-issue')).toHaveCount(3);
+  const group = desk.locator('[data-issue-id="group:blocked-group"]');
+  await expect(group.getByRole('heading', { name: 'Blocked recovery basket' })).toBeVisible();
+  await expect(group).toContainText('Acknowledged · unresolved');
+  await expect(group).toContainText('1 hour 10 minutes');
+  await expect(group.locator('.desk-issue-amount')).toContainText('1,250.00');
+  await expect(group).toContainText('0.02 Base units');
+  await expect(desk).toContainText('History preparation basket');
+  await expect(desk).toContainText('Duration unavailable');
+  await expect(desk).toContainText('Unvalued inventory is not zero exposure.');
+  await expect(desk).toContainText('Shared workspace');
+  await expect(desk).not.toContainText('Other-source-only error');
+  await expect(desk).not.toContainText('Historical stopped basket');
+  await expect(page.locator('.overview-economic-state')).toContainText('Action required');
+  await expect(page.locator('.service-health-state')).toContainText('ok');
+  await expect(
+    page.locator('.overview-strategies').getByText('Active portfolio groups').locator('..'),
+  ).toContainText('3');
+  await expect(
+    page.locator('.overview-strategies').getByText('Active managed legs').locator('..'),
+  ).toContainText('2');
+  await expect(
+    page.locator('.overview-strategies').getByText('Active standalone strategies').locator('..'),
+  ).toContainText('0');
+  await group.getByRole('button', { name: 'Inspect group & recovery', exact: true }).click();
+  await expect(
+    page
+      .locator('.managed-group-evidence')
+      .getByRole('heading', { name: 'Blocked recovery basket', exact: true }),
+  ).toBeVisible();
+  await navigate(page, 'Overview');
+  await desk
+    .locator('[data-issue-id="group:blocked-group"]')
+    .getByRole('button', { name: 'Inspect incident & response', exact: true })
+    .click();
+  const incident = page.getByRole('region', { name: 'Selected incident', exact: true });
+  await expect(incident).toContainText('blocked-group');
+  await expect(incident).toContainText('Investigating retained inventory');
+  await expect(page.getByRole('tab', { name: 'Incidents', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await navigate(page, 'Overview');
+  await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
+  await page.reload();
+  const zh = page.getByRole('region', { name: '未解决事项', exact: true });
+  await expect(zh).toContainText('已响应 · 尚未恢复');
+  await expect(zh).toContainText('当前组内持仓');
+  await expect(zh).toContainText('1 小时 10 分钟');
+  await expect(zh).toContainText('未估值的持仓不代表零敞口。');
+  await expect(page.locator('.overview-economic-state')).toContainText('需要处理');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  );
+  if (testInfo.project.name === 'mobile') {
+    await mkdir('../docs/assets', { recursive: true });
+    await zh.screenshot({
+      path: '../docs/assets/trading-desk-incident-mobile.png',
+      animations: 'disabled',
+    });
+  }
+  await page.evaluate(() => localStorage.setItem('tidebench:language', 'en'));
+  await page.reload();
+  if (testInfo.project.name === 'desktop') {
+    await expect(
+      page
+        .getByRole('region', { name: 'Unresolved conditions', exact: true })
+        .locator('.desk-issue'),
+    ).toHaveCount(3);
+    await expect(page.locator('.overview-economic-state')).toContainText('Action required');
+    await expect(
+      page.locator('.trader-metrics .metric').filter({ hasText: 'Gross exposure' }),
+    ).toContainText('1,250.00');
+    await expect(
+      page.locator('.overview-strategies').getByText('Active portfolio groups').locator('..'),
+    ).toContainText('3');
+    await mkdir('../docs/assets', { recursive: true });
+    await page.screenshot({
+      path: '../docs/assets/trading-desk-incident-desktop.png',
+      fullPage: false,
+      animations: 'disabled',
+    });
+  }
+  recovered = true;
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(
+    page.getByRole('region', { name: 'Unresolved conditions', exact: true }),
+  ).toHaveCount(0);
+});
+
+test('pending funding marks account economics provisional even when service health is ok', async ({
+  page,
+}) => {
+  const accountFixture = await (
+    await page.request.get('/api/v1/pro/execution/account?source=example')
+  ).json();
+  await page.route('**/api/v1/pro/execution/account?*', (route) =>
+    route.fulfill({
+      json: {
+        ...accountFixture,
+        economic_status: 'funding_pending',
+        equity: null,
+        equity_before_pending_funding: '10000',
+        pending_funding: [{ inst_id: 'BTC-USDT-SWAP', quantity: '1' }],
+      },
+    }),
+  );
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.locator('.overview-funding-notice')).toContainText(
+    'Funding settlement remains pending',
+  );
+  await expect(page.locator('.overview-economic-state')).toContainText('Action required');
+  await expect(
+    page.locator('.trader-metrics .metric').filter({ hasText: 'Account equity' }),
+  ).toContainText('—');
+  await page.getByRole('button', { name: 'Inspect funding & ledger', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Ledger', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+});
+
+test('completed research keeps a failed simulated execution visibly ineligible for deployment', async ({
+  page,
+}) => {
+  const run = {
+    id: 'qa-execution-failure',
+    source: 'example',
+    status: 'completed',
+    created_at: Date.now(),
+    progress: 1,
+    config: {
+      name: 'Failed execution observation',
+      mode: 'fixed_weights',
+      hypothesis: 'A completed computation can retain an economic execution failure.',
+      portfolio_version_id: 'qa-version',
+      execution_contract: 'reduce_group_v1',
+    },
+    manifest: {},
+    result: {
+      execution_contract: 'reduce_group_v1',
+      failure_policy: 'reduce_group',
+      max_residual_pct: '2',
+      execution_status: 'compensating',
+      metrics: { total_return_pct: '-2', final_equity: '9800', fees_paid: '5' },
+      equity: [],
+      decisions: [],
+      orders: [],
+      ledger: [],
+      execution_rejections: [],
+      assumptions: {},
+      evaluation: {
+        mode: 'sealed_holdout',
+        test_start: Date.now() - 86_400_000,
+        test_end: Date.now(),
+        rejection: {
+          status: 'rejected',
+          checks: [
+            {
+              metric: 'execution_status',
+              actual: 'compensating',
+              threshold: 'running',
+              passed: false,
+            },
+          ],
+        },
+      },
+    },
+  };
+  await page.route('**/api/v1/pro/research/portfolios?*', (route) =>
+    route.fulfill({ json: { items: [run] } }),
+  );
+  await page.route('**/api/v1/pro/research/portfolios/qa-execution-failure', (route) =>
+    route.fulfill({ json: run }),
+  );
+  await navigate(page, 'Research');
+  await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
+  const outcome = page.getByRole('region', { name: 'Simulation execution state', exact: true });
+  await expect(outcome).toContainText('This simulation is not eligible for paper deployment.');
+  await expect(outcome).toContainText('Marked returns include any retained inventory');
+  await expect(page.locator('.sealed-evaluation')).toContainText('Execution state');
+  const check = page.locator('.sealed-evaluation tbody tr').filter({ hasText: 'Execution state' });
+  await expect(check).toContainText('compensating');
+  await expect(check).toContainText('running');
+  await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
+  await page.reload();
+  await page.getByRole('tab', { name: '组合研究', exact: true }).click();
+  const zh = page.getByRole('region', { name: '模拟执行状态', exact: true });
+  await expect(zh).toContainText('此模拟结果不具备模拟部署资格。');
+  await expect(zh).toContainText('市值收益包含保留持仓');
+  await expect(page.locator('.sealed-evaluation')).toContainText('执行状态');
+  await expect(page.locator('.sealed-evaluation')).toContainText('减仓补偿中');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  );
+});
+
+test('risk operator can persist the shared underlying capital policy without changing research scenarios', async ({
+  page,
+  request,
+}) => {
+  const auth = await (await request.get('/api/v1/auth/status')).json();
+  const headers = { 'X-CSRF-Token': auth.csrf_token };
+  const initial = await (
+    await request.get('/api/v1/pro/execution/capital-policy?source=example')
+  ).json();
+  try {
+    await navigate(page, 'Execution');
+    await page.getByRole('tab', { name: 'Risk', exact: true }).click();
+    const policy = page.locator('.account-capital-control');
+    await expect(
+      policy.getByRole('heading', { name: 'Account capital policy', exact: true }),
+    ).toBeVisible();
+    await expect(
+      policy.getByLabel('Underlying asset gross limit (%)', { exact: true }),
+    ).toHaveValue(String(initial.max_base_asset_gross_pct));
+    await policy.getByLabel('Underlying asset gross limit (%)', { exact: true }).fill('77.5');
+    const saved = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname.endsWith('/capital-policy') &&
+        response.request().method() === 'PUT',
+    );
+    await policy.getByRole('button', { name: 'Save capital policy', exact: true }).click();
+    const response = await saved;
+    expect(response.ok()).toBeTruthy();
+    expect((await response.json()).max_base_asset_gross_pct).toBe('77.5');
+    const stored = await (
+      await request.get('/api/v1/pro/execution/capital-policy?source=example')
+    ).json();
+    expect(stored.max_base_asset_gross_pct).toBe('77.5');
+    await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
+    await page.reload();
+    await expect(policy.getByRole('heading', { name: '账户资本政策', exact: true })).toBeVisible();
+    await expect(policy.getByLabel('标的资产总敞口上限（%）', { exact: true })).toHaveValue('77.5');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+  } finally {
+    expect(
+      (
+        await request.put('/api/v1/pro/execution/capital-policy?source=example', {
+          headers,
+          data: {
+            source: 'example',
+            max_base_asset_gross_pct: String(initial.max_base_asset_gross_pct),
+          },
+        })
+      ).ok(),
+    ).toBeTruthy();
+  }
+});
+
+test('a flat failed group remains a warning until the operator explicitly stops it', async ({
+  page,
+}) => {
+  let stopped = false;
+  const now = Date.now();
+  const group = () => ({
+    id: 'qa-flat-failure',
+    source: 'example',
+    status: stopped ? 'stopped' : 'failed',
+    created_at: now,
+    last_error: 'Preparation failed before any fill.',
+    manifest: {
+      name: 'Flat failure awaiting disposition',
+      version_revision: 1,
+      definition: { capital_pct: '20' },
+      legs: [],
+    },
+    attention: stopped
+      ? null
+      : {
+          phase: 'failed',
+          since: now - 60_000,
+          as_of: now,
+          error: 'Preparation failed before any fill.',
+          inventory_notional: '0',
+          valuation_status: 'fresh',
+          inventory: [],
+          residual_notional: '0',
+        },
+  });
+  await page.route('**/api/v1/pro/ops', (route) =>
+    route.fulfill({
+      json: { health: { status: 'ok' }, incidents: [], jobs: [], feeds: [], workers: [] },
+    }),
+  );
+  await page.route('**/api/v1/pro/execution/portfolios?*', (route) =>
+    route.fulfill({ json: { items: [group()] } }),
+  );
+  await page.route('**/api/v1/pro/execution/portfolios/qa-flat-failure/batches*', (route) =>
+    route.fulfill({ json: { items: [] } }),
+  );
+  await page.route('**/api/v1/pro/execution/portfolios/qa-flat-failure/stop', (route) => {
+    expect(route.request().method()).toBe('POST');
+    stopped = true;
+    return route.fulfill({ json: group() });
+  });
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  const desk = page.getByRole('region', { name: 'Unresolved conditions', exact: true });
+  const issue = desk.locator('[data-issue-id="group:qa-flat-failure"]');
+  await expect(issue).toHaveClass(/desk-issue-warning/);
+  await expect(issue).toContainText('0.00 USDT');
+  await expect(
+    desk.getByRole('heading', { name: 'Review unresolved conditions', exact: true }),
+  ).toBeVisible();
+  await issue.getByRole('button', { name: 'Inspect group & recovery', exact: true }).click();
+  const stop = page.getByRole('button', { name: 'Stop whole portfolio', exact: true });
+  await expect(stop).toBeEnabled();
+  await stop.click();
+  await expect(stop).toBeDisabled();
+  await navigate(page, 'Overview');
+  await expect(
+    page.getByRole('region', { name: 'Unresolved conditions', exact: true }),
+  ).toHaveCount(0);
+});
+
+test('public depth evidence exposes finite coverage and freezes honest incomplete observations in both languages', async ({
+  page,
+}) => {
+  const capturedAt = Date.now();
+  const captureId = 'a'.repeat(32);
+  const reportId = 'b'.repeat(32);
+  let didCapture = false;
+  let didFreeze = false;
+  const scenarios = [1000, 2500, 10000, 100000].flatMap((size) =>
+    ['buy', 'sell'].map((side) => ({
+      side,
+      requested_notional: String(size),
+      status: size === 1000 ? 'complete' : 'depth_exhausted',
+      vwap: side === 'buy' ? '100.15' : '99.85',
+      shortfall_bps: '15',
+      participation_pct: '100',
+      unfilled_quantity: String(Math.max(0, size / 100 - 10)),
+    })),
+  );
+  const capture = {
+    id: captureId,
+    inst_id: 'BTC-USDT',
+    source: 'okx',
+    received_at: capturedAt,
+    known_at: capturedAt,
+    current_age_ms: 50,
+    content_hash: 'fixture-depth-hash',
+    evidence: {
+      status: 'supported',
+      book_age_at_capture_ms: 10,
+      mid: '100',
+      spread_bps: '20',
+      metadata: { quantity_unit: 'base_asset' },
+      scenarios,
+    },
+    raw_depth: [
+      {
+        ts: String(capturedAt - 10),
+        asks: [
+          ['100.10', '5', '0', '1'],
+          ['100.20', '5', '0', '2'],
+        ],
+        bids: [
+          ['99.90', '5', '0', '1'],
+          ['99.80', '5', '0', '2'],
+        ],
+      },
+    ],
+    raw_metadata: [{ provenance: 'synthetic_fixture_for_browser_acceptance' }],
+  };
+  const quantiles = { median: '15', p90: '15', p95: '15', worst: '15' };
+  const report = {
+    id: reportId,
+    inst_id: 'BTC-USDT',
+    created_at: capturedAt + 1,
+    content_hash: 'fixture-report-hash',
+    status: 'insufficient_evidence',
+    current_review_status: 'insufficient_evidence',
+    independent_book_count: 1,
+    selection_audit: { all_available_count: 1, selected_count: 1, omitted_capture_ids: [] },
+    uncovered_edges: { start_ms: 0, end_ms: 0 },
+    approved_observed_notional: null,
+    declared_child_notional: '2500',
+    declared_sleeve_notional: '10000',
+    input: { minimum_samples: 12 },
+    observed_window: { start: capturedAt, end: capturedAt },
+    independent_window: { elapsed_ms: 0 },
+    scenarios: [1000, 2500, 10000, 100000].map((size) => ({
+      notional: String(size),
+      all_samples_pass: false,
+      sides: {
+        buy: { shortfall_bps: quantiles, participation_pct: { ...quantiles, worst: '100' } },
+        sell: { shortfall_bps: quantiles, participation_pct: { ...quantiles, worst: '100' } },
+      },
+    })),
+  };
+  await page.route('**/api/v1/pro/research/liquidity/**', async (route) => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    if (path.endsWith('/captures') && route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({ inst_id: 'BTC-USDT', depth: 400 });
+      didCapture = true;
+      return route.fulfill({ status: 201, json: capture });
+    }
+    if (path.endsWith('/captures'))
+      return route.fulfill({ json: { items: didCapture ? [capture] : [] } });
+    if (path.endsWith('/captures/' + captureId)) return route.fulfill({ json: capture });
+    if (path.endsWith('/calibrations') && route.request().method() === 'POST') {
+      const body = route.request().postDataJSON();
+      expect(body).toMatchObject({
+        inst_id: 'BTC-USDT',
+        capture_ids: [captureId],
+        max_shortfall_bps: '7.5',
+        max_participation_pct: '5',
+      });
+      expect(body.window_end - body.window_start).toBeGreaterThanOrEqual(30 * 60000);
+      expect(body.window_end - body.window_start).toBeLessThan(30 * 60000 + 100);
+      didFreeze = true;
+      return route.fulfill({ status: 201, json: report });
+    }
+    if (path.endsWith('/calibrations'))
+      return route.fulfill({ json: { items: didFreeze ? [report] : [] } });
+    if (path.endsWith('/paper-comparison'))
+      return route.fulfill({
+        json: {
+          items: [
+            {
+              order_id: 'fixture-paper-order',
+              filled_at: capturedAt + 100,
+              status: 'no_causal_capture',
+              paper_shortfall_bps: null,
+              model_minus_walk_bps: null,
+            },
+          ],
+        },
+      });
+    throw new Error('Unexpected fixture liquidity API ' + path);
+  });
+  await navigate(page, 'Operations');
+  await page.getByRole('tab', { name: 'Cost and depth', exact: true }).click();
+  const panel = page.locator('.liquidity-workspace');
+  await expect(panel).toContainText('No public depth has been captured');
+  await panel.getByRole('button', { name: 'Capture public book', exact: true }).click();
+  await expect(panel.getByText('Displayed depth exhausted', { exact: true })).toHaveCount(6);
+  await expect(panel).toContainText('Historical research costs remain scenarios.');
+  await panel.getByRole('button', { name: 'Inspect raw depth and metadata', exact: true }).click();
+  await expect(panel.locator('.json-details pre')).toContainText(
+    'synthetic_fixture_for_browser_acceptance',
+  );
+  await expect(panel.locator('.json-details pre')).toContainText('fixture-depth-hash');
+  await panel.getByRole('button', { name: 'Close raw depth evidence', exact: true }).click();
+  await panel.getByLabel('Maximum mid shortfall (bps)', { exact: true }).fill('7.5');
+  await panel.getByLabel('Maximum captured depth share (%)', { exact: true }).fill('5');
+  await panel.getByRole('button', { name: 'Freeze cost and depth review', exact: true }).click();
+  await expect(panel.locator('.liquidity-report')).toContainText('Insufficient observations');
+  await expect(panel.locator('.liquidity-report')).toContainText('1 / 12');
+  await expect(panel.locator('.liquidity-report')).toContainText(/Historical capacity/i);
+  await panel.getByRole('button', { name: 'Compare local paper fills', exact: true }).click();
+  await expect(panel.locator('.liquidity-paper')).toContainText('No prior fresh capture');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  );
+  await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
+  await page.reload();
+  await page.getByRole('tab', { name: '成本与深度', exact: true }).click();
+  await expect(panel.getByRole('heading', { name: '成本与容量证据', exact: true })).toBeVisible();
+  await expect(panel.getByText('可见深度不足', { exact: true })).toHaveCount(6);
+  await expect(panel.locator('.liquidity-report')).toContainText('观测证据不足');
+  await expect(panel).toContainText('历史研究成本仍属于情景假设。');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  );
+});
+
+test('release depth evidence uses pinned reports and refuses a content hash mismatch', async ({
+  page,
+}) => {
+  const run = {
+    id: 'qa-pinned-liquidity',
+    source: 'example',
+    status: 'completed',
+    created_at: Date.now(),
+    progress: 1,
+    config: {
+      name: 'Pinned evidence browser fixture',
+      mode: 'fixed_weights',
+      hypothesis: 'A release must inspect the specific immutable evidence it reviewed.',
+      portfolio_version_id: 'qa-version',
+      execution_contract: 'reduce_group_v1',
+    },
+    manifest: {},
+    result: {
+      execution_contract: 'reduce_group_v1',
+      execution_status: 'running',
+      metrics: { total_return_pct: null, final_equity: null, fees_paid: null },
+      equity: [],
+      decisions: [],
+      orders: [],
+      ledger: [],
+      execution_rejections: [],
+      assumptions: {},
+    },
+  };
+  const firstId = 'c'.repeat(32),
+    secondId = 'd'.repeat(32);
+  let previews = 0;
+  let latestRequests = 0;
+  const definition = {
+    schema_version: 1,
+    bar: '1H',
+    mode: 'fixed_weights',
+    capital_pct: '100',
+    max_residual_pct: '2',
+    failure_policy: 'reduce_group',
+    legs: [{ inst_id: 'BTC-USDT', weight: '1', leverage: '1', direction: 'long_only' }],
+  };
+  await page.route('**/api/v1/pro/research/portfolios?*', (route) =>
+    route.fulfill({ json: { items: [run] } }),
+  );
+  await page.route('**/api/v1/pro/research/portfolios/qa-pinned-liquidity', (route) =>
+    route.fulfill({ json: run }),
+  );
+  await page.route('**/api/v1/pro/execution/portfolio-releases/preview', (route) => {
+    previews++;
+    const id = previews === 1 ? firstId : secondId;
+    return route.fulfill({
+      json: {
+        run_id: run.id,
+        source: 'okx',
+        preview_hash: 'fixture-preview-' + previews,
+        definition,
+        execution_config: {},
+        risk_policy: {},
+        research_evidence: {},
+        cost_differences: [],
+        risk_differences: [],
+        required_acknowledgements: [],
+        blockers: [],
+        liquidity_review: {
+          role: 'informational',
+          scope: 'fixture immutable review only',
+          reports: [
+            {
+              id,
+              inst_id: 'BTC-USDT',
+              content_hash: 'expected-' + id,
+              status_at_freeze: 'observational_pass',
+            },
+          ],
+          missing_markets: [],
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/pro/research/liquidity/calibrations?*', (route) => {
+    latestRequests++;
+    return route.fulfill({ json: { items: [] } });
+  });
+  await page.route('**/api/v1/pro/research/liquidity/calibrations/*', (route) => {
+    const id = new URL(route.request().url()).pathname.split('/').pop()!;
+    return route.fulfill({
+      json: {
+        id,
+        inst_id: 'BTC-USDT',
+        content_hash: id === firstId ? 'expected-' + id : 'wrong-hash',
+        created_at: Date.now() - 600000,
+        status: 'observational_pass',
+        current_review_status: 'stale',
+        independent_book_count: 12,
+        approved_observed_notional: '1000',
+        declared_child_notional: '2500',
+        declared_sleeve_notional: '10000',
+        input: { minimum_samples: 12 },
+        observed_window: { start: Date.now() - 930000, end: Date.now() - 600000 },
+        independent_window: { elapsed_ms: 330000 },
+        selection_audit: { all_available_count: 12, selected_count: 12, omitted_capture_ids: [] },
+        uncovered_edges: { start_ms: 0, end_ms: 0 },
+        scenarios: [],
+      },
+    });
+  });
+  await navigate(page, 'Research');
+  await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
+  await page.getByRole('button', { name: 'Review portfolio release', exact: true }).click();
+  const evidence = page.locator('.liquidity-release-evidence');
+  await expect(evidence).toContainText(
+    'These immutable reports are pinned to this release review.',
+  );
+  await expect(evidence).toContainText('Observed window passed');
+  await expect(evidence).toContainText('Evidence is stale');
+  await evidence.getByRole('button', { name: 'Inspect evidence', exact: true }).click();
+  await expect(evidence.locator('pre')).toContainText(firstId);
+  expect(latestRequests).toBe(0);
+  await page.getByRole('button', { name: 'Review portfolio release', exact: true }).click();
+  await expect(evidence).toContainText('Pinned liquidity review failed content verification.');
+  expect(latestRequests).toBe(0);
 });

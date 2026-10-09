@@ -1,5 +1,19 @@
 # Verification record
 
+## v0.10.0 financial evidence and trader workflows
+
+Final local backend validation passed **880 tests** (161.67 seconds), plus Ruff lint/format, Prettier, TypeScript and the production build. The main JavaScript bundle is 497.87 kB before compression, with operations/capital/contribution detail deferred. The existing Starlette/HTTPX test-client deprecation remains visible.
+
+**42 desktop/mobile workflows passed across the final verification runs**: 40 in the whole-suite run (4.2 minutes), followed by both corrected financial-window workflows (9.7 seconds). The test fix reads the actual snapshot envelope and matches the rendered verification paragraph; it does not alter backend behavior. Instrument capture is exercised with a real older list deliberately returned late. Final CI repeats the complete suite on its exact published commit.
+
+The [fresh independent institutional review](audit/fresh-institutional-review-0.10.0.zh-CN.md) reproduces financial admission, funding conversion, maintenance breach and known-bad-book omission counterexamples. The additional manual-capital declaration review checks direct and real release/activation paths. [Byte-preserved scripts, before/after observations and publication hashes](audit/fresh-review-0.10.0/README.md) make the findings reconstructible. The independent report's 128-test run predates its separate six-case declaration correction; the complete 880-test run covers final source.
+
+Separate [offline adversarial observations](audit/v0.10.0-offline-redteam-observations.json), [actual hard-exit/schema-8 recovery](audit/v0.10.0-managed-observations.json) and [240-request HTTP workload](audit/v0.10.0-http-workload.json) passed. The latter measured 12 clients, four mixed spot/perpetual positions and concurrent 24-case research: 240/240 HTTP 200, p95 344.65 ms. This is one local bounded workload, not a service capacity or availability guarantee.
+
+[Real public L2 observations](audit/v0.10.0-public-liquidity-observations.json) retain all 72 captures across six spot/perpetual markets and six frozen reports. Collection source hashes remained unchanged; selected windows include all 12 known captures per market. **All six reports are unsupported**, because some venue timestamps are later than the local receive clock. The reports preserve the actual clock evidence and do not manufacture a capacity pass. No raw order-book array or operational database is bundled.
+
+Schema is **8**. New public evidence is retained during actual restore; later financial epochs remain in the safety backup rather than being grafted onto older balances. Primary-user/account preservation is checked separately during the preview upgrade. See [professional workflows](professional-workflows-v0.10.md) for implemented behavior and [scope](commercial-readiness.md) for evidence boundaries.
+
 ## v0.9.0 portfolio risk allocation
 
 The full local backend suite passed **729 tests** (110.19 seconds), and the subsequently added covariance-work admission refusal test passed separately: **730 total tests**. Formula and independent covariance checks, future perturbation, zero/invalid histories, ceiling cash, stress scaling, contribution reconciliation, frozen holdout controls, historical replay and managed restart idempotency are covered. Ruff, locked package synchronization, Prettier, TypeScript and production build passed. The existing Starlette/HTTPX deprecation remains visible.

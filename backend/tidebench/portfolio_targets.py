@@ -149,15 +149,23 @@ def addition_plan(targets, positions, quotes, available_cash, leverage, fee_bps,
             if size >= number(meta["min_size"]):
                 quantities[symbol] = size if quantity > 0 else -size
             else:
+                old = number(positions.get(symbol, 0))
+                maintenance = old * number(targets[symbol]) > 0
                 skipped.append(
                     {
                         "inst_id": symbol,
-                        "code": "minimum_size",
+                        "code": "rebalance_cash_rounding" if maintenance else "minimum_size",
+                        "existing_quantity": str(old),
+                        "target_quantity": str(number(targets[symbol])),
                         "requested_quantity": str(abs(quantity)),
                         "scaled_quantity": str(size),
                         "minimum_size": str(meta["min_size"]),
                         "cash_scale": str(scale),
-                        "message": "Common cash scaling and lot rounding leave this leg below minimum size.",
+                        "message": (
+                            "Same-side existing inventory is retained after allocated cash scaling rounds its increment below minimum; the original target remains subject to the reviewed residual limit."
+                            if maintenance
+                            else "Common cash scaling and lot rounding leave this new leg below minimum size."
+                        ),
                     }
                 )
         return AdditionPlan(scale, required, quantities, requested, skipped)

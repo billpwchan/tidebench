@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DatabaseBackup, Loader2, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import { proApi } from '../proApi';
@@ -15,15 +15,20 @@ import {
   valueText,
 } from '../components/ProWorkspace';
 import { useSession } from '../components/AuthGate';
+import LiquidityEvidencePanel from '../components/LiquidityEvidence';
 
 const records = (v: unknown): RecordData[] =>
   Array.isArray(v) ? (v.filter((x) => x && typeof x === 'object') as RecordData[]) : [];
-export default function Operations() {
+export default function Operations({ initialView = 'feeds' }: { initialView?: string }) {
   const { t } = useI18n();
   const session = useSession();
   const admin = session?.user?.role === 'admin';
   const qc = useQueryClient();
-  const [tab, setTab] = useState('feeds');
+  const [tab, setTab] = useState(initialView.split(':')[0]);
+  const selectedIncidentId = initialView.startsWith('incidents:')
+    ? initialView.slice(10)
+    : undefined;
+  useEffect(() => setTab(initialView.split(':')[0]), [initialView]);
   const [notice, setNotice] = useState<string | null>(null);
   const [verified, setVerified] = useState<RecordData | null>(null);
   const [backup, setBackup] = useState<RecordData | null>(null);
@@ -69,6 +74,7 @@ export default function Operations() {
   });
   useDialogFocus(!!backup, '.restore-dialog', () => setBackup(null));
   const data = ops.data;
+  const selectedIncident = data?.incidents?.find((item) => item.id === selectedIncidentId);
   const health = data?.health;
   const healthRecord = typeof health === 'object' ? health : undefined;
   const healthStatus = typeof health === 'string' ? health : String(healthRecord?.status ?? '—');
@@ -116,6 +122,29 @@ export default function Operations() {
               </div>
               <RecordGrid value={healthRecord} />
               <JsonDetails value={healthRecord?.checks} label="Health checks" open />
+              {data?.economic_health && (
+                <div className="ops-economic-monitor">
+                  <div className="section-heading">
+                    <h3>{t('Workspace economic monitor')}</h3>
+                    <Status type={data.economic_health.status === 'ok' ? 'neutral' : 'warning'}>
+                      {t(String(data.economic_health.status ?? 'unavailable'))}
+                    </Status>
+                  </div>
+                  <p className="quiet-copy">
+                    {t(
+                      'Across all market sources. Economic obligations are monitored separately from process health.',
+                    )}
+                  </p>
+                  <RecordGrid
+                    value={{
+                      [t('Groups requiring attention')]:
+                        data.economic_health.managed_groups_requiring_attention,
+                      [t('Pending funding obligations')]:
+                        data.economic_health.pending_funding_obligations,
+                    }}
+                  />
+                </div>
+              )}
             </section>
             <section className="pro-panel">
               <div className="section-heading">
@@ -131,6 +160,7 @@ export default function Operations() {
               onChange={setTab}
               items={[
                 { key: 'feeds', label: 'Feeds' },
+                { key: 'liquidity', label: 'Cost and depth' },
                 { key: 'incidents', label: 'Incidents' },
                 { key: 'workers', label: 'Workers' },
                 { key: 'jobs', label: 'Jobs' },
@@ -140,6 +170,7 @@ export default function Operations() {
                 { key: 'metrics', label: 'Operational metrics' },
               ]}
             />
+            {tab === 'liquidity' && <LiquidityEvidencePanel />}
             {tab === 'incidents' && (
               <>
                 <p className="quiet-copy">
@@ -147,6 +178,49 @@ export default function Operations() {
                     'Acknowledgement records your response. A failing condition remains active until the monitor observes recovery.',
                   )}
                 </p>
+                {selectedIncident && (
+                  <section className="selected-incident" aria-label={t('Selected incident')}>
+                    <div className="section-heading">
+                      <div>
+                        <h3>
+                          {t(selectedIncident.kind)} · {selectedIncident.subject}
+                        </h3>
+                        <p className="quiet-copy">
+                          {t('First observed')}: {date(selectedIncident.first_seen)} ·{' '}
+                          {t('Last observed')}: {date(selectedIncident.last_seen)}
+                        </p>
+                      </div>
+                      <Status type={selectedIncident.status === 'resolved' ? 'good' : 'warning'}>
+                        {t(selectedIncident.status)}
+                      </Status>
+                    </div>
+                    {!!selectedIncident.details.error && (
+                      <p className="inline-warning">{String(selectedIncident.details.error)}</p>
+                    )}
+                    {selectedIncident.ack_reason && (
+                      <p className="quiet-copy">
+                        {t('Response owner')}: {selectedIncident.ack_actor} ·{' '}
+                        {selectedIncident.ack_reason}
+                      </p>
+                    )}
+                    <JsonDetails
+                      value={selectedIncident.details}
+                      label="Incident condition evidence"
+                    />
+                    {admin && selectedIncident.status !== 'resolved' && (
+                      <button
+                        className="text-button"
+                        onClick={() => {
+                          acknowledge.reset();
+                          setIncident(selectedIncident);
+                          setResponseNote('');
+                        }}
+                      >
+                        {t('Record incident response')}
+                      </button>
+                    )}
+                  </section>
+                )}
                 <DataTable
                   rows={records(data?.incidents)}
                   columns={[

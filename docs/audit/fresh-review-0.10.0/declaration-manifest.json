@@ -1,0 +1,15 @@
+{
+  "audit_date": "2026-10-09",
+  "scope": "additional declaration admission review, six isolated assertions",
+  "source_sha256": {
+    "backend/tidebench/account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44",
+    "backend/tidebench/portfolio_releases.py": "baaf5ad7730a7615a8a6b1cbabf9f43054081596a21dc3c3bed416240a961657",
+    "backend/tidebench/managed_portfolios.py": "8a0910a15d98352a271532e6565ca3b8c6037d2e13e8899c9c9a1e701d335263"
+  },
+  "artifact_sha256": {
+    "declaration.py": "65d7c8823f94666612cd5bc1d6e4a3ebbeea61617b1e2f1724cdddf4fa04d405",
+    "declaration-before.json": "26080b0fb9d93462f12a0b4cf2f9a7a79d7c6b1efff323ff41a7405b61d1f2e8",
+    "declaration-after.json": "9d5b2cce6771c5d3e443983347fa59cd35edd02c600a6d4af5b90e8547ad43e8",
+    "fresh-institutional-review-0.10.0.zh-CN.md": "ae06c8860c8f4bf7902cde8e024688cc730252213eea713a91c239d8c4169cf7"
+  }
+}

@@ -508,7 +508,7 @@ class BackupService:
                 or manifest["size_bytes"] <= 0
                 or type(manifest.get("created_at")) is not int
                 or type(manifest.get("database_schema")) is not int
-                or manifest["database_schema"] not in (1, 2, 3, 4, 5, 6, 7)
+                or manifest["database_schema"] not in (1, 2, 3, 4, 5, 6, 7, 8)
             ):
                 raise ValueError
         except (OSError, ValueError, TypeError, UnicodeError):
@@ -530,7 +530,7 @@ class BackupService:
             versions = [row[0] for row in conn.execute("SELECT version FROM schema_version")]
         except sqlite3.Error:
             raise PlatformError("backup_schema", "Backup database schema is missing.", 409) from None
-        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4, 5, 6, 7):
+        if len(versions) != 1 or type(versions[0]) is not int or versions[0] not in (1, 2, 3, 4, 5, 6, 7, 8):
             raise PlatformError("backup_schema", "Backup database schema is unsupported.", 409)
         return versions[0]
 
@@ -834,6 +834,55 @@ class BackupService:
                 "content_hash",
                 "body",
             }
+        if version >= 8:
+            capital_and_funding = {
+                "historical_lifecycle_events": {
+                    "event_hash",
+                    "source",
+                    "inst_id",
+                    "body",
+                    "source_hash",
+                    "created_at",
+                },
+                "historical_lifecycle_applications": {"source", "event_hash", "body", "applied_at"},
+                "forward_performance_snapshots": {"id", "source", "body", "content_hash", "created_at"},
+                "liquidity_captures": {"id", "inst_id", "received_at", "content_hash", "payload"},
+                "liquidity_calibrations": {"id", "inst_id", "created_at", "content_hash", "payload"},
+                "account_capital_policy": {"source", "body", "content_hash", "updated_at"},
+                "account_capital_commitments": {
+                    "source",
+                    "owner",
+                    "body",
+                    "content_hash",
+                    "status",
+                    "created_at",
+                    "updated_at",
+                },
+                "pro_funding_obligations": {
+                    "source",
+                    "inst_id",
+                    "ts",
+                    "body",
+                    "content_hash",
+                    "status",
+                    "payment",
+                    "settled_at",
+                },
+                "pro_funding_inventory": {
+                    "source",
+                    "inst_id",
+                    "start_ts",
+                    "end_ts",
+                    "reference",
+                    "body",
+                    "content_hash",
+                },
+            }
+            if not set(capital_and_funding).issubset(tables):
+                raise PlatformError(
+                    "backup_schema", "Schema version 8 is missing capital or pending funding evidence.", 409
+                )
+            required_columns.update(capital_and_funding)
         for table, required in required_columns.items():
             if table in tables and not required.issubset(
                 {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
@@ -854,7 +903,119 @@ class BackupService:
                     InstrumentObservations.checked(dict(zip(columns, row, strict=True)))
             except MarketError as exc:
                 raise PlatformError("backup_integrity", exc.message, 409) from None
+        if version >= 8:
+            from .account_capital import amount, checked
+            from .pending_funding import _read
+
+            try:
+                for table in (
+                    "account_capital_policy",
+                    "account_capital_commitments",
+                    "pro_funding_obligations",
+                    "pro_funding_inventory",
+                ):
+                    cursor = conn.execute(f"SELECT * FROM {table}")
+                    columns = [c[0] for c in cursor.description]
+                    for raw in cursor:
+                        row = dict(zip(columns, raw, strict=True))
+                        if table.startswith("account_capital"):
+                            body = checked(row)
+                            if table == "account_capital_policy" and (
+                                amount(body.get("capital_limit_pct")) != 100
+                                or not 1 <= amount(body.get("max_base_asset_gross_pct")) <= 1000
+                            ):
+                                raise PlatformError(
+                                    "backup_integrity", "Capital policy bounds failed validation.", 409
+                                )
+                        else:
+                            _read(row)
+                            if table == "pro_funding_obligations" and (
+                                row["status"] not in {"pending", "settled"}
+                                or row["status"] == "settled"
+                                and (row["settled_at"] is None or not amount(row["payment"]).is_finite())
+                            ):
+                                raise PlatformError(
+                                    "backup_integrity", "Funding obligation settlement state is invalid.", 409
+                                )
+            except PlatformError as exc:
+                raise PlatformError("backup_integrity", exc.message, 409) from None
+        if version >= 8:
+            cls._validate_temporal_evidence(conn)
         return tables
+
+    @staticmethod
+    def _validate_temporal_evidence(conn):
+        from .forward_performance import checked_snapshot
+        from .historical_lifecycle import checked_application, checked_event
+        from .liquidity_evidence import checked_evidence
+
+        validators = {
+            "forward_performance_snapshots": checked_snapshot,
+            "historical_lifecycle_events": checked_event,
+            "historical_lifecycle_applications": checked_application,
+            "liquidity_captures": lambda row: checked_evidence(row, "liquidity_captures"),
+            "liquidity_calibrations": lambda row: checked_evidence(row, "liquidity_calibrations"),
+        }
+        try:
+            for table, check in validators.items():
+                cursor = conn.execute(f"SELECT * FROM {table}")
+                columns = [c[0] for c in cursor.description]
+                for raw in cursor:
+                    body = check(dict(zip(columns, raw, strict=True)))
+                    if table == "liquidity_calibrations":
+                        for pinned in body["captures"]:
+                            capture = conn.execute(
+                                "SELECT * FROM liquidity_captures WHERE id=?", (pinned["id"],)
+                            )
+                            names = [c[0] for c in capture.description]
+                            row = capture.fetchone()
+                            if (
+                                row is None
+                                or checked_evidence(dict(zip(names, row, strict=True)), "liquidity_captures")[
+                                    "content_hash"
+                                ]
+                                != pinned["content_hash"]
+                            ):
+                                raise PlatformError(
+                                    "backup_integrity",
+                                    "Frozen liquidity capture reference is missing or changed.",
+                                    409,
+                                )
+        except PlatformError as exc:
+            raise PlatformError("backup_integrity", exc.message, 409) from None
+
+    def _retain_temporal_evidence(self, prepared):
+        # Public observations and attributed source facts are non-financial.
+        # Applications and forward economic snapshots remain in their matching
+        # financial epoch; the safety backup preserves the later epoch.
+        keys = {
+            "historical_lifecycle_events": "event_hash",
+            "liquidity_captures": "id",
+            "liquidity_calibrations": "id",
+        }
+        counts = {}
+        with self.store.read() as current:
+            self._validate_temporal_evidence(current)
+            for table, key in keys.items():
+                counts[table] = 0
+                cursor = current.execute(f"SELECT * FROM {table}")
+                columns = [c[0] for c in cursor.description]
+                for raw in cursor:
+                    values = tuple(raw)
+                    identifier = values[columns.index(key)]
+                    prior = prepared.execute(f"SELECT * FROM {table} WHERE {key}=?", (identifier,)).fetchone()
+                    if prior is not None:
+                        if tuple(prior) != values:
+                            raise PlatformError(
+                                "backup_integrity",
+                                "Conflicting immutable temporal evidence prevents recovery.",
+                                409,
+                            )
+                        continue
+                    prepared.execute(f"INSERT INTO {table} VALUES({','.join('?' for _ in columns)})", values)
+                    counts[table] += 1
+        self._validate_temporal_evidence(prepared)
+        return counts
 
     def _retain_instrument_observations(self, prepared):
         from .instrument_observations import InstrumentObservations
@@ -1052,6 +1213,11 @@ class BackupService:
                             if manifest["database_schema"] >= 7
                             else 0
                         )
+                        retained_temporal = (
+                            self._retain_temporal_evidence(prepared)
+                            if manifest["database_schema"] >= 8
+                            else {}
+                        )
                         if "workspace_sessions" in tables:
                             prepared.execute("DELETE FROM workspace_sessions")
                         prepared.execute("UPDATE risk SET kill_switch=1")
@@ -1102,6 +1268,7 @@ class BackupService:
                                 "safety_backup_id": safety["id"],
                                 "retained_research_facts": retained_research,
                                 "retained_instrument_observations": retained_observations,
+                                "retained_temporal_evidence": retained_temporal,
                             },
                         )
                         prepared.commit()
@@ -1129,6 +1296,7 @@ class BackupService:
                 "execution_halted": True,
                 "pending_orders_canceled": True,
                 "retained_research_facts": retained_research,
+                "retained_temporal_evidence": retained_temporal,
                 "manifest": manifest,
             }
 

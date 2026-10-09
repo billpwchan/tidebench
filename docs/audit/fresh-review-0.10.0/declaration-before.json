@@ -1,0 +1,10 @@
+{
+  "source": "example",
+  "equity": "10000",
+  "existing_manual_spot_capital": "3000",
+  "proposed_portfolio_capital_pct": "80",
+  "preview_blockers": [],
+  "reserved_status": "reserved",
+  "actual_plus_promises_pct": "110.0",
+  "scope": "Fresh other-market manual inventory; no same-market ownership conflict; per-order financial guard remains separate"
+}

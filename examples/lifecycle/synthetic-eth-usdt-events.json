@@ -1,0 +1,38 @@
+[
+  {
+    "inst_id": "ETH-USDT",
+    "kind": "listing",
+    "effective_ts": 1767236400000,
+    "known_at": 1767225600000,
+    "effective_until": null,
+    "valid_until": 1767268800000,
+    "source": {
+      "url": "https://example.test/lifecycle",
+      "published_at": 1767225600000,
+      "captured_at": 1767268800000,
+      "raw_content": "{\"effective_ts\": 1767236400000, \"fixture\": \"causal lifecycle unit test\", \"inst_id\": \"ETH-USDT\", \"kind\": \"listing\"}",
+      "content_hash": "eb6a231ed6a7a87875ed6c64006ad2f7ceed1070a32bcd4eef7172c0be903410",
+      "evidence_type": "synthetic_fixture"
+    },
+    "instrument": {
+      "inst_id": "ETH-USDT",
+      "inst_type": "SPOT",
+      "base": "ETH",
+      "quote": "USDT",
+      "settle_ccy": "",
+      "ct_type": null,
+      "ct_val": null,
+      "ct_mult": null,
+      "ct_val_ccy": null,
+      "tick_size": ".01",
+      "lot_size": ".01",
+      "min_size": ".01",
+      "state": "live"
+    },
+    "margin_tiers": [],
+    "quantity_ratio": null,
+    "settlement_currency": "USDT",
+    "settlement_price": null,
+    "settlement_fee": "0"
+  }
+]

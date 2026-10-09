@@ -4,7 +4,7 @@ import { Download, RefreshCw } from 'lucide-react';
 import type { Source } from '../api';
 import { downloadBlob } from '../api';
 import { proApi } from '../proApi';
-import type { InstrumentMember } from '../proApi';
+import type { InstrumentMember, InstrumentObservation } from '../proApi';
 import { useSession } from './AuthGate';
 import { canResearch } from '../lib/permissions';
 import { useI18n } from '../lib/i18n';
@@ -79,6 +79,16 @@ export default function InstrumentEvidence({ source }: { source: Source }) {
   const capture = useMutation({
     mutationFn: () => proApi.captureInstruments(source, product),
     onSuccess: async (snapshot) => {
+      const key = ['instrument-observations', source, product];
+      // An older in-flight list must not erase the capture the operator selected.
+      await qc.cancelQueries({ queryKey: key });
+      qc.setQueryData<{ items: InstrumentObservation[] }>(key, (prior) => ({
+        items: [snapshot, ...(prior?.items ?? []).filter((item) => item.id !== snapshot.id)].slice(
+          0,
+          100,
+        ),
+      }));
+      qc.setQueryData(['instrument-observation', snapshot.id], snapshot);
       setSelected(snapshot.id);
       setAsOf(utcInput(snapshot.received_at));
       setQuery(undefined);

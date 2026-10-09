@@ -6630,3 +6630,322 @@ tbody tr:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Current conditions precede account metrics; quiet rows carry actionable risk. */
+.overview-economic-state {
+  display: flex;
+  gap: 10px 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+.overview-economic-state small {
+  font-size: 11px;
+}
+.desk-attention {
+  padding: 21px 0 8px;
+  border-top: 2px solid var(--negative);
+  border-bottom: 1px solid var(--line);
+  margin: 0 0 10px;
+}
+.desk-attention-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.desk-attention-heading > svg {
+  color: var(--negative);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.desk-attention-heading h2 {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
+}
+.desk-attention-heading p {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 5px 0 0;
+}
+.desk-attention-heading > .subtle-tag {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.desk-issue {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(200px, 1fr) auto;
+  gap: 22px;
+  padding: 20px 0;
+}
+.desk-issue + .desk-issue {
+  border-top: 1px solid var(--line);
+}
+.desk-issue-context,
+.desk-issue-inventory {
+  min-width: 0;
+}
+.desk-issue-scope {
+  color: var(--muted);
+  font-size: 10px;
+}
+.desk-issue h3 {
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 4px 0 7px;
+}
+.desk-issue-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+}
+.desk-issue-state > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.desk-issue-error {
+  color: var(--negative);
+  overflow-wrap: anywhere;
+  margin: 9px 0 0;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.desk-issue-label {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+.desk-issue-amount {
+  display: block;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+.desk-issue-amount small {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.desk-issue-inventory p {
+  color: var(--muted);
+  font-size: 10px;
+  margin: 5px 0 0;
+  line-height: 1.7;
+}
+.desk-inventory-position {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.desk-issue-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+}
+.desk-issue-actions button {
+  font-size: 11px;
+}
+.overview-funding-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 0;
+  color: var(--negative);
+}
+.overview-funding-notice > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.overview-funding-notice strong {
+  font-size: 12px;
+}
+.overview-funding-notice p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 5px 0 0;
+}
+.overview-funding-notice button {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.service-health-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.selected-incident {
+  padding: 16px 0 22px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.selected-incident h3 {
+  font-size: 13px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+  .desk-issue {
+    grid-template-columns: minmax(0, 1.5fr) minmax(180px, 1fr);
+  }
+  .desk-issue-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+  }
+}
+@media (max-width: 650px) {
+  .desk-attention {
+    padding-top: 17px;
+  }
+  .desk-attention-heading > .subtle-tag {
+    font-size: 9px;
+  }
+  .desk-attention-heading h2 {
+    font-size: 14px;
+  }
+  .desk-attention-heading p {
+    font-size: 10px;
+    line-height: 1.7;
+  }
+  .desk-issue {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 18px 0;
+  }
+  .desk-issue-actions {
+    flex-wrap: wrap;
+    gap: 12px 20px;
+  }
+  .desk-issue-inventory {
+    padding-left: 0;
+  }
+  .overview-funding-notice {
+    flex-wrap: wrap;
+  }
+  .overview-funding-notice > div {
+    flex: 1;
+  }
+  .overview-funding-notice button {
+    margin-left: 27px;
+  }
+  .overview-economic-state small {
+    flex-basis: 100%;
+  }
+}
+
+.portfolio-execution-outcome {
+  padding: 18px 0;
+  margin: 12px 0;
+  border-top: 1px solid var(--negative);
+  border-bottom: 1px solid var(--line);
+}
+.portfolio-execution-outcome p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 10px 0 0;
+}
+
+.account-capital-control {
+  border-top: 1px solid var(--line);
+  margin-top: 22px;
+  padding-top: 18px;
+}
+.account-capital-control h3 {
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.account-capital-control form {
+  max-width: 430px;
+  margin-top: 16px;
+}
+.capital-admission .record-grid {
+  margin-top: 12px;
+}
+
+.ops-economic-monitor {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 16px;
+}
+.ops-economic-monitor h3 {
+  font-size: 12px;
+  margin: 0;
+}
+
+.desk-attention-warning {
+  border-top-color: #8c6a29;
+}
+.desk-attention-warning .desk-attention-heading > svg,
+.desk-issue-warning .desk-issue-error {
+  color: #8c6a29;
+}
+
+.liquidity-workspace {
+  padding-top: 24px;
+}
+.liquidity-workspace h2 {
+  font-size: 17px;
+}
+.liquidity-workspace h3 {
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+.liquidity-controls {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.liquidity-controls .field {
+  flex: 1 1 155px;
+  max-width: 240px;
+  margin: 0;
+}
+.liquidity-controls .button {
+  margin-bottom: 1px;
+}
+.liquidity-current,
+.liquidity-freeze,
+.liquidity-report,
+.liquidity-paper {
+  padding: 22px 0;
+  border-top: 1px solid var(--line);
+}
+.liquidity-current .record-grid,
+.liquidity-report .record-grid {
+  margin-bottom: 18px;
+}
+.liquidity-release-evidence {
+  margin: 18px 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 600px) {
+  .liquidity-controls .field {
+    max-width: none;
+  }
+  .liquidity-controls .button {
+    width: 100%;
+  }
+  .liquidity-current,
+  .liquidity-freeze,
+  .liquidity-report {
+    padding: 18px 0;
+  }
+}

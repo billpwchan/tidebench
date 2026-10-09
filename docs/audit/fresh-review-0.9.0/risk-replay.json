@@ -1,0 +1,52 @@
+{
+  "capture_checks": [
+    {
+      "inst_id": "BTC-USDT",
+      "rows": 4380,
+      "manifest_hash_matches": true,
+      "all_confirmed": true,
+      "aligned": true
+    },
+    {
+      "inst_id": "ETH-USDT",
+      "rows": 4380,
+      "manifest_hash_matches": true,
+      "all_confirmed": true,
+      "aligned": true
+    },
+    {
+      "inst_id": "SOL-USDT",
+      "rows": 4380,
+      "manifest_hash_matches": true,
+      "all_confirmed": true,
+      "aligned": true
+    }
+  ],
+  "installed_implementation_matches": true,
+  "plan_hash_matches": true,
+  "runner_hash_matches": true,
+  "ordered_results_hash_matches": true,
+  "input_hash_matches": true,
+  "result_hash_matches": true,
+  "metrics_match": true,
+  "metrics": {
+    "initial_cash": "10000",
+    "final_equity": "10016.918797415894",
+    "total_return_pct": "0.1691879741589400",
+    "max_drawdown_pct": "5.3916599578480006971599870924431804934111348196709",
+    "fees_paid": "335.097802395106",
+    "funding_paid": "0",
+    "insurance_debt": "0",
+    "complete_utc_days": 182,
+    "realized_annual_vol_pct": 8.97364947859564,
+    "realized_vol_reason": null,
+    "mean_gross_exposure_pct": "13.318520390067384057359449733594635302309887120606",
+    "turnover": "16.7548901197553",
+    "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity",
+    "orders": 292,
+    "execution_rejections": 0
+  },
+  "retained_final_positions": [],
+  "independently_replayed_cases": 1,
+  "public_cases": 28
+}

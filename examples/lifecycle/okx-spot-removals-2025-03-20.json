@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "parser_version": "attributed_lifecycle_v1",
+  "scope": "Three source-attributed removal facts only. No listing membership, candles, execution metadata, valuation or realized settlement price is supplied. Not an executable backtest or a survivorship-free historical dataset.",
+  "known_at_policy": "The source publishes a calendar date without a clock. Use the end of that UTC day conservatively; this does not independently verify when the announcement first became visible.",
+  "effective_time_policy": "Preserve the announced one-hour interval. Eligibility is unknown during it, then delisted; inventory cannot be valued or closed from this announcement.",
+  "lifecycle_events": {
+    "XR-USDT": [
+      {
+        "inst_id": "XR-USDT",
+        "kind": "delist",
+        "effective_ts": 1742457600000,
+        "effective_until": 1742461200000,
+        "known_at": 1741910399999,
+        "source": {
+          "url": "https://www.okx.com/en-au/help/okx-to-delist-xr-goal-kp3r-lbr-lamb-bzz-and-gpt-spot-trading-pairs",
+          "published_at": 1741910399999,
+          "captured_at": 1791524720074,
+          "raw_content": "{\"custody\":\"Token balances remain in the venue funding-account untradable-assets section after removal.\",\"delisting_window_utc\":[\"2025-03-20T08:00:00Z\",\"2025-03-20T09:00:00Z\"],\"extraction_scope\":\"Paraphrased announcement facts; this is not archived original HTML.\",\"markets\":[\"XR-USDT\",\"GOAL-USDT\",\"KP3R-USDT\"],\"published_date\":\"2025-03-13\",\"settlement_price_evidence\":null}",
+          "content_hash": "4cad59e43f702dc434e0be648c5c74c55518b7668b0a9efa4d18562899f38d7e",
+          "evidence_type": "announcement_extract"
+        }
+      }
+    ],
+    "GOAL-USDT": [
+      {
+        "inst_id": "GOAL-USDT",
+        "kind": "delist",
+        "effective_ts": 1742457600000,
+        "effective_until": 1742461200000,
+        "known_at": 1741910399999,
+        "source": {
+          "url": "https://www.okx.com/en-au/help/okx-to-delist-xr-goal-kp3r-lbr-lamb-bzz-and-gpt-spot-trading-pairs",
+          "published_at": 1741910399999,
+          "captured_at": 1791524720074,
+          "raw_content": "{\"custody\":\"Token balances remain in the venue funding-account untradable-assets section after removal.\",\"delisting_window_utc\":[\"2025-03-20T08:00:00Z\",\"2025-03-20T09:00:00Z\"],\"extraction_scope\":\"Paraphrased announcement facts; this is not archived original HTML.\",\"markets\":[\"XR-USDT\",\"GOAL-USDT\",\"KP3R-USDT\"],\"published_date\":\"2025-03-13\",\"settlement_price_evidence\":null}",
+          "content_hash": "4cad59e43f702dc434e0be648c5c74c55518b7668b0a9efa4d18562899f38d7e",
+          "evidence_type": "announcement_extract"
+        }
+      }
+    ],
+    "KP3R-USDT": [
+      {
+        "inst_id": "KP3R-USDT",
+        "kind": "delist",
+        "effective_ts": 1742457600000,
+        "effective_until": 1742461200000,
+        "known_at": 1741910399999,
+        "source": {
+          "url": "https://www.okx.com/en-au/help/okx-to-delist-xr-goal-kp3r-lbr-lamb-bzz-and-gpt-spot-trading-pairs",
+          "published_at": 1741910399999,
+          "captured_at": 1791524720074,
+          "raw_content": "{\"custody\":\"Token balances remain in the venue funding-account untradable-assets section after removal.\",\"delisting_window_utc\":[\"2025-03-20T08:00:00Z\",\"2025-03-20T09:00:00Z\"],\"extraction_scope\":\"Paraphrased announcement facts; this is not archived original HTML.\",\"markets\":[\"XR-USDT\",\"GOAL-USDT\",\"KP3R-USDT\"],\"published_date\":\"2025-03-13\",\"settlement_price_evidence\":null}",
+          "content_hash": "4cad59e43f702dc434e0be648c5c74c55518b7668b0a9efa4d18562899f38d7e",
+          "evidence_type": "announcement_extract"
+        }
+      }
+    ]
+  }
+}

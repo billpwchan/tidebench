@@ -1,0 +1,64 @@
+.lifecycle-scenario {
+  margin: 22px 0;
+}
+.lifecycle-import {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.lifecycle-import-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.lifecycle-import input[type='file'] {
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+}
+.lifecycle-import input[type='file']::file-selector-button {
+  border: 0;
+  border-radius: 5px;
+  padding: 9px 14px;
+  margin-right: 12px;
+  background: #edf1ee;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.lifecycle-evidence {
+  padding: 26px 0;
+  margin: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.lifecycle-evidence h4 {
+  margin-top: 24px;
+}
+.lifecycle-evidence > .field {
+  max-width: 360px;
+  margin: 18px 0;
+}
+.lifecycle-evidence td a {
+  display: inline-block;
+  max-width: 350px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .lifecycle-import-heading,
+  .lifecycle-evidence .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .lifecycle-evidence > .field {
+    max-width: 100%;
+  }
+  .lifecycle-evidence td a {
+    max-width: 210px;
+  }
+}

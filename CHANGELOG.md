@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.0 · 2026-10-09
+
+- Shared historical/forward execution contracts, typed causal lifecycle events, inspectable source imports and immutable final-evaluation bindings.
+- Durable settlement-time funding obligations preserve original inventory/owner quantities across late publication, close/reopen, restart and same-identity contract-unit conversion; protection remains available while economics are incomplete.
+- Account-wide capital commitments include manual inventory, pending orders, post-fill fees/spread and underlying/gross limits. Activation revalidates fresh full-account economics in the write transaction; stopped inventory retains its commitment until resolved.
+- Current desk incidents distinguish economic risk from service health and acknowledgement. Research failures and unresolved group exposure stay visible.
+- Research explains price P&L, actual costs/funding, monetary contributions and predeclared cash/passive references. Frozen forward evidence covers the entire observation window, detects restore/counter discontinuities and independently verifies after new observations are appended.
+- Immutable public L2 reports evaluate both sides, exact contract units, finite displayed depth and complete captured windows; known poor samples cannot be omitted. Unsupported clocks remain visible rather than receiving a capacity pass.
+- Schema-8 recovery validates new evidence and retains newer immutable public facts while keeping later financial observations in the safety backup. Responsive English/Chinese workflows and isolated end-to-end acceptance cover these contracts.
+- Published independent adversarial reproductions, public-data experiments and release-specific verification retain negative outcomes and their source identities. This release adds research/paper correctness; it does not establish investment edge, venue execution capacity or multi-week availability.
+
 ## 0.5.0 · 2026-10-08
 
 - Immutable multi-market portfolio versions, exact research binding, whole-group cost/risk review and transactional release activation.

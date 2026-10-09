@@ -8,10 +8,12 @@ from datetime import UTC, datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, DecimalException, localcontext
 from functools import wraps
 
+from .account_capital import AccountCapital
 from .contributions import ContributionBook
 from .derivatives import LinearContract, MarginTier, contract_base_quantity, select_margin_tier
 from .engine import ACCOUNTING_CONTEXT, EngineError, _decimal, _floor_lot, _round_to_step
 from .forward_performance import ForwardPerformance
+from .pending_funding import PendingFunding
 from .platform import PlatformError
 from .store import Store, dumps, new_id, now_ms
 
@@ -150,6 +152,8 @@ class SimulationBook:
                 )
 
         self.contributions = ContributionBook(store) if capture_contributions else None
+        self.deferred_funding = PendingFunding(store, self.contributions)
+        self.capital = AccountCapital(store, self.contributions)
 
     def contribution_report(self, source, snapshots):
         with self.store.read() as conn:
@@ -382,7 +386,7 @@ class SimulationBook:
                         pnl += upnl
                 if mark is None:
                     status = "unavailable"
-                used += margin
+                used += max(ZERO, margin)
                 maintenance += mm or ZERO
                 output.append(
                     {
@@ -413,6 +417,31 @@ class SimulationBook:
                 ),
                 ZERO,
             )
+            pending_funding = self.deferred_funding.pending(source, conn)
+            for row in rows:
+                meta = json.loads(row["metadata"])
+                expected = meta.get("expected_funding_time")
+                at = int(snapshots.get(row["inst_id"], {}).get("ts", self.now()))
+                if (
+                    expected is not None
+                    and row["funding_cursor"] < expected <= at
+                    and not conn.execute(
+                        "SELECT 1 FROM pro_funding WHERE source=? AND inst_id=? AND ts=?",
+                        (source, row["inst_id"], expected),
+                    ).fetchone()
+                    and not any(
+                        p["inst_id"] == row["inst_id"] and p["ts"] == expected for p in pending_funding
+                    )
+                ):
+                    pending_funding.append(
+                        {
+                            "inst_id": row["inst_id"],
+                            "ts": expected,
+                            "quantity": row["quantity"],
+                            "observed_at": at,
+                            "owners": None,
+                        }
+                    )
             return {
                 "source": source,
                 "execution_mode": "local-paper",
@@ -420,7 +449,14 @@ class SimulationBook:
                 "cash": str(cash),
                 "available_cash": str(cash - reserved),
                 "reserved_cash": str(reserved),
-                "equity": str(equity) if status != "unavailable" else None,
+                "equity": str(equity) if status != "unavailable" and not pending_funding else None,
+                "equity_before_pending_funding": str(equity) if status != "unavailable" else None,
+                "economic_status": "funding_pending"
+                if pending_funding
+                else "complete"
+                if status in {"fresh", "example"}
+                else "valuation_incomplete",
+                "pending_funding": pending_funding,
                 "used_margin": str(used),
                 "maintenance_margin": str(maintenance) if status != "unavailable" else None,
                 "unrealized_pnl": str(pnl) if status != "unavailable" else None,
@@ -488,7 +524,15 @@ class SimulationBook:
             }
 
     def _prepare(
-        self, conn, order, snapshots, *, exclude_reservation=ZERO, exclude_order_id=None, liquidation=False
+        self,
+        conn,
+        order,
+        snapshots,
+        *,
+        exclude_reservation=ZERO,
+        exclude_order_id=None,
+        liquidation=False,
+        actor="manual",
     ):
         source, symbol = order["source"], order["inst_id"]
         snapshot = snapshots.get(symbol)
@@ -533,9 +577,10 @@ class SimulationBook:
                         "Contract units changed; reconcile the existing position before trading.",
                         409,
                     )
-        if row and old and meta["inst_type"] == "SWAP":
+        if row and old and meta["inst_type"] == "SWAP" and not reducing:
             expected = json.loads(row["metadata"]).get("expected_funding_time")
-            if expected is not None and expected <= int(snapshot["ts"]):
+            economic_ts = int(snapshot["ts"]) if source == "example" else max(self.now(), int(snapshot["ts"]))
+            if expected is not None and expected <= economic_ts:
                 if not conn.execute(
                     "SELECT 1 FROM pro_funding WHERE source=? AND inst_id=? AND ts=?",
                     (source, symbol, expected),
@@ -575,10 +620,30 @@ class SimulationBook:
         account = self.account(source, snapshots, conn)
         cash = number(account["cash"])
         if not reducing and not liquidation:
+            if account["pending_funding"]:
+                raise PlatformError(
+                    "funding_pending",
+                    "Unsettled funding blocks new risk; protective reductions remain available.",
+                    409,
+                )
             if account["valuation_status"] not in {"fresh", "example"} or account["equity"] is None:
                 raise PlatformError(
                     "valuation_unavailable", "All portfolio marks must be fresh before increasing risk.", 409
                 )
+            for held in account["positions"]:
+                if (
+                    held["inst_type"] == "SWAP"
+                    and number(held["margin"]) + number(held["unrealized_pnl"])
+                    <= number(held["maintenance_margin"])
+                    + number(held["market_value"])
+                    * (number(risk["fee_bps"]) + number(risk["liquidation_fee_bps"]))
+                    / 10000
+                ):
+                    raise PlatformError(
+                        "existing_margin_breach",
+                        "An existing isolated position breaches mark-based maintenance; resolve it before increasing account risk.",
+                        409,
+                    )
             equity = number(account["equity"])
             if equity <= 0 or number(account["insurance_debt"]) > 0:
                 raise PlatformError("insolvent", "Outstanding simulated loss blocks new risk.", 409)
@@ -620,6 +685,12 @@ class SimulationBook:
                     "Available cash including existing reservations is insufficient.",
                     409,
                 )
+            projected_equity = equity - fee + signed * base_size(meta) * (mark - price)
+            if projected_equity <= 0:
+                raise PlatformError(
+                    "insolvent", "Execution costs and fill-to-mark loss exhaust projected equity.", 409
+                )
+            candidate_marked_gross = qty * base_size(meta) * mark
             gross = sum((number(p["market_value"]) for p in account["positions"]), ZERO)
             pending = sum(
                 (
@@ -631,7 +702,9 @@ class SimulationBook:
                 ),
                 ZERO,
             )
-            if (gross + pending + notional) / equity * 100 > number(risk["max_gross_exposure_pct"]):
+            if (gross + pending + candidate_marked_gross) / projected_equity * 100 > number(
+                risk["max_gross_exposure_pct"]
+            ):
                 raise PlatformError(
                     "gross_exposure_limit",
                     "Portfolio gross exposure including pending orders exceeds the limit.",
@@ -640,14 +713,30 @@ class SimulationBook:
             baseline = conn.execute(
                 "SELECT day_equity FROM pro_accounts WHERE source=?", (source,)
             ).fetchone()[0]
-            if number(baseline) > 0 and (number(baseline) - equity + fee) / number(baseline) * 100 >= number(
-                risk["max_daily_loss_pct"]
-            ):
+            if number(baseline) > 0 and (number(baseline) - projected_equity) / number(
+                baseline
+            ) * 100 >= number(risk["max_daily_loss_pct"]):
                 raise PlatformError(
                     "daily_loss_limit", "The persisted observed-day loss budget is exhausted.", 409
                 )
+            self.capital.admit_order(
+                conn,
+                source,
+                actor,
+                account,
+                meta,
+                signed,
+                price,
+                leverage=leverage,
+                fee=fee,
+                mark_price=mark,
+                exclude_order_id=exclude_order_id,
+            )
         return {
             "snapshot": snapshot,
+            "economic_ts": int(snapshot["ts"])
+            if source == "example"
+            else max(self.now(), int(snapshot["ts"])),
             "metadata": meta,
             "qty": qty,
             "signed": signed,
@@ -741,6 +830,20 @@ class SimulationBook:
                             "Approved risk policy changed; review a new release before adding strategy risk.",
                             409,
                         )
+                    expected_capital = config.get("capital_policy_hash")
+                    if (
+                        expected_capital
+                        and not order.get("reduce_only")
+                        and expected_capital
+                        != hashlib.sha256(
+                            dumps(self.capital.policy(order["source"], conn)).encode()
+                        ).hexdigest()
+                    ):
+                        raise PlatformError(
+                            "strategy_capital_policy_changed",
+                            "Approved account capital policy changed; review a new release before adding strategy risk.",
+                            409,
+                        )
                 elif pending_id is None and not liquidation and not order.get("reduce_only"):
                     if conn.execute(
                         "SELECT 1 FROM pro_deployments WHERE source=? AND inst_id=? AND status='running'",
@@ -769,8 +872,17 @@ class SimulationBook:
                     exclude_reservation=number(previous["reservation"]) if previous else ZERO,
                     exclude_order_id=pending_id,
                     liquidation=liquidation,
+                    actor=json.loads(previous["body"]).get(
+                        "submitted_by", json.loads(previous["body"]).get("actor", actor)
+                    )
+                    if previous
+                    else actor,
                 )
                 meta, qty, signed, old, row = (values[k] for k in ("metadata", "qty", "signed", "old", "row"))
+                if row:
+                    self.deferred_funding.capture(
+                        conn, row, dict(values["snapshot"], ts=values["economic_ts"])
+                    )
                 price, fee, notional, cash = (values[k] for k in ("price", "fee", "notional", "cash"))
                 identifier = previous["id"] if previous else self.order_id()
                 order_type = order.get("order_type", "market")
@@ -793,6 +905,10 @@ class SimulationBook:
                     else actor,
                     "instrument": meta,
                     "quote_ts": values["snapshot"]["ts"],
+                    "quote_bid": str(values["snapshot"]["bid"]),
+                    "quote_ask": str(values["snapshot"]["ask"]),
+                    "quote_last": str(values["snapshot"]["last"]),
+                    "quote_mark": str(values["mark"]),
                     "risk_snapshot": values["risk"],
                 }
                 if pending:
@@ -928,10 +1044,13 @@ class SimulationBook:
                         if not row or old == 0
                         else row["funding_cursor"]
                     )
+                    if row:
+                        self.deferred_funding.freeze_interval(conn, row, values["economic_ts"], identifier)
                     previous_position_meta = json.loads(row["metadata"]) if row and old else {}
                     stored_meta = dict(meta) | {
+                        "inventory_effective_at": values["economic_ts"],
                         "position_opened_at": previous_position_meta.get(
-                            "position_opened_at", int(values["snapshot"]["ts"])
+                            "position_opened_at", values["economic_ts"]
                         ),
                         "position_generation": previous_position_meta.get("position_generation", identifier),
                     }
@@ -950,6 +1069,17 @@ class SimulationBook:
                             ]
                             expected = min(future_times) if future_times else None
                         stored_meta["expected_funding_time"] = expected
+                        stored_meta["observed_funding_times"] = sorted(
+                            {
+                                int(v)
+                                for v in [
+                                    *previous_meta.get("observed_funding_times", []),
+                                    values["snapshot"].get("funding_time"),
+                                    values["snapshot"].get("next_funding_time"),
+                                ]
+                                if v is not None and int(v) > cursor
+                            }
+                        )
                     conn.execute(
                         "INSERT INTO pro_positions VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(source,inst_id) DO UPDATE SET metadata=excluded.metadata,quantity=excluded.quantity,entry_price=excluded.entry_price,margin=excluded.margin,basis=excluded.basis,leverage=excluded.leverage,funding_cursor=excluded.funding_cursor",
                         (
@@ -1037,6 +1167,8 @@ class SimulationBook:
                     f"{order['side']} {qty} {order['inst_id']}",
                     {"order_id": identifier, "actor": actor, "liquidation": liquidation},
                 )
+                if result["status"] == "filled" and (values["reducing"] or liquidation):
+                    self._reconcile_capital_after_protection(conn, source, result["id"])
                 if actor.startswith("strategy:"):
                     # Cursor and economic fill commit together. A crash cannot
                     # leave a filled signal looking unevaluated after restart.
@@ -1045,6 +1177,23 @@ class SimulationBook:
                         (int(key.rsplit(":", 1)[1]), self.now(), actor.split(":", 1)[1]),
                     )
                 return result
+
+    def _reconcile_capital_after_protection(self, conn, source, reference):
+        # Capital diagnostics must never roll back an economic risk reduction.
+        conn.execute("SAVEPOINT protective_capital")
+        try:
+            self.capital.reconcile(source, conn)
+        except PlatformError as exc:
+            conn.execute("ROLLBACK TO protective_capital")
+            self.store.audit(
+                conn,
+                source,
+                "capital.reconciliation_deferred",
+                "Protective action committed; capital evidence requires repair",
+                {"reference": reference, "code": exc.code, "error": exc.message},
+            )
+        finally:
+            conn.execute("RELEASE protective_capital")
 
     def cancel(self, identifier, actor):
         with self.store.write() as conn:
@@ -1076,6 +1225,13 @@ class SimulationBook:
     def observe(self, source, snapshots, *, record_performance=True):
         """Persist a new observed UTC-day baseline before evaluating new risk."""
         with localcontext(ACCOUNTING_CONTEXT), self.store.write() as conn:
+            for row in conn.execute(
+                "SELECT * FROM pro_positions WHERE source=? AND quantity!='0'", (source,)
+            ).fetchall():
+                if row["inst_id"] in snapshots:
+                    self.deferred_funding.capture(
+                        conn, row, self._funding_snapshot(source, snapshots[row["inst_id"]])
+                    )
             account = self.account(source, snapshots, conn)
             observed_ts = max((int(s["ts"]) for s in snapshots.values()), default=self.now())
             day = (
@@ -1107,6 +1263,20 @@ class SimulationBook:
         return account
 
     @_accounted
+    def _funding_snapshot(self, source, snapshot):
+        # Quote generation time is not the local execution/ownership time. A
+        # fresh OKX REST cache may regress; protections still execute now.
+        at = int(snapshot["ts"]) if source == "example" else max(self.now(), int(snapshot["ts"]))
+        return dict(snapshot, ts=at)
+
+    def capture_funding_obligations(self, source, symbol, snapshot):
+        with self.store.write() as conn:
+            row = conn.execute(
+                "SELECT * FROM pro_positions WHERE source=? AND inst_id=?", (source, symbol)
+            ).fetchone()
+            self.deferred_funding.capture(conn, row, self._funding_snapshot(source, snapshot))
+
+    @_accounted
     def settle_funding(self, source, symbol, events, snapshots):
         if len(events) > 10000:
             raise PlatformError(
@@ -1116,10 +1286,12 @@ class SimulationBook:
             row = conn.execute(
                 "SELECT * FROM pro_positions WHERE source=? AND inst_id=?", (source, symbol)
             ).fetchone()
-            if not row or number(row["quantity"]) == 0:
-                return []
-            meta = json.loads(row["metadata"])
-            if meta["inst_type"] != "SWAP":
+            if row and number(row["quantity"]):
+                self.deferred_funding.capture(
+                    conn, row, self._funding_snapshot(source, snapshots.get(symbol, {"ts": self.now()}))
+                )
+            pending = [p for p in self.deferred_funding.pending(source, conn) if p["inst_id"] == symbol]
+            if not row and not pending:
                 return []
             account = conn.execute("SELECT * FROM pro_accounts WHERE source=?", (source,)).fetchone()
             contribution_error = None
@@ -1128,36 +1300,25 @@ class SimulationBook:
                     self.contributions.before(conn, source)
                 except PlatformError as exc:
                     contribution_error = exc.message
-            margin, total = number(row["margin"]), number(account["funding"])
-            output, cursor = [], row["funding_cursor"]
-            expected = meta.get("expected_funding_time")
-            snapshot = snapshots.get(symbol, {})
-            observed_until = int(snapshot.get("ts", self.now()))
-            if expected is not None and expected <= observed_until:
-                already = conn.execute(
-                    "SELECT 1 FROM pro_funding WHERE source=? AND inst_id=? AND ts=?",
-                    (source, symbol, expected),
-                ).fetchone()
-                if not already and expected not in {int(event["ts"]) for event in events}:
-                    raise PlatformError(
-                        "funding_pending",
-                        "A previously observed funding settlement is due but its realized historical rate is not published. Trading remains blocked.",
-                        409,
-                    )
+            cash, debt, total = (number(account[k]) for k in ("cash", "debt", "funding"))
+            margin = number(row["margin"]) if row else ZERO
+            meta = json.loads(row["metadata"]) if row else {}
+            cursor = row["funding_cursor"] if row else 0
+            output = []
             for event in sorted(events, key=lambda e: int(e["ts"])):
                 ts = int(event["ts"])
-                if ts > self.now() or (event.get("inst_id") is not None and event["inst_id"] != symbol):
+                if ts > self.now() or event.get("inst_id", symbol) != symbol:
                     raise PlatformError(
                         "invalid_funding_event",
                         "Funding cannot use a future settlement or a different instrument.",
                         409,
                     )
-                if event.get("mark_ts", ts) != ts:
+                if int(event.get("mark_ts", ts)) != ts:
                     raise PlatformError(
                         "invalid_funding_mark", "Historical mark timestamp must match settlement.", 409
                     )
-                rate, event_mark = number(event["rate"]), number(event.get("mark_price"))
-                if abs(rate) >= 1 or event_mark <= 0:
+                rate, mark = number(event["rate"]), number(event.get("mark_price"))
+                if abs(rate) >= 1 or mark <= 0:
                     raise PlatformError(
                         "invalid_funding_event",
                         "Funding requires a positive historical mark and an absolute realized rate below one.",
@@ -1168,39 +1329,61 @@ class SimulationBook:
                 ).fetchone()
                 if existing:
                     booked = json.loads(existing["body"])
-                    if number(booked["rate"]) != rate or number(booked["mark_price"]) != event_mark:
+                    if number(booked["rate"]) != rate or number(booked["mark_price"]) != mark:
                         raise PlatformError(
                             "funding_conflict",
                             "A settled funding timestamp cannot be rewritten with a different rate or mark.",
                             409,
                         )
                     continue
-                if ts <= cursor:
+                inventory = self.deferred_funding.event_inventory(conn, source, symbol, ts, row)
+                if inventory is None:
                     continue
-                # Settlement must use the historical event mark, not today's price.
-                if not event.get("mark_price"):
+                frozen_meta = inventory["metadata"]
+                if frozen_meta["inst_type"] != "SWAP":
                     raise PlatformError(
-                        "funding_mark_missing",
-                        "Historical settlement mark is required before funding can be booked.",
-                        409,
+                        "invalid_funding_event", "Funding requires a linear perpetual inventory.", 409
                     )
-                amount = (
-                    number(row["quantity"])
-                    * base_size(meta)
-                    * number(event["mark_price"])
-                    * number(event["rate"])
-                )
-                margin = number(margin - amount)
+                quantity = number(inventory["quantity"])
+                amount = quantity * base_size(frozen_meta) * mark * rate
+                # Pending protection allows reductions, never new risk. Remaining
+                # original-generation base exposure retains its proportional margin
+                # obligation across contract unit conversion; closed exposure
+                # charges cash, never a new position.
+                retained = ZERO
+                if (
+                    row
+                    and number(row["quantity"])
+                    and meta.get("position_generation") == inventory.get("position_generation")
+                    and number(row["quantity"]) * quantity > 0
+                ):
+                    retained = min(
+                        D(1),
+                        abs(number(row["quantity"]) * base_size(meta) / (quantity * base_size(frozen_meta))),
+                    )
+                margin_charge, cash_charge = amount * retained, amount * (1 - retained)
+                margin = number(margin - margin_charge)
+                proposed = number(cash - cash_charge)
+                deficit = max(ZERO, -proposed)
+                new_cash = max(ZERO, proposed)
+                debt = number(debt + deficit)
                 total = number(total + amount)
                 body = {
                     "inst_id": symbol,
                     "ts": ts,
-                    "rate": str(event["rate"]),
-                    "mark_price": str(event["mark_price"]),
+                    "rate": str(rate),
+                    "mark_price": str(mark),
                     "mark_price_source": event.get("mark_price_source", "user_supplied"),
-                    "mark_ts": event.get("mark_ts", ts),
+                    "mark_ts": ts,
                     "payment": str(amount),
-                    "quantity": row["quantity"],
+                    "quantity": str(quantity),
+                    "position_generation": inventory.get("position_generation"),
+                    "owners": inventory.get("owners"),
+                    "margin_payment": str(margin_charge),
+                    "cash_payment": str(cash_charge),
+                    "liability_created": str(deficit),
+                    "inventory_policy": "frozen_settlement_time_quantity_and_ownership",
+                    "retained_base_exposure_fraction": str(retained),
                 }
                 conn.execute("INSERT INTO pro_funding VALUES(?,?,?,?)", (source, symbol, ts, dumps(body)))
                 self.post(
@@ -1209,26 +1392,49 @@ class SimulationBook:
                     f"funding:{symbol}:{ts}",
                     "Historical funding settlement",
                     symbol,
-                    [("USDT", "margin", -amount), ("USDT", "funding_pnl", amount)],
+                    [
+                        ("USDT", "margin", -margin_charge),
+                        ("USDT", "cash", new_cash - cash),
+                        ("USDT", "insurance_liability", -deficit),
+                        ("USDT", "funding_pnl", amount),
+                    ],
                 )
-                cursor = ts
+                cash = new_cash
+                conn.execute(
+                    "UPDATE pro_funding_obligations SET status='settled',payment=?,settled_at=? WHERE source=? AND inst_id=? AND ts=?",
+                    (str(amount), self.now(), source, symbol, ts),
+                )
+                cursor = max(cursor, ts)
                 output.append(body)
-            if expected is not None and any(event["ts"] == expected for event in output):
-                candidates = [snapshot.get("funding_time"), snapshot.get("next_funding_time")]
-                future_times = [
-                    int(value) for value in candidates if value is not None and int(value) > cursor
+            if row:
+                pending_times = [
+                    p["ts"] for p in self.deferred_funding.pending(source, conn) if p["inst_id"] == symbol
                 ]
-                meta["expected_funding_time"] = min(future_times) if future_times else None
+                candidates = [
+                    *meta.get("observed_funding_times", []),
+                    snapshots.get(symbol, {}).get("funding_time"),
+                    snapshots.get(symbol, {}).get("next_funding_time"),
+                ]
+                future_times = sorted({int(t) for t in candidates if t is not None and int(t) > cursor})
+                meta["expected_funding_time"] = (
+                    min(pending_times) if pending_times else min(future_times) if future_times else None
+                )
+                meta["observed_funding_times"] = future_times
+                conn.execute(
+                    "UPDATE pro_positions SET margin=?,funding_cursor=?,metadata=? WHERE source=? AND inst_id=?",
+                    (str(margin), cursor, dumps(meta), source, symbol),
+                )
             conn.execute(
-                "UPDATE pro_positions SET margin=?,funding_cursor=?,metadata=? WHERE source=? AND inst_id=?",
-                (str(margin), cursor, dumps(meta), source, symbol),
+                "UPDATE pro_accounts SET cash=?,funding=?,debt=? WHERE source=?",
+                (str(cash), str(total), str(debt), source),
             )
-            conn.execute("UPDATE pro_accounts SET funding=? WHERE source=?", (str(total), source))
+            if debt > number(account["debt"]):
+                conn.execute("UPDATE pro_risk SET halted=1 WHERE source=?", (source,))
             if self.contributions and output:
                 if contribution_error is None:
                     conn.execute("SAVEPOINT contribution_funding")
                     try:
-                        self.contributions.funding(conn, source, symbol, output)
+                        self.contributions.funding_frozen(conn, source, symbol, output)
                     except PlatformError as exc:
                         conn.execute("ROLLBACK TO contribution_funding")
                         contribution_error = exc.message
@@ -1253,5 +1459,11 @@ class SimulationBook:
                         contribution_error,
                     )
             for event in output:
-                self.store.audit(conn, source, "pro.funding", "Swap funding settled once", event)
+                self.store.audit(
+                    conn, source, "pro.funding", "Swap funding settled once at original inventory", event
+                )
+            if output:
+                self._reconcile_capital_after_protection(conn, source, f"funding:{symbol}:{output[-1]['ts']}")
+            # Capture persists independently of publication. Callers can still
+            # execute protective actions with complete price/rule evidence.
             return output

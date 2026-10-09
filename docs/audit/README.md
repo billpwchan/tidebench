@@ -1,6 +1,10 @@
 # Red-team record
 
-Latest: [v0.9 portfolio risk self-audit](red-team-0.9.0.zh-CN.md), [28 public-data allocation cases](v0.9.0-portfolio-risk-battery.json) and [risk research methods](../portfolio-risk-research.md).
+Latest: [fresh v0.10 independent review](fresh-institutional-review-0.10.0.zh-CN.md), [reproduction artifacts](fresh-review-0.10.0/README.md), [v0.10 workflow and corrective contracts](../professional-workflows-v0.10.md), and [release verification](../verification.md).
+
+Baseline: [fresh v0.9 institutional review](fresh-institutional-review-0.9.0.zh-CN.md).
+
+Previous: [v0.9 portfolio risk self-audit](red-team-0.9.0.zh-CN.md), [28 public-data allocation cases](v0.9.0-portfolio-risk-battery.json) and [risk research methods](../portfolio-risk-research.md).
 
 Previous: [v0.8 strategy self-audit](red-team-0.8.0.zh-CN.md), [all 108 public spot cases](v0.8.0-strategy-battery.json) and [methods/negative conclusions](../strategy-research.md).
 
@@ -33,4 +37,4 @@ The standalone audits use temporary databases and synthetic fault injection; ven
 - [Managed portfolio contract and operator guide](../managed-portfolios.md)
 - [Design and delivery record](../professional-platform-design.zh-CN.md)
 
-Managed forward portfolios, immutable release identity, monetary contribution accounting and captured one-use portfolio evaluations are implemented. Recovery retains newer research reservation, exposure, consumption and trial facts. Attributed historical listing/delisting, contract lifecycle events, order-book capacity and longer external operations remain substantive work. The bounded elapsed-time audit has its own [method and scope](soak-method.md). Tests do not establish investment edge, maximum production capacity, tenant isolation or exchange matching fidelity.
+Managed forward portfolios, immutable release identity, monetary contribution accounting and captured one-use portfolio evaluations are implemented. Recovery retains newer research reservation, exposure, consumption and trial facts. Attributed historical eligibility, typed cash settlement/unit conversion, current public L2 cost evidence, account capital commitments and frozen full-window economics are implemented. Comprehensive venue membership archives, event-aware per-market lifecycle attribution, dynamic historical-to-forward conversion routing, exchange matching/capacity fidelity and longer elapsed external operations remain separate evidence or scope boundaries. The bounded elapsed-time audit has its own [method and scope](soak-method.md). Tests do not establish investment edge, maximum production capacity, tenant isolation or exchange matching fidelity.

@@ -83,6 +83,9 @@ def test_exact_binding_uses_numeric_identity_and_complete_ordered_universe(regis
     assert registry.validate_binding(body, packages)["id"] == version["id"]
     for change in (
         {"capital_pct": "74"},
+        {"max_residual_pct": "1"},
+        {"failure_policy": "ignore"},
+        {"execution_contract": "other"},
         {"rebalance_bars": 23},
         {"top_k": 2},
         {"risk_window": 80},
@@ -122,3 +125,37 @@ def test_construction_signal_retention_momentum_ties_and_missing_funding():
     assert not any(
         construction_weights({"mode": "funding_carry", "carry_threshold": 0}, legs, {}, {}, {}, None).values()
     )
+
+
+def test_stored_legacy_version_reads_without_rewrite_and_requires_explicit_revision(registry):
+    from tidebench.store import dumps
+    from tidebench.strategy_registry import digest
+
+    p = project(registry)
+    version = p["version"]
+    legacy = {k: v for k, v in version["definition"].items() if k != "execution_contract"}
+    identity = digest(
+        dict(definition=legacy, hypothesis=version["hypothesis"], implementation=version["implementation"])
+    )
+    with registry.store.write() as conn:
+        conn.execute(
+            "UPDATE portfolio_versions SET definition=?,content_hash=? WHERE id=?",
+            (dumps(legacy), identity, version["id"]),
+        )
+    read = registry.version(version["id"])
+    assert read["definition"] == legacy and read["content_hash"] == identity
+    config = encode(
+        PortfolioInput(
+            name="Legacy binding",
+            hypothesis=version["hypothesis"],
+            portfolio_version_id=version["id"],
+            legs=[{"package_id": str(i) * 32, "weight": ".5"} for i in (1, 2)],
+        ).model_dump()
+    )
+    with pytest.raises(PlatformError) as error:
+        registry.validate_binding(config, [{"inst_id": s, "bar": "1H"} for s in ("BTC-USDT", "ETH-USDT")])
+    assert error.value.code == "portfolio_execution_legacy"
+    revised = registry.create_version(p["id"], version["hypothesis"], legacy, "researcher", version["id"])
+    assert revised["definition"]["execution_contract"] == "reduce_group_v1"
+    assert revised["content_hash"] != identity
+    assert registry.version(version["id"])["content_hash"] == identity

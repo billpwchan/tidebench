@@ -90,6 +90,11 @@ def _build_app(settings, market, store):
             (now_ms(),),
         )
         conn.execute("UPDATE schema_version SET version=7")
+        conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations VALUES(8,?,'Settlement-time funding obligations, protected reductions, account capital commitments and unified execution contract')",
+            (now_ms(),),
+        )
+        conn.execute("UPDATE schema_version SET version=8")
 
     @asynccontextmanager
     async def lifespan(app):
@@ -235,7 +240,7 @@ def _build_app(settings, market, store):
                 elif unsafe:
                     if path == "/api/v1/pro/execution/analytics":
                         allowed = {"admin", "trader", "researcher", "viewer", "risk_operator"}
-                    elif "/risk" in path or path.endswith("/halt"):
+                    elif "/risk" in path or path.endswith(("/halt", "/capital-policy")):
                         allowed = {"admin", "trader", "risk_operator"}
                     elif "/execution/" in path or "/paper/" in path:
                         allowed = {"admin", "trader"}

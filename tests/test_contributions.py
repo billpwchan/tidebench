@@ -80,9 +80,19 @@ def test_mixed_entry_costs_and_proportional_partial_reduction(book, symbol, leve
 
 def test_short_funding_liquidation_and_debt_are_not_counted_twice(book):
     submit(
-        book, order(side="sell", quantity="100"), snapshot(price="100"), key="alice-short-01", actor="alice"
+        book,
+        order(side="sell", quantity="100", leverage=2),
+        snapshot(price="100"),
+        key="alice-short-01",
+        actor="alice",
     )
-    submit(book, order(side="sell", quantity="200"), snapshot(price="120"), key="bob-short-0001", actor="bob")
+    submit(
+        book,
+        order(side="sell", quantity="200", leverage=2),
+        snapshot(price="120"),
+        key="bob-short-0001",
+        actor="bob",
+    )
     quote = snapshot(price="110", ts=2_000_000, funding_time=3_000_000, next_funding_time=4_000_000)
     events = [{"ts": 2_000_000, "rate": ".01", "mark_price": "110", "mark_ts": 2_000_000}]
     book.settle_funding("example", SYMBOL, events, {SYMBOL: quote})

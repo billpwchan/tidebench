@@ -30,7 +30,7 @@ async def runtime(tmp_path):
     await client.aclose()
 
 
-async def research(r, **definition_changes):
+async def research(r, *, research_policy=None, research_bars=72, **definition_changes):
     definition = PortfolioDefinition.model_validate(
         {
             "legs": [
@@ -48,7 +48,7 @@ async def research(r, **definition_changes):
     )
     inputs = []
     for leg in definition["legs"]:
-        package = r.packages.create_package(leg["inst_id"], "1H", END - 72 * HOUR, END, "example")
+        package = r.packages.create_package(leg["inst_id"], "1H", END - research_bars * HOUR, END, "example")
         package = await r.packages.run_package(package["id"])
         assert package["ready"]
         inputs.append({k: v for k, v in leg.items() if k != "inst_id"} | {"package_id": package["id"]})
@@ -68,6 +68,9 @@ async def research(r, **definition_changes):
                         "top_k",
                         "carry_threshold",
                         "capital_pct",
+                        "failure_policy",
+                        "max_residual_pct",
+                        "execution_contract",
                         "risk_window",
                         "vol_target_pct",
                         "vol_floor_pct",
@@ -79,6 +82,7 @@ async def research(r, **definition_changes):
                         "carry_max_age_hours",
                     )
                 },
+                **(research_policy or {}),
             }
         ).model_dump()
     )
@@ -378,9 +382,13 @@ async def test_policy_drift_prevents_all_new_risk(runtime):
 
 async def test_managed_spot_swap_carry_uses_contract_units_prior_funding_and_group_exit(runtime):
     r = runtime
+    # A full-equity hedged pair still carries two absolute BTC exposures.
+    # Declare the broader gross-underlying policy in both study and execution.
+    r.book.capital.set_policy("example", {"max_base_asset_gross_pct": "200"}, "risk-operator")
     group = await activate(
         r,
         mode="funding_carry",
+        research_policy={"max_base_asset_gross_pct": "200"},
         carry_threshold="-.01",
         legs=[
             {"inst_id": "BTC-USDT", "weight": ".5", "strategy": {"kind": "buy_hold"}},
@@ -415,9 +423,13 @@ async def test_managed_spot_swap_carry_uses_contract_units_prior_funding_and_gro
 
 async def test_managed_carry_actual_funding_reconciles_to_portfolio_contribution(runtime):
     r = runtime
+    # A full-equity hedged pair still carries two absolute BTC exposures.
+    # Declare the broader gross-underlying policy in both study and execution.
+    r.book.capital.set_policy("example", {"max_base_asset_gross_pct": "200"}, "risk-operator")
     group = await activate(
         r,
         mode="funding_carry",
+        research_policy={"max_base_asset_gross_pct": "200"},
         carry_threshold="-.01",
         legs=[
             {"inst_id": "BTC-USDT", "weight": ".5"},
@@ -458,9 +470,10 @@ async def test_risk_policy_differences_require_explicit_review(runtime):
 
 async def test_history_limit_never_hides_active_scheduling_or_old_failure_incidents(runtime, monkeypatch):
     r = runtime
-    group = await activate(r)
+    group = await activate(r, capital_pct=70)
     other_run = await research(
         r,
+        capital_pct=30,
         legs=[
             {"inst_id": symbol, "weight": ".1", "leverage": "2"}
             for symbol in ("BTC-USDT-SWAP", "ETH-USDT-SWAP")
@@ -532,6 +545,7 @@ async def test_one_corrupt_group_is_isolated_and_can_stop_without_losing_invento
     assert len(r.book.positions("example")) == 2
     good = await activate(
         r,
+        capital_pct=70,
         legs=[
             {"inst_id": symbol, "weight": ".1", "leverage": "2"}
             for symbol in ("BTC-USDT-SWAP", "ETH-USDT-SWAP")
@@ -748,6 +762,10 @@ async def test_deferred_minimum_rebalance_cannot_bypass_reviewed_residual_limit(
     group = await activate(
         r,
         mode="funding_carry",
+        # A two-bar cash study has no lagged funding sample or execution
+        # failure; later observed forward history genuinely permits entry.
+        # Its no-OOS limitation is explicitly acknowledged by approve().
+        research_bars=2,
         capital_pct="8",
         carry_threshold="-.01",
         rebalance_bars=2,

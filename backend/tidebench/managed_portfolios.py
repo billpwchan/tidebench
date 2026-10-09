@@ -8,12 +8,21 @@ commands. Multi-leg fills are explicitly sequential and never atomic.
 import asyncio
 import json
 from contextlib import AsyncExitStack, nullcontext
-from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, localcontext
+from decimal import Decimal, localcontext
 
+from .account_capital import AccountCapital
 from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, StrategyConfig
 from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights, funding_carry_evidence
+from .portfolio_execution import (
+    compensation_quantities,
+    portfolio_commands,
+    portfolio_residuals,
+    require_addition_legs,
+    require_compensation_flat,
+    require_residual_limit,
+)
 from .portfolio_risk import constrain_risk_weights, risk_momentum_weights
 from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import base_size, number
@@ -35,39 +44,13 @@ def verified(row, key, hash_key):
     return body
 
 
-def split_addition(quantity, quote, policy):
-    """Balanced lot-aligned children within a frozen per-order notional limit."""
-    with localcontext(ACCOUNTING_CONTEXT):
-        meta = quote["instrument"]
-        lot = number(meta["lot_size"])
-        price = number(quote["ask"] if quantity > 0 else quote["bid"]) * (
-            1 + number(policy["slippage_bps"]) / 10000 * (1 if quantity > 0 else -1)
-        )
-        tick = number(meta["tick_size"])
-        price = (price / tick).to_integral_value(
-            rounding=ROUND_CEILING if quantity > 0 else ROUND_FLOOR
-        ) * tick
-        maximum = int(
-            (number(policy["max_order_notional"]) / price / base_size(meta) / lot).to_integral_value(
-                rounding=ROUND_FLOOR
-            )
-        )
-        minimum = int((number(meta["min_size"]) / lot).to_integral_value(rounding=ROUND_CEILING))
-        units = int(abs(quantity) / lot)
-        children = (units + maximum - 1) // maximum if maximum else 0
-        if not children or children > 20 or units < children * minimum:
-            raise PlatformError(
-                "portfolio_child_budget",
-                "The leg cannot be split into at most twenty valid orders under the account order limit.",
-                409,
-            )
-        quotient, remainder = divmod(units, children)
-        return [(quotient + (i < remainder)) * lot * (1 if quantity > 0 else -1) for i in range(children)]
-
-
 class ManagedPortfolios:
     def __init__(self, runtime):
         self.runtime, self.store = runtime, runtime.store
+        self.capital = getattr(runtime.book, "capital", None) or AccountCapital(
+            self.store, runtime.book.contributions
+        )
+        runtime.book.capital = self.capital
         with self.store.write() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS managed_portfolios(id TEXT PRIMARY KEY,source TEXT NOT NULL,version_id TEXT NOT NULL REFERENCES portfolio_versions(id),release_id TEXT NOT NULL REFERENCES portfolio_releases(id),manifest TEXT NOT NULL,manifest_hash TEXT NOT NULL,status TEXT NOT NULL,anchor_bar INTEGER,last_bar INTEGER,last_error TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL);
@@ -76,6 +59,9 @@ class ManagedPortfolios:
                 CREATE INDEX IF NOT EXISTS portfolio_batches_pending ON portfolio_batches(group_id,status,bar);
                 CREATE TABLE IF NOT EXISTS portfolio_commands(id TEXT PRIMARY KEY,batch_id TEXT NOT NULL REFERENCES portfolio_batches(id),phase TEXT NOT NULL,sequence INTEGER NOT NULL,deployment_id TEXT NOT NULL,key TEXT NOT NULL UNIQUE,payload TEXT NOT NULL,payload_hash TEXT NOT NULL,status TEXT NOT NULL,order_id TEXT,error TEXT,updated_at INTEGER NOT NULL,UNIQUE(batch_id,phase,sequence));
             """)
+            if not conn.in_transaction:
+                conn.execute("BEGIN IMMEDIATE")
+            self.capital.bootstrap(conn)
 
     @staticmethod
     def decode(row):
@@ -111,25 +97,158 @@ class ManagedPortfolios:
                 "integrity_error": {"code": exc.code, "message": exc.message},
             }
 
+    def _presentation(self, row, conn, *, strict=False):
+        group = self.decode(row) if strict else self.present(row)
+        try:
+            group["capital_commitment"] = self.capital.get(group["source"], "portfolio:" + group["id"], conn)
+        except PlatformError as exc:
+            if strict:
+                raise
+            group["capital_commitment"] = None
+            group["capital_integrity_error"] = {"code": exc.code, "message": exc.message}
+        group["attention"] = self._attention_projection(group, conn)
+        return group
+
     def get(self, identifier, conn=None, *, strict=False):
         with nullcontext(conn) if conn is not None else self.store.read() as connection:
             row = connection.execute("SELECT * FROM managed_portfolios WHERE id=?", (identifier,)).fetchone()
-        if not row:
-            raise PlatformError("managed_portfolio_missing", "Managed portfolio not found.", 404)
-        return self.decode(row) if strict else self.present(row)
+            if not row:
+                raise PlatformError("managed_portfolio_missing", "Managed portfolio not found.", 404)
+            return self._presentation(row, connection, strict=strict)
 
     def list(self, source=None):
-        """Every actionable group, followed by the latest bounded history."""
+        """All active/retained commitments, plus bounded terminal history."""
         with self.store.read() as conn:
-            active = conn.execute(
-                "SELECT * FROM managed_portfolios WHERE (? IS NULL OR source=?) AND status IN ('running','compensating') ORDER BY created_at DESC,id DESC",
+            rows = conn.execute(
+                "SELECT g.* FROM managed_portfolios g WHERE (? IS NULL OR g.source=?) "
+                "AND (g.status IN ('running','compensating') OR EXISTS(SELECT 1 FROM account_capital_commitments c "
+                "WHERE c.source=g.source AND c.owner='portfolio:'||g.id AND c.status!='released')) "
+                "ORDER BY g.created_at DESC,g.id DESC",
                 (source, source),
             ).fetchall()
+            included = {row["id"] for row in rows}
             history = conn.execute(
-                "SELECT * FROM managed_portfolios WHERE (? IS NULL OR source=?) AND status NOT IN ('running','compensating') ORDER BY created_at DESC,id DESC LIMIT 200",
+                "SELECT * FROM managed_portfolios WHERE (? IS NULL OR source=?) "
+                "AND status NOT IN ('running','compensating') ORDER BY created_at DESC,id DESC LIMIT 200",
                 (source, source),
             ).fetchall()
-        return [self.present(row) for row in [*active, *history]]
+            return [
+                self._presentation(row, conn)
+                for row in [*rows, *[r for r in history if r["id"] not in included]]
+            ]
+
+    def _attention_projection(self, group, conn):
+        """Current economic condition; a historic failed status is not itself an incident."""
+        owner, source = "portfolio:" + group["id"], group["source"]
+        inventory, unknown, pending = [], False, False
+        try:
+            sleeves = [
+                self.runtime.book.contributions.decode(row)
+                for row in conn.execute(
+                    "SELECT * FROM contribution_sleeves WHERE source=? AND owner=? ORDER BY inst_id",
+                    (source, owner),
+                )
+            ]
+            held = [(r["inst_id"], number(r["quantity"])) for r in sleeves if number(r["quantity"])]
+        except PlatformError:
+            # Ownership damage cannot be presented as a flat group.
+            unknown, held = True, []
+            symbols = [leg["inst_id"] for leg in (group.get("manifest") or {}).get("legs", [])]
+            for row in conn.execute(
+                "SELECT * FROM pro_positions WHERE source=? AND quantity!='0'", (source,)
+            ):
+                if row["inst_id"] in symbols:
+                    held.append((row["inst_id"], number(row["quantity"])))
+        for symbol, quantity in held:
+            value, quote = None, self.runtime.snapshots.get((source, symbol))
+            if quote and not unknown:
+                try:
+                    _, _, mark = self.runtime.book.fresh(quote)
+                    value = abs(quantity) * base_size(quote["instrument"]) * mark
+                except PlatformError:
+                    pass
+            inventory.append(
+                {
+                    "inst_id": symbol,
+                    "quantity": str(quantity),
+                    "market_value": str(value) if value is not None else None,
+                }
+            )
+        symbols = {leg["inst_id"] for leg in (group.get("manifest") or {}).get("legs", [])}
+        for obligation in self.runtime.book.deferred_funding.pending(source, conn):
+            owners = obligation.get("owners")
+            if owner in (owners or {}) or owners is None and obligation["inst_id"] in symbols:
+                pending = True
+        damaged = bool(group.get("integrity_error") or group.get("capital_integrity_error") or unknown)
+        actionable = (
+            group["status"] == "compensating"
+            or group["status"] == "failed"
+            and bool(group["last_error"])
+            or group["status"] == "running"
+            and bool(group["last_error"])
+            or damaged
+            or group["status"] not in ACTIVE
+            and (bool(inventory) or pending)
+        )
+        if not actionable:
+            return None
+        batch = conn.execute(
+            "SELECT * FROM portfolio_batches WHERE group_id=? ORDER BY bar DESC LIMIT 1", (group["id"],)
+        ).fetchone()
+        incident = None
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE name='ops_incidents'").fetchone():
+            incident = conn.execute(
+                "SELECT id,first_seen FROM ops_incidents WHERE kind='managed_portfolio' AND subject=? AND status!='resolved'",
+                (group["id"],),
+            ).fetchone()
+        residual = None
+        if batch and batch["residuals"]:
+            try:
+                residual = json.loads(batch["residuals"]).get("notional")
+            except (TypeError, ValueError):
+                damaged = True
+        phase = (
+            "integrity"
+            if damaged
+            else "compensating"
+            if group["status"] == "compensating"
+            else "retained_inventory"
+            if group["status"] not in ACTIVE and inventory
+            else "funding_pending"
+            if pending
+            else "failed"
+            if group["status"] == "failed"
+            else "preparing"
+        )
+        error = (
+            group["last_error"]
+            or (group.get("integrity_error") or group.get("capital_integrity_error") or {}).get("message")
+            or (batch["error"] if batch else None)
+            or "Stopped portfolio retains unsettled economic obligations."
+        )
+        complete = not unknown and all(r["market_value"] is not None for r in inventory)
+        return {
+            "phase": phase,
+            "since": incident["first_seen"]
+            if incident
+            else batch["created_at"]
+            if batch
+            else group["updated_at"],
+            "as_of": now_ms(),
+            "error": error,
+            "inventory": inventory,
+            "inventory_notional": str(sum((number(r["market_value"]) for r in inventory), D(0)))
+            if complete
+            else None,
+            "valuation_status": "unavailable"
+            if not complete
+            else "example"
+            if source == "example"
+            else "fresh",
+            "residual_notional": residual,
+            "batch_id": batch["id"] if batch else None,
+            "incident_id": incident["id"] if incident else None,
+        }
 
     def active(self):
         """Complete scheduling metadata; each task verifies its own evidence."""
@@ -140,16 +259,33 @@ class ManagedPortfolios:
         return [dict(row) for row in rows]
 
     def attention(self):
-        """Complete fault metadata; corrupted manifests cannot stop monitoring."""
+        """Unbounded current economic faults, including terminal retained inventory."""
         with self.store.read() as conn:
-            rows = conn.execute(
-                "SELECT id,source,status,last_error,created_at,updated_at FROM managed_portfolios WHERE status IN ('compensating','failed') OR (status='running' AND last_error IS NOT NULL) OR last_error LIKE 'Portfolio evidence integrity:%' ORDER BY created_at,id"
-            ).fetchall()
-        return [dict(row) for row in rows]
+            groups = [
+                self._presentation(row, conn)
+                for row in conn.execute("SELECT * FROM managed_portfolios ORDER BY created_at,id")
+            ]
+            return [group for group in groups if group["attention"] is not None]
 
     def activate(self, release, actor, conn):
         p = release["approval"]["preview"]
         identifier, timestamp = new_id(), now_ms()
+        self.capital.reserve(
+            conn,
+            p["source"],
+            "portfolio:" + identifier,
+            p["definition"],
+            actor,
+            account=self.runtime.book.account(
+                p["source"],
+                {
+                    symbol: snapshot
+                    for (source, symbol), snapshot in self.runtime.snapshots.items()
+                    if source == p["source"]
+                },
+                conn,
+            ),
+        )
         # The caller holds BEGIN IMMEDIATE across every ownership admission.
         # Any leg failure rolls back all deployments and the group together.
         legs = []
@@ -161,6 +297,7 @@ class ManagedPortfolios:
                 "group_id": identifier,
                 "portfolio_version_id": p["version_id"],
                 "risk_policy_hash": p["risk_policy_hash"],
+                "capital_policy_hash": p["capital_policy_hash"],
                 "research_run_id": p["run_id"],
                 "research_result_hash": p["result_hash"],
                 "research_implementation": p["implementation"],
@@ -177,6 +314,7 @@ class ManagedPortfolios:
             "definition": p["definition"],
             "legs": legs,
             "risk_policy_hash": p["risk_policy_hash"],
+            "capital_policy_hash": p["capital_policy_hash"],
             "implementation": p["implementation"],
             "result_hash": p["result_hash"],
             "activated_by": actor,
@@ -239,6 +377,7 @@ class ManagedPortfolios:
                 "UPDATE portfolio_commands SET status='canceled',updated_at=? WHERE batch_id IN (SELECT id FROM portfolio_batches WHERE group_id=?) AND status='pending'",
                 (timestamp, identifier),
             )
+            self.capital.terminal(group["source"], "portfolio:" + identifier, connection)
             self.store.audit(
                 connection,
                 group["source"],
@@ -301,45 +440,34 @@ class ManagedPortfolios:
 
     def _commands(self, conn, batch, group, phase, quantities, quotes=None, policy=None):
         by_symbol = {leg["inst_id"]: leg for leg in group["manifest"]["legs"]}
-        children = {
-            s: split_addition(q, quotes[s], policy) if phase == "add" else [q]
-            for s, q in sorted(quantities.items())
-            if q
-        }
-        sequence = 0
-        # Round-robin child execution bounds temporary concentration across legs.
-        for i in range(max((len(v) for v in children.values()), default=0)):
-            for symbol, rows in children.items():
-                if i >= len(rows):
-                    continue
-                quantity = rows[i]
-                leg = by_symbol[symbol]
-                payload = {
-                    "source": group["source"],
-                    "inst_id": symbol,
-                    "side": "buy" if quantity > 0 else "sell",
-                    "quantity": str(abs(quantity)),
-                    "leverage": leg["leverage"],
-                    "reduce_only": phase != "add",
-                    "margin_mode": "isolated",
-                    "order_type": "market",
-                }
-                key = f"portfolio:{batch['id']}:{phase}:{sequence}:{batch['bar']}"
-                conn.execute(
-                    "INSERT INTO portfolio_commands VALUES(?,?,?,?,?,?,?,?,'pending',NULL,NULL,?)",
-                    (
-                        new_id(),
-                        batch["id"],
-                        phase,
-                        sequence,
-                        leg["deployment_id"],
-                        key,
-                        dumps(payload),
-                        digest(payload),
-                        now_ms(),
-                    ),
-                )
-                sequence += 1
+        for command in portfolio_commands(phase, quantities, quotes, policy):
+            sequence, symbol, quantity = command["sequence"], command["inst_id"], command["quantity"]
+            leg = by_symbol[symbol]
+            payload = {
+                "source": group["source"],
+                "inst_id": symbol,
+                "side": "buy" if quantity > 0 else "sell",
+                "quantity": str(abs(quantity)),
+                "leverage": leg["leverage"],
+                "reduce_only": phase != "add",
+                "margin_mode": "isolated",
+                "order_type": "market",
+            }
+            key = f"portfolio:{batch['id']}:{phase}:{sequence}:{batch['bar']}"
+            conn.execute(
+                "INSERT INTO portfolio_commands VALUES(?,?,?,?,?,?,?,?,'pending',NULL,NULL,?)",
+                (
+                    new_id(),
+                    batch["id"],
+                    phase,
+                    sequence,
+                    leg["deployment_id"],
+                    key,
+                    dumps(payload),
+                    digest(payload),
+                    now_ms(),
+                ),
+            )
 
     def _active(self, group_id, conn):
         group = self.get(group_id, conn, strict=True)
@@ -694,7 +822,9 @@ class ManagedPortfolios:
                                 "A post-close quote is required for the command.",
                                 409,
                             )
-                        await r.sync_funding(group["source"], payload["inst_id"], quotes)
+                        await r.sync_funding(
+                            group["source"], payload["inst_id"], quotes, protective=payload["reduce_only"]
+                        )
                         # Fresh reduce-only commands may proceed despite unrelated
                         # unavailable markets. The book blocks incomplete new risk.
                         try:
@@ -734,33 +864,39 @@ class ManagedPortfolios:
             self._quotes(group, batch["body"]["available_at"], quotes)
             for symbol in symbols:
                 await r.sync_funding(group["source"], symbol, quotes)
-            account = await r.offload(r.book.account, group["source"], quotes)
-            policy = r.book.risk(group["source"])
-            plan = addition_plan(
-                batch["body"]["targets"],
-                {p["inst_id"]: D(p["quantity"]) for p in account["positions"]},
-                quotes,
-                account["available_cash"],
-                {leg["inst_id"]: leg["leverage"] for leg in group["manifest"]["legs"]},
-                policy["fee_bps"],
-                policy["slippage_bps"],
-            )
-            body = encode(
-                {
-                    "quantities": plan.quantities,
-                    "requested": plan.requested,
-                    "cash_scale": plan.cash_scale,
-                    "required_cash": plan.required_cash,
-                    "skipped": plan.skipped,
-                    "available_cash": account["available_cash"],
-                    "quotes": {s: quotes[s] for s in symbols},
-                    "policy_hash": digest(policy),
-                }
-            )
             with self.store.write() as conn:
                 self._active(group["id"], conn)
                 if self.batch(batch["id"], conn)["additions"]:
                     return
+                # Marks, attribution, cash allowance and commands share one
+                # transaction. Another group cannot spend between these reads.
+                account = r.book.account(group["source"], quotes, conn)
+                policy = r.book.risk(group["source"], conn)
+                capital_budget = self.capital.addition_budget(
+                    conn, group["source"], "portfolio:" + group["id"], account
+                )
+                plan = addition_plan(
+                    batch["body"]["targets"],
+                    {p["inst_id"]: D(p["quantity"]) for p in account["positions"]},
+                    quotes,
+                    capital_budget["budget_cash"],
+                    {leg["inst_id"]: leg["leverage"] for leg in group["manifest"]["legs"]},
+                    policy["fee_bps"],
+                    policy["slippage_bps"],
+                )
+                body = encode(
+                    {
+                        "quantities": plan.quantities,
+                        "requested": plan.requested,
+                        "cash_scale": plan.cash_scale,
+                        "required_cash": plan.required_cash,
+                        "skipped": plan.skipped,
+                        "available_cash": account["available_cash"],
+                        "capital_budget": capital_budget,
+                        "quotes": {s: quotes[s] for s in symbols},
+                        "policy_hash": digest(policy),
+                    }
+                )
                 self._commands(conn, batch, group, "add", plan.quantities, quotes, policy)
                 conn.execute(
                     "UPDATE portfolio_batches SET status='adding',additions=?,additions_hash=?,updated_at=? WHERE id=?",
@@ -776,41 +912,20 @@ class ManagedPortfolios:
             if not batch["additions"]:
                 await self._freeze_additions(group, batch)
                 batch = self.batch(batch["id"])
-            if any(row["code"] != "rebalance_minimum" for row in batch["additions"]["skipped"]):
-                raise PlatformError(
-                    "portfolio_minimum_leg",
-                    "Common cash scaling leaves a portfolio leg below minimum size.",
-                    409,
-                )
+            require_addition_legs(batch["additions"]["skipped"])
             await self._phase(group, batch, "add")
             quotes = await self.runtime.snapshots_for(group["source"], batch["body"]["targets"])
             self._quotes(group, batch["body"]["available_at"], quotes)
             positions = {p["inst_id"]: D(p["quantity"]) for p in self.runtime.book.positions(group["source"])}
-            residuals = {s: str(D(q) - positions.get(s, D(0))) for s, q in batch["body"]["targets"].items()}
-            amount = sum(
-                (
-                    abs(D(q)) * base_size(quotes[s]["instrument"]) * D(quotes[s]["last"])
-                    for s, q in residuals.items()
-                ),
-                D(0),
+            residuals = portfolio_residuals(
+                batch["body"]["targets"], positions, quotes, batch["body"]["capital"]
             )
-            capital = D(batch["body"]["capital"])
-            pct = amount / capital * 100 if capital else D(0) if not amount else D(100)
             with self.store.write() as conn:
                 conn.execute(
                     "UPDATE portfolio_batches SET residuals=?,updated_at=? WHERE id=?",
-                    (
-                        dumps({"quantities": residuals, "notional": str(amount), "capital_pct": str(pct)}),
-                        now_ms(),
-                        batch["id"],
-                    ),
+                    (dumps(residuals), now_ms(), batch["id"]),
                 )
-            if pct > D(group["manifest"]["definition"]["max_residual_pct"]):
-                raise PlatformError(
-                    "portfolio_residual_limit",
-                    "Executed portfolio differs from its target beyond the reviewed residual limit.",
-                    409,
-                )
+            require_residual_limit(residuals, group["manifest"]["definition"])
             self._finish(group, batch, "completed")
         except asyncio.CancelledError:
             # Owned storage offloads drain on shutdown. Persisted command keys
@@ -867,26 +982,22 @@ class ManagedPortfolios:
                 ).fetchone()
                 if not existing:
                     positions = {
-                        p["inst_id"]: -D(p["quantity"])
+                        p["inst_id"]: D(p["quantity"])
                         for p in conn.execute(
                             "SELECT inst_id,quantity FROM pro_positions WHERE source=? AND quantity!='0'",
                             (group["source"],),
                         )
-                        if p["inst_id"] in batch["body"]["targets"]
                     }
-                    self._commands(conn, batch, group, "compensate", positions)
+                    self._commands(
+                        conn,
+                        batch,
+                        group,
+                        "compensate",
+                        compensation_quantities(batch["body"]["targets"], positions),
+                    )
             await self._phase(group, batch, "compensate")
-            remaining = {
-                p["inst_id"]: p["quantity"]
-                for p in self.runtime.book.positions(group["source"])
-                if p["inst_id"] in batch["body"]["targets"] and D(p["quantity"])
-            }
-            if remaining:
-                raise PlatformError(
-                    "portfolio_compensation_residual",
-                    "Compensation retains inventory; operator action is required.",
-                    409,
-                )
+            remaining = {p["inst_id"]: p["quantity"] for p in self.runtime.book.positions(group["source"])}
+            require_compensation_flat(batch["body"]["targets"], remaining)
             self._finish(group, batch, "compensated")
         except asyncio.CancelledError:
             raise
@@ -937,6 +1048,8 @@ class ManagedPortfolios:
                         leg["deployment_id"],
                     ),
                 )
+            if status == "compensated":
+                self.capital.terminal(group["source"], "portfolio:" + group["id"], conn)
             self.store.audit(
                 conn,
                 group["source"],

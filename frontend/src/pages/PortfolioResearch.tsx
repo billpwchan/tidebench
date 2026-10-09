@@ -8,7 +8,12 @@ import { useSession } from '../components/AuthGate';
 import { DataTable, JsonDetails, RecordGrid, WorkspaceTabs } from '../components/ProWorkspace';
 import ResearchChart from '../components/ResearchChart';
 import PortfolioRiskEvidence from '../components/PortfolioRiskEvidence';
+import LifecycleEvidence, {
+  LifecycleImport,
+  LifecycleScenario,
+} from '../components/LifecycleEvidence';
 import PortfolioResearchSummary from '../components/PortfolioResearchSummary';
+import PortfolioEconomicsEvidence from '../components/PortfolioEconomicsEvidence';
 import {
   Empty,
   ErrorBox,
@@ -40,6 +45,7 @@ type Leg = {
   leverage: string;
   direction: string;
   strategy: Strategy;
+  lifecycle_events?: RecordData[];
 };
 const newLeg = (): Leg => ({
   package_id: '',
@@ -47,6 +53,7 @@ const newLeg = (): Leg => ({
   leverage: '1',
   direction: 'long_only',
   strategy: { ...defaultStrategy },
+  lifecycle_events: [],
 });
 export default function PortfolioResearch({
   source,
@@ -59,7 +66,8 @@ export default function PortfolioResearch({
   onExecution: () => void;
   initialRunId?: string;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const qc = useQueryClient();
   const canOperate = canResearch(useSession()?.user?.role);
   const packages = useQuery({
@@ -93,12 +101,20 @@ export default function PortfolioResearch({
   const [name, setName] = useState('');
   const [hypothesis, setHypothesis] = useState('');
   const [mode, setMode] = useState('fixed_weights');
+  const [universeMode, setUniverseMode] = useState('static');
+  const [lifecycleWarmup, setLifecycleWarmup] = useState(2);
   const [legs, setLegs] = useState<Leg[]>([newLeg(), newLeg()]);
   const [projectId, setProjectId] = useState('');
   const [recipeId, setRecipeId] = useState('');
   const [parentId, setParentId] = useState('');
   const [capitalPct, setCapitalPct] = useState('100');
   const [residualPct, setResidualPct] = useState('2');
+  const [executionContract, setExecutionContract] =
+    useState<NonNullable<PortfolioDefinition['execution_contract']>>('reduce_group_v1');
+  const loadExecution = (definition: Partial<PortfolioDefinition>) => {
+    setResidualPct(definition.max_residual_pct ?? '2');
+    setExecutionContract(definition.execution_contract ?? 'reduce_group_v1');
+  };
   const [carryThreshold, setCarryThreshold] = useState('0');
   const [carryConfig, setCarryConfig] = useState({
     carry_window: 1,
@@ -139,6 +155,8 @@ export default function PortfolioResearch({
   const [lookback, setLookback] = useState(20);
   const [topK, setTopK] = useState(1);
   const [gross, setGross] = useState(200);
+  const [maxOrder, setMaxOrder] = useState('2500');
+  const [maxBaseGross, setMaxBaseGross] = useState('100');
   const [daily, setDaily] = useState(5);
   const [evaluation, setEvaluation] = useState('full');
   const [trainPct, setTrainPct] = useState(70);
@@ -161,6 +179,7 @@ export default function PortfolioResearch({
         ...riskConfig,
         max_residual_pct: residualPct,
         failure_policy: 'reduce_group',
+        execution_contract: executionContract,
         legs: legs.map((leg, i) => ({
           inst_id: selected[i]!.inst_id,
           weight: leg.weight,
@@ -187,7 +206,13 @@ export default function PortfolioResearch({
         name,
         hypothesis,
         mode,
-        legs,
+        legs: legs.map((leg) => ({
+          ...leg,
+          lifecycle_events:
+            universeMode === 'historical_lifecycle' ? (leg.lifecycle_events ?? []) : [],
+        })),
+        universe_mode: universeMode,
+        lifecycle_warmup_bars: lifecycleWarmup,
         capital_pct: capitalPct,
         portfolio_version_id: version.id,
         initial_cash: cash,
@@ -199,7 +224,12 @@ export default function PortfolioResearch({
         carry_threshold: carryThreshold,
         ...carryConfig,
         ...riskConfig,
+        failure_policy: 'reduce_group',
+        max_residual_pct: residualPct,
+        execution_contract: executionContract,
         max_gross_pct: gross,
+        max_order_notional: maxOrder,
+        max_base_asset_gross_pct: maxBaseGross,
         max_daily_loss_pct: daily,
         evaluation,
         train_pct: trainPct,
@@ -230,8 +260,10 @@ export default function PortfolioResearch({
       setName(project.name);
       setHypothesis(version.hypothesis);
       setMode(d.mode);
+      setUniverseMode('static');
+      setLifecycleWarmup(2);
       setCapitalPct(d.capital_pct);
-      setResidualPct(d.max_residual_pct);
+      loadExecution(d);
       setCarryThreshold(d.carry_threshold);
       loadCarry(d);
       loadRisk(d);
@@ -243,6 +275,7 @@ export default function PortfolioResearch({
       setLegs(
         d.legs.map((leg) => ({
           ...leg,
+          lifecycle_events: [],
           package_id:
             ready.find(
               (p) => p.inst_id === leg.inst_id && p.start === first?.start && p.end === first?.end,
@@ -259,14 +292,17 @@ export default function PortfolioResearch({
         const v = await proApi.portfolioVersion(versionId);
         setProjectId(v.project_id);
         setParentId(v.id);
-        setResidualPct(v.definition.max_residual_pct);
+        loadExecution(v.definition);
       } else {
         setProjectId('');
         setParentId('');
+        loadExecution(config as Partial<PortfolioDefinition>);
       }
       setName(String(config.name));
       setHypothesis(String(config.hypothesis));
       setMode(String(config.mode));
+      setUniverseMode(String(config.universe_mode ?? 'static'));
+      setLifecycleWarmup(Number(config.lifecycle_warmup_bars ?? 2));
       setLegs(config.legs as Leg[]);
       setCapitalPct(String(config.capital_pct ?? 100));
       setCarryThreshold(String(config.carry_threshold));
@@ -279,6 +315,8 @@ export default function PortfolioResearch({
       setLookback(Number(config.lookback));
       setTopK(Number(config.top_k));
       setGross(Number(config.max_gross_pct));
+      setMaxOrder(String(config.max_order_notional ?? '2500'));
+      setMaxBaseGross(String(config.max_base_asset_gross_pct ?? '100'));
       setDaily(Number(config.max_daily_loss_pct));
       setEvaluation(String(config.evaluation));
       setTrainPct(Number(config.train_pct));
@@ -292,9 +330,17 @@ export default function PortfolioResearch({
   const ready = packages.data?.items.filter((p) => p.ready) ?? [];
   const first = ready.find((p) => p.id === legs[0].package_id);
   const choices = ready.filter(
-    (p) => !first || (p.bar === first.bar && p.start === first.start && p.end === first.end),
+    (p) =>
+      !first ||
+      (p.bar === first.bar &&
+        (universeMode === 'historical_lifecycle' ||
+          (p.start === first.start && p.end === first.end))),
   );
   const plan = run.data?.result;
+  const economicIncomplete = plan?.economic_state === 'incomplete_lifecycle';
+  const executionFailed =
+    economicIncomplete || ['failed', 'compensating'].includes(String(plan?.execution_status));
+  const executionBound = plan?.execution_contract === 'reduce_group_v1';
   const evaluationEvidence = plan?.evaluation as RecordData | undefined;
   const sealedAssessment = String(
     (evaluationEvidence?.rejection as RecordData)?.status ?? 'unavailable',
@@ -359,8 +405,10 @@ export default function PortfolioResearch({
                     setName(recipe.name);
                     setHypothesis(recipe.hypothesis);
                     setMode(d.mode);
+                    setUniverseMode('static');
+                    setLifecycleWarmup(2);
                     setCapitalPct(d.capital_pct);
-                    setResidualPct(d.max_residual_pct);
+                    loadExecution(d);
                     setCarryThreshold(d.carry_threshold);
                     loadCarry(d);
                     loadRisk(d);
@@ -456,10 +504,17 @@ export default function PortfolioResearch({
                 onChange={(e) => setHypothesis(e.target.value)}
               />
             </Field>
+            <LifecycleScenario
+              mode={universeMode}
+              warmup={lifecycleWarmup}
+              onMode={setUniverseMode}
+              onWarmup={setLifecycleWarmup}
+            />
             <p className="quiet-copy">
-              {t(
-                'Use ready packages with identical source, interval and UTC window. Weights are signed notional / account equity. Spot weights must be nonnegative.',
-              )}
+              {universeMode === 'static' &&
+                t(
+                  'Use ready packages with identical source, interval and UTC window. Weights are signed notional / account equity. Spot weights must be nonnegative.',
+                )}
             </p>
             {packages.isError && <ErrorBox error={packages.error} />}
             {!ready.length && (
@@ -488,7 +543,9 @@ export default function PortfolioResearch({
                     <select
                       required
                       value={leg.package_id}
-                      onChange={(e) => patch(i, { package_id: e.target.value })}
+                      onChange={(e) =>
+                        patch(i, { package_id: e.target.value, lifecycle_events: [] })
+                      }
                     >
                       <option value="">{t('Choose a ready package')}</option>
                       {(i === 0 ? ready : choices).map((p) => (
@@ -520,6 +577,13 @@ export default function PortfolioResearch({
                     />
                   </Field>
                 </div>
+                {universeMode === 'historical_lifecycle' && (
+                  <LifecycleImport
+                    symbol={ready.find((p) => p.id === leg.package_id)?.inst_id ?? ''}
+                    events={leg.lifecycle_events ?? []}
+                    onChange={(events) => patch(i, { lifecycle_events: events })}
+                  />
+                )}
                 {mode !== 'independent_signals' && (
                   <StrategyExitFields
                     value={leg.strategy}
@@ -607,7 +671,10 @@ export default function PortfolioResearch({
                   onChange={(e) => setCapitalPct(e.target.value)}
                 />
               </Field>
-              <Field label="Maximum execution residual %">
+              <Field
+                label="Maximum execution residual %"
+                hint="Deviation beyond this allocated-capital limit triggers group reduction; recovery fills can also fail."
+              >
                 <input
                   required
                   type="number"
@@ -712,6 +779,34 @@ export default function PortfolioResearch({
                   onChange={(e) => setSlip(e.target.value)}
                 />
               </Field>
+              <Field
+                label="Maximum order notional (USDT)"
+                hint="A leg is split into at most twenty lot-aligned child orders under this cap. Unexecutable plans enter the shared failure policy."
+              >
+                <input
+                  required
+                  type="number"
+                  min={0.01}
+                  max={1000000000}
+                  step="any"
+                  value={maxOrder}
+                  onChange={(e) => setMaxOrder(e.target.value)}
+                />
+              </Field>
+              <Field
+                label="Underlying asset gross limit (%)"
+                hint="Combine absolute spot and perpetual exposure to the same underlying without netting directions."
+              >
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  max={1000}
+                  step="any"
+                  value={maxBaseGross}
+                  onChange={(e) => setMaxBaseGross(e.target.value)}
+                />
+              </Field>
               <Field label="Gross exposure limit %">
                 <input
                   required
@@ -758,6 +853,12 @@ export default function PortfolioResearch({
                 </>
               )}
             </div>
+            <p className="quiet-copy">
+              {t('Shared failure policy')}: <strong>{t('Reduce the group on failure')}</strong>.{' '}
+              {t(
+                'Research and managed paper execution use the same sequential reduction, addition and compensation policy. A completed research job can still contain a halted simulation.',
+              )}
+            </p>
             {mode === 'risk_momentum' && (
               <section className="portfolio-risk-controls">
                 <h3>{t('Portfolio risk budget')}</h3>
@@ -808,9 +909,10 @@ export default function PortfolioResearch({
               </section>
             )}
             <p className="quiet-copy">
-              {t(
-                'This form captures current instrument rules. Attributed point-in-time rule events are supported through the API. The chosen universe is explicit; no historical listing coverage is inferred. Multi-leg fills are sequential, with residuals and rejections reported.',
-              )}
+              {universeMode === 'static' &&
+                t(
+                  'This form captures current instrument rules. Attributed point-in-time rule events are supported through the API. The chosen universe is explicit; no historical listing coverage is inferred. Multi-leg fills are sequential, with residuals and rejections reported.',
+                )}
             </p>
             {loadProject.isError && <ErrorBox error={loadProject.error} />}
             <p className="quiet-copy">
@@ -872,7 +974,9 @@ export default function PortfolioResearch({
                   <Status
                     type={
                       run.data?.status === 'completed'
-                        ? 'good'
+                        ? executionFailed
+                          ? 'warning'
+                          : 'good'
                         : run.data?.status === 'failed'
                           ? 'bad'
                           : 'neutral'
@@ -881,6 +985,43 @@ export default function PortfolioResearch({
                     {t(run.data?.status ?? '')}
                   </Status>
                 </div>
+                {plan && (executionFailed || !executionBound) && (
+                  <section
+                    className="portfolio-execution-outcome"
+                    aria-label={t('Simulation execution state')}
+                  >
+                    <Status type={executionFailed ? 'bad' : 'warning'}>
+                      {economicIncomplete
+                        ? text('Incomplete economic result', '经济结果未完成')
+                        : t(
+                            executionFailed
+                              ? String(plan.execution_status)
+                              : 'Legacy execution semantics',
+                          )}
+                    </Status>
+                    <p>
+                      <strong>
+                        {t(
+                          executionFailed
+                            ? 'This simulation is not eligible for paper deployment.'
+                            : 'Revise this legacy study under the shared execution policy.',
+                        )}
+                      </strong>
+                    </p>
+                    <p className="quiet-copy">
+                      {economicIncomplete
+                        ? text(
+                            'Lifecycle evidence could not value or settle retained inventory. Final equity is unavailable; inspect eligibility, accounting events and unresolved holdings below.',
+                            '生命周期证据无法为保留持仓提供估值或结算，最终权益不可核定。请查看下方市场资格、核算事件和未解决持仓。',
+                          )
+                        : t(
+                            executionFailed
+                              ? 'The research computation completed, but a leg failure halted the simulated group or left compensation incomplete. Marked returns include any retained inventory; inspect the execution journal and residuals.'
+                              : 'Its saved results remain available for audit. A new immutable revision is required to bind the shared failure and residual policy.',
+                          )}
+                    </p>
+                  </section>
+                )}
                 <p className="strategy-hypothesis">{String(run.data?.config.hypothesis)}</p>
                 <div className="portfolio-release-actions">
                   <button
@@ -962,6 +1103,7 @@ export default function PortfolioResearch({
                                   return_vs_cash_pct: 'Return above cash (%)',
                                   max_drawdown_pct: 'Maximum drawdown (%)',
                                   zero_debt: 'Insurance debt (USDT)',
+                                  execution_status: 'Execution state',
                                 } as Record<string, string>
                               )[String(r.metric)] ?? String(r.metric),
                             ),
@@ -970,14 +1112,26 @@ export default function PortfolioResearch({
                           key: 'actual',
                           label: 'Actual',
                           render: (r) => (
-                            <span title={String(r.actual)}>{number(r.actual, 4)}</span>
+                            <span title={String(r.actual)}>
+                              {['execution_status', 'lifecycle_economics'].includes(
+                                String(r.metric),
+                              )
+                                ? t(String(r.actual))
+                                : number(r.actual, 4)}
+                            </span>
                           ),
                         },
                         {
                           key: 'threshold',
                           label: 'Threshold',
                           render: (r) => (
-                            <span title={String(r.threshold)}>{number(r.threshold, 4)}</span>
+                            <span title={String(r.threshold)}>
+                              {['execution_status', 'lifecycle_economics'].includes(
+                                String(r.metric),
+                              )
+                                ? t(String(r.threshold))
+                                : number(r.threshold, 4)}
+                            </span>
                           ),
                         },
                         {
@@ -999,7 +1153,7 @@ export default function PortfolioResearch({
                   <PortfolioReleaseReview
                     key={run.data.id}
                     runId={run.data.id}
-                    bound={!!run.data.config.portfolio_version_id}
+                    bound={!!run.data.config.portfolio_version_id && executionBound}
                     onExecution={onExecution}
                   />
                 )}
@@ -1028,7 +1182,14 @@ export default function PortfolioResearch({
                       </button>
                       <JsonDetails value={run.data?.manifest} label="Input manifest" />
                     </div>
+                    <LifecycleEvidence
+                      evidence={plan.lifecycle as RecordData | undefined}
+                      config={run.data?.config}
+                    />
                     <PortfolioResearchSummary metrics={plan.metrics} />
+                    <PortfolioEconomicsEvidence
+                      evidence={plan.economics as RecordData | undefined}
+                    />
                     <PortfolioRiskEvidence decisions={plan.decisions ?? []} />
                     {evaluationEvidence?.mode === 'train_test' && (
                       <>

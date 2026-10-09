@@ -425,8 +425,11 @@ async def test_late_funding_publication_is_not_cached_as_no_event_or_advanced_cu
     await runtime.sync_funding("example", SYMBOL, {SYMBOL: runtime.catalog.quote}, periodic=True)
     runtime.catalog.quote = quote(END + 60_001)
     for _ in range(2):
-        with pytest.raises(PlatformError, match="not published"):
-            await runtime.sync_funding("example", SYMBOL, {SYMBOL: runtime.catalog.quote}, periodic=True)
+        await runtime.sync_funding("example", SYMBOL, {SYMBOL: runtime.catalog.quote}, periodic=True)
+        assert (
+            runtime.book.account("example", {SYMBOL: runtime.catalog.quote})["economic_status"]
+            == "funding_pending"
+        )
     assert len(runtime.catalog.funding_calls) == 3
     assert runtime.book.positions("example")[0]["funding_cursor"] == END
     runtime.catalog.events = [
@@ -668,3 +671,38 @@ def test_installed_research_identity_is_path_independent_and_content_sensitive(m
     assert identity["code_fingerprint"] != altered["code_fingerprint"]
     assert identity["modules"]["engine.py"] == altered["modules"]["engine.py"]
     assert all("/" not in name for name in identity["modules"])
+
+
+async def test_funding_transport_failure_cannot_block_liquidation_and_restart_settlement(
+    runtime, monkeypatch
+):
+    runtime.book.set_risk("example", {"max_leverage": "10"}, "test")
+    runtime.book.submit(command(leverage=10), "funding-outage-entry", {SYMBOL: runtime.catalog.quote})
+    due = END + 60001
+    severe = quote(due)
+    severe.update(bid="80", ask="80", last="80", mark="80")
+    runtime.catalog.quote = severe
+
+    async def unavailable(*args):
+        raise PlatformError("upstream_outage", "Funding history endpoint unavailable", 502)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(runtime.catalog, "funding_history", unavailable)
+        await runtime.poll_market("example", SYMBOL, {SYMBOL: severe})
+    assert not runtime.book.positions("example")
+    assert runtime.book.orders("example")[0]["liquidation"]
+    assert runtime.book.account("example", {SYMBOL: severe})["equity"] is None
+    assert runtime.book.deferred_funding.pending("example")[0]["quantity"] == "100"
+    restored = restart(runtime)
+    restored.catalog.events = [
+        {"ts": END + 60000, "rate": ".001", "mark_price": "100", "mark_ts": END + 60000}
+    ]
+    await restored.sync_funding("example", SYMBOL, {SYMBOL: severe}, periodic=True, protective=True)
+    account = restored.book.account("example", {SYMBOL: severe})
+    assert not account["pending_funding"]
+    assert D(account["funding_paid"]) == D(".1")
+    assert D(account["equity"]) == D("9979.9")
+    assert restored.book.contribution_report("example", {SYMBOL: severe})["reconciled"]
+    await restored.sync_funding("example", SYMBOL, {SYMBOL: severe}, periodic=True, protective=True)
+    assert D(restored.book.account("example", {SYMBOL: severe})["funding_paid"]) == D(".1")
+    await restored.stop()

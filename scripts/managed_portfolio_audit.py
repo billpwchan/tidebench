@@ -143,7 +143,7 @@ async def observe(directory, market):
             }
         )
         backup = r.backups.create("managed-portfolio-offline-acceptance")
-        assert r.backups.verify(backup["id"])["database_schema"] == 7
+        assert r.backups.verify(backup["id"])["database_schema"] == 8
         r.backups.restore(backup["id"])
         after = r.book.contribution_report("example", await r.snapshots_for("example"))
         assert (
@@ -152,7 +152,7 @@ async def observe(directory, market):
         )
         observations.append(
             {
-                "contract": "schema7_actual_backup_restore",
+                "contract": "schema8_actual_backup_restore",
                 "schema": backup["database_schema"],
                 "group_status": r.managed_portfolios.get(group["id"])["status"],
                 "risk_halted": r.book.risk("example")["halted"],

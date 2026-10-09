@@ -413,6 +413,39 @@ class ContributionBook:
             },
         )
 
+    def funding_frozen(self, conn, source, symbol, events):
+        rows = {r["owner"]: r for r in self.rows(conn, source) if r["inst_id"] == symbol}
+        changed = {}
+        amount = exact_sum(D(e["payment"]) for e in events)
+        for event in events:
+            weights = event.get("owners")
+            if weights is None or not weights or any(owner not in rows for owner in weights):
+                raise PlatformError(
+                    "contribution_integrity",
+                    "Frozen settlement ownership is unavailable; economic settlement retained for investigation.",
+                    409,
+                )
+            parts = allocate(D(event["payment"]), {owner: D(q) for owner, q in weights.items()})
+            for owner, payment in parts.items():
+                row = rows[owner]
+                row["funding"] = str(exact_sum([D(row["funding"]), payment]))
+                self.save(conn, row)
+                changed[owner] = row
+        adjustments = self._reconcile(conn, source, list(changed.values()), amount)
+        self._event(
+            conn,
+            source,
+            f"funding:{symbol}:{events[0]['ts']}:{events[-1]['ts']}:{source}",
+            "funding",
+            symbol,
+            {
+                "events": events,
+                "allocation": "frozen_settlement_time_quantity",
+                "sleeves_after": list(changed.values()),
+                "finite_precision_adjustments": adjustments,
+            },
+        )
+
     def quarantine(self, conn, source, reference, symbol, kind, evidence, reason):
         timestamp = now_ms()
         conn.execute(

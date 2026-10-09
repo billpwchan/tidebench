@@ -17,8 +17,20 @@ from pydantic import Field, model_validator
 
 from .catalog import CATALOG_BARS
 from .engine import ACCOUNTING_CONTEXT, EngineError, StrategyConfig
+from .historical_lifecycle import (
+    PARSER_VERSION,
+    LifecycleEvent,
+    apply_inventory_event,
+    capture_events,
+    compatible_units,
+    eligibility,
+)
+from .historical_lifecycle import (
+    initialize as initialize_lifecycle,
+)
 from .platform import PlatformError
 from .portfolio_construction import apply_weight_caps, construction_weights, funding_carry_evidence
+from .portfolio_execution import EXECUTION_CONTRACT, execute_batch, resume_compensation
 from .portfolio_risk import constrain_risk_weights, realized_portfolio_metrics, risk_momentum_weights
 from .portfolio_targets import addition_plan, reduction_plan, target_quantities
 from .pro_execution import SimulationBook, base_size, number, tier_for
@@ -53,6 +65,7 @@ class PortfolioLeg(InputModel):
     strategy: ProStrategyInput = Field(default_factory=ProStrategyInput)
     direction: Literal["long_only", "short_only", "long_short"] = "long_only"
     rule_events: list[RuleEvent] = Field(default_factory=list, max_length=200)
+    lifecycle_events: list[LifecycleEvent] = Field(default_factory=list, max_length=200)
 
 
 class PortfolioInput(InputModel):
@@ -64,11 +77,16 @@ class PortfolioInput(InputModel):
     )
     portfolio_version_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     capital_pct: Decimal = Field(default=100, gt=0, le=100)
+    failure_policy: Literal["reduce_group"] = "reduce_group"
+    max_residual_pct: Decimal = Field(default=2, ge=".01", le=100)
+    execution_contract: Literal["reduce_group_v1"] = "reduce_group_v1"
     initial_cash: Money = D(10000)
     fee_bps: Decimal = Field(default=10, ge=0, le=100)
     slippage_bps: Decimal = Field(default=5, ge=0, le=100)
     liquidation_fee_bps: Decimal = Field(default=50, ge=0, le=500)
     max_gross_pct: Decimal = Field(default=200, ge=1, le=1000)
+    max_order_notional: Decimal = Field(default=2500, gt=0, le=1000000000)
+    max_base_asset_gross_pct: Decimal = Field(default=100, ge=1, le=1000)
     max_daily_loss_pct: Decimal = Field(default=5, ge=".1", le=50)
     rebalance_bars: int = Field(default=24, ge=1, le=1000)
     lookback: int = Field(default=20, ge=2, le=400)
@@ -84,6 +102,8 @@ class PortfolioInput(InputModel):
     carry_buffer_bps: Decimal = Field(default=0, ge=0, le=1000)
     carry_max_age_hours: int = Field(default=0, ge=0, le=168)
     rules_mode: Literal["captured_current", "point_in_time"] = "captured_current"
+    universe_mode: Literal["static", "historical_lifecycle"] = "static"
+    lifecycle_warmup_bars: int = Field(default=2, ge=1, le=400)
     evaluation: Literal["full", "train_test"] = "full"
     train_pct: int = Field(default=70, ge=50, le=85)
     embargo_bars: int = Field(default=1, ge=0, le=400)
@@ -92,6 +112,7 @@ class PortfolioInput(InputModel):
 class PortfolioResearch:
     def __init__(self, runtime):
         self.runtime, self.store = runtime, runtime.store
+        initialize_lifecycle(self.store)
         with self.store.write() as conn:
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS portfolio_runs(id TEXT PRIMARY KEY,source TEXT NOT NULL,status TEXT NOT NULL,config TEXT NOT NULL,manifest TEXT NOT NULL,result TEXT,error TEXT,progress REAL NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)"
@@ -139,22 +160,26 @@ class PortfolioResearch:
             raise PlatformError(
                 "portfolio_inputs", "Every portfolio leg needs a ready, verified data package.", 409
             )
-        if len({(p["source"], p["bar"], p["start"], p["end"]) for p in packages}) != 1 or len(
-            {p["inst_id"] for p in packages}
-        ) != len(packages):
+        lifecycle = config["universe_mode"] == "historical_lifecycle"
+        alignment = {
+            (p["source"], p["bar"]) if lifecycle else (p["source"], p["bar"], p["start"], p["end"])
+            for p in packages
+        }
+        if len(alignment) != 1 or len({p["inst_id"] for p in packages}) != len(packages):
             raise PlatformError(
                 "portfolio_alignment",
                 "Use distinct markets with the same source, bar and exact UTC window.",
                 422,
             )
         version = self.runtime.portfolio_registry.validate_binding(config, packages)
-        start, end = capture_window or (packages[0]["start"], packages[0]["end"])
+        bounds = (
+            (min(p["start"] for p in packages), max(p["end"] for p in packages))
+            if lifecycle
+            else (packages[0]["start"], packages[0]["end"])
+        )
+        start, end = capture_window or bounds
         interval = CATALOG_BARS[packages[0]["bar"]]
-        if (
-            not packages[0]["start"] <= start < end <= packages[0]["end"]
-            or start % interval
-            or end % interval
-        ):
+        if not bounds[0] <= start < end <= bounds[1] or start % interval or end % interval:
             raise PlatformError(
                 "portfolio_window", "The complete warmup and test window must fit every aligned package.", 422
             )
@@ -200,6 +225,20 @@ class PortfolioResearch:
                     "portfolio_spot",
                     "Spot legs require nonnegative weights, long-only signals and leverage one.",
                     422,
+                )
+            if lifecycle:
+                if leg["rule_events"] or config["rules_mode"] != "captured_current":
+                    raise PlatformError(
+                        "lifecycle_rules",
+                        "Historical lifecycle mode uses its own attributed events, not static rule histories.",
+                        422,
+                    )
+                leg["lifecycle_events"] = capture_events(
+                    self.store, package["source"], package["inst_id"], leg["lifecycle_events"], interval, end
+                )
+            elif leg["lifecycle_events"]:
+                raise PlatformError(
+                    "lifecycle_mode", "Lifecycle events require explicit historical_lifecycle mode.", 422
                 )
             events = leg["rule_events"]
             baseline = package["manifest"]["instrument"]
@@ -310,7 +349,34 @@ class PortfolioResearch:
             "config_hash": digest(config),
             "created_by": actor,
             "rules_mode": config["rules_mode"],
+            "execution_contract": config["execution_contract"],
+            "execution_policy": {
+                key: config[key]
+                for key in (
+                    "failure_policy",
+                    "max_residual_pct",
+                    "max_order_notional",
+                    "max_base_asset_gross_pct",
+                    "max_gross_pct",
+                    "max_daily_loss_pct",
+                )
+            },
             "universe_scope": "explicit_research_universe; no survivorship-bias-free listing history is inferred",
+            **(
+                {
+                    "lifecycle": {
+                        "parser_version": PARSER_VERSION,
+                        "source_attribution": "captured bytes and submitter-attributed dates; not independently verified venue history",
+                        "event_hashes": [
+                            digest(e) for leg in config["legs"] for e in leg["lifecycle_events"]
+                        ],
+                        "warmup_bars": config["lifecycle_warmup_bars"],
+                        "coverage": "bounded supplied events for selected markets only; unknown is not tradable",
+                    }
+                }
+                if lifecycle
+                else {}
+            ),
         }
         bundle = {"config": config, "manifest": manifest, "legs": self.capture(config, manifest)}
         return config, manifest, bundle
@@ -561,15 +627,29 @@ class PortfolioResearch:
 
 def simulate_portfolio(config, manifest, legs, progress=lambda _: None):
     if config.get("evaluation", "full") == "train_test":
-        count = len(legs[0]["candles"])
+        lifecycle = config.get("universe_mode") == "historical_lifecycle"
+        count = (
+            (manifest["end"] - manifest["start"]) // CATALOG_BARS[manifest["bar"]]
+            if lifecycle
+            else len(legs[0]["candles"])
+        )
         split = count * config["train_pct"] // 100
         first_test = split + config["embargo_bars"]
         if min(split, count - first_test) < 20:
             raise PlatformError("portfolio_split", "Independent windows need at least 20 bars.", 422)
+        train_end = manifest["start"] + split * CATALOG_BARS[manifest["bar"]]
         train_legs = [
-            leg | {"candles": leg["candles"][:split], "marks": leg["marks"][:split]} for leg in legs
+            leg
+            | {
+                "candles": [c for c in leg["candles"] if c.ts < train_end],
+                "marks": [c for c in leg["marks"] if c.ts < train_end],
+            }
+            if lifecycle
+            else leg | {"candles": leg["candles"][:split], "marks": leg["marks"][:split]}
+            for leg in legs
         ]
-        train = _simulate_portfolio(config, manifest, train_legs, lambda p: progress(p * 0.5))
+        train_manifest = manifest | {"end": train_end} if lifecycle else manifest
+        train = _simulate_portfolio(config, train_manifest, train_legs, lambda p: progress(p * 0.5))
         test = _simulate_portfolio(
             config, manifest, legs, lambda p: progress(0.5 + p * 0.5), first_trading_index=first_test
         )
@@ -579,10 +659,16 @@ def simulate_portfolio(config, manifest, legs, progress=lambda _: None):
                 "parameter_selection": "Fixed pre-declared construction; no optimization or test-score selection.",
                 "capital_policy": "Independent initial capital, flat inventory and reset risk budget in each window.",
                 "warmup": "Pre-test closes initialize indicators and momentum; no pre-test orders or positions are carried.",
-                "train_start": legs[0]["candles"][0].ts,
-                "train_end": legs[0]["candles"][split - 1].ts + CATALOG_BARS[manifest["bar"]],
-                "test_start": legs[0]["candles"][first_test].ts,
-                "test_end": legs[0]["candles"][-1].ts + CATALOG_BARS[manifest["bar"]],
+                "train_start": manifest["start"] if lifecycle else legs[0]["candles"][0].ts,
+                "train_end": train_end
+                if lifecycle
+                else legs[0]["candles"][split - 1].ts + CATALOG_BARS[manifest["bar"]],
+                "test_start": manifest["start"] + first_test * CATALOG_BARS[manifest["bar"]]
+                if lifecycle
+                else legs[0]["candles"][first_test].ts,
+                "test_end": manifest["end"]
+                if lifecycle
+                else legs[0]["candles"][-1].ts + CATALOG_BARS[manifest["bar"]],
                 "embargo_bars": config["embargo_bars"],
                 "train_metrics": train["metrics"],
                 "train_result_hash": digest(train),
@@ -595,14 +681,25 @@ def simulate_portfolio(config, manifest, legs, progress=lambda _: None):
 
 def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, first_trading_index=0):
     source, interval = manifest["source"], CATALOG_BARS[manifest["bar"]]
-    count = len(legs[0]["candles"])
-    if any(
+    lifecycle = config.get("universe_mode") == "historical_lifecycle"
+    count = (manifest["end"] - manifest["start"]) // interval if lifecycle else len(legs[0]["candles"])
+    strict_execution = config.get("execution_contract") == EXECUTION_CONTRACT
+    if config.get("execution_contract") not in (None, EXECUTION_CONTRACT):
+        raise PlatformError("portfolio_execution_contract", "Unsupported portfolio execution contract.", 422)
+    # Missing contract denotes retained pre-upgrade captured inputs. New API inputs
+    # always carry reduce_group_v1; this branch never rewrites stored evidence.
+    execution_status, compensation = "running", None
+    if not lifecycle and any(
         len(leg["candles"]) != count or [c.ts for c in leg["candles"]] != [c.ts for c in leg["marks"]]
         for leg in legs
     ):
         raise PlatformError("portfolio_alignment", "Trade and mark bars must align exactly across legs.", 422)
-    timestamps = [c.ts for c in legs[0]["candles"]]
-    if any([c.ts for c in leg["candles"]] != timestamps for leg in legs):
+    timestamps = (
+        list(range(manifest["start"], manifest["end"], interval))
+        if lifecycle
+        else [c.ts for c in legs[0]["candles"]]
+    )
+    if not lifecycle and any([c.ts for c in leg["candles"]] != timestamps for leg in legs):
         raise PlatformError(
             "portfolio_alignment",
             "All leg timestamps must align; missing bars are never forward-filled.",
@@ -617,6 +714,8 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             capture_contributions=False,
             order_id_factory=lambda: f"order-{next(order_sequence)}",
         )
+        if lifecycle:
+            initialize_lifecycle(book.store)
         initial = D(config["initial_cash"])
         with book.store.write() as conn:
             delta = initial - D(10000)
@@ -638,13 +737,17 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 "fee_bps": config["fee_bps"],
                 "slippage_bps": config["slippage_bps"],
                 "liquidation_fee_bps": config["liquidation_fee_bps"],
-                "max_order_notional": "1000000000",
+                "max_order_notional": config["max_order_notional"] if strict_execution else "1000000000",
                 "max_gross_exposure_pct": config["max_gross_pct"],
                 "max_leverage": 50,
                 "max_daily_loss_pct": config["max_daily_loss_pct"],
             },
             "research-policy",
         )
+        if strict_execution:
+            book.capital.set_policy(
+                source, {"max_base_asset_gross_pct": config["max_base_asset_gross_pct"]}, "research-policy"
+            )
         states = []
         for leg in legs:
             strategy = dict(leg["config"]["strategy"])
@@ -671,11 +774,57 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
         decisions, equity, errors, funding, pending = [], [], [], [], None
         exit_states = {}
         symbol_legs = {leg["instrument"]["inst_id"]: leg for leg in legs}
+        candle_maps = {s: {c.ts: c for c in leg["candles"]} for s, leg in symbol_legs.items()}
+        mark_maps = {s: {c.ts: c for c in leg["marks"]} for s, leg in symbol_legs.items()}
+        lifecycle_rows, lifecycle_applications, lifecycle_issues = [], [], []
+        lifecycle_incomplete = False
+        histories = {s: [] for s in symbol_legs}
+        processed_events = set()
+        current_eligibility = {}
+        blocked_symbols = set()
+        history_epochs = {}
+
+        def bar(leg, index, mark=False):
+            if not lifecycle:
+                return leg["marks" if mark else "candles"][index]
+            symbol = leg["instrument"]["inst_id"]
+            return (mark_maps if mark else candle_maps)[symbol].get(timestamps[index])
+
+        def lifecycle_state(ts):
+            return {
+                s: eligibility(
+                    leg["config"].get("lifecycle_events", []),
+                    ts,
+                    candle_maps[s],
+                    interval,
+                    config["lifecycle_warmup_bars"],
+                )
+                for s, leg in symbol_legs.items()
+            }
+
+        def stop_lifecycle(code, symbol, **evidence):
+            nonlocal lifecycle_incomplete, pending
+            lifecycle_incomplete, pending = True, None
+            blocked_symbols.add(symbol)
+            issue = {"ts": clock[0], "inst_id": symbol, "code": code, **evidence}
+            if issue not in lifecycle_issues:
+                lifecycle_issues.append(issue)
 
         def snapshots(index, phase="open", timestamp=None):
             output = {}
             for leg in legs:
                 instrument, tiers = leg["instrument"], leg["tiers"]
+                symbol = instrument["inst_id"]
+                if lifecycle:
+                    info = current_eligibility[symbol]
+                    if (
+                        symbol in blocked_symbols
+                        or info["instrument"] is None
+                        or info["state"] in {"unknown", "delisted"}
+                    ):
+                        continue
+                    instrument, tiers = dict(info["instrument"]), info["margin_tiers"]
+
                 eligible = [
                     event
                     for event in leg["config"]["rule_events"]
@@ -683,7 +832,9 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 ]
                 if eligible:
                     instrument, tiers = eligible[-1]["instrument"], eligible[-1]["margin_tiers"]
-                candle, mark = leg["candles"][index], leg["marks"][index]
+                candle, mark = bar(leg, index), bar(leg, index, True)
+                if candle is None or mark is None:
+                    continue
                 price, mark_price = getattr(candle, phase), getattr(mark, phase)
                 output[instrument["inst_id"]] = {
                     "source": source,
@@ -699,12 +850,18 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 }
             return output
 
-        def submit(symbol, quantity, reduce, quotes, key, liquidation=False):
+        def submit(symbol, quantity, reduce, quotes, key, liquidation=False, *, propagate=False):
             if not quantity:
                 return
             leg = symbol_legs[symbol]
             try:
-                book.submit(
+                if lifecycle and (symbol in blocked_symbols or not current_eligibility[symbol]["tradable"]):
+                    raise PlatformError(
+                        "lifecycle_not_tradable",
+                        "Lifecycle evidence blocks execution in this market at the current boundary.",
+                        409,
+                    )
+                return book.submit(
                     {
                         "source": source,
                         "inst_id": symbol,
@@ -724,6 +881,8 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 errors.append(
                     {"ts": clock[0], "inst_id": symbol, "key": key, "code": exc.code, "message": exc.message}
                 )
+                if propagate:
+                    raise
 
         def liquidate(quotes, phase):
             account = book.account(source, quotes)
@@ -739,6 +898,9 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                     D(position["margin"]) + D(position["unrealized_pnl"])
                     <= D(position["maintenance_margin"]) + allowance
                 ):
+                    if lifecycle and not current_eligibility[position["inst_id"]]["tradable"]:
+                        stop_lifecycle("lifecycle_liquidation_unexecutable", position["inst_id"])
+                        continue
                     submit(
                         position["inst_id"],
                         -D(position["quantity"]),
@@ -751,11 +913,97 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
         for index, ts in enumerate(timestamps):
             if index % 50 == 0:
                 progress((index + 1) / count * 0.95)
+            clock[0] = ts
+            if lifecycle:
+                current_eligibility = lifecycle_state(ts)
+                for symbol, info in current_eligibility.items():
+                    if ts not in candle_maps[symbol] or ts not in mark_maps[symbol]:
+                        info.update(tradable=False, reason="missing_price_bar")
+                    epoch = info["eligible_since"]
+                    if epoch != history_epochs.get(symbol):
+                        position_index = list(symbol_legs).index(symbol)
+                        states[position_index] = _DecisionState(states[position_index].config)
+                        histories[symbol] = []
+                        history_epochs[symbol] = epoch
+                for symbol, leg in symbol_legs.items():
+                    for event in leg["config"].get("lifecycle_events", []):
+                        event_hash = digest(event)
+                        if (
+                            event_hash in processed_events
+                            or event["effective_ts"] > ts
+                            or event["known_at"] > ts
+                        ):
+                            continue
+                        if index < first_trading_index:
+                            processed_events.add(event_hash)
+                            continue
+                        prior_rules = [
+                            e
+                            for e in leg["config"].get("lifecycle_events", [])
+                            if e["effective_ts"] < event["effective_ts"]
+                            and e["known_at"] <= ts
+                            and e.get("instrument")
+                        ]
+                        if event["kind"] in {"listing", "resume", "rules"} and prior_rules:
+                            old_rules = max(prior_rules, key=lambda e: e["effective_ts"])["instrument"]
+                            if not compatible_units(old_rules, event["instrument"]) or base_size(
+                                old_rules
+                            ) != base_size(event["instrument"]):
+                                stop_lifecycle("lifecycle_unit_event_required", symbol, event_hash=event_hash)
+                        if event["kind"] in {"cash_settlement", "unit_conversion"}:
+                            try:
+                                if event["known_at"] > event["effective_ts"]:
+                                    raise PlatformError(
+                                        "lifecycle_late_inventory_fact",
+                                        "A late inventory fact cannot retrospectively mutate intervening fills and funding.",
+                                        409,
+                                    )
+                                applied = apply_inventory_event(book, source, event)
+                                lifecycle_applications.append(applied)
+                            except PlatformError as exc:
+                                stop_lifecycle(exc.code, symbol, event_hash=event_hash, message=exc.message)
+                        processed_events.add(event_hash)
+                for position in book.positions(source):
+                    symbol = position["inst_id"]
+                    info = current_eligibility[symbol]
+                    old = json.loads(position["metadata"])
+                    new = info["instrument"]
+                    if (
+                        info["state"] in {"unknown", "delisted"}
+                        or bar(symbol_legs[symbol], index) is None
+                        or bar(symbol_legs[symbol], index, True) is None
+                    ):
+                        stop_lifecycle(
+                            "lifecycle_inventory_unvalued",
+                            symbol,
+                            state=info["state"],
+                            quantity=position["quantity"],
+                        )
+                    elif new is not None and (
+                        not compatible_units(old, new) or base_size(old) != base_size(new)
+                    ):
+                        stop_lifecycle(
+                            "lifecycle_unconverted_inventory", symbol, quantity=position["quantity"]
+                        )
+                lifecycle_rows.append(
+                    {
+                        "ts": ts,
+                        "markets": {
+                            s: {k: v for k, v in info.items() if k not in {"instrument", "margin_tiers"}}
+                            for s, info in current_eligibility.items()
+                        },
+                    }
+                )
             if index < first_trading_index:
                 for state, leg in zip(states, legs, strict=True):
-                    state.on_bar(leg["candles"][index])
+                    candle = bar(leg, index)
+                    symbol = leg["instrument"]["inst_id"]
+                    if candle is not None and (
+                        not lifecycle or current_eligibility[symbol]["state"] == "eligible"
+                    ):
+                        state.on_bar(candle)
+                        histories[symbol].append(candle)
                 continue
-            clock[0] = ts
             quotes = snapshots(index)
             # Realized funding at a boundary applies to pre-existing inventory.
             events = sorted(
@@ -766,6 +1014,10 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             def settle(event, quotes=quotes):
                 clock[0] = int(event["ts"])
                 exact = {key: dict(value, ts=clock[0], mark_ts=clock[0]) for key, value in quotes.items()}
+                if event["inst_id"] not in exact:
+                    if any(p["inst_id"] == event["inst_id"] for p in book.positions(source)):
+                        stop_lifecycle("lifecycle_funding_mark_unavailable", event["inst_id"])
+                    return
                 exact[event["inst_id"]]["mark"] = D(str(event["mark_price"]))
                 funding.extend(book.settle_funding(source, event["inst_id"], [event], exact))
                 liquidate(exact, "funding")
@@ -776,14 +1028,42 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             clock[0] = ts
             liquidate(quotes, "open")
             book.observe(source, quotes)
-            if pending is not None:
+            if compensation is not None and not lifecycle_incomplete:
+                batch, failed_decision = compensation
+                resume_compensation(
+                    batch,
+                    quotes,
+                    lambda: {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)},
+                    lambda s, q, reduce, key, quotes=quotes: submit(
+                        s, q, reduce, quotes, key, propagate=True
+                    ),
+                )
+                failed_decision.update(
+                    status=batch["status"],
+                    residuals=batch["residuals"],
+                    quantity_residuals=batch["residuals"]["quantities"],
+                )
+                if batch["status"] == "compensated":
+                    execution_status, compensation = "failed", None
+            if pending is not None and not lifecycle_incomplete:
                 weights, decision = pending
                 capital = (
                     D(book.account(source, quotes)["equity"] or 0)
                     * D(str(config.get("capital_pct", 100)))
                     / 100
                 )
-                targets = target_quantities(weights, capital, quotes)
+                targets = target_quantities(
+                    {s: w for s, w in weights.items() if s in quotes}, capital, quotes
+                )
+                if lifecycle:
+                    positions_now = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
+                    for symbol, info in current_eligibility.items():
+                        if symbol in quotes and (
+                            not info["tradable"]
+                            or not decision.get("eligibility", {}).get(symbol, {}).get("tradable", True)
+                        ):
+                            targets[symbol] = positions_now.get(symbol, D(0))
+
                 if decision.get("exit_only"):
                     current_positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
                     targets = {
@@ -792,39 +1072,76 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                         else current_positions.get(symbol, D(0))
                         for symbol in targets
                     }
-                # Shared domain planning is also used by the managed controller.
-                positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
-                reductions = reduction_plan(targets, positions, quotes)
-                for symbol, quantity in reductions.quantities.items():
-                    submit(symbol, quantity, True, quotes, f"rebalance:{index}:reduce:{symbol}")
-                positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
-                plan = addition_plan(
-                    targets,
-                    positions,
-                    quotes,
-                    book.account(source, quotes)["available_cash"],
-                    {s: leg["config"]["leverage"] for s, leg in symbol_legs.items()},
-                    config["fee_bps"],
-                    config["slippage_bps"],
-                )
-                scale = plan.cash_scale
-                for symbol, quantity in plan.quantities.items():
-                    submit(symbol, quantity, False, quotes, f"rebalance:{index}:add:{symbol}")
-                errors.extend(
-                    row | {"ts": clock[0], "key": f"rebalance:{index}:add:{row['inst_id']}"}
-                    for row in [*reductions.skipped, *plan.skipped]
-                )
-                positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
-                residual = {
-                    symbol: str(target - positions.get(symbol, D(0))) for symbol, target in targets.items()
-                }
-                decision.update(
-                    executed_at=ts,
-                    cash_scale=str(scale),
-                    quantity_targets={s: str(q) for s, q in targets.items()},
-                    quantity_residuals=residual,
-                    rebalance_skips=[*reductions.skipped, *plan.skipped],
-                )
+                if strict_execution:
+                    decision["execution"] = batch = execute_batch(
+                        targets,
+                        capital,
+                        quotes,
+                        config,
+                        {s: leg["config"]["leverage"] for s, leg in symbol_legs.items()},
+                        lambda: {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)},
+                        lambda quotes=quotes: book.account(source, quotes),
+                        lambda s, q, reduce, key, quotes=quotes: submit(
+                            s, q, reduce, quotes, key, propagate=True
+                        ),
+                        f"rebalance:{index}",
+                    )
+                    decision.update(
+                        executed_at=ts,
+                        cash_scale=batch["cash_scale"],
+                        quantity_targets=batch["targets"],
+                        quantity_residuals=batch["residuals"]["quantities"],
+                        residuals=batch["residuals"],
+                        rebalance_skips=batch["skipped"],
+                        status=batch["status"],
+                    )
+                    errors.extend(
+                        row | {"ts": clock[0], "key": f"rebalance:{index}:add:{row['inst_id']}"}
+                        for row in batch["skipped"]
+                    )
+                    if batch.get("failure"):
+                        if (
+                            batch["failure"]["phase"] not in {"reduce", "add"}
+                            or batch["failure"]["code"] == "portfolio_execution_failure"
+                        ):
+                            errors.append(batch["failure"] | {"ts": clock[0], "key": f"rebalance:{index}"})
+                        execution_status = "failed" if batch["status"] == "compensated" else "compensating"
+                        compensation = (batch, decision) if batch["status"] == "compensating" else None
+                else:
+                    # Shared domain planning is also used by the managed controller.
+                    positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
+                    reductions = reduction_plan(targets, positions, quotes)
+                    for symbol, quantity in reductions.quantities.items():
+                        submit(symbol, quantity, True, quotes, f"rebalance:{index}:reduce:{symbol}")
+                    positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
+                    plan = addition_plan(
+                        targets,
+                        positions,
+                        quotes,
+                        book.account(source, quotes)["available_cash"],
+                        {s: leg["config"]["leverage"] for s, leg in symbol_legs.items()},
+                        config["fee_bps"],
+                        config["slippage_bps"],
+                    )
+                    scale = plan.cash_scale
+                    for symbol, quantity in plan.quantities.items():
+                        submit(symbol, quantity, False, quotes, f"rebalance:{index}:add:{symbol}")
+                    errors.extend(
+                        row | {"ts": clock[0], "key": f"rebalance:{index}:add:{row['inst_id']}"}
+                        for row in [*reductions.skipped, *plan.skipped]
+                    )
+                    positions = {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)}
+                    residual = {
+                        symbol: str(target - positions.get(symbol, D(0)))
+                        for symbol, target in targets.items()
+                    }
+                    decision.update(
+                        executed_at=ts,
+                        cash_scale=str(scale),
+                        quantity_targets={s: str(q) for s, q in targets.items()},
+                        quantity_residuals=residual,
+                        rebalance_skips=[*reductions.skipped, *plan.skipped],
+                    )
             pending = None
             for event in events:
                 if int(event["ts"]) > ts:
@@ -833,16 +1150,28 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             clock[0] = ts + interval
             adverse = snapshots(index, "close")
             for position in book.positions(source):
-                if symbol_legs[position["inst_id"]]["instrument"]["inst_type"] == "SWAP":
+                if (
+                    symbol_legs[position["inst_id"]]["instrument"]["inst_type"] == "SWAP"
+                    and position["inst_id"] in adverse
+                ):
                     symbol = position["inst_id"]
                     leg = symbol_legs[symbol]
                     adverse[symbol]["mark"] = (
-                        leg["marks"][index].low if D(position["quantity"]) > 0 else leg["marks"][index].high
+                        bar(leg, index, True).low
+                        if D(position["quantity"]) > 0
+                        else bar(leg, index, True).high
                     )
                     adverse[symbol]["bid"] = adverse[symbol]["ask"] = adverse[symbol]["mark"]
             liquidate(adverse, "adverse_mark")
             closing = snapshots(index, "close")
             account = book.observe(source, closing)
+            if lifecycle and (lifecycle_incomplete or account["equity"] is None):
+                lifecycle_incomplete = True
+                account = account | {
+                    "equity": None,
+                    "valuation_status": "unavailable",
+                    "unrealized_pnl": None,
+                }
             equity.append(
                 {
                     "ts": clock[0],
@@ -864,14 +1193,27 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             )
             signals = []
             for state, leg in zip(states, legs, strict=True):
-                signal, features = state.on_bar(leg["candles"][index])
-                signals.append((signal, features))
+                symbol, candle = leg["instrument"]["inst_id"], bar(leg, index)
+                if lifecycle and (candle is None or current_eligibility[symbol]["state"] != "eligible"):
+                    signals.append((None, {"lifecycle": current_eligibility[symbol]["reason"]}))
+                    histories[symbol] = []
+                else:
+                    signal, features = state.on_bar(candle)
+                    histories[symbol].append(candle)
+                    histories[symbol] = histories[symbol][
+                        -max(config["lookback"], config["risk_window"], 400) - 1 :
+                    ]
+                    signals.append((signal, features))
             risk_exits = {}
             positions = {p["inst_id"]: p for p in book.positions(source)}
             for leg, state in zip(legs, states, strict=True):
                 symbol = leg["instrument"]["inst_id"]
                 position = positions.get(symbol)
-                if not position:
+                if (
+                    not position
+                    or lifecycle
+                    and (not current_eligibility[symbol]["tradable"] or bar(leg, index) is None)
+                ):
                     exit_states.pop(symbol, None)
                     continue
                 meta = json.loads(position["metadata"])
@@ -885,7 +1227,7 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                     state.config.strategy,
                     D(position["quantity"]),
                     D(position["entry_price"]),
-                    leg["candles"][index].close,
+                    bar(leg, index).close,
                     peak,
                     bars,
                 )
@@ -893,7 +1235,14 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 if reason:
                     risk_exits[symbol] = reason
             rebalance_due = (index - first_trading_index) % config["rebalance_bars"] == 0
-            if index == count - 1 or not rebalance_due and not risk_exits:
+            if (
+                lifecycle_incomplete
+                or account["equity"] is None
+                or execution_status != "running"
+                or index == count - 1
+                or not rebalance_due
+                and not risk_exits
+            ):
                 continue
             past = (
                 [e for e in legs[1]["funding"] if int(e["ts"]) < ts]
@@ -906,15 +1255,33 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 else None
             )
             risk_evidence = None
+            selected_legs = [
+                leg
+                for leg in legs
+                if not lifecycle or current_eligibility[leg["instrument"]["inst_id"]]["tradable"]
+            ]
             if config["mode"] == "risk_momentum":
+                selected_legs = [
+                    leg
+                    for leg in selected_legs
+                    if not lifecycle
+                    or len(histories[leg["instrument"]["inst_id"]])
+                    > max(config["lookback"], config["risk_window"])
+                ]
+                if not selected_legs:
+                    continue
                 risk_evidence = risk_momentum_weights(
                     config,
-                    [leg["config"] | {"inst_id": leg["instrument"]["inst_id"]} for leg in legs],
+                    [leg["config"] | {"inst_id": leg["instrument"]["inst_id"]} for leg in selected_legs],
                     {
-                        leg["instrument"]["inst_id"]: leg["candles"][
+                        leg["instrument"]["inst_id"]: histories[leg["instrument"]["inst_id"]][
+                            -max(config["lookback"], config["risk_window"]) - 1 :
+                        ]
+                        if lifecycle
+                        else leg["candles"][
                             max(0, index - max(config["lookback"], config["risk_window"])) : index + 1
                         ]
-                        for leg in legs
+                        for leg in selected_legs
                     },
                     ts,
                     interval,
@@ -928,16 +1295,26 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
                 },
                 {p["inst_id"]: D(p["quantity"]) for p in book.positions(source)},
                 {
-                    leg["instrument"]["inst_id"]: leg["candles"][index].close
-                    / leg["candles"][index - config["lookback"]].close
+                    leg["instrument"]["inst_id"]: histories[leg["instrument"]["inst_id"]][-1].close
+                    / histories[leg["instrument"]["inst_id"]][-1 - config["lookback"]].close
                     - 1
-                    for leg in legs
+                    for leg in selected_legs
+                    if len(histories[leg["instrument"]["inst_id"]]) > config["lookback"]
                 }
                 if index >= config["lookback"]
                 else {},
                 carry_evidence["mean_rate"] if carry_evidence and carry_evidence["allowed"] else None,
                 risk_evidence=risk_evidence,
             )
+            if lifecycle:
+                weights = {s: weights.get(s, D(0)) for s in symbol_legs}
+                for symbol in weights:
+                    if not current_eligibility[symbol]["tradable"]:
+                        weights[symbol] = D(0)
+                if config["mode"] == "funding_carry" and any(
+                    not info["tradable"] for info in current_eligibility.values()
+                ):
+                    weights = {s: D(0) for s in weights}
             if config["mode"] == "funding_carry" and risk_exits:
                 risk_exits = {leg["instrument"]["inst_id"]: "carry_group_exit" for leg in legs}
             caps = {
@@ -955,7 +1332,10 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             )
             if risk_evidence:
                 weights, risk_evidence = constrain_risk_weights(config, weights, risk_evidence)
+                if lifecycle:
+                    weights = {s: weights.get(s, D(0)) for s in symbol_legs}
             decision = {
+                **({"eligibility": lifecycle_rows[-1]["markets"]} if lifecycle else {}),
                 "ts": clock[0],
                 "bar_ts": ts,
                 "weights": {s: str(w) for s, w in weights.items()},
@@ -975,6 +1355,8 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             if index % 50 == 0:
                 progress((index + 1) / count * 0.95)
         final = book.account(source, closing)
+        if lifecycle_incomplete:
+            final = final | {"equity": None, "valuation_status": "unavailable", "unrealized_pnl": None}
         with book.store.read() as conn:
             rows = conn.execute(
                 "SELECT id,key,body FROM pro_orders WHERE source=? ORDER BY created_at,key", (source,)
@@ -996,21 +1378,53 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             raise RuntimeError("Portfolio native-asset journal does not balance")
         peak, drawdown = initial, D(0)
         for point in equity:
+            if point["equity"] is None:
+                continue
             value = D(point["equity"])
             peak = max(peak, value)
             drawdown = max(drawdown, (peak - value) / peak)
-        return {
+        result = {
             "schema_version": 1,
             "mode": config["mode"],
+            **(
+                {
+                    "execution_contract": EXECUTION_CONTRACT,
+                    "execution_policy": {
+                        k: config[k]
+                        for k in (
+                            "max_order_notional",
+                            "max_base_asset_gross_pct",
+                            "max_gross_pct",
+                            "max_daily_loss_pct",
+                        )
+                    },
+                    "failure_policy": config["failure_policy"],
+                    "max_residual_pct": config["max_residual_pct"],
+                    "execution_status": execution_status,
+                    "economic_state": "incomplete_lifecycle"
+                    if lifecycle_incomplete
+                    else "incomplete_compensation"
+                    if execution_status == "compensating"
+                    else "marked_inventory",
+                }
+                if strict_execution
+                else {}
+            ),
             "metrics": {
                 "initial_cash": str(initial),
                 "final_equity": final["equity"],
-                "total_return_pct": str((D(final["equity"]) / initial - 1) * 100),
-                "max_drawdown_pct": str(drawdown * 100),
+                "total_return_pct": str((D(final["equity"]) / initial - 1) * 100)
+                if final["equity"] is not None
+                else None,
+                "max_drawdown_pct": str(drawdown * 100) if not lifecycle_incomplete else None,
                 "fees_paid": final["fees_paid"],
                 "funding_paid": final["funding_paid"],
                 "insurance_debt": final["insurance_debt"],
-                **realized_portfolio_metrics(equity, orders, initial, interval),
+                **(
+                    realized_portfolio_metrics(equity, orders, initial, interval)
+                    if not lifecycle_incomplete
+                    else {"risk_metrics_status": "unavailable_incomplete_economics"}
+                ),
                 "orders": len(orders),
                 "execution_rejections": len(errors),
             },
@@ -1024,7 +1438,11 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             "assumptions": {
                 "capital": "one shared SimulationBook, one USDT cash balance, native-asset double entry",
                 "weights": "signed notional / pre-rebalance equity; reductions first, common cash scaling, lot rounding",
-                "fills": "sequential next-open market fills; no atomic multi-leg guarantee; residuals retained",
+                "fills": (
+                    "sequential next-open market fills; shared reduce_group_v1 preflight, residual limit and compensated failure; actual costs retained"
+                    if strict_execution
+                    else "sequential next-open market fills; no atomic multi-leg guarantee; residuals retained"
+                ),
                 "spread": "zero synthetic spread; configured adverse slippage and fees",
                 "funding": "captured realized settlement marks; lagged known settlements for carry signals",
                 "intrabar": "boundary funding before orders; intrabar funding before adverse mark; gap/adverse full isolated liquidation",
@@ -1034,3 +1452,26 @@ def _simulate_portfolio(config, manifest, legs, progress=lambda _: None, *, firs
             },
             "input_hash": manifest.get("input_hash") or digest({"config": config, "manifest": manifest}),
         }
+
+        if lifecycle:
+            result["lifecycle"] = {
+                "parser_version": PARSER_VERSION,
+                "eligibility": lifecycle_rows,
+                "applications": lifecycle_applications,
+                "issues": lifecycle_issues,
+                "status": "incomplete" if lifecycle_incomplete else "complete_within_supplied_scope",
+                "source_hashes": sorted(
+                    {
+                        e["source"]["content_hash"]
+                        for leg in legs
+                        for e in leg["config"].get("lifecycle_events", [])
+                    }
+                ),
+                "scope": "Attributed bounded events for selected markets; source byte hashes do not independently authenticate historical dates or comprehensive venue membership.",
+                "conversion_scope": "Same inst_id linear contract units preserving signed base exposure; spot redenomination and symbol renames unsupported.",
+                "forward_support": "Historical lifecycle accounting is not implemented by the managed current-market controller; a release requires explicit lifecycle-scope review.",
+            }
+        from .research_economics import explain_portfolio
+
+        result["economics"] = explain_portfolio(result, config, legs, manifest)
+        return result

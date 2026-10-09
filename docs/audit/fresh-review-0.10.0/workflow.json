@@ -1,0 +1,14 @@
+{
+  "group_id": "c24493a0e2ac49a98cfcf35e7d3e1b81",
+  "source": "example",
+  "batch_status": "completed",
+  "actual_order_count": 4,
+  "entry_positions": 2,
+  "entry_contributions_reconciled": true,
+  "frozen_window_replay_verified": true,
+  "frozen_acceptance_passed": false,
+  "stop_preserved_promise": "retained",
+  "terminal_promise": "released",
+  "terminal_positions": 0,
+  "terminal_contributions_reconciled": true
+}

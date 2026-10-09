@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, CircleAlert, Clock3, RefreshCw } from 'lucide-react';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
+import DeskAttention from '../components/DeskAttention';
+import { deskIssues } from '../lib/deskAttention';
 import type { Page } from '../lib/config';
 import { date, number, percent, price, quantityText, tone } from '../lib/format';
 import { useNow } from '../lib/hooks';
@@ -63,12 +65,17 @@ export default function Overview({
     queryFn: () => proApi.deployments(source),
     refetchInterval: 5000,
   });
+  const groups = useQuery({
+    queryKey: ['managed-portfolios', source],
+    queryFn: () => proApi.managedPortfolios(source),
+    refetchInterval: 5000,
+  });
   const risk = useQuery({
     queryKey: ['pro-risk', source],
     queryFn: () => proApi.risk(source),
     refetchInterval: 5000,
   });
-  const ops = useQuery({ queryKey: ['pro-ops'], queryFn: proApi.ops, refetchInterval: 10000 });
+  const ops = useQuery({ queryKey: ['pro-ops'], queryFn: proApi.ops, refetchInterval: 5000 });
   const packages = useQuery({
     queryKey: ['pro-packages', source],
     queryFn: () => proApi.packages(source),
@@ -85,6 +92,7 @@ export default function Overview({
       'portfolio-analytics',
       'pro-orders',
       'pro-deployments',
+      'managed-portfolios',
       'pro-risk',
       'pro-ops',
       'pro-packages',
@@ -104,6 +112,17 @@ export default function Overview({
   const activeJobs = jobs.filter((j) => ['queued', 'running', 'preparing'].includes(j.status));
   const health = ops.data?.health;
   const healthStatus = typeof health === 'object' ? health.status : health;
+  const currentGroups = groups.data?.items.filter((group) => group.source === source) ?? [];
+  const issues = deskIssues(source, currentGroups, ops.data?.incidents ?? [], strategies);
+  const groupMembers = new Set(
+    currentGroups.flatMap((group) => group.manifest?.legs.map((leg) => leg.deployment_id) ?? []),
+  );
+  const independentStrategies = strategies.filter(
+    (strategy) => !strategy.group_id && !groupMembers.has(strategy.id),
+  );
+  const managedMembers = strategies.filter(
+    (strategy) => !!strategy.group_id || groupMembers.has(strategy.id),
+  );
   const alerts: Alert[] = [];
   if (risk.data?.halted)
     alerts.push({
@@ -121,8 +140,18 @@ export default function Overview({
       page: 'execution',
       severity: 'warning',
     });
-  const strategyErrors = strategies.filter(
-    (s) => s.last_error || ['failed', 'blocked', 'error'].includes(s.status),
+  if (a?.economic_status === 'funding_pending')
+    alerts.push({
+      key: 'funding',
+      title: t('Funding settlement remains pending'),
+      detail: t('Historical liability remains unsettled; account equity is provisional.'),
+      page: 'execution',
+      view: 'ledger',
+      severity: 'bad',
+    });
+  const strategyErrors = independentStrategies.filter(
+    (s) =>
+      s.status !== 'stopped' && (s.last_error || ['failed', 'blocked', 'error'].includes(s.status)),
   );
   if (strategyErrors.length)
     alerts.push({
@@ -161,10 +190,26 @@ export default function Overview({
       page: 'risk',
       severity: 'warning',
     });
-  const errors = [account, analytics, orders, deployments, risk, ops, packages, runs].filter(
-    (q) => q.isError,
+  const economicAttention = !!(
+    issues.length ||
+    risk.data?.halted ||
+    strategyErrors.length ||
+    a?.economic_status === 'funding_pending' ||
+    (a && !['fresh', 'example'].includes(a.valuation_status ?? '')) ||
+    (analytics.data && analytics.data.status !== 'available')
   );
-  const ready = [account, analytics, orders, deployments, risk, ops, packages, runs].every(
+  const errors = [
+    account,
+    analytics,
+    orders,
+    deployments,
+    groups,
+    risk,
+    ops,
+    packages,
+    runs,
+  ].filter((q) => q.isError);
+  const ready = [account, analytics, orders, deployments, groups, risk, ops, packages, runs].every(
     (q) => q.isSuccess,
   );
   return (
@@ -202,6 +247,37 @@ export default function Overview({
           </Status>
         )}
       </div>
+      <div className="overview-economic-state">
+        <span>{t('Trading conditions')}</span>
+        <Status type={economicAttention ? 'bad' : ready ? 'neutral' : 'warning'}>
+          {t(
+            economicAttention
+              ? 'Action required'
+              : ready
+                ? 'No known unresolved conditions'
+                : 'Monitoring incomplete',
+          )}
+        </Status>
+        <small>{t('Service health does not confirm trading risk is clear.')}</small>
+      </div>
+      <DeskAttention issues={issues} source={source} now={now} navigate={navigate} />
+      {a?.economic_status === 'funding_pending' && (
+        <div className="overview-funding-notice">
+          <CircleAlert size={15} />
+          <div>
+            <strong>{t('Funding settlement remains pending')}</strong>
+            <p>
+              {t(
+                'Account equity remains provisional until the historical funding obligation is settled. Inspect the ledger and protective exits before adding risk.',
+              )}
+            </p>
+          </div>
+          <button className="text-button" onClick={() => navigate('execution', 'ledger')}>
+            {t('Inspect funding & ledger')}
+            <ArrowRight size={13} />
+          </button>
+        </div>
+      )}
       <div className="pro-metric-strip trader-metrics">
         <Metric label="Account equity" value={number(a?.equity)} unit="USDT" />
         <Metric label="Available cash" value={number(a?.available_cash)} unit="USDT" />
@@ -475,7 +551,7 @@ export default function Overview({
           <section className="pro-panel attention-panel">
             <div className="section-heading">
               <h2>{t('Attention queue')}</h2>
-              <span className="subtle-tag">{ready ? alerts.length : '—'}</span>
+              <span className="subtle-tag">{ready ? alerts.length + issues.length : '—'}</span>
             </div>
             {alerts.length ? (
               <div className="attention-list">
@@ -496,7 +572,11 @@ export default function Overview({
               </div>
             ) : ready ? (
               <p className="quiet-state">
-                {t('Loaded services report no blocked work, pending orders or strategy errors.')}
+                {t(
+                  issues.length
+                    ? 'Unresolved conditions are listed above with their current inventory and response links.'
+                    : 'No known unresolved conditions in the loaded snapshots.',
+                )}
               </p>
             ) : (
               <p className="quiet-state">
@@ -506,11 +586,37 @@ export default function Overview({
           </section>
           <section className="pro-panel overview-strategies">
             <div className="section-heading">
-              <h2>{t('Strategy health')}</h2>
+              <h2>{t('Deployment health')}</h2>
               <button className="text-button" onClick={() => navigate('execution', 'strategies')}>
                 <ArrowRight size={14} />
                 <span className="sr-only">{t('Open strategies')}</span>
               </button>
+            </div>
+            <div className="desk-status-row">
+              <span>{t('Active portfolio groups')}</span>
+              <strong>
+                {groups.isSuccess
+                  ? currentGroups.filter((group) =>
+                      ['running', 'compensating'].includes(group.status),
+                    ).length
+                  : '—'}
+              </strong>
+            </div>
+            <div className="desk-status-row">
+              <span>{t('Active managed legs')}</span>
+              <strong>
+                {deployments.isSuccess
+                  ? managedMembers.filter((strategy) => strategy.status === 'running').length
+                  : '—'}
+              </strong>
+            </div>
+            <div className="desk-status-row">
+              <span>{t('Active standalone strategies')}</span>
+              <strong>
+                {deployments.isSuccess
+                  ? independentStrategies.filter((strategy) => strategy.status === 'running').length
+                  : '—'}
+              </strong>
             </div>
             {deployments.isPending ? (
               <Loading />
@@ -518,18 +624,34 @@ export default function Overview({
               <ErrorBox error={deployments.error} />
             ) : strategies.length ? (
               <div className="strategy-health-list">
-                {strategies.slice(0, 6).map((s) => (
-                  <div key={s.id}>
-                    <div>
-                      <strong>{s.inst_id}</strong>
-                      <Status type={s.last_error ? 'bad' : 'neutral'}>{s.status}</Status>
+                {strategies.slice(0, 6).map((s) => {
+                  const owner = currentGroups.find(
+                    (group) =>
+                      group.id === s.group_id ||
+                      group.manifest?.legs.some((leg) => leg.deployment_id === s.id),
+                  );
+                  const ownerIssue =
+                    !!owner && issues.some((issue) => issue.group?.id === owner.id);
+                  return (
+                    <div key={s.id}>
+                      <div>
+                        <strong>{s.inst_id}</strong>
+                        <Status type={ownerIssue ? 'warning' : s.last_error ? 'bad' : 'neutral'}>
+                          {ownerIssue ? t('Group requires attention') : s.status}
+                        </Status>
+                      </div>
+                      {owner && (
+                        <small>
+                          {t('Portfolio group')}: {owner.manifest?.name ?? owner.id.slice(0, 8)}
+                        </small>
+                      )}
+                      <small>
+                        {t('Last evaluation')}: {date(s.last_bar)}
+                      </small>
+                      {s.last_error && <p className="inline-warning">{s.last_error}</p>}
                     </div>
-                    <small>
-                      {t('Last evaluation')}: {date(s.last_bar)}
-                    </small>
-                    {s.last_error && <p className="inline-warning">{s.last_error}</p>}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="quiet-state">{t('No strategy is running for this source.')}</p>
@@ -538,10 +660,23 @@ export default function Overview({
           <section className="pro-panel overview-work">
             <div className="section-heading">
               <h2>{t('Work & service')}</h2>
-              <Status type={healthStatus === 'healthy' ? 'good' : 'neutral'}>
-                {String(healthStatus ?? 'unavailable')}
-              </Status>
+              <span className="service-health-state">
+                {t('Service health')}:{' '}
+                <Status
+                  type={['healthy', 'ok'].includes(String(healthStatus)) ? 'neutral' : 'warning'}
+                >
+                  {t(String(healthStatus ?? 'unavailable'))}
+                </Status>
+              </span>
             </div>
+            {ops.data?.economic_health && (
+              <div className="desk-status-row">
+                <span>{t('Workspace economic monitor')}</span>
+                <Status type={ops.data.economic_health.status === 'ok' ? 'neutral' : 'warning'}>
+                  {t(String(ops.data.economic_health.status ?? 'unavailable'))}
+                </Status>
+              </div>
+            )}
             <div className="desk-status-row">
               <span>{t('Active jobs')}</span>
               <strong>{ops.isSuccess ? activeJobs.length : '—'}</strong>

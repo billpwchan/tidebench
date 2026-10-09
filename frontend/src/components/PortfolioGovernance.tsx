@@ -10,6 +10,7 @@ import { canResearch } from '../lib/permissions';
 import { useSession } from './AuthGate';
 import { DataTable, JsonDetails, RecordGrid } from './ProWorkspace';
 import { Empty, ErrorBox, Field, Loading, PageHeading, Status } from './workspace';
+import { CapturedLifecycleSources, LifecycleImport, LifecycleScenario } from './LifecycleEvidence';
 
 const utc = (ts: number) => new Date(ts).toISOString().slice(0, 16);
 const intervals: Record<string, number> = {
@@ -38,12 +39,21 @@ function FrozenPlan({ holdout }: { holdout: PortfolioHoldout }) {
           'Final window start': date(p.test_start, true),
           'Final window end': date(p.test_end, true),
           warmup_bars: p.warmup_bars,
+          'Market history':
+            p.test_config.universe_mode === 'historical_lifecycle'
+              ? t('Attributed historical lifecycle')
+              : t('Static selected markets'),
+          'Per-market listing / resume warmup': p.test_config.lifecycle_warmup_bars ?? 2,
           initial_cash: p.test_config.initial_cash,
           fee_bps: p.test_config.fee_bps,
           slippage_bps: p.test_config.slippage_bps,
           liquidation_fee_bps: p.test_config.liquidation_fee_bps,
           max_gross_pct: p.test_config.max_gross_pct,
           max_daily_loss_pct: p.test_config.max_daily_loss_pct,
+          'Maximum order notional (USDT)': p.test_config.max_order_notional,
+          'Underlying asset gross limit (%)': p.test_config.max_base_asset_gross_pct,
+          'Shared failure policy': t('Reduce the group on failure'),
+          'Maximum execution residual %': p.definition.max_residual_pct,
         }}
       />
       <DataTable
@@ -64,6 +74,7 @@ function FrozenPlan({ holdout }: { holdout: PortfolioHoldout }) {
           },
         ]}
       />
+      <CapturedLifecycleSources config={p.test_config} />
       <h4>{t('Pre-registered rejection criteria')}</h4>
       <RecordGrid value={p.criteria} />
       <p className="quiet-copy">{p.rejection_plan}</p>
@@ -86,6 +97,8 @@ const defaults = {
   slip: '5',
   liquidationFee: '50',
   gross: '200',
+  maxOrder: '2500',
+  maxBaseGross: '100',
   daily: '5',
   minReturn: '0',
   maxDrawdown: '20',
@@ -101,6 +114,8 @@ const numericFields: [NumericKey, string, number, number][] = [
   ['liquidationFee', 'Liquidation fee (bps)', 0, 500],
   ['gross', 'Maximum gross exposure %', 1, 1000],
   ['daily', 'Daily loss limit %', 0.1, 50],
+  ['maxOrder', 'Maximum order notional (USDT)', 0.01, 1000000000],
+  ['maxBaseGross', 'Underlying asset gross limit (%)', 1, 1000],
   ['minReturn', 'Minimum return versus cash %', -100, 1000000],
   ['maxDrawdown', 'Maximum accepted drawdown %', 0, 1000],
   ['minFills', 'Minimum executed fills', 0, 1000000],
@@ -152,6 +167,9 @@ export default function PortfolioGovernance({
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [values, setValues] = useState(defaults);
+  const [universeMode, setUniverseMode] = useState('static');
+  const [lifecycleWarmup, setLifecycleWarmup] = useState(2);
+  const [lifecycleEvents, setLifecycleEvents] = useState<Record<string, RecordData[]>>({});
   const [rejection, setRejection] = useState('');
   const [frozen, setFrozen] = useState<PortfolioHoldoutPreview | null>(null);
   const [expanded, setExpanded] = useState('');
@@ -168,12 +186,17 @@ export default function PortfolioGovernance({
         test_start: Date.parse(start + 'Z'),
         test_end: Date.parse(end + 'Z'),
         warmup_bars: Number(values.warmup),
+        universe_mode: universeMode,
+        lifecycle_warmup_bars: lifecycleWarmup,
+        lifecycle_events: universeMode === 'historical_lifecycle' ? lifecycleEvents : {},
         initial_cash: values.cash,
         fee_bps: values.fee,
         slippage_bps: values.slip,
         liquidation_fee_bps: values.liquidationFee,
         max_gross_pct: values.gross,
         max_daily_loss_pct: values.daily,
+        max_order_notional: values.maxOrder,
+        max_base_asset_gross_pct: values.maxBaseGross,
         benchmark: 'cash',
         rejection_plan: rejection,
         criteria: {
@@ -210,9 +233,14 @@ export default function PortfolioGovernance({
     );
     if (chosen?.length && chosen.every(Boolean)) {
       const first =
-        Math.max(...chosen.map((p) => p!.start)) +
+        (universeMode === 'historical_lifecycle'
+          ? Math.min(...chosen.map((p) => p!.start))
+          : Math.max(...chosen.map((p) => p!.start))) +
         Number(values.warmup) * intervals[version!.definition.bar];
-      const last = Math.min(...chosen.map((p) => p!.end));
+      const last =
+        universeMode === 'historical_lifecycle'
+          ? Math.max(...chosen.map((p) => p!.end))
+          : Math.min(...chosen.map((p) => p!.end));
       if (first < last) {
         setStart(utc(first));
         setEnd(utc(last));
@@ -372,6 +400,7 @@ export default function PortfolioGovernance({
                       setPackageIds({});
                       setStart('');
                       setEnd('');
+                      setLifecycleEvents({});
                     }}
                   >
                     <option value="">{t('Choose an immutable version')}</option>
@@ -383,9 +412,31 @@ export default function PortfolioGovernance({
                   </select>
                 </Field>
               </div>
+              <LifecycleScenario
+                mode={universeMode}
+                warmup={lifecycleWarmup}
+                onMode={(value) => {
+                  setUniverseMode(value);
+                  preview.reset();
+                }}
+                onWarmup={(value) => {
+                  setLifecycleWarmup(value);
+                  preview.reset();
+                }}
+              />
               {version && (
                 <div className="holdout-package-selection">
                   <p className="quiet-copy">{version.hypothesis}</p>
+                  <p className="quiet-copy">
+                    {t('Shared failure policy')}: {t('Reduce the group on failure')} ·{' '}
+                    {t('Maximum execution residual %')}:{' '}
+                    {number(version.definition.max_residual_pct)}%
+                  </p>
+                  {!version.definition.execution_contract && (
+                    <p className="inline-warning">
+                      {t('Revise this legacy study under the shared execution policy.')}
+                    </p>
+                  )}
                   {version.definition.legs.map((l) => (
                     <Field key={l.inst_id} label={`Package · ${l.inst_id}`}>
                       <select
@@ -409,6 +460,18 @@ export default function PortfolioGovernance({
                       </select>
                     </Field>
                   ))}
+                  {universeMode === 'historical_lifecycle' &&
+                    version.definition.legs.map((l) => (
+                      <LifecycleImport
+                        key={l.inst_id}
+                        symbol={l.inst_id}
+                        events={lifecycleEvents[l.inst_id] ?? []}
+                        onChange={(events) => {
+                          setLifecycleEvents((old) => ({ ...old, [l.inst_id]: events }));
+                          preview.reset();
+                        }}
+                      />
+                    ))}
                 </div>
               )}
               {packages.isError && <ErrorBox error={packages.error} />}
@@ -430,14 +493,14 @@ export default function PortfolioGovernance({
                   />
                 </Field>
               </div>
-              {renderFields(numericFields.slice(0, 7))}
+              {renderFields(numericFields.slice(0, 9))}
               <h3>{t('Pre-registered rejection criteria')}</h3>
               <p className="quiet-copy">
                 {t(
                   'Cash benchmark: unchanged initial USDT, zero interest and no trading costs. Warmup has no orders, positions or funding exposure.',
                 )}
               </p>
-              {renderFields(numericFields.slice(7))}
+              {renderFields(numericFields.slice(9))}
               <p className="quiet-copy">
                 {t(
                   'Zero insurance debt is required. Too few observations or fills produce an inconclusive assessment. These are fixed decision criteria, not a statistical significance test.',

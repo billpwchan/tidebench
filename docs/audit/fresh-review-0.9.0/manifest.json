@@ -1,0 +1,21 @@
+{
+  "review_date": "2026-10-09",
+  "source_commit": "6436a279e0b6fc9e7fe0500ab6544ee14bf369c7",
+  "scope": "read-only product audit; isolated synthetic counterexamples; one captured OKX case recomputed",
+  "exchange_orders_submitted": false,
+  "fresh_agent_counterexamples_rechecked_by_primary": true,
+  "independent_captured_cases_recomputed": 1,
+  "full_public_battery_cases": 28,
+  "reproducer_sha256": "5bf46d0e90ae6e4a6c352d237e463fc10664ba9debb9b6a190048c482eea60aa",
+  "artifact_sha256": {
+    "alert-gap.json": "f7cad804a12d8332fdf0ddc7e5eafd486f7cb8100aae9628742f5d31d6dffb0e",
+    "funding-gap.json": "229d11a6cd205482675ea7d49af8087d0e93f04fac2c86b5fdbc2e827b429222",
+    "history-forward-gap.json": "5ea6b24a1e4aa2b66306ac478eac07f708e3886e850ba9c93e65ca874954e13b",
+    "risk-replay.json": "02e2ded2c9b423a286c93ce642f29a299478560372aa9a64ed56d79d3ae19dd9"
+  },
+  "reproducer_command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python docs/audit/fresh-review-0.9.0/reproduce.py",
+  "reproducer_observation": "four cases completed with expected counterexamples; mocks prohibit external requests; disposable SQLite workspaces",
+  "captured_replay_boundary": "Recomputation used retained private market capture; raw capture is not published. Stored hashes verify artifacts, not statistical validity or historical universe completeness.",
+  "primary_application_or_operational_data_modified": false,
+  "audit_artifacts_written": true
+}

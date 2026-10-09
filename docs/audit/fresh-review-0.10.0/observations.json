@@ -1,0 +1,929 @@
+{
+  "capital_after_fee": {
+    "fixed": true,
+    "rejected": "account_capital_limit",
+    "positions": []
+  },
+  "conversion_long": {
+    "fixed": true,
+    "expected_margin": "49",
+    "application": {
+      "source": "example",
+      "event_hash": "f4ff2a48c54b018591cb8f0eb457a53dc78dc60bce3aefddba792c91822b4b9e",
+      "inst_id": "BTC-USDT-SWAP",
+      "kind": "unit_conversion",
+      "effective_ts": 1767243600000,
+      "applied_at": 1767243600000,
+      "source_hash": "c3a9e68c6d8c350929af9adaad22b822cd2684d022aae43dc2f13ca4bb2bfdce",
+      "status": "applied",
+      "quantity_before": "100",
+      "quantity_after": "50.0",
+      "base_before": "1.00",
+      "base_after": "1.000",
+      "basis_before": "0",
+      "basis_after": "0",
+      "margin_before": "50.00",
+      "margin_after": "50.00",
+      "entry_price_before": "100",
+      "entry_price_after": "100",
+      "signal_price_policy": "unchanged underlying base-price history",
+      "application_hash": "d8319163e317db2f6527afc92350cd6e8f98df15462f5af2b3d89e3838336fdd"
+    },
+    "funding": [
+      {
+        "inst_id": "BTC-USDT-SWAP",
+        "ts": 1767243600000,
+        "rate": "0.01",
+        "mark_price": "100",
+        "mark_price_source": "user_supplied",
+        "mark_ts": 1767243600000,
+        "payment": "1.0000",
+        "quantity": "100",
+        "position_generation": "2f5db455ecdc43dbab80f460cafe15e6",
+        "owners": null,
+        "margin_payment": "1.0000",
+        "cash_payment": "0.0000",
+        "liability_created": "0",
+        "inventory_policy": "frozen_settlement_time_quantity_and_ownership",
+        "retained_base_exposure_fraction": "1"
+      }
+    ],
+    "cash": "9950.0000",
+    "equity": "9999.0000",
+    "actual_margin": "49.0000"
+  },
+  "conversion_short": {
+    "fixed": true,
+    "expected_margin": "51",
+    "application": {
+      "source": "example",
+      "event_hash": "f4ff2a48c54b018591cb8f0eb457a53dc78dc60bce3aefddba792c91822b4b9e",
+      "inst_id": "BTC-USDT-SWAP",
+      "kind": "unit_conversion",
+      "effective_ts": 1767243600000,
+      "applied_at": 1767243600000,
+      "source_hash": "c3a9e68c6d8c350929af9adaad22b822cd2684d022aae43dc2f13ca4bb2bfdce",
+      "status": "applied",
+      "quantity_before": "-100",
+      "quantity_after": "-50.0",
+      "base_before": "-1.00",
+      "base_after": "-1.000",
+      "basis_before": "0",
+      "basis_after": "0",
+      "margin_before": "50.00",
+      "margin_after": "50.00",
+      "entry_price_before": "100",
+      "entry_price_after": "100",
+      "signal_price_policy": "unchanged underlying base-price history",
+      "application_hash": "5619d2e7f62093a68cfbc1610a19322b23387eda9130b728f375d5a49f545b09"
+    },
+    "funding": [
+      {
+        "inst_id": "BTC-USDT-SWAP",
+        "ts": 1767243600000,
+        "rate": "0.01",
+        "mark_price": "100",
+        "mark_price_source": "user_supplied",
+        "mark_ts": 1767243600000,
+        "payment": "-1.0000",
+        "quantity": "-100",
+        "position_generation": "b6b5c405b79540ff888e529257657513",
+        "owners": null,
+        "margin_payment": "-1.0000",
+        "cash_payment": "-0.0000",
+        "liability_created": "0",
+        "inventory_policy": "frozen_settlement_time_quantity_and_ownership",
+        "retained_base_exposure_fraction": "1"
+      }
+    ],
+    "cash": "9950.0000",
+    "equity": "10001.0000",
+    "actual_margin": "51.0000"
+  },
+  "negative_margin_capital": {
+    "fixed": true,
+    "admitted": [],
+    "rejected": "existing_margin_breach",
+    "before_cash": "9998.0000",
+    "before_equity": "9997.0000",
+    "before_margin": "-1.0000",
+    "maintenance_margin": "0.40000",
+    "after_cash": "9998.0000",
+    "after_equity": "9997.0000",
+    "after_spot_value": "0"
+  },
+  "liquidity_selection": {
+    "fixed": true,
+    "selected_report": {
+      "schema_version": 1,
+      "methodology": "okx_displayed_l2_v1",
+      "id": "fe677580a18d4a24aebd356b5600968f",
+      "source": "okx",
+      "inst_id": "BTC-USDT",
+      "created_at": 1767225930000,
+      "created_by": "audit",
+      "input": {
+        "inst_id": "BTC-USDT",
+        "capture_ids": [
+          "0b942b2fd9cd4b5b8c299574e2022295",
+          "9332712e467140748ffd984ba269c781",
+          "2b8341141a9a47fa944418c21895cfb9",
+          "1f4c37a0c90d4ac29706afd1660a506e",
+          "9a564206762b420eac6fa8df4787e137",
+          "a60995c624784063b28108ef6fed5d30",
+          "e42560b4efd04369a83363e9870524d7",
+          "c0983c8a2c98496aa82bf5f6c6fb25ee",
+          "a6e20552f98e4df681fffd73151f5b61",
+          "fcd489c6e5cd4415a0aaff6504634e6b",
+          "b8ca169db563408e8af2b348edb42a5f",
+          "25f8c415c99548f2a01a134dbfd6cb6e"
+        ],
+        "window_start": 1767225600000,
+        "window_end": 1767225930000,
+        "max_shortfall_bps": "10",
+        "max_participation_pct": "10",
+        "minimum_samples": 12,
+        "minimum_elapsed_ms": 300000,
+        "max_gap_ms": 60000,
+        "max_book_age_ms": 2000,
+        "review_max_age_ms": 300000,
+        "child_notional": "2500",
+        "sleeve_notional": "10000"
+      },
+      "input_hash": "50bd3bf50dbcfa130ab258e1efb8239544c704fb8c3a40f8c0bda931c82224c1",
+      "captures": [
+        {
+          "id": "0b942b2fd9cd4b5b8c299574e2022295",
+          "content_hash": "1471200b23fdf7c07447fe78c2f4ee4ee1b5aa9eac790deb9dcdc052f556811d",
+          "known_at": 1767225600000
+        },
+        {
+          "id": "9332712e467140748ffd984ba269c781",
+          "content_hash": "02a633d4e2d370f31f551280a06b413cd1dd857f5729cf9798e540a1782af2c8",
+          "known_at": 1767225630000
+        },
+        {
+          "id": "2b8341141a9a47fa944418c21895cfb9",
+          "content_hash": "80bed8f01d283261538364e3aba30666353cd83864d8f7d5e54c39341bb33583",
+          "known_at": 1767225660000
+        },
+        {
+          "id": "1f4c37a0c90d4ac29706afd1660a506e",
+          "content_hash": "54f004322efab12e654d89a220893207bd30ed38d6b36b2fb5ff2d833046cda4",
+          "known_at": 1767225690000
+        },
+        {
+          "id": "9a564206762b420eac6fa8df4787e137",
+          "content_hash": "b35165461ebc7f2834b075c042a08f5718df6d4a8d07244154faf7df5ab33e1b",
+          "known_at": 1767225720000
+        },
+        {
+          "id": "a60995c624784063b28108ef6fed5d30",
+          "content_hash": "9c55e13d5644288768cc2194b0d5490fa346ad90ae2346f76104dbcab41a664c",
+          "known_at": 1767225750000
+        },
+        {
+          "id": "c6b86b6770184c979a19f3078d6a37a4",
+          "content_hash": "8be88ffc1cb05496c75b234587b1cd77ecd4247b22b088d49d1c70400a61aa72",
+          "known_at": 1767225765000
+        },
+        {
+          "id": "e42560b4efd04369a83363e9870524d7",
+          "content_hash": "c5d3f2ecd9f546c9e61ae6898377ddb461260a9886d0726ae7f4ccd40c3978e5",
+          "known_at": 1767225780000
+        },
+        {
+          "id": "c0983c8a2c98496aa82bf5f6c6fb25ee",
+          "content_hash": "1c68af4d585bdb05857126e9117d9d0eb84525e0e72630c5c961329b24e68920",
+          "known_at": 1767225810000
+        },
+        {
+          "id": "a6e20552f98e4df681fffd73151f5b61",
+          "content_hash": "79a96834a5123b76c9e382210efd3c23118e13c14942d6e36d540d1185c20023",
+          "known_at": 1767225840000
+        },
+        {
+          "id": "fcd489c6e5cd4415a0aaff6504634e6b",
+          "content_hash": "1b46f6df893e41fb9207ef44a42fd93a3774c190455b3c41642f1477c00cfbbe",
+          "known_at": 1767225870000
+        },
+        {
+          "id": "b8ca169db563408e8af2b348edb42a5f",
+          "content_hash": "95671e04d41ce090b9a282c580b40fa2aa74c2ba07773991c9d5e036379ef95e",
+          "known_at": 1767225900000
+        },
+        {
+          "id": "25f8c415c99548f2a01a134dbfd6cb6e",
+          "content_hash": "fa596f2fa41754b32d4c389f1edffc1b5d7bd0fdaf592fdffd2e79f921b605ba",
+          "known_at": 1767225930000
+        }
+      ],
+      "declared_window": {
+        "start": 1767225600000,
+        "end": 1767225930000
+      },
+      "observed_window": {
+        "start": 1767225600000,
+        "end": 1767225930000
+      },
+      "independent_window": {
+        "start": 1767225600000,
+        "end": 1767225930000,
+        "elapsed_ms": 330000
+      },
+      "selection_audit": {
+        "selection_policy": "all_available_captures_in_declared_window",
+        "availability_as_of": 1767225930000,
+        "all_available_count": 13,
+        "selected_count": 12,
+        "omitted_capture_ids": [
+          "c6b86b6770184c979a19f3078d6a37a4"
+        ],
+        "omitted_policy": "automatically_included_not_excluded"
+      },
+      "uncovered_edges": {
+        "start_ms": 0,
+        "end_ms": 0,
+        "max_allowed_ms": 60000
+      },
+      "sample_count": 13,
+      "independent_book_count": 13,
+      "repeated_or_missing_timestamp_count": 0,
+      "maximum_observed_gap_ms": 30000,
+      "conditions": {
+        "boundary_coverage": true,
+        "samples": true,
+        "elapsed": true,
+        "cadence": true,
+        "fresh_at_capture": true,
+        "timestamp_order": true,
+        "supported": true
+      },
+      "spread_bps": {
+        "median": "2.0000",
+        "p90": "2.0000",
+        "p95": "2.0000",
+        "worst": "2.0000"
+      },
+      "status": "exceeds_limits",
+      "scenarios": [
+        {
+          "notional": "1000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 13,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "0.100",
+                "p90": "0.100",
+                "p95": "0.100",
+                "worst": "0.100"
+              }
+            },
+            "sell": {
+              "all_samples_pass": false,
+              "complete_samples": 12,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "0.100",
+                "p90": "0.100",
+                "p95": "100",
+                "worst": "100"
+              }
+            }
+          },
+          "all_samples_pass": false
+        },
+        {
+          "notional": "2500",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 13,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "0.2500",
+                "p90": "0.2500",
+                "p95": "0.2500",
+                "worst": "0.2500"
+              }
+            },
+            "sell": {
+              "all_samples_pass": false,
+              "complete_samples": 12,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "0.2500",
+                "p90": "0.2500",
+                "p95": "100",
+                "worst": "100"
+              }
+            }
+          },
+          "all_samples_pass": false
+        },
+        {
+          "notional": "10000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 13,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "1.00",
+                "p90": "1.00",
+                "p95": "1.00",
+                "worst": "1.00"
+              }
+            },
+            "sell": {
+              "all_samples_pass": false,
+              "complete_samples": 12,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "1.00",
+                "p90": "1.00",
+                "p95": "100",
+                "worst": "100"
+              }
+            }
+          },
+          "all_samples_pass": false
+        },
+        {
+          "notional": "100000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 13,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "10.0",
+                "p90": "10.0",
+                "p95": "10.0",
+                "worst": "10.0"
+              }
+            },
+            "sell": {
+              "all_samples_pass": false,
+              "complete_samples": 12,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "10.0",
+                "p90": "10.0",
+                "p95": "100",
+                "worst": "100"
+              }
+            }
+          },
+          "all_samples_pass": false
+        }
+      ],
+      "approved_observed_notional": null,
+      "declared_child_notional": "2500",
+      "declared_sleeve_notional": "10000",
+      "child_observed_pass": false,
+      "sleeve_observed_pass": false,
+      "historical_capacity": "unknown",
+      "live_execution_calibration": "not_measured",
+      "scope": "Observed cached organic L2 window only; no queue position, hidden liquidity, impact/replenishment, fees or executable guarantee. Both sides and every selected sample must pass; quantiles are descriptive. Historical backtest cost assumptions remain scenarios.",
+      "content_hash": "72b239a6feded2059f3f92a2941518a36caa6ba1ade21a9c6a21c009b2d0feae"
+    },
+    "all_samples_report": {
+      "schema_version": 1,
+      "methodology": "okx_displayed_l2_v1",
+      "id": "46bae6ceebf544d280028824c078b752",
+      "source": "okx",
+      "inst_id": "BTC-USDT",
+      "created_at": 1767225930000,
+      "created_by": "audit",
+      "input": {
+        "inst_id": "BTC-USDT",
+        "capture_ids": [
+          "0b942b2fd9cd4b5b8c299574e2022295",
+          "9332712e467140748ffd984ba269c781",
+          "2b8341141a9a47fa944418c21895cfb9",
+          "1f4c37a0c90d4ac29706afd1660a506e",
+          "9a564206762b420eac6fa8df4787e137",
+          "a60995c624784063b28108ef6fed5d30",
+          "e42560b4efd04369a83363e9870524d7",
+          "c0983c8a2c98496aa82bf5f6c6fb25ee",
+          "a6e20552f98e4df681fffd73151f5b61",
+          "fcd489c6e5cd4415a0aaff6504634e6b",
+          "b8ca169db563408e8af2b348edb42a5f",
+          "25f8c415c99548f2a01a134dbfd6cb6e",
+          "c6b86b6770184c979a19f3078d6a37a4"
+        ],
+        "window_start": 1767225600000,
+        "window_end": 1767225930000,
+        "max_shortfall_bps": "10",
+        "max_participation_pct": "10",
+        "minimum_samples": 12,
+        "minimum_elapsed_ms": 300000,
+        "max_gap_ms": 60000,
+        "max_book_age_ms": 2000,
+        "review_max_age_ms": 300000,
+        "child_notional": "2500",
+        "sleeve_notional": "10000"
+      },
+      "input_hash": "b71012675ace8a575df2c4f663e9971810700a9aee767bc28cddc26d5ed1c914",
+      "captures": [
+        {
+          "id": "0b942b2fd9cd4b5b8c299574e2022295",
+          "content_hash": "1471200b23fdf7c07447fe78c2f4ee4ee1b5aa9eac790deb9dcdc052f556811d",
+          "known_at": 1767225600000
+        },
+        {
+          "id": "9332712e467140748ffd984ba269c781",
+          "content_hash": "02a633d4e2d370f31f551280a06b413cd1dd857f5729cf9798e540a1782af2c8",
+          "known_at": 1767225630000
+        },
+        {
+          "id": "2b8341141a9a47fa944418c21895cfb9",
+          "content_hash": "80bed8f01d283261538364e3aba30666353cd83864d8f7d5e54c39341bb33583",
+          "known_at": 1767225660000
+        },
+        {
+          "id": "1f4c37a0c90d4ac29706afd1660a506e",
+          "content_hash": "54f004322efab12e654d89a220893207bd30ed38d6b36b2fb5ff2d833046cda4",
+          "known_at": 1767225690000
+        },
+        {
+          "id": "9a564206762b420eac6fa8df4787e137",
+          "content_hash": "b35165461ebc7f2834b075c042a08f5718df6d4a8d07244154faf7df5ab33e1b",
+          "known_at": 1767225720000
+        },
+        {
+          "id": "a60995c624784063b28108ef6fed5d30",
+          "content_hash": "9c55e13d5644288768cc2194b0d5490fa346ad90ae2346f76104dbcab41a664c",
+          "known_at": 1767225750000
+        },
+        {
+          "id": "c6b86b6770184c979a19f3078d6a37a4",
+          "content_hash": "8be88ffc1cb05496c75b234587b1cd77ecd4247b22b088d49d1c70400a61aa72",
+          "known_at": 1767225765000
+        },
+        {
+          "id": "e42560b4efd04369a83363e9870524d7",
+          "content_hash": "c5d3f2ecd9f546c9e61ae6898377ddb461260a9886d0726ae7f4ccd40c3978e5",
+          "known_at": 1767225780000
+        },
+        {
+          "id": "c0983c8a2c98496aa82bf5f6c6fb25ee",
+          "content_hash": "1c68af4d585bdb05857126e9117d9d0eb84525e0e72630c5c961329b24e68920",
+          "known_at": 1767225810000
+        },
+        {
+          "id": "a6e20552f98e4df681fffd73151f5b61",
+          "content_hash": "79a96834a5123b76c9e382210efd3c23118e13c14942d6e36d540d1185c20023",
+          "known_at": 1767225840000
+        },
+        {
+          "id": "fcd489c6e5cd4415a0aaff6504634e6b",
+          "content_hash": "1b46f6df893e41fb9207ef44a42fd93a3774c190455b3c41642f1477c00cfbbe",
+          "known_at": 1767225870000
+        },
+        {
+          "id": "b8ca169db563408e8af2b348edb42a5f",
+          "content_hash": "95671e04d41ce090b9a282c580b40fa2aa74c2ba07773991c9d5e036379ef95e",
+          "known_at": 1767225900000
+        },
+        {
+          "id": "25f8c415c99548f2a01a134dbfd6cb6e",
+          "content_hash": "fa596f2fa41754b32d4c389f1edffc1b5d7bd0fdaf592fdffd2e79f921b605ba",
+          "known_at": 1767225930000
+        }
+      ],
+      "declared_window": {
+        "start": 1767225600000,
+        "end": 1767225930000
+      },
+      "observed_window": {
+        "start": 1767225600000,
+        "end": 1767225930000
+      },
+      "independent_window": {
+        "start": 1767225600000,
+        "end": 1767225930000,
+        "elapsed_ms": 330000
+      },
+      "selection_audit": {
+        "selection_policy": "all_available_captures_in_declared_window",
+        "availability_as_of": 1767225930000,
+        "all_available_count": 13,
+        "selected_count": 13,
+        "omitted_capture_ids": [],
+        "omitted_policy": "automatically_included_not_excluded"
+      },
+      "uncovered_edges": {
+        "start_ms": 0,
+        "end_ms": 0,
+        "max_allowed_ms": 60000
+      },
+      "sample_count": 13,
+      "independent_book_count": 13,
+      "repeated_or_missing_timestamp_count": 0,
+      "maximum_observed_gap_ms": 30000,
+      "conditions": {
+        "boundary_coverage": true,
+        "samples": true,
+        "elapsed": true,
+        "cadence": true,
+        "fresh_at_capture": true,
+        "timestamp_order": true,
+        "supported": true
+      },
+      "spread_bps": {
+        "median": "2.0000",
+        "p90": "2.0000",
+        "p95": "2.0000",
+        "worst": "2.0000"
+      },
+      "status": "exceeds_limits",
+      "scenarios": [
+        {
+          "notional": "1000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 13,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "0.100",
+                "p90": "0.100",
+                "p95": "0.100",
+                "worst": "0.100"
+              }
+            },
+            "sell": {
+              "all_samples_pass": false,
+              "complete_samples": 12,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "0.100",
+                "p90": "0.100",
+                "p95": "100",
+                "worst": "100"
+              }
+            }
+          },
+          "all_samples_pass": false
+        },
+        {
+          "notional": "2500",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 13,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "0.2500",
+                "p90": "0.2500",
+                "p95": "0.2500",
+                "worst": "0.2500"
+              }
+            },
+            "sell": {
+              "all_samples_pass": false,
+              "complete_samples": 12,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "0.2500",
+                "p90": "0.2500",
+                "p95": "100",
+                "worst": "100"
+              }
+            }
+          },
+          "all_samples_pass": false
+        },
+        {
+          "notional": "10000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 13,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "1.00",
+                "p90": "1.00",
+                "p95": "1.00",
+                "worst": "1.00"
+              }
+            },
+            "sell": {
+              "all_samples_pass": false,
+              "complete_samples": 12,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "1.00",
+                "p90": "1.00",
+                "p95": "100",
+                "worst": "100"
+              }
+            }
+          },
+          "all_samples_pass": false
+        },
+        {
+          "notional": "100000",
+          "sides": {
+            "buy": {
+              "all_samples_pass": true,
+              "complete_samples": 13,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "10.0",
+                "p90": "10.0",
+                "p95": "10.0",
+                "worst": "10.0"
+              }
+            },
+            "sell": {
+              "all_samples_pass": false,
+              "complete_samples": 12,
+              "shortfall_bps": {
+                "median": "1.0000",
+                "p90": "1.0000",
+                "p95": "1.0000",
+                "worst": "1.0000"
+              },
+              "participation_pct": {
+                "median": "10.0",
+                "p90": "10.0",
+                "p95": "100",
+                "worst": "100"
+              }
+            }
+          },
+          "all_samples_pass": false
+        }
+      ],
+      "approved_observed_notional": null,
+      "declared_child_notional": "2500",
+      "declared_sleeve_notional": "10000",
+      "child_observed_pass": false,
+      "sleeve_observed_pass": false,
+      "historical_capacity": "unknown",
+      "live_execution_calibration": "not_measured",
+      "scope": "Observed cached organic L2 window only; no queue position, hidden liquidity, impact/replenishment, fees or executable guarantee. Both sides and every selected sample must pass; quantiles are descriptive. Historical backtest cost assumptions remain scenarios.",
+      "content_hash": "5d01a9ccfc46b435c0239aea6d0910f4668e8fe11008cbde1261c93737be4015"
+    },
+    "omitted_capture_id": "c6b86b6770184c979a19f3078d6a37a4",
+    "omitted_known_at": 1767225765000,
+    "omitted_evidence": {
+      "status": "supported",
+      "reason": null,
+      "metadata": {
+        "product": "SPOT",
+        "quantity_unit": "base_asset",
+        "base_asset": "BTC",
+        "base_per_unit": "1",
+        "tick_size": "0.01",
+        "lot_size": "0.01",
+        "minimum_size": "0.01"
+      },
+      "exchange_ts": 1767225764990,
+      "book_age_at_capture_ms": 10,
+      "best_bid": "99.99",
+      "best_ask": "100.01",
+      "mid": "100.00",
+      "spread_bps": "2.0000",
+      "levels": {
+        "buy": 1,
+        "sell": 1
+      },
+      "scenarios": [
+        {
+          "side": "buy",
+          "requested_notional": "1000",
+          "requested_quantity": "1E+1",
+          "requested_base_quantity": "1E+1",
+          "effective_mid_notional": "1000.0",
+          "filled_quantity": "10",
+          "filled_base_quantity": "10",
+          "unfilled_quantity": "0E+1",
+          "matched_notional": "1000.1",
+          "fill_ratio_pct": "100.0",
+          "status": "complete",
+          "vwap": "100.01",
+          "shortfall_bps": "1.0000",
+          "displayed_side_quantity": "10000",
+          "displayed_side_notional": "1000100.00",
+          "participation_pct": "0.100",
+          "levels_used": 1
+        },
+        {
+          "side": "sell",
+          "requested_notional": "1000",
+          "requested_quantity": "1E+1",
+          "requested_base_quantity": "1E+1",
+          "effective_mid_notional": "1000.0",
+          "filled_quantity": "1",
+          "filled_base_quantity": "1",
+          "unfilled_quantity": "9",
+          "matched_notional": "99.99",
+          "fill_ratio_pct": "10.0",
+          "status": "depth_exhausted",
+          "vwap": "99.99",
+          "shortfall_bps": "1.0000",
+          "displayed_side_quantity": "1",
+          "displayed_side_notional": "99.99",
+          "participation_pct": "100",
+          "levels_used": 1
+        },
+        {
+          "side": "buy",
+          "requested_notional": "2500",
+          "requested_quantity": "25",
+          "requested_base_quantity": "25",
+          "effective_mid_notional": "2500.00",
+          "filled_quantity": "25",
+          "filled_base_quantity": "25",
+          "unfilled_quantity": "0",
+          "matched_notional": "2500.25",
+          "fill_ratio_pct": "100",
+          "status": "complete",
+          "vwap": "100.01",
+          "shortfall_bps": "1.0000",
+          "displayed_side_quantity": "10000",
+          "displayed_side_notional": "1000100.00",
+          "participation_pct": "0.2500",
+          "levels_used": 1
+        },
+        {
+          "side": "sell",
+          "requested_notional": "2500",
+          "requested_quantity": "25",
+          "requested_base_quantity": "25",
+          "effective_mid_notional": "2500.00",
+          "filled_quantity": "1",
+          "filled_base_quantity": "1",
+          "unfilled_quantity": "24",
+          "matched_notional": "99.99",
+          "fill_ratio_pct": "4.00",
+          "status": "depth_exhausted",
+          "vwap": "99.99",
+          "shortfall_bps": "1.0000",
+          "displayed_side_quantity": "1",
+          "displayed_side_notional": "99.99",
+          "participation_pct": "100",
+          "levels_used": 1
+        },
+        {
+          "side": "buy",
+          "requested_notional": "10000",
+          "requested_quantity": "1E+2",
+          "requested_base_quantity": "1E+2",
+          "effective_mid_notional": "10000",
+          "filled_quantity": "100",
+          "filled_base_quantity": "100",
+          "unfilled_quantity": "0E+2",
+          "matched_notional": "10001",
+          "fill_ratio_pct": "100.00",
+          "status": "complete",
+          "vwap": "100.01",
+          "shortfall_bps": "1.0000",
+          "displayed_side_quantity": "10000",
+          "displayed_side_notional": "1000100.00",
+          "participation_pct": "1.00",
+          "levels_used": 1
+        },
+        {
+          "side": "sell",
+          "requested_notional": "10000",
+          "requested_quantity": "1E+2",
+          "requested_base_quantity": "1E+2",
+          "effective_mid_notional": "10000",
+          "filled_quantity": "1",
+          "filled_base_quantity": "1",
+          "unfilled_quantity": "99",
+          "matched_notional": "99.99",
+          "fill_ratio_pct": "1.00",
+          "status": "depth_exhausted",
+          "vwap": "99.99",
+          "shortfall_bps": "1.0000",
+          "displayed_side_quantity": "1",
+          "displayed_side_notional": "99.99",
+          "participation_pct": "100",
+          "levels_used": 1
+        },
+        {
+          "side": "buy",
+          "requested_notional": "100000",
+          "requested_quantity": "1.0E+3",
+          "requested_base_quantity": "1.0E+3",
+          "effective_mid_notional": "100000",
+          "filled_quantity": "1000",
+          "filled_base_quantity": "1000",
+          "unfilled_quantity": "0E+2",
+          "matched_notional": "100010",
+          "fill_ratio_pct": "100.00",
+          "status": "complete",
+          "vwap": "100.01",
+          "shortfall_bps": "1.0000",
+          "displayed_side_quantity": "10000",
+          "displayed_side_notional": "1000100.00",
+          "participation_pct": "10.0",
+          "levels_used": 1
+        },
+        {
+          "side": "sell",
+          "requested_notional": "100000",
+          "requested_quantity": "1.0E+3",
+          "requested_base_quantity": "1.0E+3",
+          "effective_mid_notional": "100000",
+          "filled_quantity": "1",
+          "filled_base_quantity": "1",
+          "unfilled_quantity": "999",
+          "matched_notional": "99.99",
+          "fill_ratio_pct": "0.100",
+          "status": "depth_exhausted",
+          "vwap": "99.99",
+          "shortfall_bps": "1.0000",
+          "displayed_side_quantity": "1",
+          "displayed_side_notional": "99.99",
+          "participation_pct": "100",
+          "levels_used": 1
+        }
+      ],
+      "basis": "Displayed organic L2; mid-sized quantity rounded up to lot/minimum; fees excluded."
+    }
+  }
+}

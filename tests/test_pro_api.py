@@ -255,7 +255,7 @@ def test_verified_restore_revokes_session_and_halts_execution(client):
     backup = client.post("/api/v1/pro/ops/backups/create")
     assert backup.status_code == 201, backup.text
     identifier = backup.json()["id"]
-    assert backup.json()["database_schema"] == 7
+    assert backup.json()["database_schema"] == 8
     assert client.get(f"/api/v1/pro/ops/backups/{identifier}/verify").json()["verified"]
     runtime.clock.change(step_ms=3600000, expected_revision=saved_clock["revision"], actor="operator")
     restore = client.post(
@@ -293,7 +293,7 @@ def test_additive_upgrade_is_repeatable_and_preserves_legacy_state(tmp_path):
         assert first.app.state.professional.book.account("example", {})["cash"] == "10000"
     with TestClient(create_app(configuration)) as second:
         with second.app.state.store.read() as conn:
-            assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 7
+            assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 8
             assert conn.execute("SELECT COUNT(*) FROM schema_migrations WHERE version=2").fetchone()[0] == 1
             assert conn.execute("SELECT COUNT(*) FROM schema_migrations WHERE version=3").fetchone()[0] == 1
             assert conn.execute("SELECT cash FROM accounts WHERE source='example'").fetchone()[0] == "9876.54"
@@ -563,7 +563,7 @@ def test_verified_restore_preserves_managed_commands_contributions_and_stops_gro
     before = client.get("/api/v1/pro/execution/contributions?source=example").json()
     assert before["reconciled"] and before["owners"]
     backup = client.post("/api/v1/pro/ops/backups/create").json()
-    assert client.get(f"/api/v1/pro/ops/backups/{backup['id']}/verify").json()["database_schema"] == 7
+    assert client.get(f"/api/v1/pro/ops/backups/{backup['id']}/verify").json()["database_schema"] == 8
     response = client.post(
         "/api/v1/pro/ops/restore", json={"backup_id": backup["id"], "confirmation": "RESTORE"}
     )

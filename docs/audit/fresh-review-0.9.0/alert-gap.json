@@ -1,0 +1,40 @@
+{
+  "group_status": "compensating",
+  "group_last_error": "Compensation blocked: Cannot execute the second leg or compensate now.",
+  "members": [
+    {
+      "inst_id": "BTC-USDT",
+      "status": "running",
+      "last_error": null
+    },
+    {
+      "inst_id": "ETH-USDT",
+      "status": "running",
+      "last_error": null
+    }
+  ],
+  "inventory": [
+    {
+      "inst_id": "BTC-USDT",
+      "quantity": "0.04103290"
+    }
+  ],
+  "incidents": [
+    {
+      "kind": "managed_portfolio",
+      "status": "open"
+    }
+  ],
+  "health": {
+    "status": "ok",
+    "checks": {
+      "database": "ok",
+      "workers": "ok",
+      "disk": "ok",
+      "backup": "ok",
+      "execution": "ok"
+    }
+  },
+  "strategies_running": 2,
+  "overview_strategy_errors": []
+}

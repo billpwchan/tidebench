@@ -15,6 +15,11 @@ English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Re
 
 Instrument evidence preserves full forward REST data-array observations, including unavailable preopen rows. Compare responses, inspect missing rules, review information known by a UTC time and export exact hashes; older listing timestamps do not manufacture historical coverage. [Observation and recovery guide](docs/instrument-evidence.md).
 
+## A trading desk with evidence you can inspect
+
+Account capital promises, settlement-time funding obligations, shared group failure contracts, current economic incidents and frozen whole-window forward reports connect research to the actual paper account. Post-fill fees and spread losses count at admission; a stopped controller does not erase inventory. Attributed lifecycle events and immutable public order-book cost reports make data limitations inspectable. [Professional workflows](docs/professional-workflows-v0.10.md) · [Historical lifecycle](docs/historical-lifecycle.md) · [Forward evidence](docs/forward-evidence.md) · [Independent reviews](docs/audit/README.md).
+
+
 ## Strategies with evidence, including failed hypotheses
 
 The bilingual research library covers weekly momentum, conditional reversion, matched funding carry, relative-strength rotation and closing-channel breakouts. Two new causal signal models and cost-aware carry admissions are executable through the same backtest and persistent paper workflow. Each dossier explains the mechanism, exact formula, sources, costs and what would reject it.
@@ -43,8 +48,8 @@ Go from an economic hypothesis to an immutable strategy or portfolio version, re
 | Data library | Prepare a complete research package in one action: trade, mark, settled funding and exact-time settlement marks; inspect blockers, immutable versions and hashes; import attributed history |
 | Strategies | Immutable hypotheses and definitions; seven signal families, source-backed dossiers, public contrary evidence, bounded declarative programs, exits, loss budgets and editable research recipes |
 | Research | Version-bound replay, grids, cost stress, train/test, walk-forward; single-strategy and captured-input portfolio final evaluations, shared one-use governance and retained trial ledger |
-| Portfolio research | Immutable multi-market hypotheses; one cash budget across 2–10 aligned markets; fixed weights, independent signals, momentum and funding carry; editable hypotheses with rejection criteria and chronological tests |
-| Managed portfolios | Whole-group review and activation; durable targets/commands, common cash scaling, residual limits, group stops and recoverable failed-leg compensation |
+| Portfolio research | Immutable multi-market hypotheses; one cash budget across 2–10 markets, attributed historical membership and distinct listing windows; fixed weights, independent signals, momentum and funding carry; editable hypotheses with rejection criteria and chronological tests |
+| Managed portfolios | Whole-group review and activation; durable account promises, targets/commands, common cash scaling, residual limits, group stops and recoverable failed-leg compensation |
 | Contributions | Actual owner quantities, entry cost, P&L, fees and funding reconciled to the account; linked fill/event evidence and exports |
 | Portfolio | Spot inventory and isolated perpetual positions in one account; order previews, market/limit/stop simulation, reservations, cancellation, leverage, margin and funding |
 | Risk | Asset and market gross/net exposure, concentration, isolated margin buffers and captured custom price shocks; transactional limits and a persistent halt |

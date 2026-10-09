@@ -18,7 +18,7 @@ import ClassicResearch from './pages/Research';
 import SettingsPage from './pages/Settings';
 import DataLibrary from './pages/DataLibrary';
 import Portfolio, { ExecutionRisk } from './pages/Portfolio';
-import Operations from './pages/Operations';
+const Operations = lazy(() => import('./pages/Operations'));
 const ProResearch = lazy(() => import('./pages/ProResearch'));
 const PortfolioResearch = lazy(() => import('./pages/PortfolioResearch'));
 const ResearchGovernance = lazy(() => import('./pages/ResearchGovernance'));
@@ -61,6 +61,7 @@ function Workspace() {
   const [selectedInputs, setSelectedInputs] = useState<ResearchInputs | undefined>();
   const [selectedVersion, setSelectedVersion] = useState<StrategyVersion | undefined>();
   const [executionView, setExecutionView] = useState('positions');
+  const [operationsView, setOperationsView] = useState('feeds');
   const [mobileNav, setMobileNav] = useState(false);
   const compactNavigation = useMediaQuery('(max-width: 850px)');
   useEffect(() => {
@@ -85,6 +86,7 @@ function Workspace() {
   };
   const navigate = (p: Page, view?: string) => {
     if (p === 'execution') setExecutionView(view ?? 'positions');
+    if (p === 'operations') setOperationsView(view ?? 'feeds');
     setPage(p);
     window.location.hash = p;
     setMobileNav(false);
@@ -288,7 +290,7 @@ function Workspace() {
                   }}
                 />
               )}
-              {page === 'operations' && <Operations />}
+              {page === 'operations' && <Operations initialView={operationsView} />}
               {page === 'settings' && (
                 <SettingsPage system={system.data} source={source} setSource={setSource} />
               )}

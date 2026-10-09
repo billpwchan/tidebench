@@ -8,6 +8,7 @@ import { ErrorBox, Field, Status } from './workspace';
 import { useI18n } from '../lib/i18n';
 import { canTrade } from '../lib/permissions';
 import { number } from '../lib/format';
+import { LiquidityReleaseEvidence } from './LiquidityEvidence';
 
 const acknowledgement: Record<string, string> = {
   holdout_rejected:
@@ -16,7 +17,8 @@ const acknowledgement: Record<string, string> = {
     'This final holdout has insufficient observations or fills for its pre-registered assessment.',
   sequential_leg_risk:
     'Legs fill sequentially. A failed leg triggers group reduction, which can also fail and retain inventory.',
-  execution_risk_difference: 'Account exposure and loss limits differ from this research scenario.',
+  execution_risk_difference:
+    'Account order, exposure, concentration or loss limits differ from this research scenario.',
   execution_cost_difference: 'The paper account cost policy differs from this research scenario.',
   no_oos_evidence: 'This study has no independent out-of-sample evaluation.',
 };
@@ -27,6 +29,17 @@ const blockers: Record<string, string> = {
   strategy_ownership: 'Another strategy owns a portfolio market',
   deployment_limit: 'The workspace has insufficient strategy slots',
   leverage_limit: 'A portfolio leg exceeds the account leverage limit',
+  research_execution_failed: 'This simulation is not eligible for paper deployment.',
+  research_economics_incomplete:
+    'Unresolved inventory or lifecycle evidence prevents complete research accounting.',
+  historical_lifecycle_forward_unsupported:
+    'This historical lifecycle scenario cannot be deployed by the current-market paper controller.',
+  account_capital_valuation:
+    'Complete fresh account valuation is required before reserving portfolio capital.',
+  account_capital_overcommitted: 'Declared portfolio capital would exceed the account budget.',
+  account_promised_gross_limit: 'Promised gross exposure would exceed the account limit.',
+  account_base_asset_limit:
+    'Combined spot and perpetual exposure would exceed an underlying asset budget.',
 };
 export default function PortfolioReleaseReview({
   runId,
@@ -109,6 +122,57 @@ export default function PortfolioReleaseReview({
               bar: p.definition.bar,
             }}
           />
+          {p.capital_admission && (
+            <section className="capital-admission" aria-label={t('Account capital admission')}>
+              <h3>{t('Account capital admission')}</h3>
+              <RecordGrid
+                value={{
+                  [t('Committed capital')]: `${number(p.capital_admission.committed_capital_pct)}%`,
+                  [t('Proposed capital')]: `${number(p.capital_admission.proposed_capital_pct)}%`,
+                  [t('Projected committed capital')]:
+                    `${number(p.capital_admission.projected_committed_capital_pct)}%`,
+                  [t('Remaining declared capital')]:
+                    `${number(p.capital_admission.remaining_declared_capital_pct)}%`,
+                  [t('Projected promised gross exposure')]:
+                    `${number(p.capital_admission.projected_promised_gross_pct)}%`,
+                }}
+              />
+              <DataTable
+                rows={Object.entries(p.capital_admission.projected_base_asset_gross_pct).map(
+                  ([asset, exposure]) => ({ asset, exposure }),
+                )}
+                columns={[
+                  { key: 'asset', label: 'Underlying asset' },
+                  {
+                    key: 'exposure',
+                    label: 'Projected promised gross exposure',
+                    render: (row) => `${number(row.exposure)}%`,
+                  },
+                  {
+                    key: 'limit',
+                    label: 'Underlying asset gross limit (%)',
+                    render: () =>
+                      `${number(p.capital_admission!.policy.max_base_asset_gross_pct)}%`,
+                  },
+                ]}
+              />
+              <p className="quiet-copy">
+                {t(
+                  'Absolute spot and perpetual exposure share one budget per underlying. Opposite directions are not netted. Declared commitments are checked before activation; actual capital use is checked again for new risk orders.',
+                )}
+              </p>
+              <p className="quiet-copy">
+                {t(
+                  'Stopping a group retains its commitment until inventory, working orders and deferred funding are cleared.',
+                )}
+              </p>
+            </section>
+          )}
+          <LiquidityReleaseEvidence
+            symbols={p.definition.legs.map((leg) => leg.inst_id)}
+            source={p.source}
+            review={p.liquidity_review}
+          />
           <h3>{t('Research evidence')}</h3>
           <RecordGrid value={p.research_evidence} />
           <h3>{t('Account risk policy')}</h3>
@@ -130,7 +194,20 @@ export default function PortfolioReleaseReview({
             <DataTable
               rows={p.cost_differences}
               columns={[
-                { key: 'field', label: 'Cost' },
+                {
+                  key: 'field',
+                  label: 'Cost',
+                  render: (row) =>
+                    t(
+                      (
+                        {
+                          fee_bps: 'Fee (bps)',
+                          slippage_bps: 'Slippage (bps)',
+                          liquidation_fee_bps: 'Liquidation fee (bps)',
+                        } as Record<string, string>
+                      )[String(row.field)] ?? String(row.field),
+                    ),
+                },
                 { key: 'research', label: 'Research' },
                 { key: 'execution', label: 'Execution' },
               ]}
@@ -140,7 +217,22 @@ export default function PortfolioReleaseReview({
             <DataTable
               rows={p.risk_differences!}
               columns={[
-                { key: 'field', label: 'Risk control' },
+                {
+                  key: 'field',
+                  label: 'Risk control',
+                  render: (row) =>
+                    t(
+                      (
+                        {
+                          lifecycle_execution_support: 'Lifecycle execution support',
+                          max_order_notional: 'Maximum order notional (USDT)',
+                          max_base_asset_gross_pct: 'Underlying asset gross limit (%)',
+                          max_gross_exposure_pct: 'Gross exposure limit %',
+                          max_daily_loss_pct: 'Daily loss limit %',
+                        } as Record<string, string>
+                      )[String(row.field)] ?? String(row.field),
+                    ),
+                },
                 { key: 'research', label: 'Research' },
                 { key: 'execution', label: 'Execution' },
               ]}

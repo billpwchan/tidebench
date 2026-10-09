@@ -9,6 +9,7 @@ from pydantic import Field
 
 from .catalog import CATALOG_BARS
 from .engine import Candle
+from .historical_lifecycle import LifecycleEvent
 from .platform import PlatformError
 from .portfolio_research import RuleEvent
 from .schemas import InputModel, Money
@@ -39,12 +40,17 @@ class PortfolioHoldoutInput(InputModel):
     slippage_bps: Decimal = Field(default=5, ge=0, le=100)
     liquidation_fee_bps: Decimal = Field(default=50, ge=0, le=500)
     max_gross_pct: Decimal = Field(default=200, ge=1, le=1000)
+    max_order_notional: Decimal = Field(default=2500, gt=0, le=1000000000)
+    max_base_asset_gross_pct: Decimal = Field(default=100, ge=1, le=1000)
     max_daily_loss_pct: Decimal = Field(default=5, ge=".1", le=50)
     benchmark: Literal["cash"] = "cash"
     rejection_plan: str = Field(min_length=20, max_length=4000)
     criteria: RejectionCriteria = Field(default_factory=RejectionCriteria)
     rules_mode: Literal["captured_current", "point_in_time"] = "captured_current"
     rule_events: dict[str, list[RuleEvent]] = Field(default_factory=dict, max_length=10)
+    universe_mode: Literal["static", "historical_lifecycle"] = "static"
+    lifecycle_warmup_bars: int = Field(default=2, ge=1, le=400)
+    lifecycle_events: dict[str, list[LifecycleEvent]] = Field(default_factory=dict, max_length=10)
 
 
 class SealPortfolioInput(InputModel):
@@ -387,13 +393,15 @@ def evaluate_frozen_portfolio(config, manifest, legs, progress=lambda _: None):
             metric="return_vs_cash_pct",
             actual=metrics["total_return_pct"],
             threshold=criteria["min_return_vs_cash_pct"],
-            passed=D(metrics["total_return_pct"]) >= D(criteria["min_return_vs_cash_pct"]),
+            passed=metrics["total_return_pct"] is not None
+            and D(metrics["total_return_pct"]) >= D(criteria["min_return_vs_cash_pct"]),
         ),
         dict(
             metric="max_drawdown_pct",
             actual=metrics["max_drawdown_pct"],
             threshold=criteria["max_drawdown_pct"],
-            passed=D(metrics["max_drawdown_pct"]) <= D(criteria["max_drawdown_pct"]),
+            passed=metrics["max_drawdown_pct"] is not None
+            and D(metrics["max_drawdown_pct"]) <= D(criteria["max_drawdown_pct"]),
         ),
         dict(
             metric="zero_debt",
@@ -402,7 +410,38 @@ def evaluate_frozen_portfolio(config, manifest, legs, progress=lambda _: None):
             passed=not criteria["require_zero_debt"] or D(metrics["insurance_debt"]) == 0,
         ),
     ]
-    status = "inconclusive" if not enough else "passed" if all(c["passed"] for c in checks) else "rejected"
+    if result.get("execution_contract"):
+        checks.append(
+            dict(
+                metric="execution_status",
+                actual=result["execution_status"],
+                threshold="running",
+                passed=result["execution_status"] == "running",
+            )
+        )
+    if result.get("lifecycle"):
+        checks.append(
+            dict(
+                metric="lifecycle_economics",
+                actual=result["lifecycle"]["status"],
+                threshold="complete_within_supplied_scope",
+                passed=result["lifecycle"]["status"] == "complete_within_supplied_scope",
+            )
+        )
+    execution_failed = (
+        result.get("execution_status") in {"failed", "compensating"}
+        or metrics["final_equity"] is None
+        or result.get("economic_state") == "incomplete_lifecycle"
+    )
+    status = (
+        "rejected"
+        if execution_failed
+        else "inconclusive"
+        if not enough
+        else "passed"
+        if all(c["passed"] for c in checks)
+        else "rejected"
+    )
     return result | {
         "evaluation": dict(
             mode="sealed_holdout",
@@ -477,11 +516,19 @@ class ResearchProtocol:
         r = self.runtime
         version = r.portfolio_registry.version(request["portfolio_version_id"])
         definition = version["definition"]
+        if "execution_contract" not in definition:
+            raise PlatformError(
+                "portfolio_execution_legacy",
+                "Create and review a new revision with the shared execution contract before freezing new evidence; stored legacy evidence remains unchanged.",
+                409,
+            )
         interval = CATALOG_BARS[definition["bar"]]
         start, end = request["test_start"], request["test_end"]
         if start % interval or end % interval or end - start < 2 * interval:
             raise PlatformError("holdout_window", "Use an aligned final interval of at least two bars.", 422)
-        if set(request["rule_events"]) - {leg["inst_id"] for leg in definition["legs"]}:
+        if (set(request["rule_events"]) | set(request["lifecycle_events"])) - {
+            leg["inst_id"] for leg in definition["legs"]
+        }:
             raise PlatformError(
                 "holdout_rules", "Rule histories must belong to the declared portfolio markets.", 422
             )
@@ -499,6 +546,9 @@ class ResearchProtocol:
                 for k in (
                     "mode",
                     "capital_pct",
+                    "failure_policy",
+                    "max_residual_pct",
+                    "execution_contract",
                     "rebalance_bars",
                     "lookback",
                     "top_k",
@@ -522,13 +572,21 @@ class ResearchProtocol:
                     "slippage_bps",
                     "liquidation_fee_bps",
                     "max_gross_pct",
+                    "max_order_notional",
+                    "max_base_asset_gross_pct",
                     "max_daily_loss_pct",
                     "rules_mode",
+                    "universe_mode",
+                    "lifecycle_warmup_bars",
                 )
             },
             legs=[
                 {k: leg[k] for k in ("weight", "leverage", "direction", "strategy")}
-                | {"package_id": package, "rule_events": request["rule_events"].get(leg["inst_id"], [])}
+                | {
+                    "package_id": package,
+                    "rule_events": request["rule_events"].get(leg["inst_id"], []),
+                    "lifecycle_events": request["lifecycle_events"].get(leg["inst_id"], []),
+                }
                 for leg, package in zip(definition["legs"], request["package_ids"], strict=True)
             ],
         )

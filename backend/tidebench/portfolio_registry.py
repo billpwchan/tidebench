@@ -55,6 +55,7 @@ class PortfolioDefinition(InputModel):
     carry_max_age_hours: int = Field(default=0, ge=0, le=168)
     max_residual_pct: Decimal = Field(default=2, ge=".01", le=100)
     failure_policy: Literal["reduce_group"] = "reduce_group"
+    execution_contract: Literal["reduce_group_v1"] = "reduce_group_v1"
 
     @model_validator(mode="after")
     def construction(self):
@@ -235,12 +236,21 @@ class PortfolioRegistry:
                 409,
             )
         definition = version["definition"]
+        if "execution_contract" not in definition:
+            raise PlatformError(
+                "portfolio_execution_legacy",
+                "Review a new portfolio revision with an explicit shared execution contract; the stored legacy version is retained unchanged.",
+                409,
+            )
         if config["hypothesis"].strip() != version["hypothesis"]:
             raise PlatformError(
                 "portfolio_binding", "Research hypothesis must match its immutable portfolio version.", 409
             )
         for key in (
             "mode",
+            "failure_policy",
+            "execution_contract",
+            "max_residual_pct",
             "rebalance_bars",
             "lookback",
             "top_k",
@@ -263,6 +273,7 @@ class PortfolioRegistry:
                     "carry_threshold",
                     "carry_buffer_bps",
                     "capital_pct",
+                    "max_residual_pct",
                     "vol_target_pct",
                     "vol_floor_pct",
                     "covariance_shrinkage",

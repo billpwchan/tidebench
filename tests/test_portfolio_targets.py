@@ -106,8 +106,9 @@ def test_minimum_rebalances_defer_without_suppressing_exits_or_funding_units(sig
     # A valid decrease must not leave dust that a later exit cannot submit.
     assert not reduction_plan({symbol: D(".5") * sign}, {symbol: old}, q).quantities
     assert reduction_plan({symbol: 9 * sign}, {symbol: old}, q).quantities == {symbol: -sign}
-    # Initial undersized exposure and cash-scaled shortfalls remain hard failures.
+    # New undersized exposure remains a hard failure. Same-side cash rounding
+    # can retain actual inventory; the group independently enforces residual limits.
     initial = addition_plan({symbol: D(".5") * sign}, {}, q, 1000, {symbol: 2}, 10, 5)
     assert initial.skipped[0]["code"] == "minimum_size"
     shortfall = addition_plan({symbol: 12 * sign}, {symbol: old}, q, 0, {symbol: 2}, 10, 5)
-    assert shortfall.skipped[0]["code"] == "minimum_size"
+    assert shortfall.skipped[0]["code"] == "rebalance_cash_rounding"

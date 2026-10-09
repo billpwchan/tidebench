@@ -1,6 +1,66 @@
 import { ApiError, downloadBlob, request, setCsrfToken, readToken } from './api';
 import type { Source, Strategy } from './api';
 export type RecordData = Record<string, unknown>;
+export type LiquidityScenario = RecordData & {
+  side: 'buy' | 'sell';
+  requested_notional: string;
+  status: string;
+  vwap: string | null;
+  shortfall_bps: string | null;
+  participation_pct: string;
+  unfilled_quantity: string;
+};
+export type LiquidityCapture = RecordData & {
+  id: string;
+  inst_id: string;
+  received_at: number;
+  known_at: number;
+  current_age_ms?: number;
+  content_hash: string;
+  evidence: {
+    status: string;
+    reason?: string | null;
+    metadata?: { quantity_unit: string };
+    book_age_at_capture_ms?: number;
+    mid?: string;
+    spread_bps?: string;
+    scenarios: LiquidityScenario[];
+  };
+};
+type LiquidityQuantiles = {
+  median: string | null;
+  p90: string | null;
+  p95: string | null;
+  worst: string | null;
+};
+export type LiquidityCalibration = RecordData & {
+  id: string;
+  inst_id: string;
+  created_at: number;
+  content_hash: string;
+  status: string;
+  current_review_status?: string;
+  independent_book_count: number;
+  approved_observed_notional: string | null;
+  selection_audit: {
+    all_available_count: number;
+    selected_count: number;
+    omitted_capture_ids: string[];
+  };
+  declared_child_notional: string;
+  declared_sleeve_notional: string;
+  input: { minimum_samples: number };
+  observed_window: { start: number | null; end: number | null };
+  independent_window: { elapsed_ms: number };
+  scenarios: (RecordData & {
+    notional: string;
+    all_samples_pass: boolean;
+    sides: Record<
+      'buy' | 'sell',
+      { shortfall_bps: LiquidityQuantiles; participation_pct: LiquidityQuantiles }
+    >;
+  })[];
+};
 export type InstrumentMember = RecordData & {
   row: number;
   inst_id: string | null;
@@ -330,7 +390,21 @@ export type ProDeployment = {
   last_error?: string | null;
   [key: string]: unknown;
 };
+export type OpsIncident = {
+  id: string;
+  kind: string;
+  subject: string;
+  status: string;
+  first_seen: number;
+  last_seen: number;
+  details: RecordData;
+  ack_actor?: string | null;
+  ack_reason?: string | null;
+  ack_at?: number | null;
+};
 export type Ops = {
+  incidents?: OpsIncident[];
+  economic_health?: RecordData;
   health?: RecordData | string;
   feeds?: RecordData[];
   jobs?: Job[];
@@ -376,6 +450,7 @@ export type PortfolioDefinition = {
   carry_max_age_hours?: number;
   max_residual_pct: string;
   failure_policy: 'reduce_group';
+  execution_contract?: 'reduce_group_v1';
 };
 export type PortfolioVersion = {
   id: string;
@@ -395,7 +470,24 @@ export type PortfolioProject = {
   versions?: PortfolioVersion[];
   version?: PortfolioVersion;
 };
+export type CapitalAdmission = {
+  committed_capital_pct: string;
+  remaining_declared_capital_pct: string;
+  proposed_capital_pct: string;
+  projected_committed_capital_pct: string;
+  projected_promised_gross_pct: string;
+  projected_base_asset_gross_pct: Record<string, string>;
+  policy: { capital_limit_pct: string; max_base_asset_gross_pct: string };
+  blockers: string[];
+};
+export type CapitalPolicy = {
+  capital_limit_pct: string;
+  max_base_asset_gross_pct: string;
+  [key: string]: unknown;
+};
 export type PortfolioReleasePreview = {
+  liquidity_review?: RecordData;
+  capital_admission?: CapitalAdmission;
   name: string;
   run_id: string;
   version_id: string;
@@ -437,6 +529,20 @@ export type ManagedPortfolio = {
   last_bar?: number;
   last_error?: string;
   created_at: number;
+  updated_at?: number;
+  attention?: {
+    phase: string;
+    since?: number;
+    as_of: number;
+    error?: string | null;
+    inventory_notional: string | null;
+    valuation_status: string;
+    inventory: { inst_id: string; quantity: string; market_value: string | null }[];
+    residual_notional?: string | null;
+    batch_id?: string | null;
+    incident_id?: string | null;
+  } | null;
+  capital_commitment?: RecordData;
   integrity_error?: { code: string; message: string };
   manifest: {
     name: string;
@@ -586,6 +692,22 @@ export type PortfolioGovernanceReport = {
   scope: string;
 };
 export const proApi = {
+  liquidityCaptures: (inst_id: string) =>
+    request<{ items: LiquidityCapture[] }>(`/pro/research/liquidity/captures?${q({ inst_id })}`),
+  liquidityCapture: (id: string) =>
+    request<LiquidityCapture>(`/pro/research/liquidity/captures/${encodeURIComponent(id)}`),
+  captureLiquidity: (inst_id: string) =>
+    post<LiquidityCapture>('/pro/research/liquidity/captures', { inst_id, depth: 400 }),
+  liquidityCalibration: (id: string) =>
+    request<LiquidityCalibration>(`/pro/research/liquidity/calibrations/${id}`),
+  liquidityCalibrations: (inst_id: string, limit = 20) =>
+    request<{ items: LiquidityCalibration[] }>(
+      `/pro/research/liquidity/calibrations?${q({ inst_id, limit })}`,
+    ),
+  calibrateLiquidity: (body: RecordData) =>
+    post<LiquidityCalibration>('/pro/research/liquidity/calibrations', body),
+  liquidityPaperComparison: (inst_id: string) =>
+    request<{ items: RecordData[] }>(`/pro/research/liquidity/paper-comparison?${q({ inst_id })}`),
   portfolioHoldouts: (source: Source, project_id: string) =>
     request<{ items: PortfolioHoldout[] }>(
       `/pro/research/portfolio-holdouts?${q({ source, project_id })}`,
@@ -668,8 +790,14 @@ export const proApi = {
     request<{
       items: { id: number; market_ts: number; observed_at: number; body: RecordData }[];
       summary: RecordData;
+      window: RecordData;
+      acceptance: RecordData;
       next_before?: number;
     }>(`/pro/execution/performance?${q({ source, ...(before === undefined ? {} : { before }) })}`),
+  freezePerformance: (body: RecordData) =>
+    post<RecordData>('/pro/execution/performance/snapshots', body),
+  verifyPerformance: (id: string) =>
+    request<RecordData>(`/pro/execution/performance/snapshots/${id}/verify`),
   decisions: (id: string, before?: number) =>
     request<{ items: RecordData[] }>(
       `/pro/execution/deployments/${id}/decisions?${q(before === undefined ? {} : { before })}`,
@@ -829,6 +957,13 @@ export const proApi = {
   stop: (id: string) =>
     post<ProDeployment>(`/pro/execution/deployments/${encodeURIComponent(id)}/stop`),
   risk: (source: Source) => request<ProRisk>(`/pro/execution/risk?${q({ source })}`),
+  capitalPolicy: (source: Source) =>
+    request<CapitalPolicy>(`/pro/execution/capital-policy?${q({ source })}`),
+  saveCapitalPolicy: (body: { source: Source; max_base_asset_gross_pct: string }) =>
+    request<CapitalPolicy>(`/pro/execution/capital-policy?${q({ source: body.source })}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
   saveRisk: (body: {
     source: Source;
     max_order_notional: string;

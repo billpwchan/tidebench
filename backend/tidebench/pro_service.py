@@ -19,6 +19,7 @@ from .data_packages import DataPackageService
 from .derivatives import FundingEvent, LinearContract, MarginTier
 from .engine import ACCOUNTING_CONTEXT, EngineError, Instrument, StrategyConfig
 from .forward_history import ForwardHistory
+from .liquidity_evidence import LiquidityEvidence
 from .managed_portfolios import ManagedPortfolios
 from .operations import IncidentStore
 from .platform import BackupService, PlatformError, RuntimeMetrics
@@ -41,6 +42,7 @@ class ProfessionalRuntime:
     def __init__(self, store, market, settings):
         self.store, self.market, self.settings = store, market, settings
         self.catalog = CatalogService(store, market)
+        self.liquidity = LiquidityEvidence(store, market)
         self.clock = self.catalog.clock
         self.history = ForwardHistory(store, self.catalog)
         self.packages = DataPackageService(store, self.catalog)
@@ -751,41 +753,42 @@ class ProfessionalRuntime:
             self.market_errors[(source, symbol)] = {"error": str(exc)[:300], "at": now_ms()}
             return self.snapshots.get((source, symbol))
 
-    async def sync_funding(self, source, symbol, snapshots, *, periodic=False):
+    async def sync_funding(self, source, symbol, snapshots, *, periodic=False, protective=False):
         position = next((p for p in self.book.positions(source) if p["inst_id"] == symbol), None)
-        if not position or not symbol.endswith("-SWAP"):
+        obligations = [p for p in self.book.deferred_funding.pending(source) if p["inst_id"] == symbol]
+        if not symbol.endswith("-SWAP") or not position and not obligations:
             return
         snapshot = snapshots.get(symbol)
         if not snapshot:
+            if protective:
+                return
             raise PlatformError(
                 "market_unavailable", "A market snapshot is required to reconcile funding.", 409
             )
+        await self.offload(self.book.capture_funding_obligations, source, symbol, snapshot)
+        obligations = [p for p in self.book.deferred_funding.pending(source) if p["inst_id"] == symbol]
         end = int(snapshot["ts"])
-        if end <= position["funding_cursor"]:
+        cursor = position["funding_cursor"] if position else end
+        start = min([cursor + 1, *(p["ts"] for p in obligations)])
+        if start > end:
             return
         check_key = (source, symbol)
-        expected = json.loads(position["metadata"]).get("expected_funding_time")
-        if (
-            periodic
-            and (not expected or int(expected) > end)
-            and now_ms() - self.funding_checks.get(check_key, 0) < 30000
-        ):
+        if periodic and not obligations and now_ms() - self.funding_checks.get(check_key, 0) < 30000:
             return
-        events = await self.catalog.funding_history(symbol, position["funding_cursor"] + 1, end + 1, source)
-        await self.offload(self.book.settle_funding, source, symbol, events, snapshots)
-        metadata = json.loads(position["metadata"])
-        expected = metadata.get("expected_funding_time")
-        if (
-            expected
-            and position["funding_cursor"] < int(expected) <= end
-            and not any(int(event["ts"]) == int(expected) for event in events)
-        ):
-            raise PlatformError(
-                "funding_pending",
-                "An expected funding settlement is not yet present in realized history; position changes are paused.",
-                409,
-            )
-        self.funding_checks[check_key] = now_ms()
+        try:
+            events = await self.catalog.funding_history(symbol, start, end + 1, source)
+            await self.offload(self.book.settle_funding, source, symbol, events, snapshots)
+            self.funding_checks[check_key] = now_ms()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            self.market_errors[check_key] = {
+                "error": str(exc)[:300],
+                "at": now_ms(),
+                "kind": "funding_reconciliation",
+            }
+            if not protective:
+                raise
 
     async def submit(self, order, key, actor):
         existing = self.book.existing(order["source"], key, dumps(order))
@@ -793,7 +796,9 @@ class ProfessionalRuntime:
             return existing
         async with self.locks[(order["source"], order["inst_id"])]:
             snapshots = await self.snapshots_for(order["source"], [order["inst_id"]])
-            await self.sync_funding(order["source"], order["inst_id"], snapshots)
+            await self.sync_funding(
+                order["source"], order["inst_id"], snapshots, protective=bool(order.get("reduce_only"))
+            )
             await self.offload(self.book.observe, order["source"], snapshots)
             result = await self.offload(self.book.submit, order, key, snapshots, actor)
             await self.offload(self.book.observe, order["source"], snapshots)
@@ -945,7 +950,7 @@ class ProfessionalRuntime:
                         409,
                     )
                 snapshots = await self.snapshots_for(source, [symbol])
-                await self.sync_funding(source, symbol, snapshots)
+                await self.sync_funding(source, symbol, snapshots, protective=True)
                 snapshot = snapshots[symbol]
                 self.book.fresh(snapshot)
                 if snapshot["ts"] < end:
@@ -1059,7 +1064,7 @@ class ProfessionalRuntime:
     async def poll_market(self, source, symbol, snapshots):
         with localcontext(ACCOUNTING_CONTEXT):
             async with self.locks[(source, symbol)]:
-                await self.sync_funding(source, symbol, snapshots, periodic=True)
+                await self.sync_funding(source, symbol, snapshots, periodic=True, protective=True)
                 account = await self.offload(self.book.observe, source, snapshots, record_performance=False)
                 for position in account["positions"]:
                     if (
@@ -1131,6 +1136,7 @@ class ProfessionalRuntime:
         for source in ("okx", "example"):
             symbols = (
                 {p["inst_id"] for p in self.book.positions(source)}
+                | {p["inst_id"] for p in self.book.deferred_funding.pending(source)}
                 | {row["inst_id"] for row in self.deployments(source) if row["status"] == "running"}
                 | {
                     json.loads(row["body"])["inst_id"]
@@ -1316,6 +1322,15 @@ class ProfessionalRuntime:
             conditions.append(
                 {"kind": "market_execution", "subject": f"{source}:{symbol}", "details": dict(failure)}
             )
+        for source in ("okx", "example"):
+            for obligation in self.book.deferred_funding.pending(source):
+                conditions.append(
+                    {
+                        "kind": "funding_pending",
+                        "subject": f"{source}:{obligation['inst_id']}:{obligation['ts']}",
+                        "details": {"source": source, **obligation},
+                    }
+                )
         for worker in self.worker_progress():
             if not worker["healthy"]:
                 conditions.append({"kind": "worker_progress", "subject": worker["worker"], "details": worker})
@@ -1342,23 +1357,13 @@ class ProfessionalRuntime:
                     }
                 )
         for group in self.managed_portfolios.attention():
-            if (
-                group["status"] in {"compensating", "failed"}
-                or group["status"] == "running"
-                and group["last_error"]
-                or (group["last_error"] or "").startswith("Portfolio evidence integrity:")
-            ):
-                conditions.append(
-                    {
-                        "kind": "managed_portfolio",
-                        "subject": group["id"],
-                        "details": {
-                            "source": group["source"],
-                            "status": group["status"],
-                            "error": group["last_error"],
-                        },
-                    }
-                )
+            conditions.append(
+                {
+                    "kind": "managed_portfolio",
+                    "subject": group["id"],
+                    "details": {"source": group["source"], "status": group["status"], **group["attention"]},
+                }
+            )
         for status in self.book.contributions.statuses():
             conditions.append(
                 {"kind": "contribution_quarantined", "subject": status["source"], "details": status}
@@ -1425,6 +1430,16 @@ class ProfessionalRuntime:
             "backups": backups,
             "storage": storage,
             "metrics": self.metrics.snapshot(),
+            "economic_health": {
+                "status": "degraded"
+                if self.managed_portfolios.attention()
+                or self.book.deferred_funding.pending()
+                or self.book.contributions.statuses()
+                else "ok",
+                "managed_groups_requiring_attention": len(self.managed_portfolios.attention()),
+                "pending_funding_obligations": len(self.book.deferred_funding.pending()),
+                "basis": "current economic obligations and verified ownership; separate from process liveness",
+            },
             "execution": {
                 "mode": "local-paper",
                 "strategies_running": sum(row["status"] == "running" for row in self.deployments()),

@@ -1,0 +1,28 @@
+{
+  "audit_date": "2026-10-09",
+  "baseline_head": "6436a279e0b6fc9e7fe0500ab6544ee14bf369c7",
+  "scope": "current uncommitted source; temporary isolated data; no exchange orders",
+  "focused_verification": {
+    "passed": 128,
+    "elapsed_seconds": 12.14
+  },
+  "source_sha256": {
+    "backend/tidebench/account_capital.py": "57ba7ad688e1b9734a3a40152d67d9a594ee008f1aaa299c083e046db93e028d",
+    "backend/tidebench/pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+    "backend/tidebench/pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+    "backend/tidebench/historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+    "backend/tidebench/portfolio_execution.py": "97f2fb266047fb4822f1ee38c20da40965a149f3fc22cc5acee7ece0009cf817",
+    "backend/tidebench/portfolio_research.py": "8b29a0ac0ef49d2d9b5f6606c18bbf817ff49fef1b39c1af16103a5035e564bb",
+    "backend/tidebench/portfolio_releases.py": "dba87edc9a02b1d7d6353cfa7b5a97e3d56834d82a307716533ff02d9bc36078",
+    "backend/tidebench/research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+    "backend/tidebench/forward_performance.py": "78d0695c125182680abb9304b855e7608f7b50bb18fa190d75051aaeef203361",
+    "backend/tidebench/liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc"
+  },
+  "artifact_sha256": {
+    "workflow.json": "c2d67456de887138faffca7a13bd69af9102f3e0da3f3b774cf8e20366c204ed",
+    "reproduce.py": "176b9a61046c05b804cc1200d6b78e687029c577eced563f092e9e8d62e41f88",
+    "fresh-institutional-review-0.10.0.zh-CN.md": "6015df0ee08b3ed27bafe3bef7b822f09f7153f84c4d85a5b33e5219ad1d1212",
+    "observations.json": "034eab0be674455f2ca8ba5c92fb97f7a71282393429f4f21ad3395588eba989",
+    "workflow.py": "88118cd10005646a3cd64ba94e99ef19ea67f51efa49926dcd1ff2214c5595cc"
+  }
+}

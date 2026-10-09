@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { ColorType, LineSeries, createChart, type UTCTimestamp } from 'lightweight-charts';
 import type { Source } from '../api';
@@ -8,9 +8,19 @@ import { date, number } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { DataTable, JsonDetails } from './ProWorkspace';
 import { Empty, ErrorBox, Loading, Metric } from './workspace';
+import { useSession } from './AuthGate';
+import { canTrade } from '../lib/permissions';
 
 export default function ForwardPerformance({ source }: { source: Source }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
+  const mayFreeze = canTrade(useSession()?.user?.role);
+  const [snapshot, setSnapshot] = useState<RecordData>();
+  const freeze = useMutation({
+    mutationFn: proApi.freezePerformance,
+    onSuccess: (data) => setSnapshot(data),
+  });
+  const verify = useMutation({ mutationFn: proApi.verifyPerformance });
   const ref = useRef<HTMLDivElement>(null);
   const [before, setBefore] = useState<number>();
   const [decisionBefore, setDecisionBefore] = useState<number>();
@@ -18,6 +28,9 @@ export default function ForwardPerformance({ source }: { source: Source }) {
     setBefore(undefined);
     setDecisionBefore(undefined);
     setSelected('');
+    setSnapshot(undefined);
+    freeze.reset();
+    verify.reset();
   }, [source]);
   const report = useQuery({
     queryKey: ['forward-performance', source, before],
@@ -51,7 +64,7 @@ export default function ForwardPerformance({ source }: { source: Source }) {
     });
     const points = new Map<number, { time: UTCTimestamp; value?: number }>();
     for (const item of items) {
-      const time = Math.floor(item.market_ts / 1000) as UTCTimestamp;
+      const time = Math.floor((item.observed_at || item.market_ts) / 1000) as UTCTimestamp;
       const equity = item.body.equity;
       points.set(
         Number(time),
@@ -77,8 +90,9 @@ export default function ForwardPerformance({ source }: { source: Source }) {
   return (
     <>
       <p className="quiet-copy">
-        {t(
-          'Actual observations from this workspace. Statistics cover the selected page of up to 500 observations. Missing valuations remain gaps; detail records preserve exact decimals.',
+        {text(
+          'Statistics cover the complete observation window. The chart and detail table display the current page of up to 500 records; paging does not change the measured window. Missing prices or unsettled funding remain gaps.',
+          '统计覆盖完整观察窗口。图表和明细每页最多展示 500 条，翻页不会改变统计范围。缺失价格与未结资金费率保留为缺口。',
         )}
       </p>
       {report.isPending ? (
@@ -108,6 +122,92 @@ export default function ForwardPerformance({ source }: { source: Source }) {
               unit="USDT"
             />
           </div>
+          <div className="pro-metric-strip">
+            <Metric
+              label={text('Window observations', '窗口观察数')}
+              value={number(summary?.observations, 0)}
+            />
+            <Metric
+              label={text('Actual elapsed time', '真实经过时间')}
+              value={number(Number(summary?.wall_elapsed_ms ?? 0) / 3600000, 2)}
+              unit="h"
+            />
+            <Metric
+              label={text('Observed coverage', '观察覆盖率')}
+              value={number(summary?.wall_coverage_pct, 2)}
+              unit="%"
+            />
+            <Metric
+              label={text('Economic coverage', '经济状态完整覆盖率')}
+              value={number(summary?.economic_wall_coverage_pct, 2)}
+              unit="%"
+            />
+          </div>
+          <div className="toolbar">
+            {mayFreeze && (
+              <button
+                className="text-button"
+                disabled={freeze.isPending || !Number(summary?.observations)}
+                onClick={() => {
+                  verify.reset();
+                  freeze.mutate({
+                    source,
+                    window_start: report.data?.window.range_start_id,
+                    window_end: report.data?.window.range_end_id,
+                    max_gap_ms: report.data?.window.max_gap_ms,
+                  });
+                }}
+              >
+                {freeze.isPending
+                  ? text('Freezing…', '正在冻结…')
+                  : text('Freeze window evidence', '冻结窗口证据')}
+              </button>
+            )}
+            <JsonDetails
+              value={{ window: report.data?.window, summary, acceptance: report.data?.acceptance }}
+              label={text('Coverage and measurement rules', '覆盖情况与统计规则')}
+            />
+            {snapshot && (
+              <button
+                className="text-button"
+                disabled={verify.isPending}
+                onClick={() => verify.mutate(String(snapshot.id))}
+              >
+                {text('Verify frozen window', '验证冻结窗口')}
+              </button>
+            )}
+          </div>
+          {freeze.isError && <ErrorBox error={freeze.error} />}
+          {verify.isError && <ErrorBox error={verify.error} />}
+          {snapshot && (
+            <p className="quiet-copy">
+              {text('Frozen evidence', '已冻结证据')} · {String(snapshot.id).slice(0, 12)} ·{' '}
+              {date(Number(snapshot.created_at), true)}{' '}
+              <JsonDetails value={snapshot} label={text('Frozen report', '冻结报告')} />
+            </p>
+          )}
+          {verify.data && (
+            <p className={verify.data.verified ? 'quiet-copy' : 'warning-banner'}>
+              {verify.data.verified
+                ? text(
+                    'Recorded observation window and hashes match the frozen evidence.',
+                    '观察窗口与哈希均匹配冻结证据。',
+                  )
+                : text(
+                    'The recorded observation window differs from the frozen evidence.',
+                    '当前观察窗口与冻结证据不一致。',
+                  )}{' '}
+              <JsonDetails value={verify.data} label={text('Verification result', '验证结果')} />
+            </p>
+          )}
+          {summary?.external_flow_periods != null && Number(summary.external_flow_periods) > 0 && (
+            <p className="quiet-copy">
+              {text(
+                'Cash flows without a flow-time valuation leave time-weighted return unreported. The boundary-adjusted estimate is available in the evidence.',
+                '资金流发生时没有对应估值，时间加权收益暂不报告。边界调整估计值保留在证据中。',
+              )}
+            </p>
+          )}
           {items?.length ? (
             <div ref={ref} role="img" aria-label={t('Observed account equity')} />
           ) : (

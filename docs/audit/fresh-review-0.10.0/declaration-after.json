@@ -1,0 +1,195 @@
+[
+  {
+    "direct": {
+      "proposed_pct": 60,
+      "missing_valuation": false,
+      "blockers": [],
+      "reserved": true,
+      "rejected": null,
+      "actual_admission": {
+        "capital_committed_or_used_pct": "90.0",
+        "base_asset_gross_pct": {
+          "SOL": "30.0",
+          "BTC": "30.0",
+          "ETH": "30.0"
+        },
+        "gross_committed_or_used_pct": "90.0",
+        "owners": [
+          {
+            "owner": "manual:alice",
+            "actual_capital_pct": "30.0",
+            "promised_capital_pct": "0",
+            "base_asset_gross_pct": {
+              "SOL": "30.0"
+            }
+          },
+          {
+            "owner": "proposed",
+            "actual_capital_pct": "0",
+            "promised_capital_pct": "60",
+            "base_asset_gross_pct": {
+              "BTC": "30.0",
+              "ETH": "30.0"
+            }
+          }
+        ],
+        "policy": {
+          "capital_limit_pct": "100",
+          "max_base_asset_gross_pct": "100",
+          "source": "example"
+        }
+      }
+    },
+    "professional": {
+      "proposed_pct": 60,
+      "missing_valuation": false,
+      "release_blockers": [],
+      "activated": true,
+      "rejected": null,
+      "commitments_count": 1,
+      "actual_admission": {
+        "capital_committed_or_used_pct": "90.0",
+        "base_asset_gross_pct": {
+          "SOL": "30.0",
+          "BTC": "30.0",
+          "ETH": "30.0"
+        },
+        "gross_committed_or_used_pct": "90.0",
+        "owners": [
+          {
+            "owner": "manual:alice",
+            "actual_capital_pct": "30.0",
+            "promised_capital_pct": "0",
+            "base_asset_gross_pct": {
+              "SOL": "30.0"
+            }
+          },
+          {
+            "owner": "proposed",
+            "actual_capital_pct": "0",
+            "promised_capital_pct": "60",
+            "base_asset_gross_pct": {
+              "BTC": "30.0",
+              "ETH": "30.0"
+            }
+          }
+        ],
+        "policy": {
+          "capital_limit_pct": "100",
+          "max_base_asset_gross_pct": "100",
+          "source": "example"
+        }
+      }
+    }
+  },
+  {
+    "direct": {
+      "proposed_pct": 80,
+      "missing_valuation": false,
+      "blockers": [
+        "account_capital_overcommitted"
+      ],
+      "reserved": false,
+      "rejected": "account_capital_overcommitted",
+      "actual_admission": {
+        "capital_committed_or_used_pct": "110.0",
+        "base_asset_gross_pct": {
+          "SOL": "30.0",
+          "BTC": "40.0",
+          "ETH": "40.0"
+        },
+        "gross_committed_or_used_pct": "110.0",
+        "owners": [
+          {
+            "owner": "manual:alice",
+            "actual_capital_pct": "30.0",
+            "promised_capital_pct": "0",
+            "base_asset_gross_pct": {
+              "SOL": "30.0"
+            }
+          },
+          {
+            "owner": "proposed",
+            "actual_capital_pct": "0",
+            "promised_capital_pct": "80",
+            "base_asset_gross_pct": {
+              "BTC": "40.0",
+              "ETH": "40.0"
+            }
+          }
+        ],
+        "policy": {
+          "capital_limit_pct": "100",
+          "max_base_asset_gross_pct": "100",
+          "source": "example"
+        }
+      }
+    },
+    "professional": {
+      "proposed_pct": 80,
+      "missing_valuation": false,
+      "release_blockers": [
+        "account_capital_overcommitted"
+      ],
+      "activated": false,
+      "rejected": "portfolio_release_changed",
+      "commitments_count": 0,
+      "actual_admission": {
+        "capital_committed_or_used_pct": "110.0",
+        "base_asset_gross_pct": {
+          "SOL": "30.0",
+          "BTC": "40.0",
+          "ETH": "40.0"
+        },
+        "gross_committed_or_used_pct": "110.0",
+        "owners": [
+          {
+            "owner": "manual:alice",
+            "actual_capital_pct": "30.0",
+            "promised_capital_pct": "0",
+            "base_asset_gross_pct": {
+              "SOL": "30.0"
+            }
+          },
+          {
+            "owner": "proposed",
+            "actual_capital_pct": "0",
+            "promised_capital_pct": "80",
+            "base_asset_gross_pct": {
+              "BTC": "40.0",
+              "ETH": "40.0"
+            }
+          }
+        ],
+        "policy": {
+          "capital_limit_pct": "100",
+          "max_base_asset_gross_pct": "100",
+          "source": "example"
+        }
+      }
+    }
+  },
+  {
+    "direct": {
+      "proposed_pct": 60,
+      "missing_valuation": true,
+      "blockers": [
+        "account_capital_valuation"
+      ],
+      "reserved": false,
+      "rejected": "account_capital_valuation",
+      "actual_admission": null
+    },
+    "professional": {
+      "proposed_pct": 60,
+      "missing_valuation": true,
+      "release_blockers": [
+        "account_capital_valuation"
+      ],
+      "activated": false,
+      "rejected": "portfolio_release_changed",
+      "commitments_count": 0,
+      "actual_admission": null
+    }
+  }
+]
