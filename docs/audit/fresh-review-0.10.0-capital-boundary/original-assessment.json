@@ -1,0 +1,53 @@
+{
+  "passed": true,
+  "source_revision": "4b0d466e82b486256ba71006605bdd223592ec36",
+  "classification": "Correct hard admission following measured shared-equity changes under reduce_group_v1; not a missing own-fee planner defect",
+  "failure_step": 23,
+  "quote_and_clock_unchanged": true,
+  "funding_unchanged_between_freeze_and_rejection": true,
+  "freeze_equity": "10003.060061459996212043386200000000000000000000000",
+  "pre_admission_equity": "10003.050508866257323843386200000000000000000000000",
+  "post_fill_equity": "10003.049855633046870243386200000000000000000000000",
+  "other_fill_equity_losses": [
+    {
+      "inst_id": "OKB-USDT-SWAP",
+      "fee": "0.0022516",
+      "equity_loss_including_fill_to_mark": "0.003637848500000000000000000000000000000000000"
+    },
+    {
+      "inst_id": "BTC-USDT",
+      "fee": "0.003693861929",
+      "equity_loss_including_fill_to_mark": "0.005914745238888200000000000000000000000000000"
+    }
+  ],
+  "shared_equity_decline": "0.009552593738888200000000000000000000000000000",
+  "frozen_budget_cash": "0.408018677652566563470896000000000000000000000",
+  "candidate_required_cash_including_fee": "0.4079976652752",
+  "candidate_quantity": "0.00014392",
+  "pre_owned_marked_capital": "799.8367862391471304",
+  "projected_owned_marked_capital": "800.2441306712118768",
+  "post_fill_capital_ceiling": "800.24398845064374961947089600000000000000000000000",
+  "actual_guard_overage": "0.00014222056812718052910400000000000000000000000",
+  "actual_guard_projected_owner_pct": "8.0000014217720613187931129013302561841233788543501",
+  "counterfactual_if_no_other_fills": {
+    "basis": "Algebraic evaluation only; not an executed fill or altered account",
+    "post_fill_equity": "10003.059408226785758443386200000000000000000000000",
+    "projected_owner_pct": "7.9999937820330200944658098459438931140650598960374",
+    "within_eight_pct": true
+  },
+  "unfilled_target_residual_notional": "0.4085331804073478",
+  "unfilled_target_residual_pct_of_frozen_sleeve": "0.051050989777764243372459231197014601181172824541231",
+  "predeclared_reserve_case": {
+    "cash_leg_weights": [
+      ".4",
+      ".4"
+    ],
+    "sleeve_cash_reserve_pct": "20",
+    "steps": 60,
+    "synthetic_hours": 240,
+    "groups_running": 3,
+    "admission_rejections": 0,
+    "contributions_reconciled": true,
+    "scope": "Separate predeclared scenario, same exact source; not a new elapsed soak or replacement of the adverse original"
+  }
+}

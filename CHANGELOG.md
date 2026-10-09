@@ -2,6 +2,8 @@
 
 ## 0.10.0 · 2026-10-09
 
+- Versioned v2 allowance continuation replaces only unfilled additions with smaller immutable commands after measured shared-equity drift, at most three times under unchanged policies. Existing v1 batches retain frozen-order compensation; all hard guards, minimum legs and residual limits remain binding.
+
 - Mixed-group funding publication waits preserve original targets, partial fills and pending commands across restart; evidence waiting cannot masquerade as a terminal execution failure. Stop and protection remain available, while actual execution failures still compensate.
 - Shared historical/forward execution contracts, typed causal lifecycle events, inspectable source imports and immutable final-evaluation bindings.
 - Durable settlement-time funding obligations preserve original inventory/owner quantities across late publication, close/reopen, restart and same-identity contract-unit conversion; protection remains available while economics are incomplete.

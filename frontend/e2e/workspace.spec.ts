@@ -13,9 +13,12 @@ const credentials = {
   display_name: 'Example workspace',
 };
 async function navigate(page: Page, name: string) {
+  const destination = page.getByRole('navigation').getByRole('button', { name, exact: true });
+  // A reload can return while AuthGate is still resolving its session.
+  await destination.waitFor({ state: 'attached' });
   const opener = page.getByRole('button', { name: /^(Open navigation|展开导航)$/ });
   if (await opener.isVisible()) await opener.click();
-  await page.getByRole('navigation').getByRole('button', { name, exact: true }).click();
+  await destination.click();
 }
 async function login(request: APIRequestContext) {
   const status = await (await request.get('/api/v1/auth/status')).json();
@@ -458,6 +461,8 @@ test('versioned portfolio release, managed execution and reconciled owner contri
   request,
 }, testInfo) => {
   test.setTimeout(90000);
+  const policyAssetDir = process.env.TIDEBENCH_BROWSER_ASSET_DIR ?? '../docs/assets';
+  await mkdir(policyAssetDir, { recursive: true });
   const csrf = (await (await request.get('/api/v1/auth/status')).json()).csrf_token;
   const headers = { 'X-CSRF-Token': csrf };
   const cleanup = async () => {
@@ -514,6 +519,9 @@ test('versioned portfolio release, managed execution and reconciled owner contri
   await navigate(page, 'Research');
   await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
   await page.getByRole('button', { name: 'New portfolio study', exact: true }).click();
+  await expect(page.getByLabel('Execution policy', { exact: true })).toHaveValue(
+    'reduce_group_v2_allowance',
+  );
   await page.getByLabel('Portfolio starting point', { exact: true }).selectOption('basket');
   await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(
     'BTC / ETH reserve-aware basket',
@@ -529,12 +537,21 @@ test('versioned portfolio release, managed execution and reconciled owner contri
   await page.getByLabel('Package 2', { exact: true }).selectOption(packages[1]);
   await page.getByLabel('Capital allocation %', { exact: true }).fill('20');
   await page.getByLabel('Evaluation', { exact: true }).selectOption('train_test');
+  await expect(
+    page.locator('.portfolio-study-editor [aria-label="Portfolio execution policy"]'),
+  ).toContainText('at most three times');
+  await page.screenshot({
+    path: `${policyAssetDir}/execution-policy-form-${testInfo.project.name}.png`,
+    fullPage: true,
+    animations: 'disabled',
+  });
   const queued = page.waitForResponse(
     (r) => r.url().endsWith('/pro/research/portfolios') && r.request().method() === 'POST',
   );
   await page.getByRole('button', { name: 'Run portfolio research', exact: true }).click();
   const run = await (await queued).json();
   expect(run.config.portfolio_version_id).toBeTruthy();
+  expect(run.config.execution_contract).toBe('reduce_group_v2_allowance');
   await expect
     .poll(
       async () =>
@@ -543,6 +560,17 @@ test('versioned portfolio release, managed execution and reconciled owner contri
     .toBe('completed');
   await page.getByRole('button', { name: 'Review portfolio release', exact: true }).click();
   const review = page.locator('.portfolio-release-review');
+  await expect(
+    review.getByRole('note', { name: 'Portfolio execution policy', exact: true }),
+  ).toContainText('Bounded allowance replans');
+  await expect(
+    review.getByRole('note', { name: 'Portfolio execution policy', exact: true }),
+  ).toContainText('original commands stay frozen');
+  await page.screenshot({
+    path: `${policyAssetDir}/execution-policy-review-${testInfo.project.name}.png`,
+    fullPage: true,
+    animations: 'disabled',
+  });
   await review
     .getByLabel('Review note', { exact: true })
     .fill(
@@ -855,6 +883,7 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
       hypothesis:
         'Shared cash and measured costs must survive a final chronological interval without retuning.',
       definition: {
+        execution_contract: 'reduce_group_v1',
         capital_pct: '20',
         max_residual_pct: '3',
         rebalance_bars: 4,
@@ -903,6 +932,11 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
   const previewResponse = await previewPromise;
   expect(previewResponse.ok()).toBeTruthy();
   const preview = await previewResponse.json();
+  await expect(
+    page
+      .locator('.frozen-portfolio-plan')
+      .getByRole('note', { name: 'Portfolio execution policy', exact: true }),
+  ).toContainText('Frozen orders');
   expect(preview.plan.warmup_bars).toBe(20);
   expect(preview.plan.definition.failure_policy).toBe('reduce_group');
   expect(preview.plan.definition.execution_contract).toBe('reduce_group_v1');
@@ -1170,12 +1204,19 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   await navigate(page, 'Research');
   await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
   await page.getByRole('button', { name: 'New portfolio study', exact: true }).click();
+  await expect(page.getByLabel('Execution policy', { exact: true })).toHaveValue(
+    'reduce_group_v2_allowance',
+  );
   await page.getByLabel('Portfolio starting point', { exact: true }).selectOption('risk-rotation');
   await expect(page.getByLabel('Risk estimation bars', { exact: true })).toHaveValue('84');
   await page.getByLabel('Maximum execution residual %', { exact: true }).fill('3');
   await page.getByLabel('Maximum order notional (USDT)', { exact: true }).fill('1750');
   await page.getByLabel('Underlying asset gross limit (%)', { exact: true }).fill('75');
   await page.getByLabel('Sleeve volatility target (%)', { exact: true }).fill('15');
+  await page.getByLabel('Execution policy', { exact: true }).selectOption('reduce_group_v1');
+  await expect(
+    page.locator('.portfolio-study-editor [aria-label="Portfolio execution policy"]'),
+  ).toContainText('cancel pending additions and reduce the group');
   const queued = page.waitForResponse(
     (r) => r.url().endsWith('/pro/research/portfolios') && r.request().method() === 'POST',
   );
@@ -1216,6 +1257,7 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
     animations: 'disabled',
   });
   await page.getByRole('button', { name: 'Revise & research', exact: true }).click();
+  await expect(page.getByLabel('Execution policy', { exact: true })).toHaveValue('reduce_group_v1');
   await expect(page.getByLabel('Sleeve volatility target (%)', { exact: true })).toHaveValue('15');
   await expect(page.getByLabel('Stress correlation (0–1)', { exact: true })).toHaveValue('0.75');
   await expect(page.getByLabel('Maximum execution residual %', { exact: true })).toHaveValue('3');
@@ -1239,6 +1281,20 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
       animations: 'disabled',
     });
   }
+  await page.getByRole('button', { name: '修订并研究', exact: true }).click();
+  await expect(page.getByLabel('执行策略', { exact: true })).toHaveValue('reduce_group_v1');
+  await expect(page.locator('.portfolio-study-editor [aria-label="组合执行策略"]')).toContainText(
+    '冻结订单',
+  );
+  await page.getByRole('button', { name: '新建组合研究', exact: true }).click();
+  await expect(page.getByLabel('执行策略', { exact: true })).toHaveValue(
+    'reduce_group_v2_allowance',
+  );
+  await expect(page.getByLabel('研究名称', { exact: true })).toHaveValue('');
+  await expect(page.getByLabel('最大执行残差 %', { exact: true })).toHaveValue('2');
+  await expect(page.locator('.portfolio-study-editor [aria-label="组合执行策略"]')).toContainText(
+    '最多三次',
+  );
 });
 
 test('trading desk surfaces unresolved group risk even when members and service health are normal', async ({

@@ -1,0 +1,245 @@
+{
+  "audited_version": "0.10.0",
+  "source_revision": "4b0d466e82b486256ba71006605bdd223592ec36",
+  "started_at_utc": "2026-10-09T07:04:26.873536+00:00",
+  "environment": {
+    "python": "3.13.15",
+    "system": "Darwin",
+    "machine": "arm64"
+  },
+  "configuration": {
+    "duration": 600.0,
+    "interval": 10,
+    "sample_interval": 5,
+    "step_hours": 4,
+    "research_interval": 90,
+    "read_clients": 2,
+    "http_timeout": 15
+  },
+  "scope": "Offline loopback HTTP, sequentially admitted three small-capital Example groups (concurrent-start capability excluded), real SQLite/fills/funding/owners, concurrent readers and research, one real SIGTERM restart. Synthetic market time does not count as wall time. This bounded single-host run is not a weeks-long soak, venue or availability/capacity SLA.",
+  "passed": false,
+  "monotonic_elapsed_seconds": 603.306,
+  "final_process_shutdown": {
+    "exit_code": -15,
+    "forced_kill": false,
+    "lifespan_shutdown_completed": true
+  },
+  "terminal_diagnostics": {
+    "groups": [
+      {
+        "id": "a960c05f451a46798c855e11f576f263",
+        "status": "running",
+        "last_bar": 1768086000000,
+        "last_error": null
+      },
+      {
+        "id": "efc8e75d71ba498aacf573565b29f0a0",
+        "status": "failed",
+        "last_bar": 1767697200000,
+        "last_error": "The portfolio's marked use and pending orders exceed its admitted capital percentage."
+      },
+      {
+        "id": "0551a8ca42904af6921368eb48f05d08",
+        "status": "running",
+        "last_bar": 1768086000000,
+        "last_error": null
+      }
+    ],
+    "recent_batches": [
+      {
+        "id": "e6929402c4df49dca77a2c0476fa4644",
+        "group_id": "0551a8ca42904af6921368eb48f05d08",
+        "bar": 1768086000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "896318e768de4be8bda8e6892f196245",
+        "group_id": "a960c05f451a46798c855e11f576f263",
+        "bar": 1768086000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "16bd5b35129d4944b47f9864b2edfa4c",
+        "group_id": "0551a8ca42904af6921368eb48f05d08",
+        "bar": 1768071600000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "f4248836f01644a1887b4e85bcedcb8c",
+        "group_id": "a960c05f451a46798c855e11f576f263",
+        "bar": 1768071600000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "9fc651235c6e40828bd544c0e1cca015",
+        "group_id": "0551a8ca42904af6921368eb48f05d08",
+        "bar": 1768042800000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "cb13c0763a6e4b61a3878d29ccdfd7dd",
+        "group_id": "a960c05f451a46798c855e11f576f263",
+        "bar": 1768042800000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "94bbbcd1efee47f0af73c3396b8d8589",
+        "group_id": "a960c05f451a46798c855e11f576f263",
+        "bar": 1768014000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+31\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "b879b9668bc3459f8d0db36de550c570",
+        "group_id": "0551a8ca42904af6921368eb48f05d08",
+        "bar": 1768014000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+37\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "07f38979757944dcbd28cc4fa6b561ee",
+        "group_id": "a960c05f451a46798c855e11f576f263",
+        "bar": 1767985200000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+31\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "1b3d0f3dda314a55ae2cb4869fbc8972",
+        "group_id": "0551a8ca42904af6921368eb48f05d08",
+        "bar": 1767985200000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+37\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "3066a94fbbb948aca08db0c6a7ed8cda",
+        "group_id": "a960c05f451a46798c855e11f576f263",
+        "bar": 1767956400000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+31\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "f3e1131a7aa54f9c855bc24dc45a8c23",
+        "group_id": "0551a8ca42904af6921368eb48f05d08",
+        "bar": 1767956400000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+37\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      }
+    ],
+    "uncompleted_commands": [
+      {
+        "phase": "add",
+        "status": "canceled",
+        "error": "The portfolio's marked use and pending orders exceed its admitted capital percentage.",
+        "payload": "{\"inst_id\":\"ETH-USDT\",\"leverage\":\"1\",\"margin_mode\":\"isolated\",\"order_type\":\"market\",\"quantity\":\"0.00012980\",\"reduce_only\":false,\"side\":\"buy\",\"source\":\"example\"}"
+      }
+    ],
+    "positions": [
+      {
+        "inst_id": "BTC-USDT",
+        "quantity": "0.00675467"
+      },
+      {
+        "inst_id": "BTC-USDT-SWAP",
+        "quantity": "-0.67"
+      },
+      {
+        "inst_id": "DOGE-USDT-SWAP",
+        "quantity": "-1.61"
+      },
+      {
+        "inst_id": "ETH-USDT",
+        "quantity": "0"
+      },
+      {
+        "inst_id": "OKB-USDT-SWAP",
+        "quantity": "4.42"
+      },
+      {
+        "inst_id": "SOL-USDT",
+        "quantity": "0"
+      }
+    ]
+  },
+  "runtime_identity": {
+    "schema_version": 1,
+    "application_version": "0.10.0",
+    "code_fingerprint": "15d05773f0024a48a77729fbe91639be27d2126d10bed7dfc12821a3275c6c5a",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+      "pro_api.py": "5984f1d0548449fd44fd8dabc1883a17f64de2c41a429bbffc83a5a0527beadd",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "ab51a47691bce2c166e65810e20eac2c184c61457a08a4c6e15ad2290f6f9d2c",
+      "strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+      "research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+      "research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+      "portfolio_registry.py": "f93687adebd7c7c48c265645d0e252961ba68a4835477ec2501111819bd9fb38",
+      "portfolio_releases.py": "baaf5ad7730a7615a8a6b1cbabf9f43054081596a21dc3c3bed416240a961657",
+      "managed_portfolios.py": "1ea386d7fbc301c587b577066c8fc8e3d43ab1695ddd15ff2b0312248655450c",
+      "portfolio_research.py": "8b29a0ac0ef49d2d9b5f6606c18bbf817ff49fef1b39c1af16103a5035e564bb",
+      "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+      "portfolio_execution.py": "97f2fb266047fb4822f1ee38c20da40965a149f3fc22cc5acee7ece0009cf817",
+      "historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44",
+      "forward_performance.py": "78d0695c125182680abb9304b855e7608f7b50bb18fa190d75051aaeef203361",
+      "liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+      "contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "errors": [
+    {
+      "phase": "audit_aborted",
+      "detail": "Managed group ETH SOL cash basket became failed: The portfolio's marked use and pending orders exceed its admitted capital percentage."
+    }
+  ],
+  "finished_at_utc": "2026-10-09T07:14:39.719399+00:00",
+  "server_log_tails": [
+    "",
+    ""
+  ],
+  "temporary_workspace_removed_on_exit": true
+}

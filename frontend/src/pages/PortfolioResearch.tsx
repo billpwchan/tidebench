@@ -29,6 +29,9 @@ import type { RecordData } from '../proApi';
 import { useI18n } from '../lib/i18n';
 import { canResearch } from '../lib/permissions';
 import PortfolioReleaseReview from '../components/PortfolioReleaseReview';
+import PortfolioExecutionPolicy, {
+  executionPolicyName,
+} from '../components/PortfolioExecutionPolicy';
 import type { PortfolioDefinition, PortfolioVersion } from '../proApi';
 import portfolioRecipeData from '../../../examples/portfolios.json';
 
@@ -109,11 +112,14 @@ export default function PortfolioResearch({
   const [parentId, setParentId] = useState('');
   const [capitalPct, setCapitalPct] = useState('100');
   const [residualPct, setResidualPct] = useState('2');
-  const [executionContract, setExecutionContract] =
-    useState<NonNullable<PortfolioDefinition['execution_contract']>>('reduce_group_v1');
-  const loadExecution = (definition: Partial<PortfolioDefinition>) => {
+  const [executionContract, setExecutionContract] = useState<
+    NonNullable<PortfolioDefinition['execution_contract']>
+  >('reduce_group_v2_allowance');
+  const [legacyUpgrade, setLegacyUpgrade] = useState(false);
+  const loadExecution = (definition: Partial<PortfolioDefinition>, savedEvidence = true) => {
     setResidualPct(definition.max_residual_pct ?? '2');
-    setExecutionContract(definition.execution_contract ?? 'reduce_group_v1');
+    setExecutionContract(definition.execution_contract ?? 'reduce_group_v2_allowance');
+    setLegacyUpgrade(savedEvidence && !definition.execution_contract);
   };
   const [carryThreshold, setCarryThreshold] = useState('0');
   const [carryConfig, setCarryConfig] = useState({
@@ -340,7 +346,9 @@ export default function PortfolioResearch({
   const economicIncomplete = plan?.economic_state === 'incomplete_lifecycle';
   const executionFailed =
     economicIncomplete || ['failed', 'compensating'].includes(String(plan?.execution_status));
-  const executionBound = plan?.execution_contract === 'reduce_group_v1';
+  const executionBound = ['reduce_group_v1', 'reduce_group_v2_allowance'].includes(
+    String(plan?.execution_contract),
+  );
   const evaluationEvidence = plan?.evaluation as RecordData | undefined;
   const sealedAssessment = String(
     (evaluationEvidence?.rejection as RecordData)?.status ?? 'unavailable',
@@ -364,6 +372,30 @@ export default function PortfolioResearch({
             setProjectId('');
             setParentId('');
             setRecipeId('');
+            setName('');
+            setHypothesis('');
+            setMode('fixed_weights');
+            setUniverseMode('static');
+            setLifecycleWarmup(2);
+            setLegs([newLeg(), newLeg()]);
+            setCapitalPct('100');
+            loadExecution({}, false);
+            setCarryThreshold('0');
+            loadCarry({});
+            loadRisk({});
+            setCash('10000');
+            setFee('10');
+            setSlip('5');
+            setRebalance(24);
+            setLookback(20);
+            setTopK(1);
+            setGross(200);
+            setMaxOrder('2500');
+            setMaxBaseGross('100');
+            setDaily(5);
+            setEvaluation('full');
+            setTrainPct(70);
+            setEmbargo(1);
             setEditing(true);
           }}
         >
@@ -408,7 +440,7 @@ export default function PortfolioResearch({
                     setUniverseMode('static');
                     setLifecycleWarmup(2);
                     setCapitalPct(d.capital_pct);
-                    loadExecution(d);
+                    loadExecution(d, false);
                     setCarryThreshold(d.carry_threshold);
                     loadCarry(d);
                     loadRisk(d);
@@ -671,20 +703,40 @@ export default function PortfolioResearch({
                   onChange={(e) => setCapitalPct(e.target.value)}
                 />
               </Field>
-              <Field
-                label="Maximum execution residual %"
-                hint="Deviation beyond this allocated-capital limit triggers group reduction; recovery fills can also fail."
-              >
-                <input
-                  required
-                  type="number"
-                  min={0.01}
-                  max={100}
-                  step="any"
-                  value={residualPct}
-                  onChange={(e) => setResidualPct(e.target.value)}
-                />
-              </Field>
+              <div className="portfolio-execution-controls">
+                <Field label="Execution policy">
+                  <select
+                    value={executionContract}
+                    onChange={(e) =>
+                      setExecutionContract(
+                        e.target.value as NonNullable<PortfolioDefinition['execution_contract']>,
+                      )
+                    }
+                  >
+                    <option value="reduce_group_v2_allowance">
+                      {t(executionPolicyName('reduce_group_v2_allowance'))}
+                    </option>
+                    <option value="reduce_group_v1">
+                      {t(executionPolicyName('reduce_group_v1'))}
+                    </option>
+                  </select>
+                </Field>
+                <Field
+                  label="Maximum execution residual %"
+                  hint="Deviation beyond this allocated-capital limit triggers group reduction; recovery fills can also fail."
+                >
+                  <input
+                    required
+                    type="number"
+                    min={0.01}
+                    max={100}
+                    step="any"
+                    value={residualPct}
+                    onChange={(e) => setResidualPct(e.target.value)}
+                  />
+                </Field>
+                <PortfolioExecutionPolicy contract={executionContract} residual={residualPct} />
+              </div>
               {mode === 'funding_carry' && (
                 <>
                   <Field label="Prior funding threshold">
@@ -859,6 +911,13 @@ export default function PortfolioResearch({
                 'Research and managed paper execution use the same sequential reduction, addition and compensation policy. A completed research job can still contain a halted simulation.',
               )}
             </p>
+            {legacyUpgrade && (
+              <p className="inline-warning">
+                {t(
+                  'This saved evidence has no bound execution policy. Saving this revision explicitly adopts your selected policy; the old version and result stay unchanged.',
+                )}
+              </p>
+            )}
             {mode === 'risk_momentum' && (
               <section className="portfolio-risk-controls">
                 <h3>{t('Portfolio risk budget')}</h3>
@@ -1185,6 +1244,10 @@ export default function PortfolioResearch({
                     <LifecycleEvidence
                       evidence={plan.lifecycle as RecordData | undefined}
                       config={run.data?.config}
+                    />
+                    <PortfolioExecutionPolicy
+                      contract={plan.execution_contract as string | undefined}
+                      residual={plan.max_residual_pct}
                     />
                     <PortfolioResearchSummary metrics={plan.metrics} />
                     <PortfolioEconomicsEvidence

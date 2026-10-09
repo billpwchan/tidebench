@@ -130,3 +130,7 @@ Design references: [LEAN portfolio construction](https://www.quantconnect.com/do
 A leg loss budget limits target notional using account equity, its declared close-stop distance and configured round-trip costs. It does not reserve separate capital or guarantee a maximum loss. In funding carry, the tightest leg budget scales **both** weights together before unit rounding; a leg exit closes the group. Other constructions apply individual sleeve caps.
 
 A damaged group manifest appears with its trusted group identifier and an explicit integrity error, rather than an invented definition. Other verifiable groups continue to run. Authorized users can stop the damaged group using database ownership; filled inventory and original evidence remain. New strategy risk from the invalid group is rejected transactionally. Missing account prices or perpetual tiers suppress complete net value rather than presenting a partial account total.
+
+## Versioned allowance continuation
+
+New studies can choose bounded allowance replanning (`reduce_group_v2_allowance`). Existing v1 releases keep frozen-order behavior. Only a demonstrated decline in shared equity and remaining capital under unchanged policies can supersede unfilled additions, at most three times; original targets, payloads, keys and residual limits remain inspectable. Hard risk guards remain binding. See [the execution policy contract](portfolio-execution-contracts.md) and [the independently measured original capital rejection](audit/fresh-institutional-review-0.10.0-capital-boundary-addendum.zh-CN.md).

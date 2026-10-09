@@ -10,6 +10,7 @@ import { canResearch } from '../lib/permissions';
 import { useSession } from './AuthGate';
 import { DataTable, JsonDetails, RecordGrid } from './ProWorkspace';
 import { Empty, ErrorBox, Field, Loading, PageHeading, Status } from './workspace';
+import PortfolioExecutionPolicy from './PortfolioExecutionPolicy';
 import { CapturedLifecycleSources, LifecycleImport, LifecycleScenario } from './LifecycleEvidence';
 
 const utc = (ts: number) => new Date(ts).toISOString().slice(0, 16);
@@ -55,6 +56,10 @@ function FrozenPlan({ holdout }: { holdout: PortfolioHoldout }) {
           'Shared failure policy': t('Reduce the group on failure'),
           'Maximum execution residual %': p.definition.max_residual_pct,
         }}
+      />
+      <PortfolioExecutionPolicy
+        contract={p.definition.execution_contract}
+        residual={p.definition.max_residual_pct}
       />
       <DataTable
         rows={p.definition.legs as unknown as RecordData[]}
@@ -432,6 +437,10 @@ export default function PortfolioGovernance({
                     {t('Maximum execution residual %')}:{' '}
                     {number(version.definition.max_residual_pct)}%
                   </p>
+                  <PortfolioExecutionPolicy
+                    contract={version.definition.execution_contract}
+                    residual={version.definition.max_residual_pct}
+                  />
                   {!version.definition.execution_contract && (
                     <p className="inline-warning">
                       {t('Revise this legacy study under the shared execution policy.')}

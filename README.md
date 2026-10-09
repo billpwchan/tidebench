@@ -20,6 +20,8 @@ Instrument evidence preserves full forward REST data-array observations, includi
 Account capital promises, settlement-time funding obligations, shared group failure contracts, current economic incidents and frozen whole-window forward reports connect research to the actual paper account. Post-fill fees and spread losses count at admission; a stopped controller does not erase inventory. Attributed lifecycle events and immutable public order-book cost reports make data limitations inspectable. [Professional workflows](docs/professional-workflows-v0.10.md) · [Historical lifecycle](docs/historical-lifecycle.md) · [Forward evidence](docs/forward-evidence.md) · [Independent reviews](docs/audit/README.md).
 
 
+New portfolio studies can explicitly choose bounded smaller continuations after shared-account allowance drift, with immutable original orders and unchanged hard guards. Existing frozen-order versions keep their recorded behavior. [Execution policy choices](docs/portfolio-execution-contracts.md).
+
 ## Strategies with evidence, including failed hypotheses
 
 The bilingual research library covers weekly momentum, conditional reversion, matched funding carry, relative-strength rotation and closing-channel breakouts. Two new causal signal models and cost-aware carry admissions are executable through the same backtest and persistent paper workflow. Each dossier explains the mechanism, exact formula, sources, costs and what would reject it.

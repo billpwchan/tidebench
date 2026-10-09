@@ -1,0 +1,102 @@
+{
+  "publication_date": "2026-10-09",
+  "scope": "Independent original-source capital-boundary classification and distinct predeclared reserve scenario; no implementation edits, broad suite or independent new elapsed soak",
+  "source_revision": "4b0d466e82b486256ba71006605bdd223592ec36",
+  "source_kind": "isolated exact git archive",
+  "recorded_probe_source_sha256": {
+    "managed_portfolios.py": "1ea386d7fbc301c587b577066c8fc8e3d43ab1695ddd15ff2b0312248655450c",
+    "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+    "portfolio_execution.py": "97f2fb266047fb4822f1ee38c20da40965a149f3fc22cc5acee7ece0009cf817",
+    "account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44",
+    "pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186"
+  },
+  "recorded_probe": {
+    "exit_code": 0,
+    "cases": [
+      {
+        "cash_leg_weights": [
+          ".5",
+          ".5"
+        ],
+        "last_step": 23,
+        "result": "actual portfolio_capital_limit -> failed / compensated"
+      },
+      {
+        "cash_leg_weights": [
+          ".4",
+          ".4"
+        ],
+        "last_step": 60,
+        "result": "all three groups running, zero recorded admission rejection, contribution reconciliation true"
+      }
+    ],
+    "clock_kind": "four-hour synthetic advances, not elapsed acceptance"
+  },
+  "recorded_arithmetic_verification": {
+    "exit_code": 0,
+    "passed": true,
+    "result": "two actual other-owner fill costs explain entire equity decline; same-freeze own-cost counterfactual within 8%; real changed equity exceeds hard 8%"
+  },
+  "byte_preservation": {
+    "original_scripts_observations_assessment_and_root_failed_soak": true,
+    "redactions": []
+  },
+  "prior_evidence_preserved": {
+    "reports_sha256": {
+      "fresh-institutional-review-0.10.0.zh-CN.md": "2abab92e752d03cd79f74d16bcac6bd71da0038d63d2585c60615a88bf8957b7",
+      "fresh-institutional-review-0.10.0-funding-wait-addendum.zh-CN.md": "2103499bab8a8babc630c92d4f18495ece6efedd6b819a72ef57b122e0823741"
+    },
+    "bundle_file_sha256": {
+      "fresh-review-0.10.0/README.md": "beffa5adb80f3ee7fc5de6c93a8b0546dc721b552748b00b8754f66251cf9249",
+      "fresh-review-0.10.0/declaration-after.json": "9d5b2cce6771c5d3e443983347fa59cd35edd02c600a6d4af5b90e8547ad43e8",
+      "fresh-review-0.10.0/declaration-before.json": "26080b0fb9d93462f12a0b4cf2f9a7a79d7c6b1efff323ff41a7405b61d1f2e8",
+      "fresh-review-0.10.0/declaration-manifest.json": "1363590d2d281c0e8f04ee44a696e1afe99dfbb701b84f020a5ab53ce84487ac",
+      "fresh-review-0.10.0/declaration.py": "65d7c8823f94666612cd5bc1d6e4a3ebbeea61617b1e2f1724cdddf4fa04d405",
+      "fresh-review-0.10.0/manifest.json": "d66834b97d06c47b11ad310f8737fdc7e3832e4a32635c581ed18737a6ffb532",
+      "fresh-review-0.10.0/observations.json": "034eab0be674455f2ca8ba5c92fb97f7a71282393429f4f21ad3395588eba989",
+      "fresh-review-0.10.0/publication-manifest.json": "940e46f0e6acd059ff90888ac00c74a92c469eb016a4c40675879c3d35d08454",
+      "fresh-review-0.10.0/reproduce.py": "176b9a61046c05b804cc1200d6b78e687029c577eced563f092e9e8d62e41f88",
+      "fresh-review-0.10.0/workflow.json": "c2d67456de887138faffca7a13bd69af9102f3e0da3f3b774cf8e20366c204ed",
+      "fresh-review-0.10.0/workflow.py": "88118cd10005646a3cd64ba94e99ef19ea67f51efa49926dcd1ff2214c5595cc",
+      "fresh-review-0.10.0-funding-wait/README.md": "35ec4c4fd5ec47a5bc5a65dcce88605b9e5add6f9cea4acafa62052606cdb067",
+      "fresh-review-0.10.0-funding-wait/after.json": "78203e903081c477bf68a755d3a13557e95ff2a11e3cf43e9f622b473599e62f",
+      "fresh-review-0.10.0-funding-wait/before.json": "0371ea62729b025de2d3a710fbe0277ed0490e76f4834000a13e08be4744d00c",
+      "fresh-review-0.10.0-funding-wait/publication-manifest.json": "efd3b798f8c9bc86f9cee999626c70b20a9480a364a076dd3d9c0c7fa2806b16",
+      "fresh-review-0.10.0-funding-wait/reproduce.py": "ad3fb33cab3f718ca7c52db7d10ca16af0d5cb234a741db16763fd76c1cfdee1"
+    },
+    "original_pre_publication_report_hashes": [
+      {
+        "stage": "before_declaration_addendum",
+        "manifest": "manifest.json",
+        "sha256": "6015df0ee08b3ed27bafe3bef7b822f09f7153f84c4d85a5b33e5219ad1d1212"
+      },
+      {
+        "stage": "after_declaration_addendum_before_publication",
+        "manifest": "declaration-manifest.json",
+        "sha256": "ae06c8860c8f4bf7902cde8e024688cc730252213eea713a91c239d8c4169cf7"
+      }
+    ],
+    "previous_manifests_unchanged": true,
+    "new_manifest_does_not_relabel_previous_results": true
+  },
+  "root_original_failed_soak": {
+    "artifact": "elapsed-failure-4b0d466.json",
+    "source_revision": "4b0d466e82b486256ba71006605bdd223592ec36",
+    "monotonic_elapsed_seconds": 603.306,
+    "passed": false,
+    "independently_rerun": false
+  },
+  "published_artifact_sha256": {
+    "README.md": "f34b48ac80c0bad543c04c8b630d7527f1bc83c53cf92ef640224403018f5649",
+    "analyze-original.py": "015ddf26cd91680225f0d597741029fa43b3b6e76f77e1d83fcb645480f45e2b",
+    "elapsed-failure-4b0d466.json": "6d98b8a774983f62435f34eef809caa89dd153150c7b8428bb3057bc5c59a366",
+    "original-assessment.json": "40be8d84006f01bdcfa88a4535dd571ae6204fef7a69e28b4771e5d05fb689c0",
+    "original-observations.json": "280d6756325bb34ffaa37e29f254b0f8eacc9986df3eaba4e1253c53e6281183",
+    "original-probe.py": "ec3c98180f9db6f5ae420e92b13f1fde832a1cff835f84f0289966d6fe400406"
+  },
+  "published_addendum": {
+    "path": "../fresh-institutional-review-0.10.0-capital-boundary-addendum.zh-CN.md",
+    "sha256": "a4603c68c247e25378db43fef7a85d4016698960f05f48354e410138e9279a57"
+  },
+  "manifest_self_hash": "Not included to avoid recursive hashing; all other artifacts hashed"
+}

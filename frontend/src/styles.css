@@ -6949,3 +6949,19 @@ tbody tr:hover {
     padding: 18px 0;
   }
 }
+
+.portfolio-execution-policy {
+  grid-column: 1 / -1;
+}
+
+.portfolio-execution-controls {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .portfolio-execution-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

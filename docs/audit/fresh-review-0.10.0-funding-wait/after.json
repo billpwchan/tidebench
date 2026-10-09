@@ -1,0 +1,1096 @@
+{
+  "expected_implementation": "fixed",
+  "source_label": "205f89b2d7ed671ff52de64921cb58d4ccb04845+funding-wait-working-tree-fix",
+  "scope": "Synthetic inputs, real book and real runtime; no external requests; isolated temporary databases",
+  "source_sha256": {
+    "managed_portfolios.py": "1ea386d7fbc301c587b577066c8fc8e3d43ab1695ddd15ff2b0312248655450c",
+    "pro_service.py": "ab51a47691bce2c166e65810e20eac2c184c61457a08a4c6e15ad2290f6f9d2c",
+    "pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+    "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+    "account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44"
+  },
+  "cases": [
+    {
+      "inject_before_add_number": 1,
+      "disposition": "resume",
+      "group_status_after_due": "running",
+      "batch_status_after_due": "adding",
+      "last_error_after_due": "[funding_pending] Unsettled funding blocks new risk; protective reductions remain available.",
+      "pending_funding": [
+        {
+          "source": "example",
+          "inst_id": "SOL-USDT-SWAP",
+          "ts": 1767225600001,
+          "quantity": "10",
+          "owners": {
+            "manual:audit-outside-owner": "10"
+          },
+          "observed_at": 1767225600002,
+          "integrity": "verified"
+        }
+      ],
+      "frozen_original": {
+        "id": "ccd708ae16404037a5ba9c8673afcfb0",
+        "bar": 1767222000000,
+        "content_hash": "f2dadcbeea5781cf83798837ca30a43c9196628d395ea1e0e923d68f1d9a89d6",
+        "body_digest": "f2dadcbeea5781cf83798837ca30a43c9196628d395ea1e0e923d68f1d9a89d6",
+        "targets": {
+          "BTC-USDT": "0.01972707",
+          "ETH-USDT": "0.38642455"
+        },
+        "additions_hash": "b474ebe06c84d276bb9a016c59830963f45e99e35f78464287478eb54f437f65",
+        "additions": {
+          "available_cash": "9337.125",
+          "capital_budget": {
+            "account_available_cash": "9337.125",
+            "account_equity": "9999.86205530",
+            "basis": "spot_marked_value_or_swap_posted_margin_plus_pending; new_fill_capital_and_full_entry_fees_share_remaining_budget",
+            "budget_cash": "2999.95861659",
+            "capital_ceiling": "2999.95861659",
+            "commitment_pct": "30",
+            "marked_owned_capital_and_pending": "0",
+            "owner": "portfolio:923d69a0dfa744cdbf37f4860498d8fe",
+            "quote_change_policy": "each_child_rechecked_at_its_fresh_execution_quote_no_tolerance",
+            "remaining_capital_including_entry_costs": "2999.95861659"
+          },
+          "cash_scale": "1",
+          "policy_hash": "52b78102ef56c574f15d96f4a0ee090f6045d7885b190e854033cec6308d7ae5",
+          "quantities": {
+            "BTC-USDT": "0.01972707",
+            "ETH-USDT": "0.38642455"
+          },
+          "quotes": {
+            "BTC-USDT": {
+              "ask": "60835.356052462515",
+              "bid": "60823.190197837485",
+              "funding_rate": null,
+              "index": null,
+              "inst_id": "BTC-USDT",
+              "instrument": {
+                "base": "BTC",
+                "contract_size_base": null,
+                "ct_mult": null,
+                "ct_type": null,
+                "ct_val": null,
+                "ct_val_ccy": null,
+                "evidence_scope": "forward_observation",
+                "expiry_time": null,
+                "inst_family": "BTC-USDT",
+                "inst_id": "BTC-USDT",
+                "inst_type": "SPOT",
+                "instrument_version": "ecec58f1d2de2243b745a7079e836ec2f0d95f3d0199aae63c600ecded3606a7",
+                "list_time": null,
+                "lot_size": "1E-8",
+                "metadata_known_at": 1791529404615,
+                "min_size": "0.00001",
+                "observation_id": "d0c1fa46d1c74de6b9e021e0a9dc456d",
+                "observed_at": 1791529404615,
+                "quantity_unit": "base",
+                "quote": "USDT",
+                "settle_ccy": "USDT",
+                "source": "example",
+                "state": "live",
+                "synthetic": true,
+                "tick_size": "0.1"
+              },
+              "last": "60829.27312515",
+              "margin_tiers": [],
+              "margin_tiers_snapshot": null,
+              "mark": "60829.27312515",
+              "mark_ts": 1767225600000,
+              "next_funding_time": null,
+              "observed_at": 1767225600000,
+              "source": "example",
+              "synthetic": true,
+              "transport": "example",
+              "ts": 1767225600000
+            },
+            "ETH-USDT": {
+              "ask": "3105.660417608262",
+              "bid": "3105.039347631738",
+              "funding_rate": null,
+              "index": null,
+              "inst_id": "ETH-USDT",
+              "instrument": {
+                "base": "ETH",
+                "contract_size_base": null,
+                "ct_mult": null,
+                "ct_type": null,
+                "ct_val": null,
+                "ct_val_ccy": null,
+                "evidence_scope": "forward_observation",
+                "expiry_time": null,
+                "inst_family": "ETH-USDT",
+                "inst_id": "ETH-USDT",
+                "inst_type": "SPOT",
+                "instrument_version": "500fe3c3a7088624e0ae5b186b35c441b9784d6b0b554a6bb6740332e967bf7a",
+                "list_time": null,
+                "lot_size": "1E-8",
+                "metadata_known_at": 1791529404615,
+                "min_size": "0.0001",
+                "observation_id": "d0c1fa46d1c74de6b9e021e0a9dc456d",
+                "observed_at": 1791529404615,
+                "quantity_unit": "base",
+                "quote": "USDT",
+                "settle_ccy": "USDT",
+                "source": "example",
+                "state": "live",
+                "synthetic": true,
+                "tick_size": "0.01"
+              },
+              "last": "3105.34988262",
+              "margin_tiers": [],
+              "margin_tiers_snapshot": null,
+              "mark": "3105.34988262",
+              "mark_ts": 1767225600000,
+              "next_funding_time": null,
+              "observed_at": 1767225600000,
+              "source": "example",
+              "synthetic": true,
+              "transport": "example",
+              "ts": 1767225600000
+            }
+          },
+          "requested": {
+            "BTC-USDT": "0.01972707",
+            "ETH-USDT": "0.38642455"
+          },
+          "required_cash": "2400.2113264765",
+          "skipped": []
+        },
+        "commands": [
+          {
+            "id": "2b322879ab60458d9aa2f3d41bfd9d64",
+            "phase": "add",
+            "sequence": 0,
+            "deployment_id": "48a058c5117b40b9ad9ea70aa437f8a3",
+            "key": "portfolio:ccd708ae16404037a5ba9c8673afcfb0:add:0:1767222000000",
+            "payload": {
+              "inst_id": "BTC-USDT",
+              "leverage": "1",
+              "margin_mode": "isolated",
+              "order_type": "market",
+              "quantity": "0.01972707",
+              "reduce_only": false,
+              "side": "buy",
+              "source": "example"
+            },
+            "payload_hash": "b4aebca29fa35470edd007764323c511310487cef6933e4fa01f62938d285042"
+          },
+          {
+            "id": "107dea28f19049e78db963c74732aa84",
+            "phase": "add",
+            "sequence": 1,
+            "deployment_id": "c7d8cc0c7c014ae4a7278ea4cc232e9d",
+            "key": "portfolio:ccd708ae16404037a5ba9c8673afcfb0:add:1:1767222000000",
+            "payload": {
+              "inst_id": "ETH-USDT",
+              "leverage": "1",
+              "margin_mode": "isolated",
+              "order_type": "market",
+              "quantity": "0.38642455",
+              "reduce_only": false,
+              "side": "buy",
+              "source": "example"
+            },
+            "payload_hash": "cdaf5019e457be70a45d7f486b4779b5c58d4fb668e4334e5e3e6edca3b6f598"
+          }
+        ]
+      },
+      "original_identity_preserved_after_due": true,
+      "group_fills_after_due": 0,
+      "group_positions_after_due": [],
+      "command_states_after_due": [
+        {
+          "key": "portfolio:ccd708ae16404037a5ba9c8673afcfb0:add:0:1767222000000",
+          "phase": "add",
+          "status": "pending",
+          "order_id": null
+        },
+        {
+          "key": "portfolio:ccd708ae16404037a5ba9c8673afcfb0:add:1:1767222000000",
+          "phase": "add",
+          "status": "pending",
+          "order_id": null
+        }
+      ],
+      "waiting_attention": {
+        "phase": "funding_pending",
+        "since": 1791529405754,
+        "as_of": 1791529405839,
+        "error": "[funding_pending] Unsettled funding blocks new risk; protective reductions remain available.",
+        "inventory": [],
+        "inventory_notional": "0",
+        "valuation_status": "example",
+        "residual_notional": null,
+        "batch_id": "ccd708ae16404037a5ba9c8673afcfb0",
+        "incident_id": null
+      },
+      "restart_wait_preserved": true,
+      "terminal_group_status": "running",
+      "terminal_batch_status": "completed",
+      "terminal_error": null,
+      "late_funding": [
+        {
+          "source": "example",
+          "inst_id": "SOL-USDT-SWAP",
+          "ts": 1767225600001,
+          "status": "settled",
+          "payment": "1.32561205530"
+        }
+      ],
+      "late_publication_requests": [
+        {
+          "inst_id": "SOL-USDT-SWAP",
+          "start": 1767225600001,
+          "end": 1767225600003,
+          "source": "example"
+        },
+        {
+          "inst_id": "SOL-USDT-SWAP",
+          "start": 1767225600002,
+          "end": 1767225600003,
+          "source": "example"
+        }
+      ],
+      "original_identity_preserved_final": true,
+      "repeat_did_not_duplicate": true,
+      "final_group_fills": 2,
+      "final_command_states": [
+        {
+          "key": "portfolio:ccd708ae16404037a5ba9c8673afcfb0:add:0:1767222000000",
+          "phase": "add",
+          "status": "completed",
+          "order_id": "a95b217306e64058a2f4a5adb7cf39cc"
+        },
+        {
+          "key": "portfolio:ccd708ae16404037a5ba9c8673afcfb0:add:1:1767222000000",
+          "phase": "add",
+          "status": "completed",
+          "order_id": "f9f45a9b12ad480d8dff05c26263efa6"
+        }
+      ],
+      "contributions_reconciled": true
+    },
+    {
+      "inject_before_add_number": 2,
+      "disposition": "resume",
+      "group_status_after_due": "running",
+      "batch_status_after_due": "adding",
+      "last_error_after_due": "[funding_pending] Unsettled funding blocks new risk; protective reductions remain available.",
+      "pending_funding": [
+        {
+          "source": "example",
+          "inst_id": "SOL-USDT-SWAP",
+          "ts": 1767225600001,
+          "quantity": "10",
+          "owners": {
+            "manual:audit-outside-owner": "10"
+          },
+          "observed_at": 1767225600002,
+          "integrity": "verified"
+        }
+      ],
+      "frozen_original": {
+        "id": "09d82483c74a49ffb323d159bd522fef",
+        "bar": 1767222000000,
+        "content_hash": "38f2f977cd323fb703dcf98f72aefca00991879a9ec1e20a56b00d137d7b4944",
+        "body_digest": "38f2f977cd323fb703dcf98f72aefca00991879a9ec1e20a56b00d137d7b4944",
+        "targets": {
+          "BTC-USDT": "0.01972707",
+          "ETH-USDT": "0.38642455"
+        },
+        "additions_hash": "f9247f04d55b8618531966d545918c4372d9f299dcfc69e2dc51bb24bebf9636",
+        "additions": {
+          "available_cash": "9337.125",
+          "capital_budget": {
+            "account_available_cash": "9337.125",
+            "account_equity": "9999.86205530",
+            "basis": "spot_marked_value_or_swap_posted_margin_plus_pending; new_fill_capital_and_full_entry_fees_share_remaining_budget",
+            "budget_cash": "2999.95861659",
+            "capital_ceiling": "2999.95861659",
+            "commitment_pct": "30",
+            "marked_owned_capital_and_pending": "0",
+            "owner": "portfolio:1a45c0d86e1a4d6ab3950176f26cb89a",
+            "quote_change_policy": "each_child_rechecked_at_its_fresh_execution_quote_no_tolerance",
+            "remaining_capital_including_entry_costs": "2999.95861659"
+          },
+          "cash_scale": "1",
+          "policy_hash": "52b78102ef56c574f15d96f4a0ee090f6045d7885b190e854033cec6308d7ae5",
+          "quantities": {
+            "BTC-USDT": "0.01972707",
+            "ETH-USDT": "0.38642455"
+          },
+          "quotes": {
+            "BTC-USDT": {
+              "ask": "60835.356052462515",
+              "bid": "60823.190197837485",
+              "funding_rate": null,
+              "index": null,
+              "inst_id": "BTC-USDT",
+              "instrument": {
+                "base": "BTC",
+                "contract_size_base": null,
+                "ct_mult": null,
+                "ct_type": null,
+                "ct_val": null,
+                "ct_val_ccy": null,
+                "evidence_scope": "forward_observation",
+                "expiry_time": null,
+                "inst_family": "BTC-USDT",
+                "inst_id": "BTC-USDT",
+                "inst_type": "SPOT",
+                "instrument_version": "ecec58f1d2de2243b745a7079e836ec2f0d95f3d0199aae63c600ecded3606a7",
+                "list_time": null,
+                "lot_size": "1E-8",
+                "metadata_known_at": 1791529406105,
+                "min_size": "0.00001",
+                "observation_id": "a05954caf190457f9800535859f19725",
+                "observed_at": 1791529406105,
+                "quantity_unit": "base",
+                "quote": "USDT",
+                "settle_ccy": "USDT",
+                "source": "example",
+                "state": "live",
+                "synthetic": true,
+                "tick_size": "0.1"
+              },
+              "last": "60829.27312515",
+              "margin_tiers": [],
+              "margin_tiers_snapshot": null,
+              "mark": "60829.27312515",
+              "mark_ts": 1767225600000,
+              "next_funding_time": null,
+              "observed_at": 1767225600000,
+              "source": "example",
+              "synthetic": true,
+              "transport": "example",
+              "ts": 1767225600000
+            },
+            "ETH-USDT": {
+              "ask": "3105.660417608262",
+              "bid": "3105.039347631738",
+              "funding_rate": null,
+              "index": null,
+              "inst_id": "ETH-USDT",
+              "instrument": {
+                "base": "ETH",
+                "contract_size_base": null,
+                "ct_mult": null,
+                "ct_type": null,
+                "ct_val": null,
+                "ct_val_ccy": null,
+                "evidence_scope": "forward_observation",
+                "expiry_time": null,
+                "inst_family": "ETH-USDT",
+                "inst_id": "ETH-USDT",
+                "inst_type": "SPOT",
+                "instrument_version": "500fe3c3a7088624e0ae5b186b35c441b9784d6b0b554a6bb6740332e967bf7a",
+                "list_time": null,
+                "lot_size": "1E-8",
+                "metadata_known_at": 1791529406105,
+                "min_size": "0.0001",
+                "observation_id": "a05954caf190457f9800535859f19725",
+                "observed_at": 1791529406105,
+                "quantity_unit": "base",
+                "quote": "USDT",
+                "settle_ccy": "USDT",
+                "source": "example",
+                "state": "live",
+                "synthetic": true,
+                "tick_size": "0.01"
+              },
+              "last": "3105.34988262",
+              "margin_tiers": [],
+              "margin_tiers_snapshot": null,
+              "mark": "3105.34988262",
+              "mark_ts": 1767225600000,
+              "next_funding_time": null,
+              "observed_at": 1767225600000,
+              "source": "example",
+              "synthetic": true,
+              "transport": "example",
+              "ts": 1767225600000
+            }
+          },
+          "requested": {
+            "BTC-USDT": "0.01972707",
+            "ETH-USDT": "0.38642455"
+          },
+          "required_cash": "2400.2113264765",
+          "skipped": []
+        },
+        "commands": [
+          {
+            "id": "62d05854462d4067ad5330ce579c4961",
+            "phase": "add",
+            "sequence": 0,
+            "deployment_id": "52ec4bb5173e4e11a1a5d37b539ad8dd",
+            "key": "portfolio:09d82483c74a49ffb323d159bd522fef:add:0:1767222000000",
+            "payload": {
+              "inst_id": "BTC-USDT",
+              "leverage": "1",
+              "margin_mode": "isolated",
+              "order_type": "market",
+              "quantity": "0.01972707",
+              "reduce_only": false,
+              "side": "buy",
+              "source": "example"
+            },
+            "payload_hash": "b4aebca29fa35470edd007764323c511310487cef6933e4fa01f62938d285042"
+          },
+          {
+            "id": "01e199b931a34fc8ba6167635fa8f6ea",
+            "phase": "add",
+            "sequence": 1,
+            "deployment_id": "6a3fa5cbad3742f58885be060f68d7cc",
+            "key": "portfolio:09d82483c74a49ffb323d159bd522fef:add:1:1767222000000",
+            "payload": {
+              "inst_id": "ETH-USDT",
+              "leverage": "1",
+              "margin_mode": "isolated",
+              "order_type": "market",
+              "quantity": "0.38642455",
+              "reduce_only": false,
+              "side": "buy",
+              "source": "example"
+            },
+            "payload_hash": "cdaf5019e457be70a45d7f486b4779b5c58d4fb668e4334e5e3e6edca3b6f598"
+          }
+        ]
+      },
+      "original_identity_preserved_after_due": true,
+      "group_fills_after_due": 1,
+      "group_positions_after_due": [
+        {
+          "source": "example",
+          "inst_id": "BTC-USDT",
+          "metadata": "{\"base\":\"BTC\",\"contract_size_base\":null,\"ct_mult\":null,\"ct_type\":null,\"ct_val\":null,\"ct_val_ccy\":null,\"evidence_scope\":\"forward_observation\",\"expiry_time\":null,\"inst_family\":\"BTC-USDT\",\"inst_id\":\"BTC-USDT\",\"inst_type\":\"SPOT\",\"instrument_version\":\"ecec58f1d2de2243b745a7079e836ec2f0d95f3d0199aae63c600ecded3606a7\",\"inventory_effective_at\":1767225600000,\"list_time\":null,\"lot_size\":\"1E-8\",\"metadata_known_at\":1791529406105,\"min_size\":\"0.00001\",\"observation_id\":\"a05954caf190457f9800535859f19725\",\"observed_at\":1791529406105,\"position_generation\":\"d3c7b026917a484a93850b446c941de4\",\"position_opened_at\":1767225600000,\"quantity_unit\":\"base\",\"quote\":\"USDT\",\"settle_ccy\":\"USDT\",\"source\":\"example\",\"state\":\"live\",\"synthetic\":true,\"tick_size\":\"0.1\"}",
+          "quantity": "0.01972707",
+          "entry_price": "60835.4",
+          "margin": "0",
+          "basis": "1200.104194278",
+          "leverage": "1",
+          "funding_cursor": 1767225600000
+        }
+      ],
+      "command_states_after_due": [
+        {
+          "key": "portfolio:09d82483c74a49ffb323d159bd522fef:add:0:1767222000000",
+          "phase": "add",
+          "status": "completed",
+          "order_id": "d3c7b026917a484a93850b446c941de4"
+        },
+        {
+          "key": "portfolio:09d82483c74a49ffb323d159bd522fef:add:1:1767222000000",
+          "phase": "add",
+          "status": "pending",
+          "order_id": null
+        }
+      ],
+      "waiting_attention": {
+        "phase": "funding_pending",
+        "since": 1791529407039,
+        "as_of": 1791529407157,
+        "error": "[funding_pending] Unsettled funding blocks new risk; protective reductions remain available.",
+        "inventory": [
+          {
+            "inst_id": "BTC-USDT",
+            "quantity": "0.01972707",
+            "market_value": "1199.9833289889528105"
+          }
+        ],
+        "inventory_notional": "1199.9833289889528105",
+        "valuation_status": "example",
+        "residual_notional": null,
+        "batch_id": "09d82483c74a49ffb323d159bd522fef",
+        "incident_id": null
+      },
+      "restart_wait_preserved": true,
+      "terminal_group_status": "running",
+      "terminal_batch_status": "completed",
+      "terminal_error": null,
+      "late_funding": [
+        {
+          "source": "example",
+          "inst_id": "SOL-USDT-SWAP",
+          "ts": 1767225600001,
+          "status": "settled",
+          "payment": "1.32561205530"
+        }
+      ],
+      "late_publication_requests": [
+        {
+          "inst_id": "SOL-USDT-SWAP",
+          "start": 1767225600001,
+          "end": 1767225600003,
+          "source": "example"
+        }
+      ],
+      "original_identity_preserved_final": true,
+      "repeat_did_not_duplicate": true,
+      "final_group_fills": 2,
+      "final_command_states": [
+        {
+          "key": "portfolio:09d82483c74a49ffb323d159bd522fef:add:0:1767222000000",
+          "phase": "add",
+          "status": "completed",
+          "order_id": "d3c7b026917a484a93850b446c941de4"
+        },
+        {
+          "key": "portfolio:09d82483c74a49ffb323d159bd522fef:add:1:1767222000000",
+          "phase": "add",
+          "status": "completed",
+          "order_id": "078676cd520a4b4cbc25dfe0a0e539b3"
+        }
+      ],
+      "contributions_reconciled": true
+    },
+    {
+      "inject_before_add_number": 2,
+      "disposition": "stop",
+      "group_status_after_due": "running",
+      "batch_status_after_due": "adding",
+      "last_error_after_due": "[funding_pending] Unsettled funding blocks new risk; protective reductions remain available.",
+      "pending_funding": [
+        {
+          "source": "example",
+          "inst_id": "SOL-USDT-SWAP",
+          "ts": 1767225600001,
+          "quantity": "10",
+          "owners": {
+            "manual:audit-outside-owner": "10"
+          },
+          "observed_at": 1767225600002,
+          "integrity": "verified"
+        }
+      ],
+      "frozen_original": {
+        "id": "186311300513454aa5cb6b0cc20b1432",
+        "bar": 1767222000000,
+        "content_hash": "f19ef7c17de9c4d812075f93ee073f35098920d2315c49bd0a7fbdce6ef6648c",
+        "body_digest": "f19ef7c17de9c4d812075f93ee073f35098920d2315c49bd0a7fbdce6ef6648c",
+        "targets": {
+          "BTC-USDT": "0.01972707",
+          "ETH-USDT": "0.38642455"
+        },
+        "additions_hash": "54072963d19797d30a8dcda4772f85a5554323fcc4ffff04bdaab5b5062760d2",
+        "additions": {
+          "available_cash": "9337.125",
+          "capital_budget": {
+            "account_available_cash": "9337.125",
+            "account_equity": "9999.86205530",
+            "basis": "spot_marked_value_or_swap_posted_margin_plus_pending; new_fill_capital_and_full_entry_fees_share_remaining_budget",
+            "budget_cash": "2999.95861659",
+            "capital_ceiling": "2999.95861659",
+            "commitment_pct": "30",
+            "marked_owned_capital_and_pending": "0",
+            "owner": "portfolio:af34ed3b4aa34860b019a6b1ff7f9ec2",
+            "quote_change_policy": "each_child_rechecked_at_its_fresh_execution_quote_no_tolerance",
+            "remaining_capital_including_entry_costs": "2999.95861659"
+          },
+          "cash_scale": "1",
+          "policy_hash": "52b78102ef56c574f15d96f4a0ee090f6045d7885b190e854033cec6308d7ae5",
+          "quantities": {
+            "BTC-USDT": "0.01972707",
+            "ETH-USDT": "0.38642455"
+          },
+          "quotes": {
+            "BTC-USDT": {
+              "ask": "60835.356052462515",
+              "bid": "60823.190197837485",
+              "funding_rate": null,
+              "index": null,
+              "inst_id": "BTC-USDT",
+              "instrument": {
+                "base": "BTC",
+                "contract_size_base": null,
+                "ct_mult": null,
+                "ct_type": null,
+                "ct_val": null,
+                "ct_val_ccy": null,
+                "evidence_scope": "forward_observation",
+                "expiry_time": null,
+                "inst_family": "BTC-USDT",
+                "inst_id": "BTC-USDT",
+                "inst_type": "SPOT",
+                "instrument_version": "ecec58f1d2de2243b745a7079e836ec2f0d95f3d0199aae63c600ecded3606a7",
+                "list_time": null,
+                "lot_size": "1E-8",
+                "metadata_known_at": 1791529407436,
+                "min_size": "0.00001",
+                "observation_id": "ef162323934f4ca0babf5fc801bf3903",
+                "observed_at": 1791529407436,
+                "quantity_unit": "base",
+                "quote": "USDT",
+                "settle_ccy": "USDT",
+                "source": "example",
+                "state": "live",
+                "synthetic": true,
+                "tick_size": "0.1"
+              },
+              "last": "60829.27312515",
+              "margin_tiers": [],
+              "margin_tiers_snapshot": null,
+              "mark": "60829.27312515",
+              "mark_ts": 1767225600000,
+              "next_funding_time": null,
+              "observed_at": 1767225600000,
+              "source": "example",
+              "synthetic": true,
+              "transport": "example",
+              "ts": 1767225600000
+            },
+            "ETH-USDT": {
+              "ask": "3105.660417608262",
+              "bid": "3105.039347631738",
+              "funding_rate": null,
+              "index": null,
+              "inst_id": "ETH-USDT",
+              "instrument": {
+                "base": "ETH",
+                "contract_size_base": null,
+                "ct_mult": null,
+                "ct_type": null,
+                "ct_val": null,
+                "ct_val_ccy": null,
+                "evidence_scope": "forward_observation",
+                "expiry_time": null,
+                "inst_family": "ETH-USDT",
+                "inst_id": "ETH-USDT",
+                "inst_type": "SPOT",
+                "instrument_version": "500fe3c3a7088624e0ae5b186b35c441b9784d6b0b554a6bb6740332e967bf7a",
+                "list_time": null,
+                "lot_size": "1E-8",
+                "metadata_known_at": 1791529407436,
+                "min_size": "0.0001",
+                "observation_id": "ef162323934f4ca0babf5fc801bf3903",
+                "observed_at": 1791529407436,
+                "quantity_unit": "base",
+                "quote": "USDT",
+                "settle_ccy": "USDT",
+                "source": "example",
+                "state": "live",
+                "synthetic": true,
+                "tick_size": "0.01"
+              },
+              "last": "3105.34988262",
+              "margin_tiers": [],
+              "margin_tiers_snapshot": null,
+              "mark": "3105.34988262",
+              "mark_ts": 1767225600000,
+              "next_funding_time": null,
+              "observed_at": 1767225600000,
+              "source": "example",
+              "synthetic": true,
+              "transport": "example",
+              "ts": 1767225600000
+            }
+          },
+          "requested": {
+            "BTC-USDT": "0.01972707",
+            "ETH-USDT": "0.38642455"
+          },
+          "required_cash": "2400.2113264765",
+          "skipped": []
+        },
+        "commands": [
+          {
+            "id": "6898eb7c6d98486b92bb16f41e2eb0a1",
+            "phase": "add",
+            "sequence": 0,
+            "deployment_id": "fa2d1e573da34c7f87a5d37bcaa45d74",
+            "key": "portfolio:186311300513454aa5cb6b0cc20b1432:add:0:1767222000000",
+            "payload": {
+              "inst_id": "BTC-USDT",
+              "leverage": "1",
+              "margin_mode": "isolated",
+              "order_type": "market",
+              "quantity": "0.01972707",
+              "reduce_only": false,
+              "side": "buy",
+              "source": "example"
+            },
+            "payload_hash": "b4aebca29fa35470edd007764323c511310487cef6933e4fa01f62938d285042"
+          },
+          {
+            "id": "5d7e0bf18e9047ddb436bc58f80c1796",
+            "phase": "add",
+            "sequence": 1,
+            "deployment_id": "14115d377de14fa9ba988bd27bb56e4b",
+            "key": "portfolio:186311300513454aa5cb6b0cc20b1432:add:1:1767222000000",
+            "payload": {
+              "inst_id": "ETH-USDT",
+              "leverage": "1",
+              "margin_mode": "isolated",
+              "order_type": "market",
+              "quantity": "0.38642455",
+              "reduce_only": false,
+              "side": "buy",
+              "source": "example"
+            },
+            "payload_hash": "cdaf5019e457be70a45d7f486b4779b5c58d4fb668e4334e5e3e6edca3b6f598"
+          }
+        ]
+      },
+      "original_identity_preserved_after_due": true,
+      "group_fills_after_due": 1,
+      "group_positions_after_due": [
+        {
+          "source": "example",
+          "inst_id": "BTC-USDT",
+          "metadata": "{\"base\":\"BTC\",\"contract_size_base\":null,\"ct_mult\":null,\"ct_type\":null,\"ct_val\":null,\"ct_val_ccy\":null,\"evidence_scope\":\"forward_observation\",\"expiry_time\":null,\"inst_family\":\"BTC-USDT\",\"inst_id\":\"BTC-USDT\",\"inst_type\":\"SPOT\",\"instrument_version\":\"ecec58f1d2de2243b745a7079e836ec2f0d95f3d0199aae63c600ecded3606a7\",\"inventory_effective_at\":1767225600000,\"list_time\":null,\"lot_size\":\"1E-8\",\"metadata_known_at\":1791529407436,\"min_size\":\"0.00001\",\"observation_id\":\"ef162323934f4ca0babf5fc801bf3903\",\"observed_at\":1791529407436,\"position_generation\":\"2c1a0a12df324bb1a599a7d267a0a94c\",\"position_opened_at\":1767225600000,\"quantity_unit\":\"base\",\"quote\":\"USDT\",\"settle_ccy\":\"USDT\",\"source\":\"example\",\"state\":\"live\",\"synthetic\":true,\"tick_size\":\"0.1\"}",
+          "quantity": "0.01972707",
+          "entry_price": "60835.4",
+          "margin": "0",
+          "basis": "1200.104194278",
+          "leverage": "1",
+          "funding_cursor": 1767225600000
+        }
+      ],
+      "command_states_after_due": [
+        {
+          "key": "portfolio:186311300513454aa5cb6b0cc20b1432:add:0:1767222000000",
+          "phase": "add",
+          "status": "completed",
+          "order_id": "2c1a0a12df324bb1a599a7d267a0a94c"
+        },
+        {
+          "key": "portfolio:186311300513454aa5cb6b0cc20b1432:add:1:1767222000000",
+          "phase": "add",
+          "status": "pending",
+          "order_id": null
+        }
+      ],
+      "waiting_attention": {
+        "phase": "funding_pending",
+        "since": 1791529408833,
+        "as_of": 1791529408949,
+        "error": "[funding_pending] Unsettled funding blocks new risk; protective reductions remain available.",
+        "inventory": [
+          {
+            "inst_id": "BTC-USDT",
+            "quantity": "0.01972707",
+            "market_value": "1199.9833289889528105"
+          }
+        ],
+        "inventory_notional": "1199.9833289889528105",
+        "valuation_status": "example",
+        "residual_notional": null,
+        "batch_id": "186311300513454aa5cb6b0cc20b1432",
+        "incident_id": null
+      },
+      "terminal_group_status": "stopped",
+      "terminal_batch_status": "canceled",
+      "protection_fills": 1,
+      "late_funding": [
+        {
+          "source": "example",
+          "inst_id": "SOL-USDT-SWAP",
+          "ts": 1767225600001,
+          "status": "settled",
+          "payment": "1.32561205530"
+        }
+      ],
+      "late_publication_requests": [
+        {
+          "inst_id": "SOL-USDT-SWAP",
+          "start": 1767225600001,
+          "end": 1767225600003,
+          "source": "example"
+        }
+      ],
+      "original_identity_preserved_final": true,
+      "pending_command_states": [
+        "canceled"
+      ]
+    },
+    {
+      "inject_before_add_number": 2,
+      "disposition": "execution_error",
+      "group_status_after_due": "running",
+      "batch_status_after_due": "adding",
+      "last_error_after_due": "[funding_pending] Unsettled funding blocks new risk; protective reductions remain available.",
+      "pending_funding": [
+        {
+          "source": "example",
+          "inst_id": "SOL-USDT-SWAP",
+          "ts": 1767225600001,
+          "quantity": "10",
+          "owners": {
+            "manual:audit-outside-owner": "10"
+          },
+          "observed_at": 1767225600002,
+          "integrity": "verified"
+        }
+      ],
+      "frozen_original": {
+        "id": "acc9979a4a9b43f1be7aa672deff85d9",
+        "bar": 1767222000000,
+        "content_hash": "66f08579c768fa563f3949bc5ceccc8e49ae360090f4b18e6d0c74e747a697ef",
+        "body_digest": "66f08579c768fa563f3949bc5ceccc8e49ae360090f4b18e6d0c74e747a697ef",
+        "targets": {
+          "BTC-USDT": "0.01972707",
+          "ETH-USDT": "0.38642455"
+        },
+        "additions_hash": "23d3239d3be79f7be2a5c7010a05e5c5d441a3dacad5761c1458589fe528f539",
+        "additions": {
+          "available_cash": "9337.125",
+          "capital_budget": {
+            "account_available_cash": "9337.125",
+            "account_equity": "9999.86205530",
+            "basis": "spot_marked_value_or_swap_posted_margin_plus_pending; new_fill_capital_and_full_entry_fees_share_remaining_budget",
+            "budget_cash": "2999.95861659",
+            "capital_ceiling": "2999.95861659",
+            "commitment_pct": "30",
+            "marked_owned_capital_and_pending": "0",
+            "owner": "portfolio:6e9c2364a81643c4bb158813fca3e0a4",
+            "quote_change_policy": "each_child_rechecked_at_its_fresh_execution_quote_no_tolerance",
+            "remaining_capital_including_entry_costs": "2999.95861659"
+          },
+          "cash_scale": "1",
+          "policy_hash": "52b78102ef56c574f15d96f4a0ee090f6045d7885b190e854033cec6308d7ae5",
+          "quantities": {
+            "BTC-USDT": "0.01972707",
+            "ETH-USDT": "0.38642455"
+          },
+          "quotes": {
+            "BTC-USDT": {
+              "ask": "60835.356052462515",
+              "bid": "60823.190197837485",
+              "funding_rate": null,
+              "index": null,
+              "inst_id": "BTC-USDT",
+              "instrument": {
+                "base": "BTC",
+                "contract_size_base": null,
+                "ct_mult": null,
+                "ct_type": null,
+                "ct_val": null,
+                "ct_val_ccy": null,
+                "evidence_scope": "forward_observation",
+                "expiry_time": null,
+                "inst_family": "BTC-USDT",
+                "inst_id": "BTC-USDT",
+                "inst_type": "SPOT",
+                "instrument_version": "ecec58f1d2de2243b745a7079e836ec2f0d95f3d0199aae63c600ecded3606a7",
+                "list_time": null,
+                "lot_size": "1E-8",
+                "metadata_known_at": 1791529409141,
+                "min_size": "0.00001",
+                "observation_id": "1a7d31bdc6414c11a2f51f626088a1ed",
+                "observed_at": 1791529409141,
+                "quantity_unit": "base",
+                "quote": "USDT",
+                "settle_ccy": "USDT",
+                "source": "example",
+                "state": "live",
+                "synthetic": true,
+                "tick_size": "0.1"
+              },
+              "last": "60829.27312515",
+              "margin_tiers": [],
+              "margin_tiers_snapshot": null,
+              "mark": "60829.27312515",
+              "mark_ts": 1767225600000,
+              "next_funding_time": null,
+              "observed_at": 1767225600000,
+              "source": "example",
+              "synthetic": true,
+              "transport": "example",
+              "ts": 1767225600000
+            },
+            "ETH-USDT": {
+              "ask": "3105.660417608262",
+              "bid": "3105.039347631738",
+              "funding_rate": null,
+              "index": null,
+              "inst_id": "ETH-USDT",
+              "instrument": {
+                "base": "ETH",
+                "contract_size_base": null,
+                "ct_mult": null,
+                "ct_type": null,
+                "ct_val": null,
+                "ct_val_ccy": null,
+                "evidence_scope": "forward_observation",
+                "expiry_time": null,
+                "inst_family": "ETH-USDT",
+                "inst_id": "ETH-USDT",
+                "inst_type": "SPOT",
+                "instrument_version": "500fe3c3a7088624e0ae5b186b35c441b9784d6b0b554a6bb6740332e967bf7a",
+                "list_time": null,
+                "lot_size": "1E-8",
+                "metadata_known_at": 1791529409141,
+                "min_size": "0.0001",
+                "observation_id": "1a7d31bdc6414c11a2f51f626088a1ed",
+                "observed_at": 1791529409141,
+                "quantity_unit": "base",
+                "quote": "USDT",
+                "settle_ccy": "USDT",
+                "source": "example",
+                "state": "live",
+                "synthetic": true,
+                "tick_size": "0.01"
+              },
+              "last": "3105.34988262",
+              "margin_tiers": [],
+              "margin_tiers_snapshot": null,
+              "mark": "3105.34988262",
+              "mark_ts": 1767225600000,
+              "next_funding_time": null,
+              "observed_at": 1767225600000,
+              "source": "example",
+              "synthetic": true,
+              "transport": "example",
+              "ts": 1767225600000
+            }
+          },
+          "requested": {
+            "BTC-USDT": "0.01972707",
+            "ETH-USDT": "0.38642455"
+          },
+          "required_cash": "2400.2113264765",
+          "skipped": []
+        },
+        "commands": [
+          {
+            "id": "1fa3098848b34879a1abdd4a8dca7936",
+            "phase": "add",
+            "sequence": 0,
+            "deployment_id": "d15c8eba003b44358b408a1ae55fcdc1",
+            "key": "portfolio:acc9979a4a9b43f1be7aa672deff85d9:add:0:1767222000000",
+            "payload": {
+              "inst_id": "BTC-USDT",
+              "leverage": "1",
+              "margin_mode": "isolated",
+              "order_type": "market",
+              "quantity": "0.01972707",
+              "reduce_only": false,
+              "side": "buy",
+              "source": "example"
+            },
+            "payload_hash": "b4aebca29fa35470edd007764323c511310487cef6933e4fa01f62938d285042"
+          },
+          {
+            "id": "19baf5da6db04cf98e538afe5ba92262",
+            "phase": "add",
+            "sequence": 1,
+            "deployment_id": "b91883a8ba104d65bbb4c80ead790372",
+            "key": "portfolio:acc9979a4a9b43f1be7aa672deff85d9:add:1:1767222000000",
+            "payload": {
+              "inst_id": "ETH-USDT",
+              "leverage": "1",
+              "margin_mode": "isolated",
+              "order_type": "market",
+              "quantity": "0.38642455",
+              "reduce_only": false,
+              "side": "buy",
+              "source": "example"
+            },
+            "payload_hash": "cdaf5019e457be70a45d7f486b4779b5c58d4fb668e4334e5e3e6edca3b6f598"
+          }
+        ]
+      },
+      "original_identity_preserved_after_due": true,
+      "group_fills_after_due": 1,
+      "group_positions_after_due": [
+        {
+          "source": "example",
+          "inst_id": "BTC-USDT",
+          "metadata": "{\"base\":\"BTC\",\"contract_size_base\":null,\"ct_mult\":null,\"ct_type\":null,\"ct_val\":null,\"ct_val_ccy\":null,\"evidence_scope\":\"forward_observation\",\"expiry_time\":null,\"inst_family\":\"BTC-USDT\",\"inst_id\":\"BTC-USDT\",\"inst_type\":\"SPOT\",\"instrument_version\":\"ecec58f1d2de2243b745a7079e836ec2f0d95f3d0199aae63c600ecded3606a7\",\"inventory_effective_at\":1767225600000,\"list_time\":null,\"lot_size\":\"1E-8\",\"metadata_known_at\":1791529409141,\"min_size\":\"0.00001\",\"observation_id\":\"1a7d31bdc6414c11a2f51f626088a1ed\",\"observed_at\":1791529409141,\"position_generation\":\"1d41cdc16166416fae0a613d4f9c98bc\",\"position_opened_at\":1767225600000,\"quantity_unit\":\"base\",\"quote\":\"USDT\",\"settle_ccy\":\"USDT\",\"source\":\"example\",\"state\":\"live\",\"synthetic\":true,\"tick_size\":\"0.1\"}",
+          "quantity": "0.01972707",
+          "entry_price": "60835.4",
+          "margin": "0",
+          "basis": "1200.104194278",
+          "leverage": "1",
+          "funding_cursor": 1767225600000
+        }
+      ],
+      "command_states_after_due": [
+        {
+          "key": "portfolio:acc9979a4a9b43f1be7aa672deff85d9:add:0:1767222000000",
+          "phase": "add",
+          "status": "completed",
+          "order_id": "1d41cdc16166416fae0a613d4f9c98bc"
+        },
+        {
+          "key": "portfolio:acc9979a4a9b43f1be7aa672deff85d9:add:1:1767222000000",
+          "phase": "add",
+          "status": "pending",
+          "order_id": null
+        }
+      ],
+      "waiting_attention": {
+        "phase": "funding_pending",
+        "since": 1791529410064,
+        "as_of": 1791529410166,
+        "error": "[funding_pending] Unsettled funding blocks new risk; protective reductions remain available.",
+        "inventory": [
+          {
+            "inst_id": "BTC-USDT",
+            "quantity": "0.01972707",
+            "market_value": "1199.9833289889528105"
+          }
+        ],
+        "inventory_notional": "1199.9833289889528105",
+        "valuation_status": "example",
+        "residual_notional": null,
+        "batch_id": "acc9979a4a9b43f1be7aa672deff85d9",
+        "incident_id": null
+      },
+      "restart_wait_preserved": true,
+      "terminal_group_status": "failed",
+      "terminal_batch_status": "compensated",
+      "terminal_error": "Approved risk policy changed; review a new release before adding strategy risk.",
+      "late_funding": [
+        {
+          "source": "example",
+          "inst_id": "SOL-USDT-SWAP",
+          "ts": 1767225600001,
+          "status": "settled",
+          "payment": "1.32561205530"
+        }
+      ],
+      "late_publication_requests": [
+        {
+          "inst_id": "SOL-USDT-SWAP",
+          "start": 1767225600001,
+          "end": 1767225600003,
+          "source": "example"
+        },
+        {
+          "inst_id": "SOL-USDT-SWAP",
+          "start": 1767225600002,
+          "end": 1767225600003,
+          "source": "example"
+        }
+      ],
+      "original_identity_preserved_final": true,
+      "repeat_did_not_duplicate": true,
+      "final_group_fills": 2,
+      "final_command_states": [
+        {
+          "key": "portfolio:acc9979a4a9b43f1be7aa672deff85d9:add:0:1767222000000",
+          "phase": "add",
+          "status": "completed",
+          "order_id": "1d41cdc16166416fae0a613d4f9c98bc"
+        },
+        {
+          "key": "portfolio:acc9979a4a9b43f1be7aa672deff85d9:add:1:1767222000000",
+          "phase": "add",
+          "status": "canceled",
+          "order_id": null
+        },
+        {
+          "key": "portfolio:acc9979a4a9b43f1be7aa672deff85d9:compensate:0:1767222000000",
+          "phase": "compensate",
+          "status": "completed",
+          "order_id": "98f29641ee16474382f0089649219734"
+        }
+      ],
+      "contributions_reconciled": true
+    }
+  ],
+  "passed": true
+}

@@ -18,7 +18,7 @@ const ForwardPerformance = lazy(() => import('../components/ForwardPerformance')
 import ManagedPortfolios from '../components/ManagedPortfolios';
 const Contributions = lazy(() => import('../components/Contributions'));
 import SimulationClock from '../components/SimulationClock';
-import ReleaseHistory from '../components/ReleaseHistory';
+const ReleaseHistory = lazy(() => import('../components/ReleaseHistory'));
 import PortfolioAnalytics from '../components/PortfolioAnalytics';
 import { proApi } from '../proApi';
 import type { Direction, OrderRequest, ProRisk, RecordData } from '../proApi';
@@ -266,7 +266,11 @@ export default function Portfolio({
                 <Contributions source={source} />
               </Suspense>
             )}
-            {table === 'releases' && <ReleaseHistory source={source} />}
+            {table === 'releases' && (
+              <Suspense fallback={<Loading />}>
+                <ReleaseHistory source={source} />
+              </Suspense>
+            )}
             {table === 'analytics' && <PortfolioAnalytics source={source} />}
             {table === 'positions' &&
               (account.isPending ? (

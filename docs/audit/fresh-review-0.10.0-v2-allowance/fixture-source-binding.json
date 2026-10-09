@@ -1,0 +1,11 @@
+{
+  "runtime_revision": "d9418062b6521dcb3590971d786553a06c86fd8d",
+  "fixture_function_bytes_match_committed_source": true,
+  "function_sha256": {
+    "tests/test_managed_portfolios.py::runtime": "87b180008196e4d1bc229336e90c5ac74af318d469046b3466f2795021de3358",
+    "tests/test_managed_portfolios.py::research": "123f33ad6f8644942bee65b9d2381ce3d5f9312f9f67524e9e49a383528ecb28",
+    "tests/test_managed_portfolios.py::approve": "74a72b1b98bacac85e3da98cd5a8aca50a7a7983a57c457d1799af6120bfb266",
+    "tests/test_managed_portfolios.py::activate": "61b2b37e3042334c4fbd1114d47feabc605af9e3b7130322e3c35fc9aadf38a9",
+    "tests/test_pro_execution.py::order": "ac18c40610d9b8b9667e714383b430e7b61f1da2c4534e0b6d7638d86987bff5"
+  }
+}

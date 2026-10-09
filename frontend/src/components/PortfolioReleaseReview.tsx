@@ -8,6 +8,7 @@ import { ErrorBox, Field, Status } from './workspace';
 import { useI18n } from '../lib/i18n';
 import { canTrade } from '../lib/permissions';
 import { number } from '../lib/format';
+import PortfolioExecutionPolicy from './PortfolioExecutionPolicy';
 import { LiquidityReleaseEvidence } from './LiquidityEvidence';
 
 const acknowledgement: Record<string, string> = {
@@ -121,6 +122,10 @@ export default function PortfolioReleaseReview({
               failure_policy: t('Reduce the group on failure'),
               bar: p.definition.bar,
             }}
+          />
+          <PortfolioExecutionPolicy
+            contract={p.definition.execution_contract}
+            residual={p.definition.max_residual_pct}
           />
           {p.capital_admission && (
             <section className="capital-admission" aria-label={t('Account capital admission')}>

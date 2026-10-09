@@ -1,0 +1,64 @@
+{
+  "scope": "Actual BackupService lineage validator on cloned financial SQLite; not a full HTTP ZIP import test",
+  "source_sha256": {
+    "platform.py": "e31b1e524a36f18040e1cbdedde2d2c6673b0ee499280fe172db09cdba761f3d",
+    "portfolio_execution.py": "b51b3dd9d7747bf5dae5407b9b8a8083ee6f95578671675ef9fda909bd05c4ff",
+    "managed_portfolios.py": "9ac1db43e51d87298948673efbd5ad3311f0a27f3cd92f45182f746f7526bcbc"
+  },
+  "cases": [
+    {
+      "case": "clean",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "case": "wrong_group",
+      "accepted": false,
+      "error_code": "backup_integrity",
+      "passed": true
+    },
+    {
+      "case": "wrong_batch",
+      "accepted": false,
+      "error_code": "backup_integrity",
+      "passed": true
+    },
+    {
+      "case": "replacement_key",
+      "accepted": false,
+      "error_code": "backup_integrity",
+      "passed": true
+    },
+    {
+      "case": "superseded_hash",
+      "accepted": false,
+      "error_code": "backup_integrity",
+      "passed": true
+    },
+    {
+      "case": "replacement_payload",
+      "accepted": false,
+      "error_code": "backup_integrity",
+      "passed": true
+    },
+    {
+      "case": "delete_plan",
+      "accepted": false,
+      "error_code": "backup_integrity",
+      "passed": true
+    },
+    {
+      "case": "delete_replacement_command",
+      "accepted": false,
+      "error_code": "backup_integrity",
+      "passed": true
+    },
+    {
+      "case": "standalone_graft",
+      "accepted": false,
+      "error_code": "backup_integrity",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

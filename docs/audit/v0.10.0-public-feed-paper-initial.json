@@ -1,0 +1,2168 @@
+{
+  "scope": "Elapsed public OKX integration; isolated local paper; no venue orders, profitability or uptime claim.",
+  "implementation": {
+    "schema_version": 1,
+    "application_version": "0.10.0",
+    "code_fingerprint": "3b0cf2a5e61617ed6ecd195853c1505f65d2f386f681dee393a6ea71fdc30b91",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+      "pro_api.py": "5984f1d0548449fd44fd8dabc1883a17f64de2c41a429bbffc83a5a0527beadd",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "ab51a47691bce2c166e65810e20eac2c184c61457a08a4c6e15ad2290f6f9d2c",
+      "strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+      "research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+      "research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+      "portfolio_registry.py": "f93687adebd7c7c48c265645d0e252961ba68a4835477ec2501111819bd9fb38",
+      "portfolio_releases.py": "baaf5ad7730a7615a8a6b1cbabf9f43054081596a21dc3c3bed416240a961657",
+      "managed_portfolios.py": "8a0910a15d98352a271532e6565ca3b8c6037d2e13e8899c9c9a1e701d335263",
+      "portfolio_research.py": "8b29a0ac0ef49d2d9b5f6606c18bbf817ff49fef1b39c1af16103a5035e564bb",
+      "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+      "portfolio_execution.py": "97f2fb266047fb4822f1ee38c20da40965a149f3fc22cc5acee7ece0009cf817",
+      "historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44",
+      "forward_performance.py": "78d0695c125182680abb9304b855e7608f7b50bb18fa190d75051aaeef203361",
+      "liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+      "contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "driver_sha256": "8fa303dd832df5ceac0ac936541f2e89dbd6684fa66799597b3a277fd84bac81",
+  "started_at": 1791527438436,
+  "passed": true,
+  "decisions": [
+    {
+      "id": "ca60bfd7836c4206b9eaa10a16deff58",
+      "bar": 1791527340000,
+      "status": "completed",
+      "available_at": 1791527400000,
+      "targets": {
+        "BTC-USDT": "0.00404089",
+        "ETH-USDT": "0.133429",
+        "SOL-USDT": "3.015499"
+      },
+      "hash": "6aa7e7cf1b7a8a8c16e5f91aa38779ce75e061cccbbe3063582be0adaacc0275",
+      "orders": [
+        {
+          "actor": "strategy:159b3f9586174872b87188da1ec6bf37",
+          "cash_after": "9666.6729445386",
+          "created_at": 1791527444537,
+          "execution_mode": "local-paper",
+          "fee": "0.3329940614",
+          "id": "482035107a5f4db79b85abe78931f97a",
+          "inst_id": "BTC-USDT",
+          "instrument": {
+            "base": "BTC",
+            "contract_size_base": null,
+            "ct_mult": null,
+            "ct_type": null,
+            "ct_val": null,
+            "ct_val_ccy": null,
+            "evidence_scope": "forward_observation",
+            "expiry_time": null,
+            "inst_family": "BTC-USDT",
+            "inst_id": "BTC-USDT",
+            "inst_type": "SPOT",
+            "instrument_version": "bcfb7e77dffcbd37acbfcb8f2d76e0d6d468e8501b765dee07480c4ea0274422",
+            "list_time": 1611907686000,
+            "lot_size": "1E-8",
+            "metadata_known_at": 1791527438720,
+            "min_size": "0.00001",
+            "observation_id": "370b9ec2887542bcba40a3d9ba5f3300",
+            "observed_at": 1791527438720,
+            "quantity_unit": "base",
+            "quote": "USDT",
+            "settle_ccy": "USDT",
+            "source": "okx",
+            "state": "live",
+            "synthetic": false,
+            "tick_size": "0.1"
+          },
+          "insurance_debt": "0",
+          "leverage": "1",
+          "liquidation": false,
+          "margin_after": "0",
+          "margin_mode": "isolated",
+          "notional": "332.994061400",
+          "order_type": "market",
+          "position_after": "0.00403480",
+          "price": "82530.5",
+          "quantity": "0.00403480",
+          "quote_ask": "82489.2",
+          "quote_bid": "82489.1",
+          "quote_last": "82489.9",
+          "quote_mark": "82489.9",
+          "quote_ts": 1791527443669,
+          "reduce_only": false,
+          "risk_snapshot": {
+            "fee_bps": "10",
+            "halt_reason": "",
+            "halted": false,
+            "liquidation_fee_bps": "50",
+            "max_daily_loss_pct": 5,
+            "max_gross_exposure_pct": 200,
+            "max_leverage": 10,
+            "max_order_notional": "2500",
+            "slippage_bps": "5",
+            "source": "okx",
+            "updated_at": 1791527438403
+          },
+          "side": "buy",
+          "source": "okx",
+          "status": "filled",
+          "submitted_by": "strategy:159b3f9586174872b87188da1ec6bf37",
+          "updated_at": 1791527444537
+        },
+        {
+          "actor": "strategy:78695183aefa4d9f83100044523868c0",
+          "cash_after": "9333.34705876572",
+          "created_at": 1791527444547,
+          "execution_mode": "local-paper",
+          "fee": "0.33299289288",
+          "id": "eb24d5e9ee67484c98c224ef2cc20164",
+          "inst_id": "ETH-USDT",
+          "instrument": {
+            "base": "ETH",
+            "contract_size_base": null,
+            "ct_mult": null,
+            "ct_type": null,
+            "ct_val": null,
+            "ct_val_ccy": null,
+            "evidence_scope": "forward_observation",
+            "expiry_time": null,
+            "inst_family": "ETH-USDT",
+            "inst_id": "ETH-USDT",
+            "inst_type": "SPOT",
+            "instrument_version": "59f88026acabd7db024264761cf80cda66c56e300d69c297cca8300fbefe3cfe",
+            "list_time": 1611907686000,
+            "lot_size": "0.000001",
+            "metadata_known_at": 1791527438720,
+            "min_size": "0.0001",
+            "observation_id": "370b9ec2887542bcba40a3d9ba5f3300",
+            "observed_at": 1791527438720,
+            "quantity_unit": "base",
+            "quote": "USDT",
+            "settle_ccy": "USDT",
+            "source": "okx",
+            "state": "live",
+            "synthetic": false,
+            "tick_size": "0.01"
+          },
+          "insurance_debt": "0",
+          "leverage": "1",
+          "liquidation": false,
+          "margin_after": "0",
+          "margin_mode": "isolated",
+          "notional": "332.99289288",
+          "order_type": "market",
+          "position_after": "0.133227",
+          "price": "2499.44",
+          "quantity": "0.133227",
+          "quote_ask": "2498.19",
+          "quote_bid": "2498.18",
+          "quote_last": "2498.2",
+          "quote_mark": "2498.2",
+          "quote_ts": 1791527444363,
+          "reduce_only": false,
+          "risk_snapshot": {
+            "fee_bps": "10",
+            "halt_reason": "",
+            "halted": false,
+            "liquidation_fee_bps": "50",
+            "max_daily_loss_pct": 5,
+            "max_gross_exposure_pct": 200,
+            "max_leverage": 10,
+            "max_order_notional": "2500",
+            "slippage_bps": "5",
+            "source": "okx",
+            "updated_at": 1791527438403
+          },
+          "side": "buy",
+          "source": "okx",
+          "status": "filled",
+          "submitted_by": "strategy:78695183aefa4d9f83100044523868c0",
+          "updated_at": 1791527444547
+        },
+        {
+          "actor": "strategy:60ee40682bd4455aa36e1c72155fb957",
+          "cash_after": "9000.00242414272",
+          "created_at": 1791527444560,
+          "execution_mode": "local-paper",
+          "fee": "0.333011623",
+          "id": "79eadf4ff4c2418d999205f3ef7da737",
+          "inst_id": "SOL-USDT",
+          "instrument": {
+            "base": "SOL",
+            "contract_size_base": null,
+            "ct_mult": null,
+            "ct_type": null,
+            "ct_val": null,
+            "ct_val_ccy": null,
+            "evidence_scope": "forward_observation",
+            "expiry_time": null,
+            "inst_family": "SOL-USDT",
+            "inst_id": "SOL-USDT",
+            "inst_type": "SPOT",
+            "instrument_version": "bf27a63b0dd8041643fe9ae1d6ee5f382afa6dc1baa402042349c0e8c95f2312",
+            "list_time": 1611907686000,
+            "lot_size": "0.000001",
+            "metadata_known_at": 1791527438720,
+            "min_size": "0.01",
+            "observation_id": "370b9ec2887542bcba40a3d9ba5f3300",
+            "observed_at": 1791527438720,
+            "quantity_unit": "base",
+            "quote": "USDT",
+            "settle_ccy": "USDT",
+            "source": "okx",
+            "state": "live",
+            "synthetic": false,
+            "tick_size": "0.01"
+          },
+          "insurance_debt": "0",
+          "leverage": "1",
+          "liquidation": false,
+          "margin_after": "0",
+          "margin_mode": "isolated",
+          "notional": "333.01162300",
+          "order_type": "market",
+          "position_after": "3.010955",
+          "price": "110.60",
+          "quantity": "3.010955",
+          "quote_ask": "110.54",
+          "quote_bid": "110.53",
+          "quote_last": "110.54",
+          "quote_mark": "110.54",
+          "quote_ts": 1791527443672,
+          "reduce_only": false,
+          "risk_snapshot": {
+            "fee_bps": "10",
+            "halt_reason": "",
+            "halted": false,
+            "liquidation_fee_bps": "50",
+            "max_daily_loss_pct": 5,
+            "max_gross_exposure_pct": 200,
+            "max_leverage": 10,
+            "max_order_notional": "2500",
+            "slippage_bps": "5",
+            "source": "okx",
+            "updated_at": 1791527438403
+          },
+          "side": "buy",
+          "source": "okx",
+          "status": "filled",
+          "submitted_by": "strategy:60ee40682bd4455aa36e1c72155fb957",
+          "updated_at": 1791527444560
+        }
+      ]
+    },
+    {
+      "id": "b168a5f75e734823b46595dffd79b948",
+      "bar": 1791527400000,
+      "status": "completed",
+      "available_at": 1791527460000,
+      "targets": {
+        "BTC-USDT": "0.00403986",
+        "ETH-USDT": "0.133393",
+        "SOL-USDT": "3.014279"
+      },
+      "hash": "7714e06dd3e743a805a0ff62fdc62faed227eb58fe82c3438ea3745d356bdc14",
+      "orders": [
+        {
+          "actor": "strategy:78695183aefa4d9f83100044523868c0",
+          "cash_after": "8999.58704569924",
+          "created_at": 1791527465718,
+          "execution_mode": "local-paper",
+          "fee": "0.00041496348",
+          "id": "5249cc3dc1e6406298998ebccff4c1c3",
+          "inst_id": "ETH-USDT",
+          "instrument": {
+            "base": "ETH",
+            "contract_size_base": null,
+            "ct_mult": null,
+            "ct_type": null,
+            "ct_val": null,
+            "ct_val_ccy": null,
+            "evidence_scope": "forward_observation",
+            "expiry_time": null,
+            "inst_family": "ETH-USDT",
+            "inst_id": "ETH-USDT",
+            "inst_type": "SPOT",
+            "instrument_version": "59f88026acabd7db024264761cf80cda66c56e300d69c297cca8300fbefe3cfe",
+            "list_time": 1611907686000,
+            "lot_size": "0.000001",
+            "metadata_known_at": 1791527438720,
+            "min_size": "0.0001",
+            "observation_id": "370b9ec2887542bcba40a3d9ba5f3300",
+            "observed_at": 1791527438720,
+            "quantity_unit": "base",
+            "quote": "USDT",
+            "settle_ccy": "USDT",
+            "source": "okx",
+            "state": "live",
+            "synthetic": false,
+            "tick_size": "0.01"
+          },
+          "insurance_debt": "0",
+          "leverage": "1",
+          "liquidation": false,
+          "margin_after": "0",
+          "margin_mode": "isolated",
+          "notional": "0.41496348",
+          "order_type": "market",
+          "position_after": "0.133393",
+          "price": "2499.78",
+          "quantity": "0.000166",
+          "quote_ask": "2498.53",
+          "quote_bid": "2498.52",
+          "quote_last": "2498.53",
+          "quote_mark": "2498.53",
+          "quote_ts": 1791527464364,
+          "reduce_only": false,
+          "risk_snapshot": {
+            "fee_bps": "10",
+            "halt_reason": "",
+            "halted": false,
+            "liquidation_fee_bps": "50",
+            "max_daily_loss_pct": 5,
+            "max_gross_exposure_pct": 200,
+            "max_leverage": 10,
+            "max_order_notional": "2500",
+            "slippage_bps": "5",
+            "source": "okx",
+            "updated_at": 1791527438403
+          },
+          "side": "buy",
+          "source": "okx",
+          "status": "filled",
+          "submitted_by": "strategy:78695183aefa4d9f83100044523868c0",
+          "updated_at": 1791527465718
+        }
+      ]
+    },
+    {
+      "id": "872493b18efd4f6fac6240809378d3b8",
+      "bar": 1791527460000,
+      "status": "completed",
+      "available_at": 1791527520000,
+      "targets": {
+        "BTC-USDT": "0.00404075",
+        "ETH-USDT": "0.133384",
+        "SOL-USDT": "3.015315"
+      },
+      "hash": "a9a4a0aafda82e71823887070bce621360cef89902d3e176c21cbb09aaf94a42",
+      "orders": []
+    },
+    {
+      "id": "e726eb2525fd4c32904110c78297d196",
+      "bar": 1791527520000,
+      "status": "completed",
+      "available_at": 1791527580000,
+      "targets": {
+        "BTC-USDT": "0.00403887",
+        "ETH-USDT": "0.133331",
+        "SOL-USDT": "3.013567"
+      },
+      "hash": "b244120953b1567f0f5d9dfe3be73e2158af80be4e12da974fd8fd51063bbc85",
+      "orders": []
+    },
+    {
+      "id": "779be5de1bbc4907a70ce7e5f676653e",
+      "bar": 1791527580000,
+      "status": "completed",
+      "available_at": 1791527640000,
+      "targets": {
+        "BTC-USDT": "0.00403849",
+        "ETH-USDT": "0.133320",
+        "SOL-USDT": "3.013849"
+      },
+      "hash": "6f5607ece2138b1327c6e36ad256d2f6d8e27471a139a6a50b2bc94d9d82ecbe",
+      "orders": []
+    },
+    {
+      "id": "1bf6f890d3ef4392a14201fcabeaa366",
+      "bar": 1791527640000,
+      "status": "completed",
+      "available_at": 1791527700000,
+      "targets": {
+        "BTC-USDT": "0.00403862",
+        "ETH-USDT": "0.133298",
+        "SOL-USDT": "3.012812"
+      },
+      "hash": "6b05423dd198d5f0368fb5d2dc916841d1f4fb632115cc9cdeab2d601a9a7cc2",
+      "orders": []
+    },
+    {
+      "id": "b7d2914a44b742e48623c0e8b09c2836",
+      "bar": 1791527700000,
+      "status": "completed",
+      "available_at": 1791527760000,
+      "targets": {
+        "BTC-USDT": "0.00403874",
+        "ETH-USDT": "0.133344",
+        "SOL-USDT": "3.013035"
+      },
+      "hash": "f7f6c8e43785865ba59f7fc7be09fa5025c9256205a05d1211da40950c72f805",
+      "orders": []
+    }
+  ],
+  "waiting_issues": [],
+  "research": {
+    "run_id": "328e0c20c3a64b49920fe8815a3027dc",
+    "input_hash": "cf17e304afa618c2b59928ae83e73f07fa3964fe62026de78b8a37a60098cc7f",
+    "result_hash": "6ba010c7cbb36c2523aae8ab3c6a02ef18cd96c8675d180f70fe8279f301a2dc",
+    "metrics": {
+      "complete_utc_days": 0,
+      "execution_rejections": 265,
+      "fees_paid": "1.00653906552",
+      "final_equity": "10002.50999982448",
+      "funding_paid": "0",
+      "initial_cash": "10000",
+      "insurance_debt": "0",
+      "max_drawdown_pct": "0.038004009835606693106512633815112698872152158433876",
+      "mean_gross_exposure_pct": "9.8982039467868242580531417097674354403134610152064",
+      "orders": 19,
+      "realized_annual_vol_pct": null,
+      "realized_vol_reason": "fewer_than_30_complete_utc_days_or_nonpositive_equity",
+      "total_return_pct": "0.025099998244800",
+      "turnover": "0.100653906552",
+      "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity"
+    },
+    "economics": {
+      "attribution_scope": "Arithmetic for actual filled quantities, not a re-execution at alternative prices. Cost-driven sizing, stops and liquidation feedback are not an independent counterfactual.",
+      "beta_diagnostic": {
+        "paired_returns": 95,
+        "sample_beta": "1.3315327829251518662967121289449263271657861974812",
+        "sample_intercept_per_bar": "-1.5845167844032314209449549427105102551114000439E-9",
+        "scope": "Full-window ex-post OLS diagnostic, never used to size the reference or select parameters. No alpha significance, independent trials, risk matching or causal edge is established.",
+        "status": "descriptive_only"
+      },
+      "cash_reference": {
+        "return_pct": "0",
+        "yield_assumption": "zero interest"
+      },
+      "edge_status": "not_established",
+      "excess_return_vs_passive_pct": "0.0062373493385500",
+      "exposure_comparison": {
+        "passive_mean_gross_pct": "7.4318732538602602833108147494012607592508713716795",
+        "risk_matched": false,
+        "strategy_mean_gross_pct": "9.8982039467868242580531417097674354403134610152064"
+      },
+      "fees_pnl": "-1.00653906552",
+      "funding_pnl": "0",
+      "gross_price_pnl_after_modeled_execution": "3.51653889000",
+      "identity": "net = price before recorded quote shortfall \u2212 recorded quote shortfall \u2212 fees \u2212 funding paid; insurance liabilities are already reflected in equity and are not deducted twice",
+      "market_contributions": {
+        "markets": [
+          {
+            "fees_pnl": "-0.33299521875",
+            "funding_pnl": "0",
+            "inst_id": "BTC-USDT",
+            "net_pnl": "0.37011268125",
+            "price_pnl_before_fees_and_funding": "0.703107900"
+          },
+          {
+            "fees_pnl": "-0.33787973838",
+            "funding_pnl": "0",
+            "inst_id": "ETH-USDT",
+            "net_pnl": "1.08010412162",
+            "price_pnl_before_fees_and_funding": "1.41798386"
+          },
+          {
+            "fees_pnl": "-0.33566410839",
+            "funding_pnl": "0",
+            "inst_id": "SOL-USDT",
+            "net_pnl": "1.05978302161",
+            "price_pnl_before_fees_and_funding": "1.39544713"
+          }
+        ],
+        "net_pnl": "2.50999982448",
+        "reconciled": true,
+        "reconciliation_delta": "0E-11",
+        "scope": "Actual filled quantities, weighted-average derivative entry and terminal independent marks. Arithmetic monetary contribution, not independent strategy returns.",
+        "status": "available"
+      },
+      "modeled_quote_shortfall_pnl": "-0.519455200",
+      "net_pnl": "2.50999982448",
+      "passive_reference": {
+        "cash": "9250.001395269625",
+        "entries": [
+          {
+            "allocated_budget": "250.00",
+            "base": "BTC",
+            "entry_fee": "0.249750118125",
+            "entry_price": "82312.5",
+            "price_market": "BTC-USDT",
+            "price_source": "captured_spot",
+            "quantity_base": "0.00303417",
+            "weight_of_initial_account": "0.025"
+          },
+          {
+            "allocated_budget": "250.00",
+            "base": "ETH",
+            "entry_fee": "0.24974901600",
+            "entry_price": "2487.54",
+            "price_market": "ETH-USDT",
+            "price_source": "captured_spot",
+            "quantity_base": "0.100400",
+            "weight_of_initial_account": "0.025"
+          },
+          {
+            "allocated_budget": "250.00",
+            "base": "SOL",
+            "entry_fee": "0.24975022125",
+            "entry_price": "110.05",
+            "price_market": "SOL-USDT",
+            "price_source": "captured_spot",
+            "quantity_base": "2.269425",
+            "weight_of_initial_account": "0.025"
+          }
+        ],
+        "entry_ts": 1791521700000,
+        "equity": [
+          {
+            "equity": "10000",
+            "gross_notional": "0",
+            "ts": 1791521700000
+          },
+          {
+            "equity": "9999.427658330625",
+            "gross_notional": "749.426263061",
+            "ts": 1791521760000
+          },
+          {
+            "equity": "9999.220666127625",
+            "gross_notional": "749.219270858",
+            "ts": 1791521820000
+          },
+          {
+            "equity": "9998.849739367625",
+            "gross_notional": "748.848344098",
+            "ts": 1791521880000
+          },
+          {
+            "equity": "9998.954295350625",
+            "gross_notional": "748.952900081",
+            "ts": 1791521940000
+          },
+          {
+            "equity": "9998.676860410625",
+            "gross_notional": "748.675465141",
+            "ts": 1791522000000
+          },
+          {
+            "equity": "9998.707443502625",
+            "gross_notional": "748.706048233",
+            "ts": 1791522060000
+          },
+          {
+            "equity": "9999.219055877625",
+            "gross_notional": "749.217660608",
+            "ts": 1791522120000
+          },
+          {
+            "equity": "9999.654983560625",
+            "gross_notional": "749.653588291",
+            "ts": 1791522180000
+          },
+          {
+            "equity": "9999.823868687625",
+            "gross_notional": "749.822473418",
+            "ts": 1791522240000
+          },
+          {
+            "equity": "9999.950486854625",
+            "gross_notional": "749.949091585",
+            "ts": 1791522300000
+          },
+          {
+            "equity": "9999.904209105625",
+            "gross_notional": "749.902813836",
+            "ts": 1791522360000
+          },
+          {
+            "equity": "9999.781233365625",
+            "gross_notional": "749.779838096",
+            "ts": 1791522420000
+          },
+          {
+            "equity": "9999.496982571625",
+            "gross_notional": "749.495587302",
+            "ts": 1791522480000
+          },
+          {
+            "equity": "9999.656011879625",
+            "gross_notional": "749.65461661",
+            "ts": 1791522540000
+          },
+          {
+            "equity": "10000.287249791625",
+            "gross_notional": "750.285854522",
+            "ts": 1791522600000
+          },
+          {
+            "equity": "10000.411903714625",
+            "gross_notional": "750.410508445",
+            "ts": 1791522660000
+          },
+          {
+            "equity": "10000.611748681625",
+            "gross_notional": "750.610353412",
+            "ts": 1791522720000
+          },
+          {
+            "equity": "10000.410070596625",
+            "gross_notional": "750.408675327",
+            "ts": 1791522780000
+          },
+          {
+            "equity": "10000.534407647625",
+            "gross_notional": "750.533012378",
+            "ts": 1791522840000
+          },
+          {
+            "equity": "10000.505010400625",
+            "gross_notional": "750.503615131",
+            "ts": 1791522900000
+          },
+          {
+            "equity": "10000.756562314625",
+            "gross_notional": "750.755167045",
+            "ts": 1791522960000
+          },
+          {
+            "equity": "10000.965812624625",
+            "gross_notional": "750.964417355",
+            "ts": 1791523020000
+          },
+          {
+            "equity": "10001.421867125625",
+            "gross_notional": "751.420471856",
+            "ts": 1791523080000
+          },
+          {
+            "equity": "10002.212179269625",
+            "gross_notional": "752.21078400",
+            "ts": 1791523140000
+          },
+          {
+            "equity": "10002.110008760625",
+            "gross_notional": "752.108613491",
+            "ts": 1791523200000
+          },
+          {
+            "equity": "10001.342113849625",
+            "gross_notional": "751.34071858",
+            "ts": 1791523260000
+          },
+          {
+            "equity": "10001.238241932625",
+            "gross_notional": "751.236846663",
+            "ts": 1791523320000
+          },
+          {
+            "equity": "10001.050930227625",
+            "gross_notional": "751.049534958",
+            "ts": 1791523380000
+          },
+          {
+            "equity": "10001.248504800625",
+            "gross_notional": "751.247109531",
+            "ts": 1791523440000
+          },
+          {
+            "equity": "10001.118456136625",
+            "gross_notional": "751.117060867",
+            "ts": 1791523500000
+          },
+          {
+            "equity": "10001.784717545625",
+            "gross_notional": "751.783322276",
+            "ts": 1791523560000
+          },
+          {
+            "equity": "10001.730271459625",
+            "gross_notional": "751.72887619",
+            "ts": 1791523620000
+          },
+          {
+            "equity": "10002.265327821625",
+            "gross_notional": "752.263932552",
+            "ts": 1791523680000
+          },
+          {
+            "equity": "10002.085954951625",
+            "gross_notional": "752.084559682",
+            "ts": 1791523740000
+          },
+          {
+            "equity": "10002.104424701625",
+            "gross_notional": "752.103029432",
+            "ts": 1791523800000
+          },
+          {
+            "equity": "10001.946893625625",
+            "gross_notional": "751.945498356",
+            "ts": 1791523860000
+          },
+          {
+            "equity": "10002.135676323625",
+            "gross_notional": "752.134281054",
+            "ts": 1791523920000
+          },
+          {
+            "equity": "10002.109613346625",
+            "gross_notional": "752.108218077",
+            "ts": 1791523980000
+          },
+          {
+            "equity": "10002.277964970625",
+            "gross_notional": "752.276569701",
+            "ts": 1791524040000
+          },
+          {
+            "equity": "10002.568055912625",
+            "gross_notional": "752.566660643",
+            "ts": 1791524100000
+          },
+          {
+            "equity": "10002.697120994625",
+            "gross_notional": "752.695725725",
+            "ts": 1791524160000
+          },
+          {
+            "equity": "10002.932730480625",
+            "gross_notional": "752.931335211",
+            "ts": 1791524220000
+          },
+          {
+            "equity": "10002.682606971625",
+            "gross_notional": "752.681211702",
+            "ts": 1791524280000
+          },
+          {
+            "equity": "10002.465419975625",
+            "gross_notional": "752.464024706",
+            "ts": 1791524340000
+          },
+          {
+            "equity": "10002.071299335625",
+            "gross_notional": "752.069904066",
+            "ts": 1791524400000
+          },
+          {
+            "equity": "10001.532273065625",
+            "gross_notional": "751.530877796",
+            "ts": 1791524460000
+          },
+          {
+            "equity": "10001.803169026625",
+            "gross_notional": "751.801773757",
+            "ts": 1791524520000
+          },
+          {
+            "equity": "10001.705501531625",
+            "gross_notional": "751.704106262",
+            "ts": 1791524580000
+          },
+          {
+            "equity": "10002.198288013625",
+            "gross_notional": "752.196892744",
+            "ts": 1791524640000
+          },
+          {
+            "equity": "10001.975518710625",
+            "gross_notional": "751.974123441",
+            "ts": 1791524700000
+          },
+          {
+            "equity": "10001.907648945625",
+            "gross_notional": "751.906253676",
+            "ts": 1791524760000
+          },
+          {
+            "equity": "10001.872573561625",
+            "gross_notional": "751.871178292",
+            "ts": 1791524820000
+          },
+          {
+            "equity": "10001.166138952625",
+            "gross_notional": "751.164743683",
+            "ts": 1791524880000
+          },
+          {
+            "equity": "10000.285021401625",
+            "gross_notional": "750.283626132",
+            "ts": 1791524940000
+          },
+          {
+            "equity": "10000.457057785625",
+            "gross_notional": "750.455662516",
+            "ts": 1791525000000
+          },
+          {
+            "equity": "10000.249361353625",
+            "gross_notional": "750.247966084",
+            "ts": 1791525060000
+          },
+          {
+            "equity": "10000.448518937625",
+            "gross_notional": "750.447123668",
+            "ts": 1791525120000
+          },
+          {
+            "equity": "10000.161704141625",
+            "gross_notional": "750.160308872",
+            "ts": 1791525180000
+          },
+          {
+            "equity": "10000.076084646625",
+            "gross_notional": "750.074689377",
+            "ts": 1791525240000
+          },
+          {
+            "equity": "10000.155433680625",
+            "gross_notional": "750.154038411",
+            "ts": 1791525300000
+          },
+          {
+            "equity": "10000.606178219625",
+            "gross_notional": "750.60478295",
+            "ts": 1791525360000
+          },
+          {
+            "equity": "10000.674929828625",
+            "gross_notional": "750.673534559",
+            "ts": 1791525420000
+          },
+          {
+            "equity": "10000.721417245625",
+            "gross_notional": "750.720021976",
+            "ts": 1791525480000
+          },
+          {
+            "equity": "10000.656048147625",
+            "gross_notional": "750.654652878",
+            "ts": 1791525540000
+          },
+          {
+            "equity": "10000.274291540625",
+            "gross_notional": "750.272896271",
+            "ts": 1791525600000
+          },
+          {
+            "equity": "10000.764093845625",
+            "gross_notional": "750.762698576",
+            "ts": 1791525660000
+          },
+          {
+            "equity": "10000.525478596625",
+            "gross_notional": "750.524083327",
+            "ts": 1791525720000
+          },
+          {
+            "equity": "10000.749366837625",
+            "gross_notional": "750.747971568",
+            "ts": 1791525780000
+          },
+          {
+            "equity": "10001.038827607625",
+            "gross_notional": "751.037432338",
+            "ts": 1791525840000
+          },
+          {
+            "equity": "10001.061450862625",
+            "gross_notional": "751.060055593",
+            "ts": 1791525900000
+          },
+          {
+            "equity": "10000.993170731625",
+            "gross_notional": "750.991775462",
+            "ts": 1791525960000
+          },
+          {
+            "equity": "10001.079245516625",
+            "gross_notional": "751.077850247",
+            "ts": 1791526020000
+          },
+          {
+            "equity": "10001.393757461625",
+            "gross_notional": "751.392362192",
+            "ts": 1791526080000
+          },
+          {
+            "equity": "10001.177968898625",
+            "gross_notional": "751.176573629",
+            "ts": 1791526140000
+          },
+          {
+            "equity": "10001.341416441625",
+            "gross_notional": "751.340021172",
+            "ts": 1791526200000
+          },
+          {
+            "equity": "10001.557298169625",
+            "gross_notional": "751.55590290",
+            "ts": 1791526260000
+          },
+          {
+            "equity": "10001.283503065625",
+            "gross_notional": "751.282107796",
+            "ts": 1791526320000
+          },
+          {
+            "equity": "10001.170183359625",
+            "gross_notional": "751.16878809",
+            "ts": 1791526380000
+          },
+          {
+            "equity": "10001.515725555625",
+            "gross_notional": "751.514330286",
+            "ts": 1791526440000
+          },
+          {
+            "equity": "10001.729029826625",
+            "gross_notional": "751.727634557",
+            "ts": 1791526500000
+          },
+          {
+            "equity": "10001.837236367625",
+            "gross_notional": "751.835841098",
+            "ts": 1791526560000
+          },
+          {
+            "equity": "10001.621123385625",
+            "gross_notional": "751.619728116",
+            "ts": 1791526620000
+          },
+          {
+            "equity": "10001.710179869625",
+            "gross_notional": "751.70878460",
+            "ts": 1791526680000
+          },
+          {
+            "equity": "10001.751227950625",
+            "gross_notional": "751.749832681",
+            "ts": 1791526740000
+          },
+          {
+            "equity": "10001.489537218625",
+            "gross_notional": "751.488141949",
+            "ts": 1791526800000
+          },
+          {
+            "equity": "10001.351238500625",
+            "gross_notional": "751.349843231",
+            "ts": 1791526860000
+          },
+          {
+            "equity": "10001.646952375625",
+            "gross_notional": "751.645557106",
+            "ts": 1791526920000
+          },
+          {
+            "equity": "10001.447348216625",
+            "gross_notional": "751.445952947",
+            "ts": 1791526980000
+          },
+          {
+            "equity": "10001.564469769625",
+            "gross_notional": "751.56307450",
+            "ts": 1791527040000
+          },
+          {
+            "equity": "10001.547189368625",
+            "gross_notional": "751.545794099",
+            "ts": 1791527100000
+          },
+          {
+            "equity": "10002.052858292625",
+            "gross_notional": "752.051463023",
+            "ts": 1791527160000
+          },
+          {
+            "equity": "10002.371065135625",
+            "gross_notional": "752.369669866",
+            "ts": 1791527220000
+          },
+          {
+            "equity": "10002.138200186625",
+            "gross_notional": "752.136804917",
+            "ts": 1791527280000
+          },
+          {
+            "equity": "10001.800159549625",
+            "gross_notional": "751.79876428",
+            "ts": 1791527340000
+          },
+          {
+            "equity": "10001.886264890625",
+            "gross_notional": "751.884869621",
+            "ts": 1791527400000
+          }
+        ],
+        "execution": "One next-open buy per base asset, fee/slippage/tick/lot/minimum adjusted; constant quantity then captured trade-close marks, no terminal forced sale.",
+        "final_equity": "10001.886264890625",
+        "mean_gross_exposure_pct": "7.4318732538602602833108147494012607592508713716795",
+        "name": "Declared unlevered passive underlying reference",
+        "return_pct": "0.0188626489062500",
+        "scope": "Underlying-price reference, not risk-matched alpha. No funding, borrowing, yield or financing. A perpetual trade-price proxy is not independently observed spot or an executable funded swap. Child-order admission, impact and liquidation are not inferred for this reference.",
+        "status": "available"
+      },
+      "price_pnl_before_recorded_quote_shortfall": "4.03599409000",
+      "reconciliation_delta": "0E-11",
+      "schema_version": 1,
+      "status": "reconciled"
+    }
+  },
+  "forward_elapsed_seconds": 360.531,
+  "strategy_order_count": 4,
+  "stopped_before_flatten": {
+    "id": "ae682b39d582472a9dbbd0c54f05fd2e",
+    "source": "okx",
+    "version_id": "355a3caebaac4ab5b7278fb4730f84e9",
+    "release_id": "8b0059d838fe4614aa4eb879669ba56f",
+    "manifest": {
+      "activated_at": 1791527440556,
+      "activated_by": "acceptance-trader",
+      "capital_policy_hash": "59d9ba79f7a29f82a71506dc1a095f4c14d48fc3d0877413551d7849663c9232",
+      "definition": {
+        "bar": "1m",
+        "capital_pct": "10",
+        "carry_buffer_bps": "0",
+        "carry_cost_settlements": 0,
+        "carry_max_age_hours": 0,
+        "carry_threshold": "0",
+        "carry_window": 1,
+        "correlation_stress": "0.75",
+        "covariance_shrinkage": "0.25",
+        "execution_contract": "reduce_group_v1",
+        "failure_policy": "reduce_group",
+        "legs": [
+          {
+            "direction": "long_only",
+            "inst_id": "BTC-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.33333333333333333333333333333333333333333333333333"
+          },
+          {
+            "direction": "long_only",
+            "inst_id": "ETH-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.33333333333333333333333333333333333333333333333333"
+          },
+          {
+            "direction": "long_only",
+            "inst_id": "SOL-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.33333333333333333333333333333333333333333333333333"
+          }
+        ],
+        "lookback": 20,
+        "max_residual_pct": "2",
+        "mode": "fixed_weights",
+        "rebalance_bars": 1,
+        "risk_window": 84,
+        "schema_version": 1,
+        "top_k": 1,
+        "vol_floor_pct": "20",
+        "vol_target_pct": "20"
+      },
+      "id": "ae682b39d582472a9dbbd0c54f05fd2e",
+      "implementation": "3b0cf2a5e61617ed6ecd195853c1505f65d2f386f681dee393a6ea71fdc30b91",
+      "legs": [
+        {
+          "deployment_id": "159b3f9586174872b87188da1ec6bf37",
+          "direction": "long_only",
+          "inst_id": "BTC-USDT",
+          "leverage": "1",
+          "strategy": {
+            "allocation": "0.25",
+            "atr_period": 14,
+            "efficiency_max": "0.35",
+            "entry": "30",
+            "exit": "60",
+            "fast": 12,
+            "kind": "sma_cross",
+            "max_bar_vol_pct": "5",
+            "max_holding_bars": 0,
+            "momentum_entry": "0.5",
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "reversion_trend_window": 84,
+            "risk_per_trade_pct": "0",
+            "rsi_period": 14,
+            "rules": [],
+            "slow": 26,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "vol_window": 42,
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5"
+          },
+          "weight": "0.33333333333333333333333333333333333333333333333333"
+        },
+        {
+          "deployment_id": "78695183aefa4d9f83100044523868c0",
+          "direction": "long_only",
+          "inst_id": "ETH-USDT",
+          "leverage": "1",
+          "strategy": {
+            "allocation": "0.25",
+            "atr_period": 14,
+            "efficiency_max": "0.35",
+            "entry": "30",
+            "exit": "60",
+            "fast": 12,
+            "kind": "sma_cross",
+            "max_bar_vol_pct": "5",
+            "max_holding_bars": 0,
+            "momentum_entry": "0.5",
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "reversion_trend_window": 84,
+            "risk_per_trade_pct": "0",
+            "rsi_period": 14,
+            "rules": [],
+            "slow": 26,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "vol_window": 42,
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5"
+          },
+          "weight": "0.33333333333333333333333333333333333333333333333333"
+        },
+        {
+          "deployment_id": "60ee40682bd4455aa36e1c72155fb957",
+          "direction": "long_only",
+          "inst_id": "SOL-USDT",
+          "leverage": "1",
+          "strategy": {
+            "allocation": "0.25",
+            "atr_period": 14,
+            "efficiency_max": "0.35",
+            "entry": "30",
+            "exit": "60",
+            "fast": 12,
+            "kind": "sma_cross",
+            "max_bar_vol_pct": "5",
+            "max_holding_bars": 0,
+            "momentum_entry": "0.5",
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "reversion_trend_window": 84,
+            "risk_per_trade_pct": "0",
+            "rsi_period": 14,
+            "rules": [],
+            "slow": 26,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "vol_window": 42,
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5"
+          },
+          "weight": "0.33333333333333333333333333333333333333333333333333"
+        }
+      ],
+      "name": "Public elapsed basket",
+      "release_id": "8b0059d838fe4614aa4eb879669ba56f",
+      "result_hash": "6ba010c7cbb36c2523aae8ab3c6a02ef18cd96c8675d180f70fe8279f301a2dc",
+      "risk_policy_hash": "cc92da083f3b14d96e51843f15566bd041c3510b3807da142ba891505e1d0c0f",
+      "source": "okx",
+      "version_id": "355a3caebaac4ab5b7278fb4730f84e9",
+      "version_revision": 1
+    },
+    "manifest_hash": "5122edf7e081ab7f2981c4df4f325d24bcb2d3d6e7507421417dcd7f4202dda9",
+    "status": "stopped",
+    "anchor_bar": 1791527340000,
+    "last_bar": 1791527700000,
+    "last_error": null,
+    "created_at": 1791527440556,
+    "updated_at": 1791527801165,
+    "capital_commitment": {
+      "source": "okx",
+      "owner": "portfolio:ae682b39d582472a9dbbd0c54f05fd2e",
+      "body": {
+        "base_asset_gross_pct": {
+          "BTC": "3.3333333333333333333333333333333333333333333333333",
+          "ETH": "3.3333333333333333333333333333333333333333333333333",
+          "SOL": "3.3333333333333333333333333333333333333333333333333"
+        },
+        "basis": "current_account_equity_percentage_not_cash_or_covariance_risk",
+        "capital_pct": "10",
+        "definition_hash": "fe713d5446f057f73a8ce7766193f32b17bfc19b8a444373b193ee0c09583e7d",
+        "gross_pct": "9.9999999999999999999999999999999999999999999999999",
+        "legacy_backfill": false,
+        "market_gross_pct": {
+          "BTC-USDT": "3.3333333333333333333333333333333333333333333333333",
+          "ETH-USDT": "3.3333333333333333333333333333333333333333333333333",
+          "SOL-USDT": "3.3333333333333333333333333333333333333333333333333"
+        },
+        "owner": "portfolio:ae682b39d582472a9dbbd0c54f05fd2e",
+        "source": "okx"
+      },
+      "content_hash": "216723f9f5fc5ddbde6c6299283867d68fffb946de07f1377671b17040859679",
+      "status": "retained",
+      "created_at": 1791527440557,
+      "updated_at": 1791527801166,
+      "retention_reason": "owned_inventory"
+    },
+    "attention": {
+      "phase": "retained_inventory",
+      "since": 1791527776803,
+      "as_of": 1791527801168,
+      "error": "Stopped portfolio retains unsettled economic obligations.",
+      "inventory": [
+        {
+          "inst_id": "BTC-USDT",
+          "quantity": "0.00403480",
+          "market_value": "332.96783520"
+        },
+        {
+          "inst_id": "ETH-USDT",
+          "quantity": "0.133393",
+          "market_value": "333.38512311"
+        },
+        {
+          "inst_id": "SOL-USDT",
+          "quantity": "3.010955",
+          "market_value": "333.07184210"
+        }
+      ],
+      "inventory_notional": "999.42480041",
+      "valuation_status": "fresh",
+      "residual_notional": "0.677720874",
+      "batch_id": "b7d2914a44b742e48623c0e8b09c2836",
+      "incident_id": null
+    }
+  },
+  "protective_flatten_orders": [
+    {
+      "source": "okx",
+      "inst_id": "BTC-USDT",
+      "side": "sell",
+      "quantity": "0.00403480",
+      "leverage": "1",
+      "reduce_only": true,
+      "margin_mode": "isolated",
+      "order_type": "market",
+      "id": "3f94c28db86549aa9fa0a12bd65ae5dd",
+      "execution_mode": "local-paper",
+      "status": "filled",
+      "price": "82481.9",
+      "notional": "332.797970120",
+      "fee": "0.33279797012",
+      "created_at": 1791527801181,
+      "updated_at": 1791527801181,
+      "actor": "acceptance-trader",
+      "submitted_by": "acceptance-trader",
+      "instrument": {
+        "inst_id": "BTC-USDT",
+        "inst_type": "SPOT",
+        "inst_family": "BTC-USDT",
+        "base": "BTC",
+        "quote": "USDT",
+        "settle_ccy": "USDT",
+        "ct_type": null,
+        "ct_val": null,
+        "ct_mult": null,
+        "ct_val_ccy": null,
+        "contract_size_base": null,
+        "tick_size": "0.1",
+        "lot_size": "1E-8",
+        "min_size": "0.00001",
+        "state": "live",
+        "quantity_unit": "base",
+        "source": "okx",
+        "synthetic": false,
+        "observed_at": 1791527438720,
+        "list_time": 1611907686000,
+        "expiry_time": null,
+        "instrument_version": "bcfb7e77dffcbd37acbfcb8f2d76e0d6d468e8501b765dee07480c4ea0274422",
+        "observation_id": "370b9ec2887542bcba40a3d9ba5f3300",
+        "metadata_known_at": 1791527438720,
+        "evidence_scope": "forward_observation"
+      },
+      "quote_ts": 1791527800075,
+      "quote_bid": "82523.2",
+      "quote_ask": "82523.3",
+      "quote_last": "82524",
+      "quote_mark": "82524",
+      "risk_snapshot": {
+        "fee_bps": "10",
+        "halt_reason": "",
+        "halted": false,
+        "liquidation_fee_bps": "50",
+        "max_daily_loss_pct": 5,
+        "max_gross_exposure_pct": 200,
+        "max_leverage": 10,
+        "max_order_notional": "2500",
+        "slippage_bps": "5",
+        "source": "okx",
+        "updated_at": 1791527438403
+      },
+      "cash_after": "9332.05221784912",
+      "position_after": "0E-8",
+      "margin_after": "0",
+      "liquidation": false,
+      "insurance_debt": "0"
+    },
+    {
+      "source": "okx",
+      "inst_id": "ETH-USDT",
+      "side": "sell",
+      "quantity": "0.133393",
+      "leverage": "1",
+      "reduce_only": true,
+      "margin_mode": "isolated",
+      "order_type": "market",
+      "id": "38331722360d4782b02d0d8dbde04881",
+      "execution_mode": "local-paper",
+      "status": "filled",
+      "price": "2497.93",
+      "notional": "333.20637649",
+      "fee": "0.33320637649",
+      "created_at": 1791527801199,
+      "updated_at": 1791527801199,
+      "actor": "acceptance-trader",
+      "submitted_by": "acceptance-trader",
+      "instrument": {
+        "inst_id": "ETH-USDT",
+        "inst_type": "SPOT",
+        "inst_family": "ETH-USDT",
+        "base": "ETH",
+        "quote": "USDT",
+        "settle_ccy": "USDT",
+        "ct_type": null,
+        "ct_val": null,
+        "ct_mult": null,
+        "ct_val_ccy": null,
+        "contract_size_base": null,
+        "tick_size": "0.01",
+        "lot_size": "0.000001",
+        "min_size": "0.0001",
+        "state": "live",
+        "quantity_unit": "base",
+        "source": "okx",
+        "synthetic": false,
+        "observed_at": 1791527438720,
+        "list_time": 1611907686000,
+        "expiry_time": null,
+        "instrument_version": "59f88026acabd7db024264761cf80cda66c56e300d69c297cca8300fbefe3cfe",
+        "observation_id": "370b9ec2887542bcba40a3d9ba5f3300",
+        "metadata_known_at": 1791527438720,
+        "evidence_scope": "forward_observation"
+      },
+      "quote_ts": 1791527800067,
+      "quote_bid": "2499.18",
+      "quote_ask": "2499.19",
+      "quote_last": "2499.27",
+      "quote_mark": "2499.27",
+      "risk_snapshot": {
+        "fee_bps": "10",
+        "halt_reason": "",
+        "halted": false,
+        "liquidation_fee_bps": "50",
+        "max_daily_loss_pct": 5,
+        "max_gross_exposure_pct": 200,
+        "max_leverage": 10,
+        "max_order_notional": "2500",
+        "slippage_bps": "5",
+        "source": "okx",
+        "updated_at": 1791527438403
+      },
+      "cash_after": "9664.92538796263",
+      "position_after": "0.000000",
+      "margin_after": "0",
+      "liquidation": false,
+      "insurance_debt": "0"
+    },
+    {
+      "source": "okx",
+      "inst_id": "SOL-USDT",
+      "side": "sell",
+      "quantity": "3.010955",
+      "leverage": "1",
+      "reduce_only": true,
+      "margin_mode": "isolated",
+      "order_type": "market",
+      "id": "164724d328ac42778815c32d2254ded8",
+      "execution_mode": "local-paper",
+      "status": "filled",
+      "price": "110.55",
+      "notional": "332.86107525",
+      "fee": "0.33286107525",
+      "created_at": 1791527801215,
+      "updated_at": 1791527801215,
+      "actor": "acceptance-trader",
+      "submitted_by": "acceptance-trader",
+      "instrument": {
+        "inst_id": "SOL-USDT",
+        "inst_type": "SPOT",
+        "inst_family": "SOL-USDT",
+        "base": "SOL",
+        "quote": "USDT",
+        "settle_ccy": "USDT",
+        "ct_type": null,
+        "ct_val": null,
+        "ct_mult": null,
+        "ct_val_ccy": null,
+        "contract_size_base": null,
+        "tick_size": "0.01",
+        "lot_size": "0.000001",
+        "min_size": "0.01",
+        "state": "live",
+        "quantity_unit": "base",
+        "source": "okx",
+        "synthetic": false,
+        "observed_at": 1791527438720,
+        "list_time": 1611907686000,
+        "expiry_time": null,
+        "instrument_version": "bf27a63b0dd8041643fe9ae1d6ee5f382afa6dc1baa402042349c0e8c95f2312",
+        "observation_id": "370b9ec2887542bcba40a3d9ba5f3300",
+        "metadata_known_at": 1791527438720,
+        "evidence_scope": "forward_observation"
+      },
+      "quote_ts": 1791527800274,
+      "quote_bid": "110.61",
+      "quote_ask": "110.62",
+      "quote_last": "110.62",
+      "quote_mark": "110.62",
+      "risk_snapshot": {
+        "fee_bps": "10",
+        "halt_reason": "",
+        "halted": false,
+        "liquidation_fee_bps": "50",
+        "max_daily_loss_pct": 5,
+        "max_gross_exposure_pct": 200,
+        "max_leverage": 10,
+        "max_order_notional": "2500",
+        "slippage_bps": "5",
+        "source": "okx",
+        "updated_at": 1791527438403
+      },
+      "cash_after": "9997.45360213738",
+      "position_after": "0.000000",
+      "margin_after": "0",
+      "liquidation": false,
+      "insurance_debt": "0"
+    }
+  ],
+  "final_group": {
+    "id": "ae682b39d582472a9dbbd0c54f05fd2e",
+    "source": "okx",
+    "version_id": "355a3caebaac4ab5b7278fb4730f84e9",
+    "release_id": "8b0059d838fe4614aa4eb879669ba56f",
+    "manifest": {
+      "activated_at": 1791527440556,
+      "activated_by": "acceptance-trader",
+      "capital_policy_hash": "59d9ba79f7a29f82a71506dc1a095f4c14d48fc3d0877413551d7849663c9232",
+      "definition": {
+        "bar": "1m",
+        "capital_pct": "10",
+        "carry_buffer_bps": "0",
+        "carry_cost_settlements": 0,
+        "carry_max_age_hours": 0,
+        "carry_threshold": "0",
+        "carry_window": 1,
+        "correlation_stress": "0.75",
+        "covariance_shrinkage": "0.25",
+        "execution_contract": "reduce_group_v1",
+        "failure_policy": "reduce_group",
+        "legs": [
+          {
+            "direction": "long_only",
+            "inst_id": "BTC-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.33333333333333333333333333333333333333333333333333"
+          },
+          {
+            "direction": "long_only",
+            "inst_id": "ETH-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.33333333333333333333333333333333333333333333333333"
+          },
+          {
+            "direction": "long_only",
+            "inst_id": "SOL-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.33333333333333333333333333333333333333333333333333"
+          }
+        ],
+        "lookback": 20,
+        "max_residual_pct": "2",
+        "mode": "fixed_weights",
+        "rebalance_bars": 1,
+        "risk_window": 84,
+        "schema_version": 1,
+        "top_k": 1,
+        "vol_floor_pct": "20",
+        "vol_target_pct": "20"
+      },
+      "id": "ae682b39d582472a9dbbd0c54f05fd2e",
+      "implementation": "3b0cf2a5e61617ed6ecd195853c1505f65d2f386f681dee393a6ea71fdc30b91",
+      "legs": [
+        {
+          "deployment_id": "159b3f9586174872b87188da1ec6bf37",
+          "direction": "long_only",
+          "inst_id": "BTC-USDT",
+          "leverage": "1",
+          "strategy": {
+            "allocation": "0.25",
+            "atr_period": 14,
+            "efficiency_max": "0.35",
+            "entry": "30",
+            "exit": "60",
+            "fast": 12,
+            "kind": "sma_cross",
+            "max_bar_vol_pct": "5",
+            "max_holding_bars": 0,
+            "momentum_entry": "0.5",
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "reversion_trend_window": 84,
+            "risk_per_trade_pct": "0",
+            "rsi_period": 14,
+            "rules": [],
+            "slow": 26,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "vol_window": 42,
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5"
+          },
+          "weight": "0.33333333333333333333333333333333333333333333333333"
+        },
+        {
+          "deployment_id": "78695183aefa4d9f83100044523868c0",
+          "direction": "long_only",
+          "inst_id": "ETH-USDT",
+          "leverage": "1",
+          "strategy": {
+            "allocation": "0.25",
+            "atr_period": 14,
+            "efficiency_max": "0.35",
+            "entry": "30",
+            "exit": "60",
+            "fast": 12,
+            "kind": "sma_cross",
+            "max_bar_vol_pct": "5",
+            "max_holding_bars": 0,
+            "momentum_entry": "0.5",
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "reversion_trend_window": 84,
+            "risk_per_trade_pct": "0",
+            "rsi_period": 14,
+            "rules": [],
+            "slow": 26,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "vol_window": 42,
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5"
+          },
+          "weight": "0.33333333333333333333333333333333333333333333333333"
+        },
+        {
+          "deployment_id": "60ee40682bd4455aa36e1c72155fb957",
+          "direction": "long_only",
+          "inst_id": "SOL-USDT",
+          "leverage": "1",
+          "strategy": {
+            "allocation": "0.25",
+            "atr_period": 14,
+            "efficiency_max": "0.35",
+            "entry": "30",
+            "exit": "60",
+            "fast": 12,
+            "kind": "sma_cross",
+            "max_bar_vol_pct": "5",
+            "max_holding_bars": 0,
+            "momentum_entry": "0.5",
+            "momentum_horizons": [
+              42,
+              84,
+              168
+            ],
+            "reversion_trend_window": 84,
+            "risk_per_trade_pct": "0",
+            "rsi_period": 14,
+            "rules": [],
+            "slow": 26,
+            "stop_loss_pct": "0",
+            "take_profit_pct": "0",
+            "trailing_stop_pct": "0",
+            "vol_window": 42,
+            "window": 20,
+            "z_entry": "2",
+            "z_exit": "0.5"
+          },
+          "weight": "0.33333333333333333333333333333333333333333333333333"
+        }
+      ],
+      "name": "Public elapsed basket",
+      "release_id": "8b0059d838fe4614aa4eb879669ba56f",
+      "result_hash": "6ba010c7cbb36c2523aae8ab3c6a02ef18cd96c8675d180f70fe8279f301a2dc",
+      "risk_policy_hash": "cc92da083f3b14d96e51843f15566bd041c3510b3807da142ba891505e1d0c0f",
+      "source": "okx",
+      "version_id": "355a3caebaac4ab5b7278fb4730f84e9",
+      "version_revision": 1
+    },
+    "manifest_hash": "5122edf7e081ab7f2981c4df4f325d24bcb2d3d6e7507421417dcd7f4202dda9",
+    "status": "stopped",
+    "anchor_bar": 1791527340000,
+    "last_bar": 1791527700000,
+    "last_error": null,
+    "created_at": 1791527440556,
+    "updated_at": 1791527801165,
+    "capital_commitment": {
+      "source": "okx",
+      "owner": "portfolio:ae682b39d582472a9dbbd0c54f05fd2e",
+      "body": {
+        "base_asset_gross_pct": {
+          "BTC": "3.3333333333333333333333333333333333333333333333333",
+          "ETH": "3.3333333333333333333333333333333333333333333333333",
+          "SOL": "3.3333333333333333333333333333333333333333333333333"
+        },
+        "basis": "current_account_equity_percentage_not_cash_or_covariance_risk",
+        "capital_pct": "10",
+        "definition_hash": "fe713d5446f057f73a8ce7766193f32b17bfc19b8a444373b193ee0c09583e7d",
+        "gross_pct": "9.9999999999999999999999999999999999999999999999999",
+        "legacy_backfill": false,
+        "market_gross_pct": {
+          "BTC-USDT": "3.3333333333333333333333333333333333333333333333333",
+          "ETH-USDT": "3.3333333333333333333333333333333333333333333333333",
+          "SOL-USDT": "3.3333333333333333333333333333333333333333333333333"
+        },
+        "owner": "portfolio:ae682b39d582472a9dbbd0c54f05fd2e",
+        "source": "okx"
+      },
+      "content_hash": "216723f9f5fc5ddbde6c6299283867d68fffb946de07f1377671b17040859679",
+      "status": "released",
+      "created_at": 1791527440557,
+      "updated_at": 1791527801216,
+      "retention_reason": null
+    },
+    "attention": null
+  },
+  "performance_snapshot": {
+    "id": "ee15bc10c8394d1cbb99ec564e96abc3",
+    "source": "okx",
+    "body": {
+      "acceptance": {
+        "as_of": 1791527801228,
+        "checks": {
+          "bound_observation_clocks": true,
+          "economic_coverage": true,
+          "fresh_final_observation": true,
+          "market_clock_progress": true,
+          "no_clock_regression": true,
+          "no_financial_discontinuity": true,
+          "no_pending_funding": true,
+          "observation_count": false,
+          "observation_coverage": true,
+          "observed_recovery": false,
+          "public_okx_observations": true,
+          "real_wall_duration": false
+        },
+        "passed": false,
+        "scope": "observed_account_and_recovery_coverage_only_not_exchange_capacity_HTTP_SLO_or_profitable_edge",
+        "targets": {
+          "min_coverage_pct": "99",
+          "min_economic_coverage_pct": "99",
+          "min_observations": 500,
+          "min_recoveries": 1,
+          "min_wall_ms": 1209600000
+        }
+      },
+      "created_at": 1791527801228,
+      "created_by": "acceptance-trader",
+      "id": "ee15bc10c8394d1cbb99ec564e96abc3",
+      "source": "okx",
+      "summary": {
+        "boundary_adjusted_return": "-0.00025463978626200000000000000000000000000000000006",
+        "clock_regressions": 0,
+        "complete_valuation_chain": true,
+        "coverage_gap_intervals": 0,
+        "economic_wall_coverage_pct": "100",
+        "economic_wall_covered_ms": 360174,
+        "external_flow_periods": 0,
+        "fees_paid_change": "1.99827896262",
+        "financial_counter_regressions": 0,
+        "financial_discontinuities": 0,
+        "first_market_ts": 1791527440347,
+        "first_observed_at": 1791527441045,
+        "funding_paid_change": "0",
+        "gross_valuation_samples": 25,
+        "last_market_ts": 1791527800274,
+        "last_observed_at": 1791527801219,
+        "ledger_sequence_regressions": 0,
+        "legacy_clock_observations": 0,
+        "market_elapsed_ms": 359927,
+        "market_updates": 18,
+        "market_wall_ratio": "0.99931422034905351302426049631566964855875215867886",
+        "max_drawdown": "0.00025463978626200000000000000000000000000000000006",
+        "max_observed_base_asset_gross_pct": "3.3356972915755343300441517991370669279605017892750",
+        "max_observed_gross_pct": "9.9971498098181264034135779650386812069331625694650",
+        "net_pnl": "-2.54639786262",
+        "net_pnl_basis": "complete_window_endpoint_equity_minus_external_flows_not_interpolated_path",
+        "observations": 25,
+        "pending_funding_observations": 0,
+        "realized_pnl_change": "-2.54639786262",
+        "recorded_cost_basis": "actual_posted_account_counters_pending_obligations_are_not_estimated_costs",
+        "recovery_counts": {
+          "operational_conditions_resolved": 0,
+          "portfolio_compensations_completed": 0,
+          "workspace_restores_completed": 0
+        },
+        "restore_events": 0,
+        "return": "-0.00025463978626200000000000000000000000000000000006",
+        "return_method": "geometrically_linked_observed_returns_no_flows",
+        "scope": "entire_frozen_observation_window",
+        "segments": [
+          {
+            "first_id": 1,
+            "last_id": 25,
+            "observations": 25,
+            "return": "-0.00025463978626200000000000000000000000000000000006"
+          }
+        ],
+        "total_observations": 25,
+        "total_segments": 1,
+        "valuation_gap_observations": 0,
+        "wall_coverage_pct": "100",
+        "wall_covered_ms": 360174,
+        "wall_elapsed_ms": 360174,
+        "warning": "Full frozen observation window; page controls only the displayed rows. Gaps/funding obligations suppress linked return. Cash-flow timing without matching valuation is an estimate. Observed drawdown misses unobserved intraperiod extremes. Wall-clock account coverage is not service availability, venue execution capacity or profitable strategy evidence."
+      },
+      "window": {
+        "audit_end_id": 39,
+        "count": 25,
+        "max_gap_ms": 60000,
+        "max_id": 25,
+        "method": "observed-full-window-v1",
+        "min_id": 1,
+        "ordered_observation_hash": "3669dd3962df9d2d05df8b03d6088c51024e03e381883426a5851f6561cb6366",
+        "range_end_id": 25,
+        "range_start_id": 1,
+        "recovery_evidence_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source": "okx"
+      }
+    },
+    "content_hash": "427362e6331526cd73f141637404c1e52d64d6d4848614f07eb3e72c84fb3d62",
+    "created_at": 1791527801228
+  },
+  "performance_verified": {
+    "snapshot_id": "ee15bc10c8394d1cbb99ec564e96abc3",
+    "verified": true,
+    "original_hash": "427362e6331526cd73f141637404c1e52d64d6d4848614f07eb3e72c84fb3d62",
+    "recomputed_window": {
+      "method": "observed-full-window-v1",
+      "source": "okx",
+      "range_start_id": 1,
+      "range_end_id": 25,
+      "min_id": 1,
+      "max_id": 25,
+      "count": 25,
+      "ordered_observation_hash": "3669dd3962df9d2d05df8b03d6088c51024e03e381883426a5851f6561cb6366",
+      "audit_end_id": 39,
+      "recovery_evidence_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "max_gap_ms": 60000
+    },
+    "recomputed_summary": {
+      "observations": 25,
+      "total_observations": 25,
+      "scope": "entire_frozen_observation_window",
+      "complete_valuation_chain": true,
+      "return": "-0.00025463978626200000000000000000000000000000000006",
+      "boundary_adjusted_return": "-0.00025463978626200000000000000000000000000000000006",
+      "max_drawdown": "0.00025463978626200000000000000000000000000000000006",
+      "return_method": "geometrically_linked_observed_returns_no_flows",
+      "external_flow_periods": 0,
+      "valuation_gap_observations": 0,
+      "coverage_gap_intervals": 0,
+      "clock_regressions": 0,
+      "legacy_clock_observations": 0,
+      "pending_funding_observations": 0,
+      "financial_discontinuities": 0,
+      "restore_events": 0,
+      "financial_counter_regressions": 0,
+      "ledger_sequence_regressions": 0,
+      "wall_elapsed_ms": 360174,
+      "market_elapsed_ms": 359927,
+      "market_updates": 18,
+      "market_wall_ratio": "0.99931422034905351302426049631566964855875215867886",
+      "wall_covered_ms": 360174,
+      "economic_wall_covered_ms": 360174,
+      "wall_coverage_pct": "100",
+      "economic_wall_coverage_pct": "100",
+      "first_observed_at": 1791527441045,
+      "last_observed_at": 1791527801219,
+      "first_market_ts": 1791527440347,
+      "last_market_ts": 1791527800274,
+      "max_observed_gross_pct": "9.9971498098181264034135779650386812069331625694650",
+      "max_observed_base_asset_gross_pct": "3.3356972915755343300441517991370669279605017892750",
+      "gross_valuation_samples": 25,
+      "segments": [
+        {
+          "first_id": 1,
+          "last_id": 25,
+          "observations": 25,
+          "return": "-0.00025463978626200000000000000000000000000000000006"
+        }
+      ],
+      "total_segments": 1,
+      "recovery_counts": {
+        "portfolio_compensations_completed": 0,
+        "operational_conditions_resolved": 0,
+        "workspace_restores_completed": 0
+      },
+      "warning": "Full frozen observation window; page controls only the displayed rows. Gaps/funding obligations suppress linked return. Cash-flow timing without matching valuation is an estimate. Observed drawdown misses unobserved intraperiod extremes. Wall-clock account coverage is not service availability, venue execution capacity or profitable strategy evidence.",
+      "fees_paid_change": "1.99827896262",
+      "funding_paid_change": "0",
+      "realized_pnl_change": "-2.54639786262",
+      "recorded_cost_basis": "actual_posted_account_counters_pending_obligations_are_not_estimated_costs",
+      "net_pnl": "-2.54639786262",
+      "net_pnl_basis": "complete_window_endpoint_equity_minus_external_flows_not_interpolated_path"
+    },
+    "recomputed_acceptance": {
+      "passed": false,
+      "checks": {
+        "public_okx_observations": true,
+        "market_clock_progress": true,
+        "bound_observation_clocks": true,
+        "real_wall_duration": false,
+        "observation_count": false,
+        "observation_coverage": true,
+        "economic_coverage": true,
+        "fresh_final_observation": true,
+        "no_pending_funding": true,
+        "observed_recovery": false,
+        "no_clock_regression": true,
+        "no_financial_discontinuity": true
+      },
+      "targets": {
+        "min_wall_ms": 1209600000,
+        "min_observations": 500,
+        "min_coverage_pct": "99",
+        "min_economic_coverage_pct": "99",
+        "min_recoveries": 1
+      },
+      "as_of": 1791527801228,
+      "scope": "observed_account_and_recovery_coverage_only_not_exchange_capacity_HTTP_SLO_or_profitable_edge"
+    }
+  },
+  "contribution_reconciliation": {
+    "owners": [
+      {
+        "owner": "portfolio:ae682b39d582472a9dbbd0c54f05fd2e",
+        "realized_pnl": "-2.54639786262",
+        "fees_paid": "1.99827896262",
+        "funding_paid": "0",
+        "unrealized_pnl": "0",
+        "markets": [
+          {
+            "entry_notional": "0E-10",
+            "fees": "0.66579203152",
+            "funding": "0",
+            "inst_id": "BTC-USDT",
+            "owner": "portfolio:ae682b39d582472a9dbbd0c54f05fd2e",
+            "quantity": "0E-8",
+            "realized": "-0.86188331152",
+            "source": "okx",
+            "unrealized_pnl": "0"
+          },
+          {
+            "entry_notional": "0E-11",
+            "fees": "0.66661423285",
+            "funding": "0",
+            "inst_id": "ETH-USDT",
+            "owner": "portfolio:ae682b39d582472a9dbbd0c54f05fd2e",
+            "quantity": "0.000000",
+            "realized": "-0.86809410285",
+            "source": "okx",
+            "unrealized_pnl": "0"
+          },
+          {
+            "entry_notional": "0E-9",
+            "fees": "0.66587269825",
+            "funding": "0",
+            "inst_id": "SOL-USDT",
+            "owner": "portfolio:ae682b39d582472a9dbbd0c54f05fd2e",
+            "quantity": "0.000000",
+            "realized": "-0.81642044825",
+            "source": "okx",
+            "unrealized_pnl": "0"
+          }
+        ],
+        "net_pnl": "-2.54639786262"
+      }
+    ],
+    "totals": {
+      "realized_pnl": "-2.54639786262",
+      "fees_paid": "1.99827896262",
+      "funding_paid": "0",
+      "unrealized_pnl": "0",
+      "net_pnl": "-2.54639786262"
+    },
+    "account_net_pnl": "-2.54639786262",
+    "valuation_status": "fresh",
+    "reconciliation_delta": "0E-11",
+    "reconciled": true,
+    "policy": "Proportional net-position reductions; each sleeve retains its own entry costs. Spot entry fees are in basis; swap fees are realized. Net P&L = realized + unrealized \u2212 funding. Fees and insurance debt are disclosures, not a second deduction. This is monetary contribution, not independent strategy return.",
+    "legacy_policy": "Pre-upgrade balances remain explicitly unattributed legacy.",
+    "as_of": 1791527801241
+  },
+  "final_account": {
+    "source": "okx",
+    "execution_mode": "local-paper",
+    "initial_cash": "10000",
+    "cash": "9997.45360213738",
+    "available_cash": "9997.45360213738",
+    "reserved_cash": "0",
+    "equity": "9997.45360213738",
+    "equity_before_pending_funding": "9997.45360213738",
+    "economic_status": "complete",
+    "pending_funding": [],
+    "used_margin": "0",
+    "maintenance_margin": "0",
+    "unrealized_pnl": "0",
+    "realized_pnl": "-2.54639786262",
+    "pnl_definition": "Spot disposal PnL includes proportional entry costs; swap realizes trading fees when charged. Funding is separate. Equity deducts recorded insurance liabilities.",
+    "ledger_precision": "50 significant digits; finite-context residuals explicitly journaled to rounding_adjustment",
+    "liquidation_fee_policy": "Trading fee plus configured additional liquidation allowance; estimate is a local model, not a venue fee-tier guarantee.",
+    "fees_paid": "1.99827896262",
+    "funding_paid": "0",
+    "insurance_debt": "0",
+    "valuation_status": "fresh",
+    "positions": [],
+    "as_of": 1791527801244
+  },
+  "elapsed_seconds": 362.736,
+  "ended_at": 1791527801244
+}

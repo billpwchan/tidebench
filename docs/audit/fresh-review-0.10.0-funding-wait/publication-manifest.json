@@ -1,0 +1,208 @@
+{
+  "publication_date": "2026-10-09",
+  "scope": "Independent funding-wait addendum only; no implementation or project test changes; no broad suite or new 600-second soak",
+  "byte_preservation": {
+    "reproduction_script_and_recorded_observations": true,
+    "redactions": []
+  },
+  "recorded_runs": [
+    {
+      "expect": "before",
+      "base_commit": "205f89b2d7ed671ff52de64921cb58d4ccb04845",
+      "source_kind": "isolated exact git archive",
+      "output": "before.json",
+      "exit_code": 0,
+      "elapsed_seconds": 1.66193525,
+      "cases": 1,
+      "verified_result": "Real partial fill was unwound, original next add canceled, batch compensated because actual account funding_pending"
+    },
+    {
+      "expect": "fixed",
+      "base_commit": "205f89b2d7ed671ff52de64921cb58d4ccb04845",
+      "source_kind": "base plus uncommitted managed funding-wait fix",
+      "output": "after.json",
+      "exit_code": 0,
+      "elapsed_seconds": 6.0704252499999996,
+      "cases": 4,
+      "verified_result": "Frozen zero/partial fills wait through restart, late catalog publication continues original keys once, Stop/protection cancels continuation, genuine policy rejection compensates"
+    }
+  ],
+  "recorded_probe_source_sha256": {
+    "before": {
+      "managed_portfolios.py": "8a0910a15d98352a271532e6565ca3b8c6037d2e13e8899c9c9a1e701d335263",
+      "pro_service.py": "ab51a47691bce2c166e65810e20eac2c184c61457a08a4c6e15ad2290f6f9d2c",
+      "pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44"
+    },
+    "after": {
+      "managed_portfolios.py": "1ea386d7fbc301c587b577066c8fc8e3d43ab1695ddd15ff2b0312248655450c",
+      "pro_service.py": "ab51a47691bce2c166e65810e20eac2c184c61457a08a4c6e15ad2290f6f9d2c",
+      "pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44"
+    }
+  },
+  "backend_python_sha256_at_publication": {
+    "backend/tidebench/__init__.py": "a92b6a9031f73b3ac29336e7770783032a5773355f9565aee2cdaa1b5d2fdfce",
+    "backend/tidebench/__main__.py": "52c9af4f350a379cab8ecff0bb50fcfb72b6f1b00994ac7268ccc34a7d048454",
+    "backend/tidebench/account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44",
+    "backend/tidebench/catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+    "backend/tidebench/config.py": "5e63d923835af6d62fb26e6a87753716c24d208e2dca16fcd531884c5203cc72",
+    "backend/tidebench/contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+    "backend/tidebench/data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+    "backend/tidebench/derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+    "backend/tidebench/engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+    "backend/tidebench/forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+    "backend/tidebench/forward_performance.py": "78d0695c125182680abb9304b855e7608f7b50bb18fa190d75051aaeef203361",
+    "backend/tidebench/historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+    "backend/tidebench/instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+    "backend/tidebench/liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+    "backend/tidebench/main.py": "ef61548250ac2714b6dab2d3c73f3b5d55c03dde1aceb2f3ac2b3769c4742d66",
+    "backend/tidebench/managed_portfolios.py": "1ea386d7fbc301c587b577066c8fc8e3d43ab1695ddd15ff2b0312248655450c",
+    "backend/tidebench/market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+    "backend/tidebench/operations.py": "41ebe8730395d4cd3c348c5285e8037676d6a4165b23ca41b40ab23c4a7c92c1",
+    "backend/tidebench/paper.py": "336b7c8abeeec6d379562d6ec07dd72dc0b53b5eed5d3c73f04dbc29b2dbfc06",
+    "backend/tidebench/pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+    "backend/tidebench/platform.py": "339588a56809ec914231c17c5ffe8387daacfb40969fb249c74b17e73d06ee62",
+    "backend/tidebench/portfolio_analytics.py": "bbda62d2a680f91bcf95ac3859218b5b932997f64afd965efeaff9313483dbb8",
+    "backend/tidebench/portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+    "backend/tidebench/portfolio_execution.py": "97f2fb266047fb4822f1ee38c20da40965a149f3fc22cc5acee7ece0009cf817",
+    "backend/tidebench/portfolio_registry.py": "f93687adebd7c7c48c265645d0e252961ba68a4835477ec2501111819bd9fb38",
+    "backend/tidebench/portfolio_releases.py": "baaf5ad7730a7615a8a6b1cbabf9f43054081596a21dc3c3bed416240a961657",
+    "backend/tidebench/portfolio_research.py": "8b29a0ac0ef49d2d9b5f6606c18bbf817ff49fef1b39c1af16103a5035e564bb",
+    "backend/tidebench/portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+    "backend/tidebench/portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+    "backend/tidebench/pro_api.py": "5984f1d0548449fd44fd8dabc1883a17f64de2c41a429bbffc83a5a0527beadd",
+    "backend/tidebench/pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+    "backend/tidebench/pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+    "backend/tidebench/pro_service.py": "ab51a47691bce2c166e65810e20eac2c184c61457a08a4c6e15ad2290f6f9d2c",
+    "backend/tidebench/provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9",
+    "backend/tidebench/research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+    "backend/tidebench/research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+    "backend/tidebench/research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+    "backend/tidebench/research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+    "backend/tidebench/research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+    "backend/tidebench/research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+    "backend/tidebench/schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+    "backend/tidebench/simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+    "backend/tidebench/store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+    "backend/tidebench/strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+    "backend/tidebench/strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+    "backend/tidebench/strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+    "backend/tidebench/strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+    "backend/tidebench/worker.py": "62d20cd9808abc509828b4810869700bf4c1904a3cd5721579715ccade68a35e"
+  },
+  "fixture_sha256_at_publication": {
+    "tests/test_managed_portfolios.py": "1383cf357c8d50f3ef4af365132e5bee6663ccb3b778fa118520a22b4ebccde2",
+    "tests/test_pro_execution.py": "190afe7fb406fa4090e1677b4d58574d09a22ab537e17efde3ddcfb794adae2d"
+  },
+  "prior_evidence_preserved": {
+    "report": {
+      "path": "../fresh-institutional-review-0.10.0.zh-CN.md",
+      "sha256": "2abab92e752d03cd79f74d16bcac6bd71da0038d63d2585c60615a88bf8957b7"
+    },
+    "bundle_file_sha256": {
+      "fresh-review-0.10.0/README.md": "beffa5adb80f3ee7fc5de6c93a8b0546dc721b552748b00b8754f66251cf9249",
+      "fresh-review-0.10.0/declaration-after.json": "9d5b2cce6771c5d3e443983347fa59cd35edd02c600a6d4af5b90e8547ad43e8",
+      "fresh-review-0.10.0/declaration-before.json": "26080b0fb9d93462f12a0b4cf2f9a7a79d7c6b1efff323ff41a7405b61d1f2e8",
+      "fresh-review-0.10.0/declaration-manifest.json": "1363590d2d281c0e8f04ee44a696e1afe99dfbb701b84f020a5ab53ce84487ac",
+      "fresh-review-0.10.0/declaration.py": "65d7c8823f94666612cd5bc1d6e4a3ebbeea61617b1e2f1724cdddf4fa04d405",
+      "fresh-review-0.10.0/manifest.json": "d66834b97d06c47b11ad310f8737fdc7e3832e4a32635c581ed18737a6ffb532",
+      "fresh-review-0.10.0/observations.json": "034eab0be674455f2ca8ba5c92fb97f7a71282393429f4f21ad3395588eba989",
+      "fresh-review-0.10.0/publication-manifest.json": "940e46f0e6acd059ff90888ac00c74a92c469eb016a4c40675879c3d35d08454",
+      "fresh-review-0.10.0/reproduce.py": "176b9a61046c05b804cc1200d6b78e687029c577eced563f092e9e8d62e41f88",
+      "fresh-review-0.10.0/workflow.json": "c2d67456de887138faffca7a13bd69af9102f3e0da3f3b774cf8e20366c204ed",
+      "fresh-review-0.10.0/workflow.py": "88118cd10005646a3cd64ba94e99ef19ea67f51efa49926dcd1ff2214c5595cc"
+    },
+    "original_pre_publication_report_hashes": [
+      {
+        "stage": "before_declaration_addendum",
+        "manifest": "manifest.json",
+        "sha256": "6015df0ee08b3ed27bafe3bef7b822f09f7153f84c4d85a5b33e5219ad1d1212"
+      },
+      {
+        "stage": "after_declaration_addendum_before_publication",
+        "manifest": "declaration-manifest.json",
+        "sha256": "ae06c8860c8f4bf7902cde8e024688cc730252213eea713a91c239d8c4169cf7"
+      }
+    ],
+    "original_artifact_sha256": {
+      "reproduce.py": "176b9a61046c05b804cc1200d6b78e687029c577eced563f092e9e8d62e41f88",
+      "workflow.py": "88118cd10005646a3cd64ba94e99ef19ea67f51efa49926dcd1ff2214c5595cc",
+      "declaration.py": "65d7c8823f94666612cd5bc1d6e4a3ebbeea61617b1e2f1724cdddf4fa04d405",
+      "observations.json": "034eab0be674455f2ca8ba5c92fb97f7a71282393429f4f21ad3395588eba989",
+      "workflow.json": "c2d67456de887138faffca7a13bd69af9102f3e0da3f3b774cf8e20366c204ed",
+      "declaration-before.json": "26080b0fb9d93462f12a0b4cf2f9a7a79d7c6b1efff323ff41a7405b61d1f2e8",
+      "declaration-after.json": "9d5b2cce6771c5d3e443983347fa59cd35edd02c600a6d4af5b90e8547ad43e8",
+      "manifest.json": "6af1cb0afc230ee93026b1e3e212c8aed5ba6dbdb05c294a331b857b97b4b605",
+      "declaration-manifest.json": "1363590d2d281c0e8f04ee44a696e1afe99dfbb701b84f020a5ab53ce84487ac"
+    },
+    "historical_source_hashes": {
+      "original_manifest": {
+        "audit_date": "2026-10-09",
+        "baseline_head": "6436a279e0b6fc9e7fe0500ab6544ee14bf369c7",
+        "scope": "current uncommitted source; temporary isolated data; no exchange orders",
+        "focused_verification": {
+          "passed": 128,
+          "elapsed_seconds": 12.14
+        },
+        "source_sha256": {
+          "backend/tidebench/account_capital.py": "57ba7ad688e1b9734a3a40152d67d9a594ee008f1aaa299c083e046db93e028d",
+          "backend/tidebench/pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+          "backend/tidebench/pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+          "backend/tidebench/historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+          "backend/tidebench/portfolio_execution.py": "97f2fb266047fb4822f1ee38c20da40965a149f3fc22cc5acee7ece0009cf817",
+          "backend/tidebench/portfolio_research.py": "8b29a0ac0ef49d2d9b5f6606c18bbf817ff49fef1b39c1af16103a5035e564bb",
+          "backend/tidebench/portfolio_releases.py": "dba87edc9a02b1d7d6353cfa7b5a97e3d56834d82a307716533ff02d9bc36078",
+          "backend/tidebench/research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+          "backend/tidebench/forward_performance.py": "78d0695c125182680abb9304b855e7608f7b50bb18fa190d75051aaeef203361",
+          "backend/tidebench/liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc"
+        },
+        "artifact_sha256": {
+          "workflow.json": "c2d67456de887138faffca7a13bd69af9102f3e0da3f3b774cf8e20366c204ed",
+          "reproduce.py": "176b9a61046c05b804cc1200d6b78e687029c577eced563f092e9e8d62e41f88",
+          "fresh-institutional-review-0.10.0.zh-CN.md": "6015df0ee08b3ed27bafe3bef7b822f09f7153f84c4d85a5b33e5219ad1d1212",
+          "observations.json": "034eab0be674455f2ca8ba5c92fb97f7a71282393429f4f21ad3395588eba989",
+          "workflow.py": "88118cd10005646a3cd64ba94e99ef19ea67f51efa49926dcd1ff2214c5595cc"
+        }
+      },
+      "declaration_manifest": {
+        "audit_date": "2026-10-09",
+        "scope": "additional declaration admission review, six isolated assertions",
+        "source_sha256": {
+          "backend/tidebench/account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44",
+          "backend/tidebench/portfolio_releases.py": "baaf5ad7730a7615a8a6b1cbabf9f43054081596a21dc3c3bed416240a961657",
+          "backend/tidebench/managed_portfolios.py": "8a0910a15d98352a271532e6565ca3b8c6037d2e13e8899c9c9a1e701d335263"
+        },
+        "artifact_sha256": {
+          "declaration.py": "65d7c8823f94666612cd5bc1d6e4a3ebbeea61617b1e2f1724cdddf4fa04d405",
+          "declaration-before.json": "26080b0fb9d93462f12a0b4cf2f9a7a79d7c6b1efff323ff41a7405b61d1f2e8",
+          "declaration-after.json": "9d5b2cce6771c5d3e443983347fa59cd35edd02c600a6d4af5b90e8547ad43e8",
+          "fresh-institutional-review-0.10.0.zh-CN.md": "ae06c8860c8f4bf7902cde8e024688cc730252213eea713a91c239d8c4169cf7"
+        }
+      }
+    },
+    "new_manifest_does_not_relabel_previous_results": true
+  },
+  "original_failed_soak": {
+    "path": "../v0.10.0-soak-funding-wait-failure.json",
+    "sha256": "aa9ef631dfc7e1a88f68f058f74fc19d64400250102cfb72aaa2b48afbae91f0",
+    "source_commit": "205f89b2d7ed671ff52de64921cb58d4ccb04845",
+    "monotonic_elapsed_seconds": 602.977,
+    "passed": false,
+    "author": "root audit run, not independently rerun by this reviewer"
+  },
+  "published_artifact_sha256": {
+    "README.md": "35ec4c4fd5ec47a5bc5a65dcce88605b9e5add6f9cea4acafa62052606cdb067",
+    "after.json": "78203e903081c477bf68a755d3a13557e95ff2a11e3cf43e9f622b473599e62f",
+    "before.json": "0371ea62729b025de2d3a710fbe0277ed0490e76f4834000a13e08be4744d00c",
+    "reproduce.py": "ad3fb33cab3f718ca7c52db7d10ca16af0d5cb234a741db16763fd76c1cfdee1"
+  },
+  "published_addendum": {
+    "path": "../fresh-institutional-review-0.10.0-funding-wait-addendum.zh-CN.md",
+    "sha256": "2103499bab8a8babc630c92d4f18495ece6efedd6b819a72ef57b122e0823741"
+  },
+  "manifest_self_hash": "Not included to avoid recursive hashing; all other artifacts hashed",
+  "verification_boundary": "Recorded independent assertions only, synthetic input and realized funding publication, actual local book/runtime, isolated temporary databases; no credentials, operational data, external requests or venue orders"
+}

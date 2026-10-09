@@ -2,17 +2,22 @@
 
 import asyncio
 import copy
+import json
 from decimal import Decimal as D
 
 import httpx
 import pytest
 from tidebench.config import Settings
+from tidebench.main import create_app
 from tidebench.market import MarketService
-from tidebench.platform import PlatformError
+from tidebench.platform import BackupService, PlatformError
+from tidebench.portfolio_execution import execute_batch
 from tidebench.portfolio_registry import PortfolioDefinition
 from tidebench.portfolio_research import PortfolioInput
+from tidebench.portfolio_targets import target_quantities
 from tidebench.pro_service import ProfessionalRuntime
-from tidebench.store import Store, encode
+from tidebench.store import Store, dumps, encode
+from tidebench.strategy_registry import digest
 
 END = 1767225600000
 HOUR = 3600000
@@ -25,6 +30,18 @@ async def runtime(tmp_path):
     )
     settings = Settings(data_dir=tmp_path, worker_enabled=False, _env_file=None)
     r = ProfessionalRuntime(Store(settings.database), MarketService(client=client), settings)
+    yield r
+    await r.stop()
+    await client.aclose()
+
+
+@pytest.fixture
+async def schema8_runtime(tmp_path):
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: pytest.fail("Unexpected external request"))
+    )
+    settings = Settings(data_dir=tmp_path, worker_enabled=False, _env_file=None)
+    r = create_app(settings, MarketService(client=client)).state.professional
     yield r
     await r.stop()
     await client.aclose()
@@ -880,3 +897,766 @@ async def test_risk_rotation_forward_uses_verified_causal_bars_and_restart_stabl
     await r.managed_portfolios.evaluate(group["id"])
     assert r.book.orders("example") == orders
     assert r.managed_portfolios.history(group["id"]) == [batch]
+
+
+async def mixed_funding_groups(r, monkeypatch):
+    """Real managed owners and fills; only publication/quote transport is controlled."""
+    due = END + 2 * HOUR
+    state = {"published": False, "network_failure": False, "prices": {}, "rate": ".001"}
+    r.book.set_risk("example", {"fee_bps": "0", "slippage_bps": "0"}, "risk-operator")
+
+    def install(runtime):
+        original_quote = runtime.catalog.get_market_snapshot
+
+        async def observed_quote(symbol, source):
+            quote = await original_quote(symbol, source)
+            at = runtime.clock.now()
+            price = state["prices"].get(symbol, "100")
+            return quote | {
+                "ts": at,
+                "mark_ts": at,
+                "bid": price,
+                "ask": price,
+                "last": price,
+                "mark": price,
+                "funding_time": due,
+                "next_funding_time": due + 8 * HOUR,
+            }
+
+        original_history = runtime.catalog.funding_history
+
+        async def published_history(symbol, start, end, source):
+            # Historical study inputs still come from the normal example catalog.
+            if end <= END:
+                return await original_history(symbol, start, end, source)
+            if state["network_failure"]:
+                raise OSError("Realized funding publication is temporarily unavailable")
+            if not state["published"] or not start <= due < end:
+                return []
+            return [{"ts": due, "rate": D(state["rate"]), "mark_price": D("100"), "mark_ts": due}]
+
+        monkeypatch.setattr(runtime.catalog, "get_market_snapshot", observed_quote)
+        monkeypatch.setattr(runtime.catalog, "funding_history", published_history)
+
+    install(r)
+    spots = await activate(
+        r,
+        capital_pct="20",
+        rebalance_bars=1,
+        legs=[{"inst_id": symbol, "weight": ".4"} for symbol in ("BTC-USDT", "ETH-USDT")],
+    )
+    swaps = await activate(
+        r,
+        capital_pct="20",
+        legs=[{"inst_id": symbol, "weight": ".5"} for symbol in ("BTC-USDT-SWAP", "SOL-USDT-SWAP")],
+    )
+    await r.managed_portfolios.evaluate(swaps["id"])
+    assert r.managed_portfolios.history(swaps["id"])[0]["status"] == "completed"
+    return spots, swaps, state, install
+
+
+async def test_account_funding_wait_preserves_reductions_then_reconciles_other_group_publication(
+    runtime, monkeypatch
+):
+    r = runtime
+    spots, swaps, publication, _ = await mixed_funding_groups(r, monkeypatch)
+    await r.managed_portfolios.evaluate(spots["id"])
+    r.clock.change(step_ms=HOUR, expected_revision=r.clock.status()["revision"], actor="trader")
+    publication["prices"] = {"BTC-USDT": "80", "ETH-USDT": "120"}
+    # Other-group realized history has a transport failure: this must not turn
+    # valid protective reductions into compensation or infer a zero payment.
+    publication["network_failure"] = True
+    before = len(r.book.orders("example"))
+    submit = r.book.submit
+
+    def due_after_reduction(order, key, snapshots, actor):
+        result = submit(order, key, snapshots, actor)
+        if order["reduce_only"] and r.clock.now() == END + HOUR:
+            r.clock.change(step_ms=HOUR, expected_revision=r.clock.status()["revision"], actor="trader")
+            r.book.observe(
+                "example",
+                {
+                    symbol: quote | {"ts": END + 2 * HOUR, "mark_ts": END + 2 * HOUR}
+                    for symbol, quote in snapshots.items()
+                },
+            )
+        return result
+
+    monkeypatch.setattr(r.book, "submit", due_after_reduction)
+    await r.managed_portfolios.evaluate(spots["id"])
+    monkeypatch.setattr(r.book, "submit", submit)
+    batch = r.managed_portfolios.history(spots["id"])[0]
+    assert batch["status"] == "reducing" and batch["additions"] is None
+    assert batch["error"].startswith("[funding_pending] ")
+    assert batch["error"] == r.managed_portfolios.get(spots["id"])["last_error"]
+    assert r.managed_portfolios.get(spots["id"])["status"] == "running"
+    reductions = r.book.orders("example")[: len(r.book.orders("example")) - before]
+    assert reductions and all(o["reduce_only"] for o in reductions)
+    obligations = r.book.deferred_funding.pending("example")
+    assert {p["inst_id"] for p in obligations} == {"BTC-USDT-SWAP", "SOL-USDT-SWAP"}
+    assert all(set(p["owners"]) == {"portfolio:" + swaps["id"]} for p in obligations)
+    assert r.managed_portfolios.get(spots["id"])["attention"]["phase"] == "funding_pending"
+    frozen = copy.deepcopy(batch["body"])
+    commands = [(c["key"], c["payload"], c["order_id"]) for c in batch["commands"]]
+    await r.managed_portfolios.evaluate(spots["id"])
+    repeated = r.managed_portfolios.history(spots["id"])[0]
+    assert repeated["body"] == frozen
+    assert [(c["key"], c["payload"], c["order_id"]) for c in repeated["commands"]] == commands
+    assert r.book.deferred_funding.pending("example") == obligations
+
+    publication["network_failure"] = False
+    publication["published"] = True
+    await r.managed_portfolios.evaluate(spots["id"])
+    finished = r.managed_portfolios.history(spots["id"])[0]
+    assert finished["id"] == batch["id"] and finished["body"] == frozen
+    assert finished["status"] == "completed" and finished["error"] is None, finished["error"]
+    assert all(c["status"] == "completed" and c["error"] is None for c in finished["commands"])
+    assert not r.book.deferred_funding.pending("example")
+    account = r.book.account("example", await r.snapshots_for("example"))
+    assert D(account["funding_paid"]) == D(2)
+    report = r.book.contribution_report("example", await r.snapshots_for("example"))
+    assert report["reconciled"]
+    owners = {row["owner"]: row for row in report["owners"]}
+    assert D(owners["portfolio:" + spots["id"]]["funding_paid"]) == 0
+    assert D(owners["portfolio:" + swaps["id"]]["funding_paid"]) == D(2)
+
+
+async def partially_filled_funding_wait(r, monkeypatch):
+    spots, swaps, publication, install = await mixed_funding_groups(r, monkeypatch)
+    submit = r.book.submit
+    first = []
+
+    def due_after_first_child(order, key, snapshots, actor):
+        result = submit(order, key, snapshots, actor)
+        if not order["reduce_only"] and not first:
+            first.append(result)
+            r.clock.change(step_ms=2 * HOUR, expected_revision=r.clock.status()["revision"], actor="trader")
+            # The independent account observer captures other-group obligations
+            # after one actual child committed, before the next admission.
+            r.book.observe(
+                "example",
+                {s: q | {"ts": END + 2 * HOUR, "mark_ts": END + 2 * HOUR} for s, q in snapshots.items()},
+            )
+        return result
+
+    monkeypatch.setattr(r.book, "submit", due_after_first_child)
+    await r.managed_portfolios.evaluate(spots["id"])
+    monkeypatch.setattr(r.book, "submit", submit)
+    batch = r.managed_portfolios.history(spots["id"])[0]
+    assert batch["status"] == "adding" and batch["error"].startswith("[funding_pending] ")
+    assert sum(c["status"] == "completed" for c in batch["commands"]) == 1
+    assert any(c["status"] == "pending" for c in batch["commands"])
+    assert not any(c["phase"] == "compensate" for c in batch["commands"])
+    return spots, swaps, publication, install, batch, first[0]
+
+
+async def test_partially_filled_funding_wait_restarts_and_resumes_original_children_once(
+    runtime, monkeypatch
+):
+    r = runtime
+    spots, _, publication, install, batch, first = await partially_filled_funding_wait(r, monkeypatch)
+    frozen = copy.deepcopy(batch["additions"])
+    commands = [(c["key"], c["payload"]) for c in batch["commands"]]
+    before = r.book.orders("example")
+    await r.stop()
+    restored = ProfessionalRuntime(Store(r.settings.database), r.market, r.settings)
+    install(restored)
+    try:
+        await restored.managed_portfolios.evaluate(spots["id"])
+        waiting = restored.managed_portfolios.history(spots["id"])[0]
+        assert waiting["id"] == batch["id"] and waiting["additions"] == frozen
+        assert [(c["key"], c["payload"]) for c in waiting["commands"]] == commands
+        assert restored.book.orders("example") == before
+        assert restored.managed_portfolios.get(spots["id"])["status"] == "running"
+        publication["published"] = True
+        restored.clock.change(
+            step_ms=1, expected_revision=restored.clock.status()["revision"], actor="trader"
+        )
+        await restored.managed_portfolios.evaluate(spots["id"])
+        finished = restored.managed_portfolios.history(spots["id"])[0]
+        assert finished["status"] == "completed" and finished["error"] is None, finished["error"]
+        assert finished["additions"] == frozen
+        assert [(c["key"], c["payload"]) for c in finished["commands"]] == commands
+        assert sum(c["order"]["id"] == first["id"] for c in finished["commands"]) == 1
+        assert all(
+            c["order"]["quote_ts"] > first["quote_ts"]
+            for c in finished["commands"]
+            if c["order"]["id"] != first["id"]
+        )
+        after = restored.book.orders("example")
+        await restored.managed_portfolios.evaluate(spots["id"])
+        # A newer clock may legitimately admit the next decision batch; every
+        # order from the original frozen batch still appears exactly once.
+        for committed in after:
+            assert sum(order["id"] == committed["id"] for order in restored.book.orders("example")) == 1
+        assert (
+            next(b for b in restored.managed_portfolios.history(spots["id"]) if b["id"] == batch["id"])
+            == finished
+        )
+        assert restored.book.contribution_report("example", await restored.snapshots_for("example"))[
+            "reconciled"
+        ]
+    finally:
+        await restored.stop()
+
+
+async def test_stop_cancels_funding_wait_continuation_but_retains_inventory_and_guard(runtime, monkeypatch):
+    r = runtime
+    spots, swaps, publication, _, batch, first = await partially_filled_funding_wait(r, monkeypatch)
+    original_positions = r.book.positions("example")
+    stopped = r.managed_portfolios.stop(spots["id"], "risk-operator")
+    assert stopped["status"] == "stopped"
+    assert r.book.positions("example") == original_positions
+    canceled = r.managed_portfolios.history(spots["id"])[0]
+    assert canceled["status"] == "canceled" and canceled["additions"] == batch["additions"]
+    assert all(c["status"] in {"completed", "canceled"} for c in canceled["commands"])
+    assert next(c for c in canceled["commands"] if c["order_id"] == first["id"])["status"] == "completed"
+    with r.store.read() as conn:
+        commitment = conn.execute(
+            "SELECT * FROM account_capital_commitments WHERE source='example' AND owner=?",
+            ("portfolio:" + spots["id"],),
+        ).fetchone()
+    assert commitment["status"] == "retained"
+    quotes = await r.snapshots_for("example")
+    inventory = next(p for p in original_positions if p["inst_id"] == first["inst_id"])
+    # The unchanged economic guard rejects new risk while allowing a fresh
+    # protective reduction even though another owner has unpaid obligations.
+    with pytest.raises(PlatformError) as rejected:
+        r.book.submit(
+            first["request"] if "request" in first else batch["commands"][0]["payload"],
+            "still-blocked-new-risk",
+            quotes,
+            "risk-operator",
+        )
+    assert rejected.value.code == "funding_pending"
+    protection = batch["commands"][0]["payload"] | {
+        "side": "sell",
+        "quantity": inventory["quantity"],
+        "reduce_only": True,
+    }
+    r.book.submit(protection, "protect-stopped-waiting-owner", quotes, "risk-operator")
+    assert r.book.deferred_funding.pending("example")
+    with r.store.read() as conn:
+        assert (
+            conn.execute(
+                "SELECT status FROM account_capital_commitments WHERE source='example' AND owner=?",
+                ("portfolio:" + spots["id"],),
+            ).fetchone()[0]
+            == "released"
+        )
+    r.managed_portfolios.stop(swaps["id"], "risk-operator")
+    for position in r.book.positions("example"):
+        r.book.submit(
+            {
+                "source": "example",
+                "inst_id": position["inst_id"],
+                "side": "sell",
+                "quantity": position["quantity"],
+                "leverage": position["leverage"],
+                "reduce_only": True,
+                "order_type": "market",
+                "margin_mode": "isolated",
+            },
+            "protect-stopped-funding-owner:" + position["inst_id"],
+            quotes,
+            "risk-operator",
+        )
+    assert not r.book.positions("example") and r.book.deferred_funding.pending("example")
+    with r.store.read() as conn:
+        assert (
+            conn.execute(
+                "SELECT status FROM account_capital_commitments WHERE source='example' AND owner=?",
+                ("portfolio:" + swaps["id"],),
+            ).fetchone()[0]
+            == "retained"
+        )
+    orders = r.book.orders("example")
+    publication["published"] = True
+    await r.managed_portfolios.evaluate(spots["id"])
+    assert r.book.orders("example") == orders
+    assert r.managed_portfolios.history(spots["id"])[0]["status"] == "canceled"
+    # Background account reconciliation still owns the other portfolio's due
+    # evidence, including after a waiting consumer has been stopped.
+    await r.execution_once()
+    assert not r.book.deferred_funding.pending("example")
+    assert r.managed_portfolios.get(swaps["id"])["status"] == "stopped"
+    with r.store.read() as conn:
+        assert (
+            conn.execute(
+                "SELECT status FROM account_capital_commitments WHERE source='example' AND owner=?",
+                ("portfolio:" + swaps["id"],),
+            ).fetchone()[0]
+            == "released"
+        )
+    assert r.book.contribution_report("example", await r.snapshots_for("example"))["reconciled"]
+
+
+async def test_unsettled_equity_before_target_freeze_waits_without_inventing_capital(runtime, monkeypatch):
+    r = runtime
+    spots, swaps, publication, _ = await mixed_funding_groups(r, monkeypatch)
+    r.clock.change(step_ms=2 * HOUR, expected_revision=r.clock.status()["revision"], actor="trader")
+    publication["network_failure"] = True
+    before = r.book.orders("example")
+    await r.managed_portfolios.evaluate(spots["id"])
+    assert r.book.orders("example") == before
+    assert not r.managed_portfolios.history(spots["id"])
+    assert r.managed_portfolios.get(spots["id"])["status"] == "running"
+    assert r.managed_portfolios.get(spots["id"])["last_error"].startswith("[funding_pending] ")
+    quotes = await r.snapshots_for("example")
+    account = r.book.account("example", quotes)
+    assert account["equity"] is None and account["economic_status"] == "funding_pending"
+    # A real protective reduction changes current quantity but leaves original
+    # settlement-time inventory/owners intact while its publication is missing.
+    held = r.book.positions("example")[0]
+    r.book.submit(
+        {
+            "source": "example",
+            "inst_id": held["inst_id"],
+            "side": "sell",
+            "quantity": str(D(held["quantity"]) / 2),
+            "leverage": held["leverage"],
+            "reduce_only": True,
+            "order_type": "market",
+            "margin_mode": "isolated",
+        },
+        "protect-before-new-target",
+        quotes,
+        "risk-operator",
+    )
+    publication["network_failure"] = False
+    publication["published"] = True
+    await r.managed_portfolios.evaluate(spots["id"])
+    assert r.managed_portfolios.history(spots["id"])[0]["status"] == "completed"
+    assert r.managed_portfolios.get(spots["id"])["last_error"] is None
+    assert D(r.book.account("example", await r.snapshots_for("example"))["funding_paid"]) == D(2)
+    report = r.book.contribution_report("example", await r.snapshots_for("example"))
+    assert report["reconciled"]
+    owner = next(row for row in report["owners"] if row["owner"] == "portfolio:" + swaps["id"])
+    assert D(owner["funding_paid"]) == D(2)
+
+
+async def allowance_drift_fixture(r, monkeypatch, contract):
+    """A real unrelated owner pays entry costs between two rebalance children."""
+    transport = r.catalog.get_market_snapshot
+
+    async def quoted(symbol, source):
+        observed = await transport(symbol, source)
+        return observed | {
+            "bid": "99.99",
+            "ask": "100.01",
+            "last": "100",
+            "mark": "100",
+            "funding_time": END + 8 * HOUR,
+            "next_funding_time": END + 16 * HOUR,
+        }
+
+    monkeypatch.setattr(r.catalog, "get_market_snapshot", quoted)
+    sleeve = await activate(r, capital_pct="8", rebalance_bars=2, execution_contract=contract)
+    other = await activate(
+        r,
+        capital_pct="20",
+        execution_contract=contract,
+        legs=[{"inst_id": s, "weight": ".25", "leverage": "2"} for s in ("SOL-USDT-SWAP", "OKB-USDT-SWAP")],
+    )
+    outside = await r.quote_snapshot("example", "SOL-USDT-SWAP")
+    actor = "strategy:" + other["manifest"]["legs"][0]["deployment_id"]
+    command = {
+        "source": "example",
+        "inst_id": "SOL-USDT-SWAP",
+        "side": "buy",
+        "quantity": ".01",
+        "leverage": "2",
+        "reduce_only": False,
+        "order_type": "market",
+        "margin_mode": "isolated",
+    }
+    r.book.submit(command, f"small-existing-other-owner:{END - HOUR}", {"SOL-USDT-SWAP": outside}, actor)
+    await r.managed_portfolios.evaluate(sleeve["id"])
+    assert r.managed_portfolios.history(sleeve["id"])[0]["status"] == "completed"
+    r.clock.change(step_ms=2 * HOUR, expected_revision=r.clock.status()["revision"], actor="trader")
+    submit = r.book.submit
+    injected = []
+
+    def another_owner_cost(payload, key, quotes, submitted_by, **kwargs):
+        if (
+            not injected
+            and payload["inst_id"] == "ETH-USDT"
+            and not payload["reduce_only"]
+            and key.startswith("portfolio:")
+        ):
+            injected.append(key)
+            # Real fee and fill-to-mark loss reduce shared equity. No rejection
+            # is mocked; the original ETH child reaches AccountCapital admission.
+            submit(
+                command | {"quantity": "20"}, f"concurrent-other-owner-entry-cost:{END + HOUR}", quotes, actor
+            )
+        return submit(payload, key, quotes, submitted_by, **kwargs)
+
+    monkeypatch.setattr(r.book, "submit", another_owner_cost)
+    return sleeve, other, submit, injected
+
+
+@pytest.mark.parametrize("contract", ["reduce_group_v1", "reduce_group_v2_allowance"])
+async def test_real_capital_drift_preserves_v1_failure_and_v2_linked_smaller_plan(
+    runtime, monkeypatch, contract
+):
+    r = runtime
+    sleeve, _, submit, injected = await allowance_drift_fixture(r, monkeypatch, contract)
+    await r.managed_portfolios.evaluate(sleeve["id"])
+    monkeypatch.setattr(r.book, "submit", submit)
+    batch = r.managed_portfolios.history(sleeve["id"])[0]
+    assert injected
+    if contract == "reduce_group_v1":
+        assert batch["status"] == "compensated"
+        assert "admitted capital percentage" in batch["error"]
+        assert not batch["allowance_replans"]
+        return
+    assert batch["status"] == "completed", batch["error"]
+    assert len(batch["allowance_replans"]) == 1
+    plan = batch["allowance_replans"][0]
+    assert plan["original_additions_hash"] == batch["additions_hash"]
+    assert plan["parent_plan_hash"] == batch["additions_hash"]
+    assert D(plan["capital_budget"]["account_equity"]) < D(plan["previous_capital_budget"]["account_equity"])
+    assert D(plan["quantities"]["ETH-USDT"]) < D(plan["remaining_original_quantities"]["ETH-USDT"])
+    assert D(batch["residuals"]["capital_pct"]) < D(2)
+    assert any(
+        c["status"] == "superseded" and c["payload"]["inst_id"] == "ETH-USDT" and c["order"] is None
+        for c in batch["commands"]
+    )
+    assert not any(c["phase"] == "compensate" for c in batch["commands"])
+    assert r.book.contribution_report("example", await r.snapshots_for("example"))["reconciled"]
+
+
+async def interrupted_allowance(r, monkeypatch, *, commit_replacement):
+    sleeve, other, original, injected = await allowance_drift_fixture(
+        r, monkeypatch, "reduce_group_v2_allowance"
+    )
+    interleaved = r.book.submit
+    committed = []
+
+    def crash(payload, key, quotes, actor, **kwargs):
+        replacement = (
+            injected
+            and key != injected[0]
+            and payload["inst_id"] == "ETH-USDT"
+            and not payload["reduce_only"]
+        )
+        if replacement and not commit_replacement:
+            raise asyncio.CancelledError()
+        receipt = interleaved(payload, key, quotes, actor, **kwargs)
+        if replacement:
+            committed.append(receipt)
+            raise asyncio.CancelledError()
+        return receipt
+
+    monkeypatch.setattr(r.book, "submit", crash)
+    with pytest.raises(asyncio.CancelledError):
+        await r.managed_portfolios.evaluate(sleeve["id"])
+    monkeypatch.setattr(r.book, "submit", original)
+    batch = r.managed_portfolios.history(sleeve["id"])[0]
+    assert batch["status"] == "adding" and len(batch["allowance_replans"]) == 1
+    return sleeve, other, batch, committed
+
+
+async def test_allowance_replacement_committed_before_restart_projects_original_receipt_once(
+    runtime, monkeypatch
+):
+    r = runtime
+    sleeve, _, interrupted, committed = await interrupted_allowance(r, monkeypatch, commit_replacement=True)
+    assert len(committed) == 1
+    receipt = committed[0]
+    original_additions = copy.deepcopy(interrupted["additions"])
+    original_plans = copy.deepcopy(interrupted["allowance_replans"])
+    order_count = len(r.book.orders("example"))
+    captured = r.catalog.get_market_snapshot
+    await r.stop()
+    restored = ProfessionalRuntime(Store(r.settings.database), r.market, r.settings)
+    monkeypatch.setattr(restored.catalog, "get_market_snapshot", captured)
+    try:
+        restored.clock.change(
+            step_ms=1, expected_revision=restored.clock.status()["revision"], actor="trader"
+        )
+        await restored.managed_portfolios.evaluate(sleeve["id"])
+        finished = restored.managed_portfolios.history(sleeve["id"])[0]
+        assert finished["status"] == "completed", finished["error"]
+        assert finished["additions"] == original_additions
+        assert finished["allowance_replans"] == original_plans
+        assert len(restored.book.orders("example")) == order_count
+        assert (
+            sum(c["order"] is not None and c["order"]["id"] == receipt["id"] for c in finished["commands"])
+            == 1
+        )
+        assert all(c["order"] is None for c in finished["commands"] if c["status"] == "superseded")
+        await restored.managed_portfolios.evaluate(sleeve["id"])
+        assert len(restored.book.orders("example")) == order_count
+    finally:
+        await restored.stop()
+
+
+async def test_stop_cancels_replacement_without_resurrecting_original_and_retains_capital(
+    runtime, monkeypatch
+):
+    r = runtime
+    sleeve, _, interrupted, _ = await interrupted_allowance(r, monkeypatch, commit_replacement=False)
+    orders, positions = r.book.orders("example"), r.book.positions("example")
+    retained_originals = {c["id"] for c in interrupted["commands"] if c["status"] == "superseded"}
+    stopped = r.managed_portfolios.stop(sleeve["id"], "trader")
+    assert stopped["status"] == "stopped"
+    assert stopped["capital_commitment"]["status"] == "retained"
+    final = r.managed_portfolios.history(sleeve["id"])[0]
+    assert final["status"] == "canceled"
+    assert {c["id"] for c in final["commands"] if c["status"] == "superseded"} == retained_originals
+    assert all(c["status"] != "pending" for c in final["commands"])
+    await r.managed_portfolios.evaluate(sleeve["id"])
+    assert r.book.orders("example") == orders and r.book.positions("example") == positions
+
+
+@pytest.mark.parametrize("changed_policy", ["risk", "capital"])
+async def test_allowance_does_not_supersede_after_real_policy_change(runtime, monkeypatch, changed_policy):
+    r = runtime
+    sleeve, _, _, _ = await allowance_drift_fixture(r, monkeypatch, "reduce_group_v2_allowance")
+    original = r.managed_portfolios._replan_additions
+
+    async def changed(group, batch, failure):
+        assert failure.code == "portfolio_capital_limit"
+        if changed_policy == "risk":
+            r.book.set_risk("example", {"max_order_notional": "2400"}, "trader")
+        else:
+            r.book.capital.set_policy("example", {"max_base_asset_gross_pct": "90"}, "trader")
+        return await original(group, batch, failure)
+
+    monkeypatch.setattr(r.managed_portfolios, "_replan_additions", changed)
+    await r.managed_portfolios.evaluate(sleeve["id"])
+    batch = r.managed_portfolios.history(sleeve["id"])[0]
+    assert batch["status"] == "compensated", batch["error"]
+    assert not batch["allowance_replans"]
+    assert any(c["phase"] == "compensate" and c["order"] for c in batch["commands"])
+
+
+async def test_allowance_backup_restore_keeps_plans_in_their_financial_epoch(schema8_runtime, monkeypatch):
+    r = schema8_runtime
+    sleeve, _, _, _ = await allowance_drift_fixture(r, monkeypatch, "reduce_group_v2_allowance")
+    before = r.backups.create("before-allowance-financial-plan")
+    await r.managed_portfolios.evaluate(sleeve["id"])
+    batch = r.managed_portfolios.history(sleeve["id"])[0]
+    assert batch["status"] == "completed" and len(batch["allowance_replans"]) == 1
+    after = r.backups.create("with-allowance-financial-plan")
+    restored = r.backups.restore(before["id"])
+    with r.store.read() as conn:
+        assert not conn.execute("SELECT 1 FROM portfolio_batches WHERE id=?", (batch["id"],)).fetchone()
+        assert not conn.execute("SELECT 1 FROM audit WHERE kind='portfolio.allowance_superseded'").fetchone()
+    with BackupService._readonly(r.backups.directory / (restored["safety_backup_id"] + ".sqlite3")) as conn:
+        assert (
+            conn.execute("SELECT COUNT(*) FROM audit WHERE kind='portfolio.allowance_superseded'").fetchone()[
+                0
+            ]
+            == 1
+        )
+    r.backups.restore(after["id"])
+    verified = r.managed_portfolios.batch(batch["id"])
+    assert verified["additions_hash"] == batch["additions_hash"]
+    assert verified["allowance_replans"] == batch["allowance_replans"]
+    assert r.managed_portfolios.get(sleeve["id"])["status"] == "stopped"
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        "deleted_plan",
+        "wrong_group",
+        "wrong_reference",
+        "inflated",
+        "wrong_sign",
+        "policy_anchor",
+        "budget_chain",
+    ],
+)
+async def test_allowance_loader_and_schema8_recovery_reject_consistent_hash_tampering(
+    schema8_runtime, monkeypatch, tamper
+):
+    r = schema8_runtime
+    sleeve, _, batch, _ = await interrupted_allowance(r, monkeypatch, commit_replacement=False)
+    orders_before = r.book.orders("example")
+    with r.store.write() as conn:
+        row = conn.execute("SELECT * FROM audit WHERE kind='portfolio.allowance_superseded'").fetchone()
+        details = json.loads(row["details"])
+        plan = details["plan"]
+        if tamper == "deleted_plan":
+            conn.execute("DELETE FROM audit WHERE id=?", (row["id"],))
+        else:
+            if tamper == "wrong_group":
+                plan["group_id"] = "another-group"
+            elif tamper == "wrong_reference":
+                plan["replacement_commands"][0]["key"] += ":unrelated"
+            elif tamper in {"inflated", "wrong_sign"}:
+                ref = plan["replacement_commands"][0]
+                command = conn.execute("SELECT * FROM portfolio_commands WHERE id=?", (ref["id"],)).fetchone()
+                payload = json.loads(command["payload"])
+                symbol = payload["inst_id"]
+                if tamper == "inflated":
+                    payload["quantity"] = str(D(plan["remaining_original_quantities"][symbol]) * 2)
+                else:
+                    payload["side"] = "sell"
+                plan["quantities"][symbol] = str(
+                    D(payload["quantity"]) * (1 if payload["side"] == "buy" else -1)
+                )
+                ref["payload_hash"] = digest(payload)
+                conn.execute(
+                    "UPDATE portfolio_commands SET payload=?,payload_hash=? WHERE id=?",
+                    (dumps(payload), ref["payload_hash"], ref["id"]),
+                )
+            elif tamper == "policy_anchor":
+                plan["policy_hash"] = "0" * 64
+            elif tamper == "budget_chain":
+                plan["previous_capital_budget"]["account_equity"] = str(
+                    D(plan["previous_capital_budget"]["account_equity"]) + 1
+                )
+            details["content_hash"] = digest(plan)
+            conn.execute("UPDATE audit SET details=? WHERE id=?", (dumps(details), row["id"]))
+    with pytest.raises(PlatformError) as failed:
+        r.managed_portfolios.batch(batch["id"])
+    assert failed.value.code == "portfolio_evidence_integrity"
+    with r.store.read() as conn, pytest.raises(PlatformError) as failed:
+        BackupService._check_connection(conn)
+    assert failed.value.code == "backup_integrity"
+    with pytest.raises(PlatformError) as failed:
+        r.backups.create("must-refuse-corrupt-allowance-plan")
+    assert failed.value.code == "backup_integrity"
+    assert r.book.orders("example") == orders_before
+    assert r.managed_portfolios.stop(sleeve["id"], "risk-operator")["status"] == "stopped"
+    assert r.book.orders("example") == orders_before
+
+
+@pytest.mark.parametrize("contract", ["reduce_group_v1", "reduce_group_v2_allowance"])
+async def test_historical_shared_adapter_uses_real_same_owner_capital_guard_and_fee_drift(
+    runtime, monkeypatch, contract
+):
+    """The historical adapter receives the same actual account and owner policy.
+
+    Research normally owns one scenario book. Using the real mixed-owner book
+    here makes the shared capital-percentage rejection observable without
+    mocking an exception or inventing an account projection.
+    """
+    r = runtime
+    sleeve, _, _, injected = await allowance_drift_fixture(r, monkeypatch, contract)
+    legs = {leg["inst_id"]: leg for leg in sleeve["manifest"]["legs"]}
+    quotes = await r.snapshots_for("example", legs)
+
+    def account():
+        return r.book.account("example", quotes)
+
+    def positions():
+        return {p["inst_id"]: D(p["quantity"]) for p in r.book.positions("example") if p["inst_id"] in legs}
+
+    policy = r.book.risk("example")
+    config = policy | {
+        "execution_contract": contract,
+        "failure_policy": "reduce_group",
+        "max_residual_pct": "2",
+        "capital_pct": "8",
+    }
+    capital = D(account()["equity"]) * D(".08")
+    targets = target_quantities({s: ".5" for s in legs}, capital, quotes)
+    committed = []
+
+    def submit(symbol, quantity, reduce, key):
+        payload = {
+            "source": "example",
+            "inst_id": symbol,
+            "side": "buy" if quantity > 0 else "sell",
+            "quantity": str(abs(quantity)),
+            "leverage": legs[symbol]["leverage"],
+            "reduce_only": reduce,
+            "order_type": "market",
+            "margin_mode": "isolated",
+        }
+        order = r.book.submit(
+            payload, key + f":{END + HOUR}", quotes, "strategy:" + legs[symbol]["deployment_id"]
+        )
+        committed.append(order)
+        return order
+
+    result = execute_batch(
+        targets,
+        capital,
+        quotes,
+        config,
+        {s: legs[s]["leverage"] for s in legs},
+        positions,
+        account,
+        submit,
+        "portfolio:shared-adapter",
+        policy_state=lambda: {"risk": r.book.risk("example"), "capital": r.book.capital.policy("example")},
+    )
+    assert injected
+    if contract == "reduce_group_v1":
+        assert result["status"] == "compensated"
+        assert result["failure"]["code"] == "portfolio_capital_limit"
+        assert not result["allowance_replans"]
+        assert not positions()
+    else:
+        assert result["status"] == "completed", result.get("failure")
+        assert len(result["allowance_replans"]) == 1
+        plan = result["allowance_replans"][0]
+        assert D(plan["quantities"]["ETH-USDT"]) < D(plan["remaining_original_quantities"]["ETH-USDT"])
+        original = next(t for t in result["trace"] if t["phase"] == "prepare_additions")
+        assert D(original["quantities"]["ETH-USDT"]) == D(plan["remaining_original_quantities"]["ETH-USDT"])
+        assert D(result["residuals"]["capital_pct"]) < 2
+        assert not any(o["reduce_only"] for o in committed)
+    assert all(t["contract"] == contract for t in result["trace"])
+    assert r.book.contribution_report("example", quotes)["reconciled"]
+
+
+async def test_real_repeated_equity_drift_is_bounded_at_three_linked_replans(runtime, monkeypatch):
+    r = runtime
+    sleeve, other, submit, injected = await allowance_drift_fixture(
+        r, monkeypatch, "reduce_group_v2_allowance"
+    )
+    interleaved = r.book.submit
+    touched = []
+    actor = "strategy:" + other["manifest"]["legs"][0]["deployment_id"]
+
+    def declining(payload, key, quotes, submitted_by, **kwargs):
+        if (
+            injected
+            and key != injected[0]
+            and payload["inst_id"] == "ETH-USDT"
+            and not payload["reduce_only"]
+            and key not in touched
+        ):
+            touched.append(key)
+            submit(
+                {
+                    "source": "example",
+                    "inst_id": "SOL-USDT-SWAP",
+                    "side": "buy",
+                    "quantity": "1",
+                    "leverage": "2",
+                    "reduce_only": False,
+                    "order_type": "market",
+                    "margin_mode": "isolated",
+                },
+                f"further-other-owner-cost:{len(touched)}:{END + HOUR}",
+                quotes,
+                actor,
+            )
+        return interleaved(payload, key, quotes, submitted_by, **kwargs)
+
+    monkeypatch.setattr(r.book, "submit", declining)
+    await r.managed_portfolios.evaluate(sleeve["id"])
+    batch = r.managed_portfolios.history(sleeve["id"])[0]
+    assert batch["status"] == "compensated", batch["error"]
+    assert "admitted capital percentage" in batch["error"]
+    assert len(batch["allowance_replans"]) == len(touched) == 3
+    plans = batch["allowance_replans"]
+    assert [p["attempt"] for p in plans] == [1, 2, 3]
+    assert [p["parent_plan_hash"] for p in plans] == [
+        batch["additions_hash"],
+        plans[0]["content_hash"],
+        plans[1]["content_hash"],
+    ]
+    assert all(
+        D(p["quantities"]["ETH-USDT"]) < D(p["remaining_original_quantities"]["ETH-USDT"]) for p in plans
+    )
+    assert any(c["phase"] == "compensate" and c["order"] for c in batch["commands"])
+    assert r.book.contribution_report("example", await r.snapshots_for("example"))["reconciled"]

@@ -1,4 +1,21 @@
 export const professionalZh: Record<string, string> = {
+  'Execution policy': '执行策略',
+  'Portfolio execution policy': '组合执行策略',
+  'Bounded allowance replans': '额度变化下的受限重规划',
+  'Frozen orders': '冻结订单',
+  'Legacy execution policy unbound': '旧版证据未绑定执行策略',
+  'Unrecognized execution policy': '无法识别的执行策略',
+  'Targets and original commands stay frozen. A fresh, complete reduction in shared account allowance can replace only unfilled additions with smaller immutable commands, at most three times, under unchanged captured risk and capital policies.':
+    '目标与原始指令保持冻结。仅当共享账户额度出现新近且完整的缩减，并且已冻结的风险与资本政策未改变时，允许最多三次用更小的不可变指令替换尚未成交的加仓部分。',
+  'Targets and original commands stay frozen. If reduced shared account allowance prevents a frozen addition, cancel pending additions and reduce the group.':
+    '目标与原始指令保持冻结。若共享账户额度缩减导致冻结的加仓指令无法执行，则取消未成交加仓并减仓整个组合。',
+  'No supported shared execution policy is bound to this evidence. Save a reviewed revision to choose a policy; existing versions and results are not converted.':
+    '此证据未绑定支持的共享执行策略。请审阅并保存一个新版本以选择策略；已有版本与结果不会转换。',
+  'Funding, valuation, policy changes and hard order, gross, asset and new-leg minimum guards are not relaxed. The original residual limit still applies; an unsuccessful plan enters group reduction, which may also fail.':
+    '资金费、估值、政策变化，以及单笔、总敞口、资产与新建仓最低规模等硬性约束均不放宽。原始残余敞口限制仍然有效；未能完成的计划进入组合减仓，而减仓也可能失败。',
+  'This saved evidence has no bound execution policy. Saving this revision explicitly adopts your selected policy; the old version and result stay unchanged.':
+    '此已保存证据未绑定执行策略。保存本次修订将明确采用所选策略；旧版本及结果保持不变。',
+
   'Complete fresh account valuation is required before reserving portfolio capital.':
     '承诺组合资本前，需要完整且新鲜的账户估值。',
   'Pinned liquidity review failed content verification.': '固定流动性审阅的内容校验失败。',

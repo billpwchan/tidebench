@@ -450,7 +450,7 @@ export type PortfolioDefinition = {
   carry_max_age_hours?: number;
   max_residual_pct: string;
   failure_policy: 'reduce_group';
-  execution_contract?: 'reduce_group_v1';
+  execution_contract?: 'reduce_group_v1' | 'reduce_group_v2_allowance';
 };
 export type PortfolioVersion = {
   id: string;

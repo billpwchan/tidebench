@@ -156,6 +156,6 @@ def test_stored_legacy_version_reads_without_rewrite_and_requires_explicit_revis
         registry.validate_binding(config, [{"inst_id": s, "bar": "1H"} for s in ("BTC-USDT", "ETH-USDT")])
     assert error.value.code == "portfolio_execution_legacy"
     revised = registry.create_version(p["id"], version["hypothesis"], legacy, "researcher", version["id"])
-    assert revised["definition"]["execution_contract"] == "reduce_group_v1"
+    assert revised["definition"]["execution_contract"] == "reduce_group_v2_allowance"
     assert revised["content_hash"] != identity
     assert registry.version(version["id"])["content_hash"] == identity

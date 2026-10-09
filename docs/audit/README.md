@@ -1,6 +1,6 @@
 # Red-team record
 
-Latest: [fresh v0.10 independent review](fresh-institutional-review-0.10.0.zh-CN.md), [reproduction artifacts](fresh-review-0.10.0/README.md), [v0.10 workflow and corrective contracts](../professional-workflows-v0.10.md), and [release verification](../verification.md).
+Latest: [fresh v0.10 independent review](fresh-institutional-review-0.10.0.zh-CN.md), separate [funding wait](fresh-institutional-review-0.10.0-funding-wait-addendum.zh-CN.md), [correct capital boundary](fresh-institutional-review-0.10.0-capital-boundary-addendum.zh-CN.md) and [v2 continuation/lineage](fresh-institutional-review-0.10.0-v2-allowance-addendum.zh-CN.md) addenda. [Completed acceptance history](acceptance-history-0.10.0.md) preserves adverse attempts. [Professional workflows](../professional-workflows-v0.10.md), [execution policy choices](../portfolio-execution-contracts.md) and [release verification](../verification.md) distinguish implemented contracts from measured scope.
 
 Baseline: [fresh v0.9 institutional review](fresh-institutional-review-0.9.0.zh-CN.md).
 
@@ -11,6 +11,8 @@ Previous: [v0.8 strategy self-audit](red-team-0.8.0.zh-CN.md), [all 108 public s
 Previous: [v0.7 instrument evidence self-audit](red-team-0.7.0.zh-CN.md) and [real public observation counts/hashes](v0.7.0-public-instrument-observations.json).
 
 The [v0.6.0 assessment](red-team-0.6.0.zh-CN.md) examines captured portfolio evaluation, recovery-retained research facts and real lifecycle failures. The [v0.5.0 assessment](red-team-0.5.0.zh-CN.md) examines managed multi-market execution, hard-interruption recovery, failed-leg compensation and contribution accounting. It records the discovered auxiliary-attribution safety and mixed-owner Decimal issues, their corrective contracts, and the remaining product work. The [v0.4.0 assessment](red-team-0.4.0.zh-CN.md) and [v0.3.0 assessment](red-team-0.3.0.zh-CN.md) remain historical evidence for those versions.
+
+Current observations: [611.289-second frozen-source lifecycle](v0.10.0-soak-observations.json), [current-source seven-decision local-paper path](v0.10.0-public-feed-paper-observations.json), [all 28 allocation cases](v0.10.0-portfolio-risk-battery.json), [exact replay](v0.10.0-portfolio-risk-replay.json), [72 L2 captures/six unsupported reports](v0.10.0-public-liquidity-observations.json), [hard-exit/schema-8 restore](v0.10.0-managed-observations-v2.json), [offline adversarial record](v0.10.0-offline-redteam-observations-v2.json), and [bounded HTTP workload](v0.10.0-http-workload-v2.json).
 
 ## Reproduce
 

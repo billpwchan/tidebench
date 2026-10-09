@@ -1,0 +1,1019 @@
+{
+  "scope": "Elapsed public OKX integration; isolated local paper; no venue orders, profitability or uptime claim.",
+  "implementation": {
+    "schema_version": 1,
+    "application_version": "0.10.0",
+    "code_fingerprint": "15d05773f0024a48a77729fbe91639be27d2126d10bed7dfc12821a3275c6c5a",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+      "pro_api.py": "5984f1d0548449fd44fd8dabc1883a17f64de2c41a429bbffc83a5a0527beadd",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "ab51a47691bce2c166e65810e20eac2c184c61457a08a4c6e15ad2290f6f9d2c",
+      "strategy_registry.py": "848bcc26d91b486e22ba1c1df35ed865bab78f0127bddce378f4416db977fffa",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "aa5e9438f61922dc18331cfe791c6b196be0d6d308a394731ed421c064f82e3b",
+      "research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+      "research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+      "portfolio_registry.py": "f93687adebd7c7c48c265645d0e252961ba68a4835477ec2501111819bd9fb38",
+      "portfolio_releases.py": "baaf5ad7730a7615a8a6b1cbabf9f43054081596a21dc3c3bed416240a961657",
+      "managed_portfolios.py": "1ea386d7fbc301c587b577066c8fc8e3d43ab1695ddd15ff2b0312248655450c",
+      "portfolio_research.py": "8b29a0ac0ef49d2d9b5f6606c18bbf817ff49fef1b39c1af16103a5035e564bb",
+      "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+      "portfolio_execution.py": "97f2fb266047fb4822f1ee38c20da40965a149f3fc22cc5acee7ece0009cf817",
+      "historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "e69b621cf9fabb3ae1a787b6d81da272a2c8eeb237c93079f99a80cfc8167f44",
+      "forward_performance.py": "78d0695c125182680abb9304b855e7608f7b50bb18fa190d75051aaeef203361",
+      "liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+      "contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "driver_sha256": "8fa303dd832df5ceac0ac936541f2e89dbd6684fa66799597b3a277fd84bac81",
+  "started_at": 1791529405785,
+  "passed": false,
+  "decisions": [
+    {
+      "id": "8af07b8bf08b46feaac9f1619d783bd4",
+      "bar": 1791529320000,
+      "status": "completed",
+      "available_at": 1791529380000,
+      "targets": {
+        "BTC-USDT": "0.00403878",
+        "ETH-USDT": "0.133439",
+        "SOL-USDT": "3.015772"
+      },
+      "hash": "7146832da038a20c8b3815190f59da6ad1b9ca02751a4fe5f9d0554156a28f60",
+      "orders": [
+        {
+          "actor": "strategy:3693d157af7a4e3bb8e2d489dac37745",
+          "cash_after": "9666.672102716619",
+          "created_at": 1791529412254,
+          "execution_mode": "local-paper",
+          "fee": "0.332994902381",
+          "id": "8a2a6bfe97614128b8f6fb1513a08006",
+          "inst_id": "BTC-USDT",
+          "instrument": {
+            "base": "BTC",
+            "contract_size_base": null,
+            "ct_mult": null,
+            "ct_type": null,
+            "ct_val": null,
+            "ct_val_ccy": null,
+            "evidence_scope": "forward_observation",
+            "expiry_time": null,
+            "inst_family": "BTC-USDT",
+            "inst_id": "BTC-USDT",
+            "inst_type": "SPOT",
+            "instrument_version": "bcfb7e77dffcbd37acbfcb8f2d76e0d6d468e8501b765dee07480c4ea0274422",
+            "list_time": 1611907686000,
+            "lot_size": "1E-8",
+            "metadata_known_at": 1791529406043,
+            "min_size": "0.00001",
+            "observation_id": "0f8b00cf446841349f68ee412253b927",
+            "observed_at": 1791529406043,
+            "quantity_unit": "base",
+            "quote": "USDT",
+            "settle_ccy": "USDT",
+            "source": "okx",
+            "state": "live",
+            "synthetic": false,
+            "tick_size": "0.1"
+          },
+          "insurance_debt": "0",
+          "leverage": "1",
+          "liquidation": false,
+          "margin_after": "0",
+          "margin_mode": "isolated",
+          "notional": "332.994902381",
+          "order_type": "market",
+          "position_after": "0.00403267",
+          "price": "82574.3",
+          "quantity": "0.00403267",
+          "quote_ask": "82533",
+          "quote_bid": "82532.9",
+          "quote_last": "82533",
+          "quote_mark": "82533",
+          "quote_ts": 1791529411469,
+          "reduce_only": false,
+          "risk_snapshot": {
+            "fee_bps": "10",
+            "halt_reason": "",
+            "halted": false,
+            "liquidation_fee_bps": "50",
+            "max_daily_loss_pct": 5,
+            "max_gross_exposure_pct": 200,
+            "max_leverage": 10,
+            "max_order_notional": "2500",
+            "slippage_bps": "5",
+            "source": "okx",
+            "updated_at": 1791529405747
+          },
+          "side": "buy",
+          "source": "okx",
+          "status": "filled",
+          "submitted_by": "strategy:3693d157af7a4e3bb8e2d489dac37745",
+          "updated_at": 1791529412254
+        },
+        {
+          "actor": "strategy:1bf28a568cef406ab0f5177da993137f",
+          "cash_after": "9333.345204191999",
+          "created_at": 1791529412266,
+          "execution_mode": "local-paper",
+          "fee": "0.33299390462",
+          "id": "bc0998e80af04ac5805b762ee50a5704",
+          "inst_id": "ETH-USDT",
+          "instrument": {
+            "base": "ETH",
+            "contract_size_base": null,
+            "ct_mult": null,
+            "ct_type": null,
+            "ct_val": null,
+            "ct_val_ccy": null,
+            "evidence_scope": "forward_observation",
+            "expiry_time": null,
+            "inst_family": "ETH-USDT",
+            "inst_id": "ETH-USDT",
+            "inst_type": "SPOT",
+            "instrument_version": "59f88026acabd7db024264761cf80cda66c56e300d69c297cca8300fbefe3cfe",
+            "list_time": 1611907686000,
+            "lot_size": "0.000001",
+            "metadata_known_at": 1791529406043,
+            "min_size": "0.0001",
+            "observation_id": "0f8b00cf446841349f68ee412253b927",
+            "observed_at": 1791529406043,
+            "quantity_unit": "base",
+            "quote": "USDT",
+            "settle_ccy": "USDT",
+            "source": "okx",
+            "state": "live",
+            "synthetic": false,
+            "tick_size": "0.01"
+          },
+          "insurance_debt": "0",
+          "leverage": "1",
+          "liquidation": false,
+          "margin_after": "0",
+          "margin_mode": "isolated",
+          "notional": "332.99390462",
+          "order_type": "market",
+          "position_after": "0.133237",
+          "price": "2499.26",
+          "quantity": "0.133237",
+          "quote_ask": "2498.01",
+          "quote_bid": "2498",
+          "quote_last": "2498.01",
+          "quote_mark": "2498.01",
+          "quote_ts": 1791529411365,
+          "reduce_only": false,
+          "risk_snapshot": {
+            "fee_bps": "10",
+            "halt_reason": "",
+            "halted": false,
+            "liquidation_fee_bps": "50",
+            "max_daily_loss_pct": 5,
+            "max_gross_exposure_pct": 200,
+            "max_leverage": 10,
+            "max_order_notional": "2500",
+            "slippage_bps": "5",
+            "source": "okx",
+            "updated_at": 1791529405747
+          },
+          "side": "buy",
+          "source": "okx",
+          "status": "filled",
+          "submitted_by": "strategy:1bf28a568cef406ab0f5177da993137f",
+          "updated_at": 1791529412266
+        },
+        {
+          "actor": "strategy:35a51cf568344c65b4fd74437c7b926f",
+          "cash_after": "9000.001816374559",
+          "created_at": 1791529412277,
+          "execution_mode": "local-paper",
+          "fee": "0.33301037744",
+          "id": "dfd51a3b44764ba99e343857d614dae1",
+          "inst_id": "SOL-USDT",
+          "instrument": {
+            "base": "SOL",
+            "contract_size_base": null,
+            "ct_mult": null,
+            "ct_type": null,
+            "ct_val": null,
+            "ct_val_ccy": null,
+            "evidence_scope": "forward_observation",
+            "expiry_time": null,
+            "inst_family": "SOL-USDT",
+            "inst_id": "SOL-USDT",
+            "inst_type": "SPOT",
+            "instrument_version": "bf27a63b0dd8041643fe9ae1d6ee5f382afa6dc1baa402042349c0e8c95f2312",
+            "list_time": 1611907686000,
+            "lot_size": "0.000001",
+            "metadata_known_at": 1791529406043,
+            "min_size": "0.01",
+            "observation_id": "0f8b00cf446841349f68ee412253b927",
+            "observed_at": 1791529406043,
+            "quantity_unit": "base",
+            "quote": "USDT",
+            "settle_ccy": "USDT",
+            "source": "okx",
+            "state": "live",
+            "synthetic": false,
+            "tick_size": "0.01"
+          },
+          "insurance_debt": "0",
+          "leverage": "1",
+          "liquidation": false,
+          "margin_after": "0",
+          "margin_mode": "isolated",
+          "notional": "333.01037744",
+          "order_type": "market",
+          "position_after": "3.011216",
+          "price": "110.59",
+          "quantity": "3.011216",
+          "quote_ask": "110.53",
+          "quote_bid": "110.52",
+          "quote_last": "110.53",
+          "quote_mark": "110.53",
+          "quote_ts": 1791529411370,
+          "reduce_only": false,
+          "risk_snapshot": {
+            "fee_bps": "10",
+            "halt_reason": "",
+            "halted": false,
+            "liquidation_fee_bps": "50",
+            "max_daily_loss_pct": 5,
+            "max_gross_exposure_pct": 200,
+            "max_leverage": 10,
+            "max_order_notional": "2500",
+            "slippage_bps": "5",
+            "source": "okx",
+            "updated_at": 1791529405747
+          },
+          "side": "buy",
+          "source": "okx",
+          "status": "filled",
+          "submitted_by": "strategy:35a51cf568344c65b4fd74437c7b926f",
+          "updated_at": 1791529412277
+        }
+      ]
+    },
+    {
+      "id": "c0c17a37e4364d768b4334c953482c68",
+      "bar": 1791529380000,
+      "status": "completed",
+      "available_at": 1791529440000,
+      "targets": {
+        "BTC-USDT": "0.00403877",
+        "ETH-USDT": "0.133436",
+        "SOL-USDT": "3.016339"
+      },
+      "hash": "648b8d9996e0d8de98953f5b0b29ad2a4a3a6541342fa1464ce9401895838e16",
+      "orders": [
+        {
+          "actor": "strategy:1bf28a568cef406ab0f5177da993137f",
+          "cash_after": "8999.504014089579",
+          "created_at": 1791529453876,
+          "execution_mode": "local-paper",
+          "fee": "0.00049730498",
+          "id": "e004575d1a0d4111a42e04d370437d66",
+          "inst_id": "ETH-USDT",
+          "instrument": {
+            "base": "ETH",
+            "contract_size_base": null,
+            "ct_mult": null,
+            "ct_type": null,
+            "ct_val": null,
+            "ct_val_ccy": null,
+            "evidence_scope": "forward_observation",
+            "expiry_time": null,
+            "inst_family": "ETH-USDT",
+            "inst_id": "ETH-USDT",
+            "inst_type": "SPOT",
+            "instrument_version": "59f88026acabd7db024264761cf80cda66c56e300d69c297cca8300fbefe3cfe",
+            "list_time": 1611907686000,
+            "lot_size": "0.000001",
+            "metadata_known_at": 1791529406043,
+            "min_size": "0.0001",
+            "observation_id": "0f8b00cf446841349f68ee412253b927",
+            "observed_at": 1791529406043,
+            "quantity_unit": "base",
+            "quote": "USDT",
+            "settle_ccy": "USDT",
+            "source": "okx",
+            "state": "live",
+            "synthetic": false,
+            "tick_size": "0.01"
+          },
+          "insurance_debt": "0",
+          "leverage": "1",
+          "liquidation": false,
+          "margin_after": "0",
+          "margin_mode": "isolated",
+          "notional": "0.49730498",
+          "order_type": "market",
+          "position_after": "0.133436",
+          "price": "2499.02",
+          "quantity": "0.000199",
+          "quote_ask": "2497.77",
+          "quote_bid": "2497.76",
+          "quote_last": "2497.63",
+          "quote_mark": "2497.63",
+          "quote_ts": 1791529452467,
+          "reduce_only": false,
+          "risk_snapshot": {
+            "fee_bps": "10",
+            "halt_reason": "",
+            "halted": false,
+            "liquidation_fee_bps": "50",
+            "max_daily_loss_pct": 5,
+            "max_gross_exposure_pct": 200,
+            "max_leverage": 10,
+            "max_order_notional": "2500",
+            "slippage_bps": "5",
+            "source": "okx",
+            "updated_at": 1791529405747
+          },
+          "side": "buy",
+          "source": "okx",
+          "status": "filled",
+          "submitted_by": "strategy:1bf28a568cef406ab0f5177da993137f",
+          "updated_at": 1791529453876
+        }
+      ]
+    },
+    {
+      "id": "248fc0640f6f41fc8a27ae4634fd0fb8",
+      "bar": 1791529440000,
+      "status": "completed",
+      "available_at": 1791529500000,
+      "targets": {
+        "BTC-USDT": "0.00403767",
+        "ETH-USDT": "0.133372",
+        "SOL-USDT": "3.015630"
+      },
+      "hash": "7457bf8544a2eb3ed75aa9c487118e68750c1fec287b375ecbec11779c7aa218",
+      "orders": []
+    },
+    {
+      "id": "881812fdfe76452299778d2af0bb6f27",
+      "bar": 1791529500000,
+      "status": "completed",
+      "available_at": 1791529560000,
+      "targets": {
+        "BTC-USDT": "0.00403820",
+        "ETH-USDT": "0.133377",
+        "SOL-USDT": "3.016664"
+      },
+      "hash": "9a22038c5386d70fcb2886d377946d352f29b0564cc1daac0daa50c02a68c031",
+      "orders": []
+    },
+    {
+      "id": "499b6f9262c64d51a2e01d39923e9ab3",
+      "bar": 1791529560000,
+      "status": "completed",
+      "available_at": 1791529620000,
+      "targets": {
+        "BTC-USDT": "0.00403734",
+        "ETH-USDT": "0.133396",
+        "SOL-USDT": "3.016408"
+      },
+      "hash": "9a329b02cd50d9a6107301c3b49ae18d08dca49b4c118ff11c4396ef2603ecdc",
+      "orders": []
+    }
+  ],
+  "waiting_issues": [],
+  "research": {
+    "run_id": "568628e03ec24600be69522fe3a32eb6",
+    "input_hash": "db93984139759ea544533e1f6b4c656191a90e542562a447fe532005d9d724b9",
+    "result_hash": "8c42cc69c71322aeb75d8728354f3c91ab6dc695b87af416021eb814de2b72c3",
+    "metrics": {
+      "complete_utc_days": 0,
+      "execution_rejections": 265,
+      "fees_paid": "1.006669184850",
+      "final_equity": "9998.362971657150",
+      "funding_paid": "0",
+      "initial_cash": "10000",
+      "insurance_debt": "0",
+      "max_drawdown_pct": "0.044393910685600",
+      "mean_gross_exposure_pct": "9.8977975836653060577610393445975767742173344439224",
+      "orders": 19,
+      "realized_annual_vol_pct": null,
+      "realized_vol_reason": "fewer_than_30_complete_utc_days_or_nonpositive_equity",
+      "total_return_pct": "-0.016370283428500",
+      "turnover": "0.100666918485",
+      "turnover_definition": "sum_absolute_executed_notional_divided_by_initial_account_equity"
+    },
+    "economics": {
+      "attribution_scope": "Arithmetic for actual filled quantities, not a re-execution at alternative prices. Cost-driven sizing, stops and liquidation feedback are not an independent counterfactual.",
+      "beta_diagnostic": {
+        "paired_returns": 95,
+        "sample_beta": "1.3354950707731756352817767707561349482643688558714",
+        "sample_intercept_per_bar": "-2.594310808612973535668715496603376831274486914E-10",
+        "scope": "Full-window ex-post OLS diagnostic, never used to size the reference or select parameters. No alpha significance, independent trials, risk matching or causal edge is established.",
+        "status": "descriptive_only"
+      },
+      "cash_reference": {
+        "return_pct": "0",
+        "yield_assumption": "zero interest"
+      },
+      "edge_status": "not_established",
+      "excess_return_vs_passive_pct": "-0.0041153924750400",
+      "exposure_comparison": {
+        "passive_mean_gross_pct": "7.4076559752309255874820625617477245271644119734166",
+        "risk_matched": false,
+        "strategy_mean_gross_pct": "9.8977975836653060577610393445975767742173344439224"
+      },
+      "fees_pnl": "-1.006669184850",
+      "funding_pnl": "0",
+      "gross_price_pnl_after_modeled_execution": "-0.630359158000",
+      "identity": "net = price before recorded quote shortfall \u2212 recorded quote shortfall \u2212 fees \u2212 funding paid; insurance liabilities are already reflected in equity and are not deducted twice",
+      "market_contributions": {
+        "markets": [
+          {
+            "fees_pnl": "-0.333847346560",
+            "funding_pnl": "0",
+            "inst_id": "BTC-USDT",
+            "net_pnl": "-0.498454194560",
+            "price_pnl_before_fees_and_funding": "-0.164606848"
+          },
+          {
+            "fees_pnl": "-0.33723639432",
+            "funding_pnl": "0",
+            "inst_id": "ETH-USDT",
+            "net_pnl": "-0.41561771432",
+            "price_pnl_before_fees_and_funding": "-0.07838132"
+          },
+          {
+            "fees_pnl": "-0.33558544397",
+            "funding_pnl": "0",
+            "inst_id": "SOL-USDT",
+            "net_pnl": "-0.72295643397",
+            "price_pnl_before_fees_and_funding": "-0.38737099"
+          }
+        ],
+        "net_pnl": "-1.637028342850",
+        "reconciled": true,
+        "reconciliation_delta": "0E-12",
+        "scope": "Actual filled quantities, weighted-average derivative entry and terminal independent marks. Arithmetic monetary contribution, not independent strategy returns.",
+        "status": "available"
+      },
+      "modeled_quote_shortfall_pnl": "-0.517561452",
+      "net_pnl": "-1.637028342850",
+      "passive_reference": {
+        "cash": "9250.000784688654",
+        "entries": [
+          {
+            "allocated_budget": "250.00",
+            "base": "BTC",
+            "entry_fee": "0.249749660286",
+            "entry_price": "82581.8",
+            "price_market": "BTC-USDT",
+            "price_source": "captured_spot",
+            "quantity_base": "0.00302427",
+            "weight_of_initial_account": "0.025"
+          },
+          {
+            "allocated_budget": "250.00",
+            "base": "ETH",
+            "entry_fee": "0.24975005890",
+            "entry_price": "2498.45",
+            "price_market": "ETH-USDT",
+            "price_source": "captured_spot",
+            "quantity_base": "0.099962",
+            "weight_of_initial_account": "0.025"
+          },
+          {
+            "allocated_budget": "250.00",
+            "base": "SOL",
+            "entry_fee": "0.24975024616",
+            "entry_price": "110.71",
+            "price_market": "SOL-USDT",
+            "price_source": "captured_spot",
+            "quantity_base": "2.255896",
+            "weight_of_initial_account": "0.025"
+          }
+        ],
+        "entry_ts": 1791523680000,
+        "equity": [
+          {
+            "equity": "10000",
+            "gross_notional": "0",
+            "ts": 1791523680000
+          },
+          {
+            "equity": "9998.678365360654",
+            "gross_notional": "748.677580672",
+            "ts": 1791523740000
+          },
+          {
+            "equity": "9998.696790820654",
+            "gross_notional": "748.696006132",
+            "ts": 1791523800000
+          },
+          {
+            "equity": "9998.539870904654",
+            "gross_notional": "748.539086216",
+            "ts": 1791523860000
+          },
+          {
+            "equity": "9998.727643682654",
+            "gross_notional": "748.726858994",
+            "ts": 1791523920000
+          },
+          {
+            "equity": "9998.701826285654",
+            "gross_notional": "748.701041597",
+            "ts": 1791523980000
+          },
+          {
+            "equity": "9998.869375319654",
+            "gross_notional": "748.868590631",
+            "ts": 1791524040000
+          },
+          {
+            "equity": "9999.158164361654",
+            "gross_notional": "749.157379673",
+            "ts": 1791524100000
+          },
+          {
+            "equity": "9999.286675903654",
+            "gross_notional": "749.285891215",
+            "ts": 1791524160000
+          },
+          {
+            "equity": "9999.521218079654",
+            "gross_notional": "749.520433391",
+            "ts": 1791524220000
+          },
+          {
+            "equity": "9999.272238460654",
+            "gross_notional": "749.271453772",
+            "ts": 1791524280000
+          },
+          {
+            "equity": "9999.055883254654",
+            "gross_notional": "749.055098566",
+            "ts": 1791524340000
+          },
+          {
+            "equity": "9998.663559554654",
+            "gross_notional": "748.662774866",
+            "ts": 1791524400000
+          },
+          {
+            "equity": "9998.127097094654",
+            "gross_notional": "748.126312406",
+            "ts": 1791524460000
+          },
+          {
+            "equity": "9998.396637925654",
+            "gross_notional": "748.395853237",
+            "ts": 1791524520000
+          },
+          {
+            "equity": "9998.299510370654",
+            "gross_notional": "748.298725682",
+            "ts": 1791524580000
+          },
+          {
+            "equity": "9998.789933012654",
+            "gross_notional": "748.789148324",
+            "ts": 1791524640000
+          },
+          {
+            "equity": "9998.568372779654",
+            "gross_notional": "748.567588091",
+            "ts": 1791524700000
+          },
+          {
+            "equity": "9998.500784084654",
+            "gross_notional": "748.499999396",
+            "ts": 1791524760000
+          },
+          {
+            "equity": "9998.465811000654",
+            "gross_notional": "748.465026312",
+            "ts": 1791524820000
+          },
+          {
+            "equity": "9997.762701141654",
+            "gross_notional": "747.761916453",
+            "ts": 1791524880000
+          },
+          {
+            "equity": "9996.885826470654",
+            "gross_notional": "746.885041782",
+            "ts": 1791524940000
+          },
+          {
+            "equity": "9997.057017914654",
+            "gross_notional": "747.056233226",
+            "ts": 1791525000000
+          },
+          {
+            "equity": "9996.850273942654",
+            "gross_notional": "746.849489254",
+            "ts": 1791525060000
+          },
+          {
+            "equity": "9997.048574206654",
+            "gross_notional": "747.047789518",
+            "ts": 1791525120000
+          },
+          {
+            "equity": "9996.763026330654",
+            "gross_notional": "746.762241642",
+            "ts": 1791525180000
+          },
+          {
+            "equity": "9996.677894215654",
+            "gross_notional": "746.677109527",
+            "ts": 1791525240000
+          },
+          {
+            "equity": "9996.756858549654",
+            "gross_notional": "746.756073861",
+            "ts": 1791525300000
+          },
+          {
+            "equity": "9997.205396298654",
+            "gross_notional": "747.20461161",
+            "ts": 1791525360000
+          },
+          {
+            "equity": "9997.273801097654",
+            "gross_notional": "747.273016409",
+            "ts": 1791525420000
+          },
+          {
+            "equity": "9997.320086044654",
+            "gross_notional": "747.319301356",
+            "ts": 1791525480000
+          },
+          {
+            "equity": "9997.255096296654",
+            "gross_notional": "747.254311608",
+            "ts": 1791525540000
+          },
+          {
+            "equity": "9996.875152009654",
+            "gross_notional": "746.874367321",
+            "ts": 1791525600000
+          },
+          {
+            "equity": "9997.362629434654",
+            "gross_notional": "747.361844746",
+            "ts": 1791525660000
+          },
+          {
+            "equity": "9997.125154165654",
+            "gross_notional": "747.124369477",
+            "ts": 1791525720000
+          },
+          {
+            "equity": "9997.348103806654",
+            "gross_notional": "747.347319118",
+            "ts": 1791525780000
+          },
+          {
+            "equity": "9997.636187516654",
+            "gross_notional": "747.635402828",
+            "ts": 1791525840000
+          },
+          {
+            "equity": "9997.658717081654",
+            "gross_notional": "747.657932393",
+            "ts": 1791525900000
+          },
+          {
+            "equity": "9997.590614540654",
+            "gross_notional": "747.589829852",
+            "ts": 1791525960000
+          },
+          {
+            "equity": "9997.676348855654",
+            "gross_notional": "747.675564167",
+            "ts": 1791526020000
+          },
+          {
+            "equity": "9997.989419080654",
+            "gross_notional": "747.988634392",
+            "ts": 1791526080000
+          },
+          {
+            "equity": "9997.774617697654",
+            "gross_notional": "747.773833009",
+            "ts": 1791526140000
+          },
+          {
+            "equity": "9997.937286380654",
+            "gross_notional": "747.936501692",
+            "ts": 1791526200000
+          },
+          {
+            "equity": "9998.152142568654",
+            "gross_notional": "748.15135788",
+            "ts": 1791526260000
+          },
+          {
+            "equity": "9997.879582944654",
+            "gross_notional": "747.878798256",
+            "ts": 1791526320000
+          },
+          {
+            "equity": "9997.766790798654",
+            "gross_notional": "747.76600611",
+            "ts": 1791526380000
+          },
+          {
+            "equity": "9998.110756904654",
+            "gross_notional": "748.109972216",
+            "ts": 1791526440000
+          },
+          {
+            "equity": "9998.323006505654",
+            "gross_notional": "748.322221817",
+            "ts": 1791526500000
+          },
+          {
+            "equity": "9998.430745746654",
+            "gross_notional": "748.429961058",
+            "ts": 1791526560000
+          },
+          {
+            "equity": "9998.215691594654",
+            "gross_notional": "748.214906906",
+            "ts": 1791526620000
+          },
+          {
+            "equity": "9998.304270978654",
+            "gross_notional": "748.30348629",
+            "ts": 1791526680000
+          },
+          {
+            "equity": "9998.345137649654",
+            "gross_notional": "748.344352961",
+            "ts": 1791526740000
+          },
+          {
+            "equity": "9998.084668297654",
+            "gross_notional": "748.083883609",
+            "ts": 1791526800000
+          },
+          {
+            "equity": "9997.946994099654",
+            "gross_notional": "747.946209411",
+            "ts": 1791526860000
+          },
+          {
+            "equity": "9998.241470464654",
+            "gross_notional": "748.240685776",
+            "ts": 1791526920000
+          },
+          {
+            "equity": "9998.042733915654",
+            "gross_notional": "748.041949227",
+            "ts": 1791526980000
+          },
+          {
+            "equity": "9998.159361288654",
+            "gross_notional": "748.15857660",
+            "ts": 1791527040000
+          },
+          {
+            "equity": "9998.142317097654",
+            "gross_notional": "748.141532409",
+            "ts": 1791527100000
+          },
+          {
+            "equity": "9998.645362781654",
+            "gross_notional": "748.644578093",
+            "ts": 1791527160000
+          },
+          {
+            "equity": "9998.962056814654",
+            "gross_notional": "748.961272126",
+            "ts": 1791527220000
+          },
+          {
+            "equity": "9998.730393095654",
+            "gross_notional": "748.729608407",
+            "ts": 1791527280000
+          },
+          {
+            "equity": "9998.394136308654",
+            "gross_notional": "748.39335162",
+            "ts": 1791527340000
+          },
+          {
+            "equity": "9998.479764829654",
+            "gross_notional": "748.478980141",
+            "ts": 1791527400000
+          },
+          {
+            "equity": "9998.704886095654",
+            "gross_notional": "748.704101407",
+            "ts": 1791527460000
+          },
+          {
+            "equity": "9998.517165629654",
+            "gross_notional": "748.516380941",
+            "ts": 1791527520000
+          },
+          {
+            "equity": "9998.907910265654",
+            "gross_notional": "748.907125577",
+            "ts": 1791527580000
+          },
+          {
+            "equity": "9999.065626352654",
+            "gross_notional": "749.064841664",
+            "ts": 1791527640000
+          },
+          {
+            "equity": "9999.026135465654",
+            "gross_notional": "749.025350777",
+            "ts": 1791527700000
+          },
+          {
+            "equity": "9999.069228735654",
+            "gross_notional": "749.068444047",
+            "ts": 1791527760000
+          },
+          {
+            "equity": "9998.983324359654",
+            "gross_notional": "748.982539671",
+            "ts": 1791527820000
+          },
+          {
+            "equity": "9999.164779719654",
+            "gross_notional": "749.163995031",
+            "ts": 1791527880000
+          },
+          {
+            "equity": "9999.313817762654",
+            "gross_notional": "749.313033074",
+            "ts": 1791527940000
+          },
+          {
+            "equity": "9999.500386148654",
+            "gross_notional": "749.49960146",
+            "ts": 1791528000000
+          },
+          {
+            "equity": "9999.768912251654",
+            "gross_notional": "749.768127563",
+            "ts": 1791528060000
+          },
+          {
+            "equity": "9999.599811055654",
+            "gross_notional": "749.599026367",
+            "ts": 1791528120000
+          },
+          {
+            "equity": "9999.735292034654",
+            "gross_notional": "749.734507346",
+            "ts": 1791528180000
+          },
+          {
+            "equity": "9999.250771620654",
+            "gross_notional": "749.249986932",
+            "ts": 1791528240000
+          },
+          {
+            "equity": "9999.507820444654",
+            "gross_notional": "749.507035756",
+            "ts": 1791528300000
+          },
+          {
+            "equity": "9999.837097500654",
+            "gross_notional": "749.836312812",
+            "ts": 1791528360000
+          },
+          {
+            "equity": "9999.910698363654",
+            "gross_notional": "749.909913675",
+            "ts": 1791528420000
+          },
+          {
+            "equity": "9999.386682076654",
+            "gross_notional": "749.385897388",
+            "ts": 1791528480000
+          },
+          {
+            "equity": "9999.341103792654",
+            "gross_notional": "749.340319104",
+            "ts": 1791528540000
+          },
+          {
+            "equity": "9999.252665074654",
+            "gross_notional": "749.251880386",
+            "ts": 1791528600000
+          },
+          {
+            "equity": "9999.222101015654",
+            "gross_notional": "749.221316327",
+            "ts": 1791528660000
+          },
+          {
+            "equity": "9999.168042482654",
+            "gross_notional": "749.167257794",
+            "ts": 1791528720000
+          },
+          {
+            "equity": "9999.047716233654",
+            "gross_notional": "749.046931545",
+            "ts": 1791528780000
+          },
+          {
+            "equity": "9998.697384382654",
+            "gross_notional": "748.696599694",
+            "ts": 1791528840000
+          },
+          {
+            "equity": "9998.903636263654",
+            "gross_notional": "748.902851575",
+            "ts": 1791528900000
+          },
+          {
+            "equity": "9999.045354445654",
+            "gross_notional": "749.044569757",
+            "ts": 1791528960000
+          },
+          {
+            "equity": "9999.204843575654",
+            "gross_notional": "749.204058887",
+            "ts": 1791529020000
+          },
+          {
+            "equity": "9999.292195980654",
+            "gross_notional": "749.291411292",
+            "ts": 1791529080000
+          },
+          {
+            "equity": "9999.090554410654",
+            "gross_notional": "749.089769722",
+            "ts": 1791529140000
+          },
+          {
+            "equity": "9999.165740152654",
+            "gross_notional": "749.164955464",
+            "ts": 1791529200000
+          },
+          {
+            "equity": "9998.797211861654",
+            "gross_notional": "748.796427173",
+            "ts": 1791529260000
+          },
+          {
+            "equity": "9998.777940902654",
+            "gross_notional": "748.777156214",
+            "ts": 1791529320000
+          },
+          {
+            "equity": "9998.774510904654",
+            "gross_notional": "748.773726216",
+            "ts": 1791529380000
+          }
+        ],
+        "execution": "One next-open buy per base asset, fee/slippage/tick/lot/minimum adjusted; constant quantity then captured trade-close marks, no terminal forced sale.",
+        "final_equity": "9998.774510904654",
+        "mean_gross_exposure_pct": "7.4076559752309255874820625617477245271644119734166",
+        "name": "Declared unlevered passive underlying reference",
+        "return_pct": "-0.0122548909534600",
+        "scope": "Underlying-price reference, not risk-matched alpha. No funding, borrowing, yield or financing. A perpetual trade-price proxy is not independently observed spot or an executable funded swap. Child-order admission, impact and liquidation are not inferred for this reference.",
+        "status": "available"
+      },
+      "price_pnl_before_recorded_quote_shortfall": "-0.112797706000",
+      "reconciliation_delta": "0E-12",
+      "schema_version": 1,
+      "status": "reconciled"
+    }
+  },
+  "error": "Every leg requires a source-matched post-close quote.",
+  "elapsed_seconds": 275.826,
+  "ended_at": 1791529681608
+}

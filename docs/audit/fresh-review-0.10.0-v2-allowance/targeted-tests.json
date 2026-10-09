@@ -1,0 +1,10 @@
+{
+  "runtime_revision": "d9418062b6521dcb3590971d786553a06c86fd8d",
+  "test_source_kind": "Implementation-agent post-runtime-commit worktree test additions; these test nodes are not present in d941806",
+  "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=backend:tests .venv/bin/python -m pytest -p no:cacheprovider -q tests/test_managed_portfolios.py::test_historical_shared_adapter_uses_real_same_owner_capital_guard_and_fee_drift tests/test_managed_portfolios.py::test_real_repeated_equity_drift_is_bounded_at_three_linked_replans",
+  "exit_code": 0,
+  "pytest_result": "3 passed in 6.86s",
+  "tool_wall_seconds": 7.172248,
+  "scope": "Real historical adapter v1/v2 capital/fee interleaving and three-attempt bound; no broad suite",
+  "fixture_binding": "Five fixture/helper function bodies independently match exact runtime commit; see fixture-source-binding.json"
+}
