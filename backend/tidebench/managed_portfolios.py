@@ -215,7 +215,7 @@ class ManagedPortfolios:
             else "retained_inventory"
             if group["status"] not in ACTIVE and inventory
             else "funding_pending"
-            if pending
+            if pending or (group["last_error"] or "").startswith("[funding_pending] ")
             else "failed"
             if group["status"] == "failed"
             else "preparing"
@@ -586,11 +586,23 @@ class ManagedPortfolios:
                     quotes = await r.snapshots_for(group["source"], symbols)
                     self._quotes(group, end, quotes)
                     for symbol in symbols:
-                        await r.sync_funding(group["source"], symbol, quotes)
+                        await r.sync_funding(group["source"], symbol, quotes, protective=True)
+                    await self._sync_other_funding(group, quotes)
                     account = await r.offload(
                         r.book.observe, group["source"], quotes, record_performance=False
                     )
-                    if account["valuation_status"] not in {"fresh", "example"}:
+                    if account["pending_funding"]:
+                        self._wait_for_funding(
+                            group,
+                            None,
+                            PlatformError(
+                                "funding_pending",
+                                "Unsettled funding blocks new risk; protective reductions remain available.",
+                                409,
+                            ),
+                        )
+                        return
+                    if account["valuation_status"] not in {"fresh", "example"} or account["equity"] is None:
                         raise PlatformError(
                             "portfolio_valuation",
                             "A complete fresh account valuation is required before a target batch.",
@@ -709,7 +721,9 @@ class ManagedPortfolios:
                 if not complete:
                     continue
                 raise PlatformError("portfolio_quote_missing", "Every leg needs a fresh observed quote.", 409)
-            if (group["source"], symbol) in self.runtime.market_errors:
+            if (self.runtime.market_errors.get((group["source"], symbol)) or {}).get(
+                "kind", "quote"
+            ) != "funding_reconciliation" and (group["source"], symbol) in self.runtime.market_errors:
                 raise PlatformError(
                     "portfolio_market_unavailable",
                     "Every portfolio leg requires a successfully observed quote.",
@@ -802,8 +816,18 @@ class ManagedPortfolios:
                                 )
                                 continue
                     for quote_attempt in range(3):
-                        quotes = await r.snapshots_for(group["source"], [payload["inst_id"]])
-                        if (group["source"], payload["inst_id"]) in r.market_errors:
+                        extra = {payload["inst_id"]}
+                        if phase == "add":
+                            extra.update(
+                                p["inst_id"] for p in r.book.deferred_funding.pending(group["source"])
+                            )
+                        quotes = await r.snapshots_for(group["source"], extra)
+                        if (r.market_errors.get((group["source"], payload["inst_id"])) or {}).get(
+                            "kind", "quote"
+                        ) != "funding_reconciliation" and (
+                            group["source"],
+                            payload["inst_id"],
+                        ) in r.market_errors:
                             raise PlatformError(
                                 "portfolio_market_unavailable",
                                 "The command requires a successfully observed quote; cached transport fallback is not used.",
@@ -822,9 +846,9 @@ class ManagedPortfolios:
                                 "A post-close quote is required for the command.",
                                 409,
                             )
-                        await r.sync_funding(
-                            group["source"], payload["inst_id"], quotes, protective=payload["reduce_only"]
-                        )
+                        await r.sync_funding(group["source"], payload["inst_id"], quotes, protective=True)
+                        if phase == "add":
+                            await self._sync_other_funding(group, quotes)
                         # Fresh reduce-only commands may proceed despite unrelated
                         # unavailable markets. The book blocks incomplete new risk.
                         try:
@@ -854,16 +878,43 @@ class ManagedPortfolios:
                     (order["id"], now_ms(), command["id"]),
                 )
 
+    async def _sync_other_funding(self, group, quotes):
+        """Reconcile account obligations without cross-group execution locks.
+
+        Settlements use the book's frozen quantity/ownership and transactional
+        idempotency. Unavailable publications leave the account guard in force;
+        this attempt runs only after protective reductions have been handled.
+        """
+        r, source = self.runtime, group["source"]
+        owned = {leg["inst_id"] for leg in group["manifest"]["legs"]}
+        for symbol in sorted(set(quotes) - owned):
+            if (
+                not symbol.endswith("-SWAP")
+                or (source, symbol) in r.market_errors
+                and r.market_errors[(source, symbol)].get("kind") != "funding_reconciliation"
+            ):
+                continue
+            snapshot = quotes[symbol]
+            try:
+                r.book.fresh(snapshot)
+                if snapshot["source"] != source:
+                    continue
+            except PlatformError:
+                continue
+            await r.sync_funding(source, symbol, quotes, protective=True)
+
     async def _freeze_additions(self, group, batch):
         r = self.runtime
         symbols = [leg["inst_id"] for leg in group["manifest"]["legs"]]
         async with AsyncExitStack() as stack:
             for symbol in sorted(symbols):
                 await stack.enter_async_context(r.locks[(group["source"], symbol)])
-            quotes = await r.snapshots_for(group["source"], symbols)
+            extra = set(symbols) | {p["inst_id"] for p in r.book.deferred_funding.pending(group["source"])}
+            quotes = await r.snapshots_for(group["source"], extra)
             self._quotes(group, batch["body"]["available_at"], quotes)
             for symbol in symbols:
-                await r.sync_funding(group["source"], symbol, quotes)
+                await r.sync_funding(group["source"], symbol, quotes, protective=True)
+            await self._sync_other_funding(group, quotes)
             with self.store.write() as conn:
                 self._active(group["id"], conn)
                 if self.batch(batch["id"], conn)["additions"]:
@@ -871,6 +922,12 @@ class ManagedPortfolios:
                 # Marks, attribution, cash allowance and commands share one
                 # transaction. Another group cannot spend between these reads.
                 account = r.book.account(group["source"], quotes, conn)
+                if account["pending_funding"]:
+                    raise PlatformError(
+                        "funding_pending",
+                        "Unsettled funding blocks new risk; protective reductions remain available.",
+                        409,
+                    )
                 policy = r.book.risk(group["source"], conn)
                 capital_budget = self.capital.addition_budget(
                     conn, group["source"], "portfolio:" + group["id"], account
@@ -932,6 +989,9 @@ class ManagedPortfolios:
             # reconcile any fill that committed while cancellation propagated.
             raise
         except Exception as exc:
+            if isinstance(exc, PlatformError) and exc.code == "funding_pending":
+                self._wait_for_funding(group, batch, exc)
+                return
             if isinstance(exc, PlatformError) and exc.code == "portfolio_valuation_retry":
                 with self.store.write() as conn:
                     self._active(group["id"], conn)
@@ -972,6 +1032,43 @@ class ManagedPortfolios:
                     {"group_id": group["id"], "batch_id": batch["id"], "error": error},
                 )
             await self._compensate(group, self.batch(batch["id"]))
+
+    def _wait_for_funding(self, group, batch, exc):
+        """Keep original targets/commands active; evidence waiting is not a fill failure."""
+        message = f"[{exc.code}] {exc.message}"[:1000]
+        with self.store.write() as conn:
+            active = self.get(group["id"], conn)
+            if active["status"] not in ACTIVE:
+                return
+            current = self.batch(batch["id"], conn) if batch else None
+            timestamp = now_ms()
+            conn.execute(
+                "UPDATE managed_portfolios SET last_error=?,updated_at=? WHERE id=?",
+                (message, timestamp, group["id"]),
+            )
+            if batch:
+                conn.execute(
+                    "UPDATE portfolio_batches SET error=?,updated_at=? WHERE id=?",
+                    (message, timestamp, batch["id"]),
+                )
+                conn.execute(
+                    "UPDATE portfolio_commands SET error=?,updated_at=? WHERE batch_id=? AND phase='add' AND status='pending'",
+                    (message, timestamp, batch["id"]),
+                )
+            if active["last_error"] != message or current and current["error"] != message:
+                self.store.audit(
+                    conn,
+                    group["source"],
+                    "portfolio.funding_wait",
+                    "Frozen portfolio execution awaits realized account funding evidence",
+                    {
+                        "group_id": group["id"],
+                        "batch_id": batch["id"] if batch else None,
+                        "code": exc.code,
+                        "message": exc.message,
+                        "pending_funding": self.runtime.book.deferred_funding.pending(group["source"], conn),
+                    },
+                )
 
     async def _compensate(self, group, batch):
         try:
@@ -1020,8 +1117,8 @@ class ManagedPortfolios:
             self._active(group["id"], conn)
             timestamp = now_ms()
             conn.execute(
-                "UPDATE portfolio_batches SET status=?,updated_at=? WHERE id=?",
-                (status, timestamp, batch["id"]),
+                "UPDATE portfolio_batches SET status=?,error=CASE WHEN ?='completed' THEN NULL ELSE error END,updated_at=? WHERE id=?",
+                (status, status, timestamp, batch["id"]),
             )
             conn.execute(
                 "UPDATE managed_portfolios SET status=?,last_bar=?,last_error=?,updated_at=? WHERE id=?",

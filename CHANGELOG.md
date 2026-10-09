@@ -2,6 +2,7 @@
 
 ## 0.10.0 · 2026-10-09
 
+- Mixed-group funding publication waits preserve original targets, partial fills and pending commands across restart; evidence waiting cannot masquerade as a terminal execution failure. Stop and protection remain available, while actual execution failures still compensate.
 - Shared historical/forward execution contracts, typed causal lifecycle events, inspectable source imports and immutable final-evaluation bindings.
 - Durable settlement-time funding obligations preserve original inventory/owner quantities across late publication, close/reopen, restart and same-identity contract-unit conversion; protection remains available while economics are incomplete.
 - Account-wide capital commitments include manual inventory, pending orders, post-fill fees/spread and underlying/gross limits. Activation revalidates fresh full-account economics in the write transaction; stopped inventory retains its commitment until resolved.
