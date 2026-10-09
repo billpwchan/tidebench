@@ -1,0 +1,33 @@
+{
+  "source_sha256": "7cb3d294c453a468bb93894fbea4055b96b7c733f4039ad3c3ce01e2f770e850",
+  "observations": [
+    {
+      "case": "spot_sell",
+      "estimated_cash_after": "10010",
+      "cash_after": "10010",
+      "insurance_debt": "0",
+      "estimated_insurance_debt_after": "0"
+    },
+    {
+      "case": "swap_long",
+      "estimated_cash_after": "10000.00",
+      "cash_after": "10000.00",
+      "insurance_debt": "0",
+      "estimated_insurance_debt_after": "0"
+    },
+    {
+      "case": "swap_short",
+      "estimated_cash_after": "10000.00",
+      "cash_after": "10000.00",
+      "insurance_debt": "0",
+      "estimated_insurance_debt_after": "0"
+    },
+    {
+      "case": "swap_debt",
+      "estimated_cash_after": "9990.00",
+      "cash_after": "9990.00",
+      "insurance_debt": "89.00",
+      "estimated_insurance_debt_after": "89.00"
+    }
+  ]
+}

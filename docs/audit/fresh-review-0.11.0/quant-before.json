@@ -1,0 +1,79 @@
+{
+  "source_commit": "8ef6b98",
+  "retained_single_trials": {
+    "before_counts": {
+      "run_count": 1,
+      "candidate_configurations": 2
+    },
+    "after_counts": {
+      "run_count": 0,
+      "candidate_configurations": 0
+    },
+    "retained": {
+      "research_reservations": 0,
+      "research_exposures": 1,
+      "research_consumptions": 0,
+      "research_trials": 1
+    },
+    "actual_facts": [
+      {
+        "kind": "single",
+        "run_id": "7eebc8a86ec5412bba0f12a757f0ea80",
+        "candidate_count": 2,
+        "project_id": "6ff84199cec14c3c8642ee6ebf48e804"
+      }
+    ]
+  },
+  "post_test_fold_selection": {
+    "fold_returns": [
+      {
+        "id": "fold-1",
+        "test_return": -0.11846214241404,
+        "fast": 5
+      },
+      {
+        "id": "fold-2",
+        "test_return": -0.15891847841919,
+        "fast": 5
+      },
+      {
+        "id": "fold-3",
+        "test_return": 0.42798034154525694,
+        "fast": 5
+      }
+    ],
+    "winner": "fold-3",
+    "selection_scope": "training_selected_independent_oos_fold",
+    "required_acknowledgements": [],
+    "approval_status": "approved",
+    "release_definition": {
+      "allocation": "0.1",
+      "atr_period": 14,
+      "efficiency_max": "0.35",
+      "entry": "30",
+      "exit": "60",
+      "fast": 5,
+      "kind": "sma_cross",
+      "max_bar_vol_pct": "5",
+      "max_holding_bars": 0,
+      "momentum_entry": "0.5",
+      "momentum_horizons": [
+        42,
+        84,
+        168
+      ],
+      "reversion_trend_window": 84,
+      "risk_per_trade_pct": "0",
+      "rsi_period": 14,
+      "rules": [],
+      "slow": 20,
+      "stop_loss_pct": "0",
+      "take_profit_pct": "0",
+      "trailing_stop_pct": "0",
+      "vol_window": 42,
+      "window": 20,
+      "z_entry": "2",
+      "z_exit": "0.5"
+    }
+  }
+}

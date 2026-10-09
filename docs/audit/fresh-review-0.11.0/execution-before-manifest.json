@@ -1,0 +1,15 @@
+{
+  "source_commit": "8ef6b98",
+  "source_sha256": {
+    "backend/tidebench/catalog.py": "602619db690b07819f1d3dc8bf9d49ff10a7a15b5ddc2210e649845a2fcdccc9",
+    "backend/tidebench/pro_execution.py": "528aeabaa08559c13dc6df8156ac37dbffbc76e28874121dda152845c0a00186",
+    "backend/tidebench/pro_service.py": "ab51a47691bce2c166e65810e20eac2c184c61457a08a4c6e15ad2290f6f9d2c",
+    "backend/tidebench/pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+    "backend/tidebench/contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200"
+  },
+  "artifact_sha256": {
+    "tidebench-v11-data-execution-observations.json": "1b6d70afb07f7f5572a2838b0ec10e2f63848be03b334c109bd3bd764f342aad",
+    "tidebench-v11-data-execution-probe.py": "826a63a185966666cf76e7c86cf0d70f231bd5c8b4a976e7076ce53f9311c78e"
+  },
+  "scope": "Temporary SQLite, synthetic MockTransport public response fixtures; no primary data or credentials, no venue orders, no repository mutation during before probe."
+}

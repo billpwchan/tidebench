@@ -1,0 +1,183 @@
+{
+  "audited_version": "0.11.0",
+  "stage": "working-tree-observation",
+  "research_implementation": {
+    "schema_version": 1,
+    "application_version": "0.11.0",
+    "code_fingerprint": "1735a8f70354b86a740f59666b42371ef42b6a263dd378a387566192d6123212",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "ff28ad8cb5641dfa407bd9d28e96c30587c33f0d1a3673bf6f12c83729c469fc",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+      "pro_api.py": "e140ef02d74ead50ef52fb5f6c4cb0ebcb163d2d3565f811ae964b1112489bb5",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "b1e999be651c5770f12f4a4f55cb0bde2bd5ba98ef12dda5da58d9ddeb7b75a8",
+      "strategy_registry.py": "d11efc7a39e1c436643857da2428cfbcce55a4774a272bfbcfa0cb850bbf8741",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "5b94403613dc72f12ca3f2585e035cf84222d16f48fd12551a8238c330e311f4",
+      "research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+      "research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+      "portfolio_registry.py": "929b7f8755fe91d2e106a96f137761c54337e57befd411eafb11ba1dbe811dfb",
+      "portfolio_releases.py": "ce622f9e69dd0388cf11c950c13cbf187c45e8e608173279e6824c91f86840a6",
+      "managed_portfolios.py": "9ac1db43e51d87298948673efbd5ad3311f0a27f3cd92f45182f746f7526bcbc",
+      "portfolio_research.py": "71ad12b8b0d27a80201bf1179104a1949a29ecf9f79f43542208ebd01414fd54",
+      "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+      "portfolio_execution.py": "b51b3dd9d7747bf5dae5407b9b8a8083ee6f95578671675ef9fda909bd05c4ff",
+      "historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "7cb3d294c453a468bb93894fbea4055b96b7c733f4039ad3c3ce01e2f770e850",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "7672e4cd5f082983b589616ffa539726033f665d686a8caeeefc7185a25d69bb",
+      "forward_performance.py": "1237a6ac66c246e7dc913be82f3ea5fad71fa21d73b30279b1bed439bc871c28",
+      "liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+      "contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "implementation_sha256": {
+    "backend/tidebench/__init__.py": "afd25b3917a5cbe8ceb600cc8ca33be4b42ee1fb952394444a05868b47d21135",
+    "backend/tidebench/pro_service.py": "b1e999be651c5770f12f4a4f55cb0bde2bd5ba98ef12dda5da58d9ddeb7b75a8",
+    "backend/tidebench/pro_execution.py": "7cb3d294c453a468bb93894fbea4055b96b7c733f4039ad3c3ce01e2f770e850",
+    "backend/tidebench/main.py": "ef61548250ac2714b6dab2d3c73f3b5d55c03dde1aceb2f3ac2b3769c4742d66",
+    "backend/tidebench/schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+    "frontend/src/pages/ProResearch.tsx": "10cfb2b7923f49b6dde71bb39d1e45864593718d455401525e4b621429eb77a2",
+    "frontend/src/pages/Portfolio.tsx": "210f7fd0d83ed4e09b3aafff0da996c2b7c544e7b5ca16bae2135419004ac6e1"
+  },
+  "data_source": "isolated synthetic fixtures",
+  "venue_requests": 0,
+  "observations": [
+    {
+      "id": "RT-02",
+      "observation": "starting_strategy_adopts_and_reverses_existing_manual_inventory",
+      "manual_quantity_before": "100",
+      "quantity_after": "100",
+      "strategy_close_orders": 0,
+      "explicit_adoption_field_in_saved_config": false,
+      "deployment_admission_error": "deployment_inventory"
+    },
+    {
+      "id": "RT-06",
+      "observation": "controllable_example_clock_advances_forward_decisions",
+      "market_time_advanced_ms": 14400000,
+      "new_bars_per_decision": [
+        2000,
+        1,
+        1,
+        1,
+        1
+      ],
+      "last_evaluated_bar": 1767236400000
+    },
+    {
+      "id": "RT-04",
+      "observation": "incremental_forward_history_stores_only_new_confirmed_bars",
+      "windows": 5,
+      "bootstrap_bars": 2000,
+      "stored_records": 2005,
+      "distinct_bar_timestamps": 2005,
+      "database_allocated_bytes": 2240512,
+      "caveat": "Actual forward scheduler path with a synthetic clock; no storage-capacity extrapolation."
+    },
+    {
+      "id": "RT-03",
+      "observation": "preexisting_manual_pending_order_fills_after_strategy_takes_market",
+      "active_strategy": null,
+      "deployment_admission_error": "deployment_pending_orders",
+      "pending_order_status_after": "pending",
+      "quantity_after": "0"
+    },
+    {
+      "id": "RT-01",
+      "observation": "strategy_history_wait_blocks_pending_order_and_risk_polling",
+      "injected_wait_ms": 6000,
+      "quote_reads_during_wait": 1,
+      "stop_order_status_during_triggered_price": "filled",
+      "task_alive": true
+    },
+    {
+      "id": "RT-10",
+      "observation": "reserved_actor_usernames_bypass_manual_strategy_ownership",
+      "outcomes": [
+        {
+          "username": "pending-order",
+          "manual_order_accepted": false,
+          "error": "Stop the strategy before adding manual risk to its market."
+        },
+        {
+          "username": "risk-engine",
+          "manual_order_accepted": false,
+          "error": "Stop the strategy before adding manual risk to its market."
+        }
+      ],
+      "caveat": "These names satisfy the workspace username policy; this is a local simulation ownership bypass, not exchange trading access."
+    },
+    {
+      "id": "RT-07",
+      "observation": "execution_cycle_dispatches_each_held_market_once",
+      "held_markets": 3,
+      "logical_snapshot_dispatches": 3,
+      "caveat": "Logical calls, not measured venue HTTP calls; the 1.5s provider cache can coalesce fast repeats."
+    },
+    {
+      "id": "RT-05",
+      "observation": "oos_api_supports_candidates_but_ui_omits_grid_in_oos_modes",
+      "training_candidates_without_grid": 1,
+      "training_candidates_with_grid": 2,
+      "ui_evidence": "Inspect ProResearch and browser acceptance separately; this observation measures engine candidate handling only."
+    },
+    {
+      "id": "RT-08",
+      "observation": "research_candidates_share_inputs_and_results_are_compressed",
+      "cases": 4,
+      "bars_per_case": 240,
+      "json_bytes": 608759,
+      "compressed_bytes": 107586,
+      "shared_input_sets": 1,
+      "selected_detail_json_bytes": 159384,
+      "bytes_per_bar_case": 634.1,
+      "caveat": "Small measured artifact only; no OOM at the maximum budget was injected."
+    },
+    {
+      "id": "RT-09",
+      "observation": "bounded_strategy_program_and_shared_capital_portfolio_models_are_available",
+      "reference_rules": [
+        "sma_cross",
+        "rsi_reversion",
+        "buy_hold",
+        "close_breakout",
+        "zscore_reversion"
+      ],
+      "program_limits": {
+        "rules": 4,
+        "conditions_per_rule": 4,
+        "arbitrary_code": false
+      },
+      "portfolio_modes": [
+        "fixed_weights",
+        "independent_signals",
+        "momentum",
+        "funding_carry"
+      ],
+      "caveat": "Program causality, portfolio semantics and rendered workflows are separately tested. No investment edge or order-book capacity is implied."
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "source": "8ef6b98",
+  "stop_after_partial": {
+    "position": "50",
+    "stop_status": "pending",
+    "error": {
+      "error": "Reduce-only orders cannot open or reverse a position.",
+      "at": 1791545982566,
+      "order_id": "8a72782f9fd54dd1b1b7b6313f10a229"
+    },
+    "after_restart_position": "50",
+    "after_restart_pending_count": 1,
+    "after_restart_error": {
+      "error": "Reduce-only orders cannot open or reverse a position.",
+      "at": 1791545982586,
+      "order_id": "8a72782f9fd54dd1b1b7b6313f10a229"
+    }
+  },
+  "stale_funding": {
+    "first_order": "filled",
+    "second_order": "filled",
+    "funding_age_ms": 172801035,
+    "index_age_ms": 172801035,
+    "valuation_status": "fresh",
+    "economic_status": "complete",
+    "pending_funding": [],
+    "equity": "10000.00",
+    "position_meta": {
+      "base": "BTC",
+      "contract_size_base": "0.01",
+      "ct_mult": "1",
+      "ct_type": "linear",
+      "ct_val": "0.01",
+      "ct_val_ccy": "BTC",
+      "evidence_scope": "forward_observation",
+      "expected_funding_time": null,
+      "expiry_time": null,
+      "inst_family": "BTC-USDT",
+      "inst_id": "BTC-USDT-SWAP",
+      "inst_type": "SWAP",
+      "instrument_version": "dd23fc0421c763c69d733d9c7e12d82ba0b29544658b536d18ce33aa1f2b2ce7",
+      "inventory_effective_at": 1791545983267,
+      "list_time": 1609459200000,
+      "lot_size": "0.01",
+      "metadata_known_at": 1791545982610,
+      "min_size": "0.01",
+      "observation_id": "52d9b3fd4e014eb09980e49e73527058",
+      "observed_at": 1791545982610,
+      "observed_funding_times": [],
+      "position_generation": "5054770522f4497d97f9a19c1a3711e5",
+      "position_opened_at": 1791545983253,
+      "quantity_unit": "contracts",
+      "quote": "USDT",
+      "settle_ccy": "USDT",
+      "source": "okx",
+      "state": "live",
+      "synthetic": false,
+      "tick_size": "0.1"
+    },
+    "watch_state": "stale",
+    "watch_stale_fields": [
+      "index_ts",
+      "funding_ts"
+    ],
+    "endpoints": [
+      "/api/v5/public/instruments",
+      "/api/v5/public/mark-price",
+      "/api/v5/market/index-tickers",
+      "/api/v5/public/funding-rate",
+      "/api/v5/market/ticker",
+      "/api/v5/public/position-tiers",
+      "/api/v5/public/mark-price",
+      "/api/v5/market/index-tickers",
+      "/api/v5/public/funding-rate"
+    ]
+  }
+}

@@ -1,0 +1,1783 @@
+{
+  "scope": "Real public REST observations and isolated local-paper orders; no credentials or venue orders; no funding-boundary or operating-duration claim.",
+  "implementation": {
+    "schema_version": 1,
+    "application_version": "0.11.0",
+    "code_fingerprint": "7cd26659ebc5a9b100e1716c829d3626f364d2c37d429c23d50b71a8187e16c0",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "15a04c1403c458ff1792f51d05b5c9c3a963f684e8979dbd96b8d31191824121",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+      "pro_api.py": "e140ef02d74ead50ef52fb5f6c4cb0ebcb163d2d3565f811ae964b1112489bb5",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "b1e999be651c5770f12f4a4f55cb0bde2bd5ba98ef12dda5da58d9ddeb7b75a8",
+      "strategy_registry.py": "d11efc7a39e1c436643857da2428cfbcce55a4774a272bfbcfa0cb850bbf8741",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "5b94403613dc72f12ca3f2585e035cf84222d16f48fd12551a8238c330e311f4",
+      "research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+      "research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+      "portfolio_registry.py": "929b7f8755fe91d2e106a96f137761c54337e57befd411eafb11ba1dbe811dfb",
+      "portfolio_releases.py": "ce622f9e69dd0388cf11c950c13cbf187c45e8e608173279e6824c91f86840a6",
+      "managed_portfolios.py": "9ac1db43e51d87298948673efbd5ad3311f0a27f3cd92f45182f746f7526bcbc",
+      "portfolio_research.py": "71ad12b8b0d27a80201bf1179104a1949a29ecf9f79f43542208ebd01414fd54",
+      "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+      "portfolio_execution.py": "b51b3dd9d7747bf5dae5407b9b8a8083ee6f95578671675ef9fda909bd05c4ff",
+      "historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "7cb3d294c453a468bb93894fbea4055b96b7c733f4039ad3c3ce01e2f770e850",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "7672e4cd5f082983b589616ffa539726033f665d686a8caeeefc7185a25d69bb",
+      "forward_performance.py": "1237a6ac66c246e7dc913be82f3ea5fad71fa21d73b30279b1bed439bc871c28",
+      "liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+      "contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "started_at": 1791549040277,
+  "passed": false,
+  "captured_snapshot": {
+    "source": "okx",
+    "synthetic": false,
+    "inst_id": "BTC-USDT-SWAP",
+    "mark_price": "83068.5",
+    "mark_ts": 1791549040747,
+    "index_price": "83101.1",
+    "index_ts": 1791549040354,
+    "funding_rate": "-0.0000194488341136",
+    "funding_time": 1791561600000,
+    "next_funding_time": 1791590400000,
+    "current_interval_ms": 28800000,
+    "funding_ts": 1791549009246,
+    "funding_inst_id": "BTC-USDT-SWAP",
+    "funding_source": "okx",
+    "settled_funding_rate": "0.0000067299443332",
+    "settlement_state": "settled",
+    "formula_type": "withRate",
+    "method": "current_period",
+    "observed_at": 1791549041285,
+    "transport": "rest",
+    "instrument": {
+      "inst_id": "BTC-USDT-SWAP",
+      "inst_type": "SWAP",
+      "inst_family": "BTC-USDT",
+      "base": "BTC",
+      "quote": "USDT",
+      "settle_ccy": "USDT",
+      "ct_type": "linear",
+      "ct_val": "0.01",
+      "ct_mult": "1",
+      "ct_val_ccy": "BTC",
+      "contract_size_base": "0.01",
+      "tick_size": "0.1",
+      "lot_size": "0.01",
+      "min_size": "0.01",
+      "state": "live",
+      "quantity_unit": "contracts",
+      "source": "okx",
+      "synthetic": false,
+      "observed_at": 1791549040580,
+      "list_time": 1573557408000,
+      "expiry_time": null,
+      "instrument_version": "b031aa838f5a9c9bfde0f4a78f57e7f0710ed8f6c1dc0b9c0b88d7775a39fdbd",
+      "observation_id": "440e40b6557642f5a2a68b898f78b8e3",
+      "metadata_known_at": 1791549040580,
+      "evidence_scope": "forward_observation"
+    },
+    "warning": null,
+    "ts": 1791549040773,
+    "last": "83069.9",
+    "bid": "83069.9",
+    "ask": "83070",
+    "mark": "83068.5",
+    "index": "83101.1",
+    "margin_tiers": [
+      {
+        "tier": 1,
+        "min_size": "0",
+        "max_size": "1000",
+        "mmr": "0.004",
+        "imr": "0.01",
+        "max_leverage": "100"
+      },
+      {
+        "tier": 2,
+        "min_size": "1000.01",
+        "max_size": "5000",
+        "mmr": "0.005",
+        "imr": "0.015",
+        "max_leverage": "66.66"
+      },
+      {
+        "tier": 3,
+        "min_size": "5000.01",
+        "max_size": "20000",
+        "mmr": "0.0075",
+        "imr": "0.02",
+        "max_leverage": "50"
+      },
+      {
+        "tier": 4,
+        "min_size": "20000.01",
+        "max_size": "40000",
+        "mmr": "0.0125",
+        "imr": "0.025",
+        "max_leverage": "40"
+      },
+      {
+        "tier": 5,
+        "min_size": "40000.01",
+        "max_size": "60000",
+        "mmr": "0.0175",
+        "imr": "0.03",
+        "max_leverage": "33.33"
+      },
+      {
+        "tier": 6,
+        "min_size": "60000.01",
+        "max_size": "80000",
+        "mmr": "0.0225",
+        "imr": "0.035",
+        "max_leverage": "28.57"
+      },
+      {
+        "tier": 7,
+        "min_size": "80000.01",
+        "max_size": "100000",
+        "mmr": "0.0275",
+        "imr": "0.04",
+        "max_leverage": "25"
+      },
+      {
+        "tier": 8,
+        "min_size": "100000.01",
+        "max_size": "120000",
+        "mmr": "0.0325",
+        "imr": "0.045",
+        "max_leverage": "22.22"
+      },
+      {
+        "tier": 9,
+        "min_size": "120000.01",
+        "max_size": "140000",
+        "mmr": "0.0375",
+        "imr": "0.05",
+        "max_leverage": "20"
+      },
+      {
+        "tier": 10,
+        "min_size": "140000.01",
+        "max_size": "160000",
+        "mmr": "0.0425",
+        "imr": "0.055",
+        "max_leverage": "18.18"
+      },
+      {
+        "tier": 11,
+        "min_size": "160000.01",
+        "max_size": "180000",
+        "mmr": "0.0475",
+        "imr": "0.06",
+        "max_leverage": "16.66"
+      },
+      {
+        "tier": 12,
+        "min_size": "180000.01",
+        "max_size": "200000",
+        "mmr": "0.0525",
+        "imr": "0.065",
+        "max_leverage": "15.38"
+      },
+      {
+        "tier": 13,
+        "min_size": "200000.01",
+        "max_size": "220000",
+        "mmr": "0.0575",
+        "imr": "0.07",
+        "max_leverage": "14.28"
+      },
+      {
+        "tier": 14,
+        "min_size": "220000.01",
+        "max_size": "240000",
+        "mmr": "0.0625",
+        "imr": "0.075",
+        "max_leverage": "13.33"
+      },
+      {
+        "tier": 15,
+        "min_size": "240000.01",
+        "max_size": "260000",
+        "mmr": "0.0675",
+        "imr": "0.08",
+        "max_leverage": "12.5"
+      },
+      {
+        "tier": 16,
+        "min_size": "260000.01",
+        "max_size": "280000",
+        "mmr": "0.0725",
+        "imr": "0.085",
+        "max_leverage": "11.76"
+      },
+      {
+        "tier": 17,
+        "min_size": "280000.01",
+        "max_size": "300000",
+        "mmr": "0.0775",
+        "imr": "0.09",
+        "max_leverage": "11.11"
+      },
+      {
+        "tier": 18,
+        "min_size": "300000.01",
+        "max_size": "320000",
+        "mmr": "0.0825",
+        "imr": "0.095",
+        "max_leverage": "10.52"
+      },
+      {
+        "tier": 19,
+        "min_size": "320000.01",
+        "max_size": "340000",
+        "mmr": "0.0875",
+        "imr": "0.1",
+        "max_leverage": "10"
+      },
+      {
+        "tier": 20,
+        "min_size": "340000.01",
+        "max_size": "360000",
+        "mmr": "0.0925",
+        "imr": "0.105",
+        "max_leverage": "9.52"
+      },
+      {
+        "tier": 21,
+        "min_size": "360000.01",
+        "max_size": "380000",
+        "mmr": "0.0975",
+        "imr": "0.11",
+        "max_leverage": "9.09"
+      },
+      {
+        "tier": 22,
+        "min_size": "380000.01",
+        "max_size": "400000",
+        "mmr": "0.1025",
+        "imr": "0.115",
+        "max_leverage": "8.69"
+      },
+      {
+        "tier": 23,
+        "min_size": "400000.01",
+        "max_size": "420000",
+        "mmr": "0.1075",
+        "imr": "0.12",
+        "max_leverage": "8.33"
+      },
+      {
+        "tier": 24,
+        "min_size": "420000.01",
+        "max_size": "440000",
+        "mmr": "0.1125",
+        "imr": "0.125",
+        "max_leverage": "8"
+      },
+      {
+        "tier": 25,
+        "min_size": "440000.01",
+        "max_size": "460000",
+        "mmr": "0.1175",
+        "imr": "0.13",
+        "max_leverage": "7.69"
+      },
+      {
+        "tier": 26,
+        "min_size": "460000.01",
+        "max_size": "480000",
+        "mmr": "0.1225",
+        "imr": "0.135",
+        "max_leverage": "7.4"
+      },
+      {
+        "tier": 27,
+        "min_size": "480000.01",
+        "max_size": "500000",
+        "mmr": "0.1275",
+        "imr": "0.14",
+        "max_leverage": "7.14"
+      },
+      {
+        "tier": 28,
+        "min_size": "500000.01",
+        "max_size": "520000",
+        "mmr": "0.1325",
+        "imr": "0.145",
+        "max_leverage": "6.89"
+      },
+      {
+        "tier": 29,
+        "min_size": "520000.01",
+        "max_size": "540000",
+        "mmr": "0.1375",
+        "imr": "0.15",
+        "max_leverage": "6.66"
+      },
+      {
+        "tier": 30,
+        "min_size": "540000.01",
+        "max_size": "560000",
+        "mmr": "0.1425",
+        "imr": "0.155",
+        "max_leverage": "6.45"
+      },
+      {
+        "tier": 31,
+        "min_size": "560000.01",
+        "max_size": "580000",
+        "mmr": "0.1475",
+        "imr": "0.16",
+        "max_leverage": "6.25"
+      },
+      {
+        "tier": 32,
+        "min_size": "580000.01",
+        "max_size": "600000",
+        "mmr": "0.1525",
+        "imr": "0.165",
+        "max_leverage": "6.06"
+      },
+      {
+        "tier": 33,
+        "min_size": "600000.01",
+        "max_size": "620000",
+        "mmr": "0.1575",
+        "imr": "0.17",
+        "max_leverage": "5.88"
+      },
+      {
+        "tier": 34,
+        "min_size": "620000.01",
+        "max_size": "640000",
+        "mmr": "0.1625",
+        "imr": "0.175",
+        "max_leverage": "5.71"
+      },
+      {
+        "tier": 35,
+        "min_size": "640000.01",
+        "max_size": "660000",
+        "mmr": "0.1675",
+        "imr": "0.18",
+        "max_leverage": "5.55"
+      },
+      {
+        "tier": 36,
+        "min_size": "660000.01",
+        "max_size": "680000",
+        "mmr": "0.1725",
+        "imr": "0.185",
+        "max_leverage": "5.4"
+      },
+      {
+        "tier": 37,
+        "min_size": "680000.01",
+        "max_size": "700000",
+        "mmr": "0.1775",
+        "imr": "0.19",
+        "max_leverage": "5.26"
+      },
+      {
+        "tier": 38,
+        "min_size": "700000.01",
+        "max_size": "720000",
+        "mmr": "0.1825",
+        "imr": "0.195",
+        "max_leverage": "5.12"
+      },
+      {
+        "tier": 39,
+        "min_size": "720000.01",
+        "max_size": "740000",
+        "mmr": "0.1875",
+        "imr": "0.2",
+        "max_leverage": "5"
+      },
+      {
+        "tier": 40,
+        "min_size": "740000.01",
+        "max_size": "760000",
+        "mmr": "0.1925",
+        "imr": "0.205",
+        "max_leverage": "4.87"
+      },
+      {
+        "tier": 41,
+        "min_size": "760000.01",
+        "max_size": "780000",
+        "mmr": "0.1975",
+        "imr": "0.21",
+        "max_leverage": "4.76"
+      },
+      {
+        "tier": 42,
+        "min_size": "780000.01",
+        "max_size": "800000",
+        "mmr": "0.2025",
+        "imr": "0.215",
+        "max_leverage": "4.65"
+      },
+      {
+        "tier": 43,
+        "min_size": "800000.01",
+        "max_size": "820000",
+        "mmr": "0.2075",
+        "imr": "0.22",
+        "max_leverage": "4.54"
+      },
+      {
+        "tier": 44,
+        "min_size": "820000.01",
+        "max_size": "840000",
+        "mmr": "0.2125",
+        "imr": "0.225",
+        "max_leverage": "4.44"
+      },
+      {
+        "tier": 45,
+        "min_size": "840000.01",
+        "max_size": "860000",
+        "mmr": "0.2175",
+        "imr": "0.23",
+        "max_leverage": "4.34"
+      },
+      {
+        "tier": 46,
+        "min_size": "860000.01",
+        "max_size": "880000",
+        "mmr": "0.2225",
+        "imr": "0.235",
+        "max_leverage": "4.25"
+      },
+      {
+        "tier": 47,
+        "min_size": "880000.01",
+        "max_size": "900000",
+        "mmr": "0.2275",
+        "imr": "0.24",
+        "max_leverage": "4.16"
+      },
+      {
+        "tier": 48,
+        "min_size": "900000.01",
+        "max_size": "920000",
+        "mmr": "0.2325",
+        "imr": "0.245",
+        "max_leverage": "4.08"
+      },
+      {
+        "tier": 49,
+        "min_size": "920000.01",
+        "max_size": "940000",
+        "mmr": "0.2375",
+        "imr": "0.25",
+        "max_leverage": "4"
+      },
+      {
+        "tier": 50,
+        "min_size": "940000.01",
+        "max_size": "960000",
+        "mmr": "0.2425",
+        "imr": "0.255",
+        "max_leverage": "3.92"
+      },
+      {
+        "tier": 51,
+        "min_size": "960000.01",
+        "max_size": "980000",
+        "mmr": "0.2475",
+        "imr": "0.26",
+        "max_leverage": "3.84"
+      },
+      {
+        "tier": 52,
+        "min_size": "980000.01",
+        "max_size": "1000000",
+        "mmr": "0.2525",
+        "imr": "0.265",
+        "max_leverage": "3.77"
+      },
+      {
+        "tier": 53,
+        "min_size": "1000000.01",
+        "max_size": "1020000",
+        "mmr": "0.2575",
+        "imr": "0.27",
+        "max_leverage": "3.7"
+      },
+      {
+        "tier": 54,
+        "min_size": "1020000.01",
+        "max_size": "1040000",
+        "mmr": "0.2625",
+        "imr": "0.275",
+        "max_leverage": "3.63"
+      },
+      {
+        "tier": 55,
+        "min_size": "1040000.01",
+        "max_size": "1060000",
+        "mmr": "0.2675",
+        "imr": "0.28",
+        "max_leverage": "3.57"
+      },
+      {
+        "tier": 56,
+        "min_size": "1060000.01",
+        "max_size": "1080000",
+        "mmr": "0.2725",
+        "imr": "0.285",
+        "max_leverage": "3.5"
+      },
+      {
+        "tier": 57,
+        "min_size": "1080000.01",
+        "max_size": "1100000",
+        "mmr": "0.2775",
+        "imr": "0.29",
+        "max_leverage": "3.44"
+      },
+      {
+        "tier": 58,
+        "min_size": "1100000.01",
+        "max_size": "1120000",
+        "mmr": "0.2825",
+        "imr": "0.295",
+        "max_leverage": "3.38"
+      },
+      {
+        "tier": 59,
+        "min_size": "1120000.01",
+        "max_size": "1140000",
+        "mmr": "0.2875",
+        "imr": "0.3",
+        "max_leverage": "3.33"
+      },
+      {
+        "tier": 60,
+        "min_size": "1140000.01",
+        "max_size": "1160000",
+        "mmr": "0.2925",
+        "imr": "0.305",
+        "max_leverage": "3.27"
+      },
+      {
+        "tier": 61,
+        "min_size": "1160000.01",
+        "max_size": "1180000",
+        "mmr": "0.2975",
+        "imr": "0.31",
+        "max_leverage": "3.22"
+      },
+      {
+        "tier": 62,
+        "min_size": "1180000.01",
+        "max_size": "1200000",
+        "mmr": "0.3025",
+        "imr": "0.315",
+        "max_leverage": "3.17"
+      },
+      {
+        "tier": 63,
+        "min_size": "1200000.01",
+        "max_size": "1220000",
+        "mmr": "0.3075",
+        "imr": "0.32",
+        "max_leverage": "3.12"
+      },
+      {
+        "tier": 64,
+        "min_size": "1220000.01",
+        "max_size": "1240000",
+        "mmr": "0.3125",
+        "imr": "0.325",
+        "max_leverage": "3.07"
+      },
+      {
+        "tier": 65,
+        "min_size": "1240000.01",
+        "max_size": "1260000",
+        "mmr": "0.3175",
+        "imr": "0.33",
+        "max_leverage": "3.03"
+      },
+      {
+        "tier": 66,
+        "min_size": "1260000.01",
+        "max_size": "1280000",
+        "mmr": "0.3225",
+        "imr": "0.335",
+        "max_leverage": "2.98"
+      },
+      {
+        "tier": 67,
+        "min_size": "1280000.01",
+        "max_size": "1300000",
+        "mmr": "0.3275",
+        "imr": "0.34",
+        "max_leverage": "2.94"
+      },
+      {
+        "tier": 68,
+        "min_size": "1300000.01",
+        "max_size": "1320000",
+        "mmr": "0.3325",
+        "imr": "0.345",
+        "max_leverage": "2.89"
+      },
+      {
+        "tier": 69,
+        "min_size": "1320000.01",
+        "max_size": "1340000",
+        "mmr": "0.3375",
+        "imr": "0.35",
+        "max_leverage": "2.85"
+      },
+      {
+        "tier": 70,
+        "min_size": "1340000.01",
+        "max_size": "1360000",
+        "mmr": "0.3425",
+        "imr": "0.355",
+        "max_leverage": "2.81"
+      },
+      {
+        "tier": 71,
+        "min_size": "1360000.01",
+        "max_size": "1380000",
+        "mmr": "0.3475",
+        "imr": "0.36",
+        "max_leverage": "2.77"
+      },
+      {
+        "tier": 72,
+        "min_size": "1380000.01",
+        "max_size": "1400000",
+        "mmr": "0.3525",
+        "imr": "0.365",
+        "max_leverage": "2.73"
+      },
+      {
+        "tier": 73,
+        "min_size": "1400000.01",
+        "max_size": "1420000",
+        "mmr": "0.3575",
+        "imr": "0.37",
+        "max_leverage": "2.7"
+      },
+      {
+        "tier": 74,
+        "min_size": "1420000.01",
+        "max_size": "1440000",
+        "mmr": "0.3625",
+        "imr": "0.375",
+        "max_leverage": "2.66"
+      },
+      {
+        "tier": 75,
+        "min_size": "1440000.01",
+        "max_size": "1460000",
+        "mmr": "0.3675",
+        "imr": "0.38",
+        "max_leverage": "2.63"
+      },
+      {
+        "tier": 76,
+        "min_size": "1460000.01",
+        "max_size": "1480000",
+        "mmr": "0.3725",
+        "imr": "0.385",
+        "max_leverage": "2.59"
+      },
+      {
+        "tier": 77,
+        "min_size": "1480000.01",
+        "max_size": "1500000",
+        "mmr": "0.3775",
+        "imr": "0.39",
+        "max_leverage": "2.56"
+      },
+      {
+        "tier": 78,
+        "min_size": "1500000.01",
+        "max_size": "1520000",
+        "mmr": "0.3825",
+        "imr": "0.395",
+        "max_leverage": "2.53"
+      },
+      {
+        "tier": 79,
+        "min_size": "1520000.01",
+        "max_size": "1540000",
+        "mmr": "0.3875",
+        "imr": "0.4",
+        "max_leverage": "2.5"
+      },
+      {
+        "tier": 80,
+        "min_size": "1540000.01",
+        "max_size": "1560000",
+        "mmr": "0.3925",
+        "imr": "0.405",
+        "max_leverage": "2.46"
+      },
+      {
+        "tier": 81,
+        "min_size": "1560000.01",
+        "max_size": "1580000",
+        "mmr": "0.3975",
+        "imr": "0.41",
+        "max_leverage": "2.43"
+      },
+      {
+        "tier": 82,
+        "min_size": "1580000.01",
+        "max_size": "1600000",
+        "mmr": "0.4025",
+        "imr": "0.415",
+        "max_leverage": "2.4"
+      },
+      {
+        "tier": 83,
+        "min_size": "1600000.01",
+        "max_size": "1620000",
+        "mmr": "0.4075",
+        "imr": "0.42",
+        "max_leverage": "2.38"
+      },
+      {
+        "tier": 84,
+        "min_size": "1620000.01",
+        "max_size": "1640000",
+        "mmr": "0.4125",
+        "imr": "0.425",
+        "max_leverage": "2.35"
+      },
+      {
+        "tier": 85,
+        "min_size": "1640000.01",
+        "max_size": "1660000",
+        "mmr": "0.4175",
+        "imr": "0.43",
+        "max_leverage": "2.32"
+      },
+      {
+        "tier": 86,
+        "min_size": "1660000.01",
+        "max_size": "1680000",
+        "mmr": "0.4225",
+        "imr": "0.435",
+        "max_leverage": "2.29"
+      },
+      {
+        "tier": 87,
+        "min_size": "1680000.01",
+        "max_size": "1700000",
+        "mmr": "0.4275",
+        "imr": "0.44",
+        "max_leverage": "2.27"
+      },
+      {
+        "tier": 88,
+        "min_size": "1700000.01",
+        "max_size": "1720000",
+        "mmr": "0.4325",
+        "imr": "0.445",
+        "max_leverage": "2.24"
+      },
+      {
+        "tier": 89,
+        "min_size": "1720000.01",
+        "max_size": "1740000",
+        "mmr": "0.4375",
+        "imr": "0.45",
+        "max_leverage": "2.22"
+      },
+      {
+        "tier": 90,
+        "min_size": "1740000.01",
+        "max_size": "1760000",
+        "mmr": "0.4425",
+        "imr": "0.455",
+        "max_leverage": "2.19"
+      },
+      {
+        "tier": 91,
+        "min_size": "1760000.01",
+        "max_size": "1780000",
+        "mmr": "0.4475",
+        "imr": "0.46",
+        "max_leverage": "2.17"
+      },
+      {
+        "tier": 92,
+        "min_size": "1780000.01",
+        "max_size": "1800000",
+        "mmr": "0.4525",
+        "imr": "0.465",
+        "max_leverage": "2.15"
+      },
+      {
+        "tier": 93,
+        "min_size": "1800000.01",
+        "max_size": "1820000",
+        "mmr": "0.4575",
+        "imr": "0.47",
+        "max_leverage": "2.12"
+      },
+      {
+        "tier": 94,
+        "min_size": "1820000.01",
+        "max_size": "1840000",
+        "mmr": "0.4625",
+        "imr": "0.475",
+        "max_leverage": "2.1"
+      },
+      {
+        "tier": 95,
+        "min_size": "1840000.01",
+        "max_size": "1860000",
+        "mmr": "0.4675",
+        "imr": "0.48",
+        "max_leverage": "2.08"
+      },
+      {
+        "tier": 96,
+        "min_size": "1860000.01",
+        "max_size": "1880000",
+        "mmr": "0.4725",
+        "imr": "0.485",
+        "max_leverage": "2.06"
+      },
+      {
+        "tier": 97,
+        "min_size": "1880000.01",
+        "max_size": "1900000",
+        "mmr": "0.4775",
+        "imr": "0.49",
+        "max_leverage": "2.04"
+      },
+      {
+        "tier": 98,
+        "min_size": "1900000.01",
+        "max_size": "1920000",
+        "mmr": "0.4825",
+        "imr": "0.495",
+        "max_leverage": "2.02"
+      },
+      {
+        "tier": 99,
+        "min_size": "1920000.01",
+        "max_size": "1940000",
+        "mmr": "0.4875",
+        "imr": "0.5",
+        "max_leverage": "2"
+      }
+    ],
+    "margin_tiers_snapshot": {
+      "source": "okx",
+      "synthetic": false,
+      "inst_id": "BTC-USDT-SWAP",
+      "td_mode": "isolated",
+      "observed_at": 1791549041285,
+      "unit": "contracts",
+      "historical": false,
+      "boundary_policy": "Model convention: minimum exclusive, maximum inclusive (min,max]; not exchange-verified boundary semantics.",
+      "tiers": [
+        {
+          "tier": 1,
+          "min_size": "0",
+          "max_size": "1000",
+          "mmr": "0.004",
+          "imr": "0.01",
+          "max_leverage": "100"
+        },
+        {
+          "tier": 2,
+          "min_size": "1000.01",
+          "max_size": "5000",
+          "mmr": "0.005",
+          "imr": "0.015",
+          "max_leverage": "66.66"
+        },
+        {
+          "tier": 3,
+          "min_size": "5000.01",
+          "max_size": "20000",
+          "mmr": "0.0075",
+          "imr": "0.02",
+          "max_leverage": "50"
+        },
+        {
+          "tier": 4,
+          "min_size": "20000.01",
+          "max_size": "40000",
+          "mmr": "0.0125",
+          "imr": "0.025",
+          "max_leverage": "40"
+        },
+        {
+          "tier": 5,
+          "min_size": "40000.01",
+          "max_size": "60000",
+          "mmr": "0.0175",
+          "imr": "0.03",
+          "max_leverage": "33.33"
+        },
+        {
+          "tier": 6,
+          "min_size": "60000.01",
+          "max_size": "80000",
+          "mmr": "0.0225",
+          "imr": "0.035",
+          "max_leverage": "28.57"
+        },
+        {
+          "tier": 7,
+          "min_size": "80000.01",
+          "max_size": "100000",
+          "mmr": "0.0275",
+          "imr": "0.04",
+          "max_leverage": "25"
+        },
+        {
+          "tier": 8,
+          "min_size": "100000.01",
+          "max_size": "120000",
+          "mmr": "0.0325",
+          "imr": "0.045",
+          "max_leverage": "22.22"
+        },
+        {
+          "tier": 9,
+          "min_size": "120000.01",
+          "max_size": "140000",
+          "mmr": "0.0375",
+          "imr": "0.05",
+          "max_leverage": "20"
+        },
+        {
+          "tier": 10,
+          "min_size": "140000.01",
+          "max_size": "160000",
+          "mmr": "0.0425",
+          "imr": "0.055",
+          "max_leverage": "18.18"
+        },
+        {
+          "tier": 11,
+          "min_size": "160000.01",
+          "max_size": "180000",
+          "mmr": "0.0475",
+          "imr": "0.06",
+          "max_leverage": "16.66"
+        },
+        {
+          "tier": 12,
+          "min_size": "180000.01",
+          "max_size": "200000",
+          "mmr": "0.0525",
+          "imr": "0.065",
+          "max_leverage": "15.38"
+        },
+        {
+          "tier": 13,
+          "min_size": "200000.01",
+          "max_size": "220000",
+          "mmr": "0.0575",
+          "imr": "0.07",
+          "max_leverage": "14.28"
+        },
+        {
+          "tier": 14,
+          "min_size": "220000.01",
+          "max_size": "240000",
+          "mmr": "0.0625",
+          "imr": "0.075",
+          "max_leverage": "13.33"
+        },
+        {
+          "tier": 15,
+          "min_size": "240000.01",
+          "max_size": "260000",
+          "mmr": "0.0675",
+          "imr": "0.08",
+          "max_leverage": "12.5"
+        },
+        {
+          "tier": 16,
+          "min_size": "260000.01",
+          "max_size": "280000",
+          "mmr": "0.0725",
+          "imr": "0.085",
+          "max_leverage": "11.76"
+        },
+        {
+          "tier": 17,
+          "min_size": "280000.01",
+          "max_size": "300000",
+          "mmr": "0.0775",
+          "imr": "0.09",
+          "max_leverage": "11.11"
+        },
+        {
+          "tier": 18,
+          "min_size": "300000.01",
+          "max_size": "320000",
+          "mmr": "0.0825",
+          "imr": "0.095",
+          "max_leverage": "10.52"
+        },
+        {
+          "tier": 19,
+          "min_size": "320000.01",
+          "max_size": "340000",
+          "mmr": "0.0875",
+          "imr": "0.1",
+          "max_leverage": "10"
+        },
+        {
+          "tier": 20,
+          "min_size": "340000.01",
+          "max_size": "360000",
+          "mmr": "0.0925",
+          "imr": "0.105",
+          "max_leverage": "9.52"
+        },
+        {
+          "tier": 21,
+          "min_size": "360000.01",
+          "max_size": "380000",
+          "mmr": "0.0975",
+          "imr": "0.11",
+          "max_leverage": "9.09"
+        },
+        {
+          "tier": 22,
+          "min_size": "380000.01",
+          "max_size": "400000",
+          "mmr": "0.1025",
+          "imr": "0.115",
+          "max_leverage": "8.69"
+        },
+        {
+          "tier": 23,
+          "min_size": "400000.01",
+          "max_size": "420000",
+          "mmr": "0.1075",
+          "imr": "0.12",
+          "max_leverage": "8.33"
+        },
+        {
+          "tier": 24,
+          "min_size": "420000.01",
+          "max_size": "440000",
+          "mmr": "0.1125",
+          "imr": "0.125",
+          "max_leverage": "8"
+        },
+        {
+          "tier": 25,
+          "min_size": "440000.01",
+          "max_size": "460000",
+          "mmr": "0.1175",
+          "imr": "0.13",
+          "max_leverage": "7.69"
+        },
+        {
+          "tier": 26,
+          "min_size": "460000.01",
+          "max_size": "480000",
+          "mmr": "0.1225",
+          "imr": "0.135",
+          "max_leverage": "7.4"
+        },
+        {
+          "tier": 27,
+          "min_size": "480000.01",
+          "max_size": "500000",
+          "mmr": "0.1275",
+          "imr": "0.14",
+          "max_leverage": "7.14"
+        },
+        {
+          "tier": 28,
+          "min_size": "500000.01",
+          "max_size": "520000",
+          "mmr": "0.1325",
+          "imr": "0.145",
+          "max_leverage": "6.89"
+        },
+        {
+          "tier": 29,
+          "min_size": "520000.01",
+          "max_size": "540000",
+          "mmr": "0.1375",
+          "imr": "0.15",
+          "max_leverage": "6.66"
+        },
+        {
+          "tier": 30,
+          "min_size": "540000.01",
+          "max_size": "560000",
+          "mmr": "0.1425",
+          "imr": "0.155",
+          "max_leverage": "6.45"
+        },
+        {
+          "tier": 31,
+          "min_size": "560000.01",
+          "max_size": "580000",
+          "mmr": "0.1475",
+          "imr": "0.16",
+          "max_leverage": "6.25"
+        },
+        {
+          "tier": 32,
+          "min_size": "580000.01",
+          "max_size": "600000",
+          "mmr": "0.1525",
+          "imr": "0.165",
+          "max_leverage": "6.06"
+        },
+        {
+          "tier": 33,
+          "min_size": "600000.01",
+          "max_size": "620000",
+          "mmr": "0.1575",
+          "imr": "0.17",
+          "max_leverage": "5.88"
+        },
+        {
+          "tier": 34,
+          "min_size": "620000.01",
+          "max_size": "640000",
+          "mmr": "0.1625",
+          "imr": "0.175",
+          "max_leverage": "5.71"
+        },
+        {
+          "tier": 35,
+          "min_size": "640000.01",
+          "max_size": "660000",
+          "mmr": "0.1675",
+          "imr": "0.18",
+          "max_leverage": "5.55"
+        },
+        {
+          "tier": 36,
+          "min_size": "660000.01",
+          "max_size": "680000",
+          "mmr": "0.1725",
+          "imr": "0.185",
+          "max_leverage": "5.4"
+        },
+        {
+          "tier": 37,
+          "min_size": "680000.01",
+          "max_size": "700000",
+          "mmr": "0.1775",
+          "imr": "0.19",
+          "max_leverage": "5.26"
+        },
+        {
+          "tier": 38,
+          "min_size": "700000.01",
+          "max_size": "720000",
+          "mmr": "0.1825",
+          "imr": "0.195",
+          "max_leverage": "5.12"
+        },
+        {
+          "tier": 39,
+          "min_size": "720000.01",
+          "max_size": "740000",
+          "mmr": "0.1875",
+          "imr": "0.2",
+          "max_leverage": "5"
+        },
+        {
+          "tier": 40,
+          "min_size": "740000.01",
+          "max_size": "760000",
+          "mmr": "0.1925",
+          "imr": "0.205",
+          "max_leverage": "4.87"
+        },
+        {
+          "tier": 41,
+          "min_size": "760000.01",
+          "max_size": "780000",
+          "mmr": "0.1975",
+          "imr": "0.21",
+          "max_leverage": "4.76"
+        },
+        {
+          "tier": 42,
+          "min_size": "780000.01",
+          "max_size": "800000",
+          "mmr": "0.2025",
+          "imr": "0.215",
+          "max_leverage": "4.65"
+        },
+        {
+          "tier": 43,
+          "min_size": "800000.01",
+          "max_size": "820000",
+          "mmr": "0.2075",
+          "imr": "0.22",
+          "max_leverage": "4.54"
+        },
+        {
+          "tier": 44,
+          "min_size": "820000.01",
+          "max_size": "840000",
+          "mmr": "0.2125",
+          "imr": "0.225",
+          "max_leverage": "4.44"
+        },
+        {
+          "tier": 45,
+          "min_size": "840000.01",
+          "max_size": "860000",
+          "mmr": "0.2175",
+          "imr": "0.23",
+          "max_leverage": "4.34"
+        },
+        {
+          "tier": 46,
+          "min_size": "860000.01",
+          "max_size": "880000",
+          "mmr": "0.2225",
+          "imr": "0.235",
+          "max_leverage": "4.25"
+        },
+        {
+          "tier": 47,
+          "min_size": "880000.01",
+          "max_size": "900000",
+          "mmr": "0.2275",
+          "imr": "0.24",
+          "max_leverage": "4.16"
+        },
+        {
+          "tier": 48,
+          "min_size": "900000.01",
+          "max_size": "920000",
+          "mmr": "0.2325",
+          "imr": "0.245",
+          "max_leverage": "4.08"
+        },
+        {
+          "tier": 49,
+          "min_size": "920000.01",
+          "max_size": "940000",
+          "mmr": "0.2375",
+          "imr": "0.25",
+          "max_leverage": "4"
+        },
+        {
+          "tier": 50,
+          "min_size": "940000.01",
+          "max_size": "960000",
+          "mmr": "0.2425",
+          "imr": "0.255",
+          "max_leverage": "3.92"
+        },
+        {
+          "tier": 51,
+          "min_size": "960000.01",
+          "max_size": "980000",
+          "mmr": "0.2475",
+          "imr": "0.26",
+          "max_leverage": "3.84"
+        },
+        {
+          "tier": 52,
+          "min_size": "980000.01",
+          "max_size": "1000000",
+          "mmr": "0.2525",
+          "imr": "0.265",
+          "max_leverage": "3.77"
+        },
+        {
+          "tier": 53,
+          "min_size": "1000000.01",
+          "max_size": "1020000",
+          "mmr": "0.2575",
+          "imr": "0.27",
+          "max_leverage": "3.7"
+        },
+        {
+          "tier": 54,
+          "min_size": "1020000.01",
+          "max_size": "1040000",
+          "mmr": "0.2625",
+          "imr": "0.275",
+          "max_leverage": "3.63"
+        },
+        {
+          "tier": 55,
+          "min_size": "1040000.01",
+          "max_size": "1060000",
+          "mmr": "0.2675",
+          "imr": "0.28",
+          "max_leverage": "3.57"
+        },
+        {
+          "tier": 56,
+          "min_size": "1060000.01",
+          "max_size": "1080000",
+          "mmr": "0.2725",
+          "imr": "0.285",
+          "max_leverage": "3.5"
+        },
+        {
+          "tier": 57,
+          "min_size": "1080000.01",
+          "max_size": "1100000",
+          "mmr": "0.2775",
+          "imr": "0.29",
+          "max_leverage": "3.44"
+        },
+        {
+          "tier": 58,
+          "min_size": "1100000.01",
+          "max_size": "1120000",
+          "mmr": "0.2825",
+          "imr": "0.295",
+          "max_leverage": "3.38"
+        },
+        {
+          "tier": 59,
+          "min_size": "1120000.01",
+          "max_size": "1140000",
+          "mmr": "0.2875",
+          "imr": "0.3",
+          "max_leverage": "3.33"
+        },
+        {
+          "tier": 60,
+          "min_size": "1140000.01",
+          "max_size": "1160000",
+          "mmr": "0.2925",
+          "imr": "0.305",
+          "max_leverage": "3.27"
+        },
+        {
+          "tier": 61,
+          "min_size": "1160000.01",
+          "max_size": "1180000",
+          "mmr": "0.2975",
+          "imr": "0.31",
+          "max_leverage": "3.22"
+        },
+        {
+          "tier": 62,
+          "min_size": "1180000.01",
+          "max_size": "1200000",
+          "mmr": "0.3025",
+          "imr": "0.315",
+          "max_leverage": "3.17"
+        },
+        {
+          "tier": 63,
+          "min_size": "1200000.01",
+          "max_size": "1220000",
+          "mmr": "0.3075",
+          "imr": "0.32",
+          "max_leverage": "3.12"
+        },
+        {
+          "tier": 64,
+          "min_size": "1220000.01",
+          "max_size": "1240000",
+          "mmr": "0.3125",
+          "imr": "0.325",
+          "max_leverage": "3.07"
+        },
+        {
+          "tier": 65,
+          "min_size": "1240000.01",
+          "max_size": "1260000",
+          "mmr": "0.3175",
+          "imr": "0.33",
+          "max_leverage": "3.03"
+        },
+        {
+          "tier": 66,
+          "min_size": "1260000.01",
+          "max_size": "1280000",
+          "mmr": "0.3225",
+          "imr": "0.335",
+          "max_leverage": "2.98"
+        },
+        {
+          "tier": 67,
+          "min_size": "1280000.01",
+          "max_size": "1300000",
+          "mmr": "0.3275",
+          "imr": "0.34",
+          "max_leverage": "2.94"
+        },
+        {
+          "tier": 68,
+          "min_size": "1300000.01",
+          "max_size": "1320000",
+          "mmr": "0.3325",
+          "imr": "0.345",
+          "max_leverage": "2.89"
+        },
+        {
+          "tier": 69,
+          "min_size": "1320000.01",
+          "max_size": "1340000",
+          "mmr": "0.3375",
+          "imr": "0.35",
+          "max_leverage": "2.85"
+        },
+        {
+          "tier": 70,
+          "min_size": "1340000.01",
+          "max_size": "1360000",
+          "mmr": "0.3425",
+          "imr": "0.355",
+          "max_leverage": "2.81"
+        },
+        {
+          "tier": 71,
+          "min_size": "1360000.01",
+          "max_size": "1380000",
+          "mmr": "0.3475",
+          "imr": "0.36",
+          "max_leverage": "2.77"
+        },
+        {
+          "tier": 72,
+          "min_size": "1380000.01",
+          "max_size": "1400000",
+          "mmr": "0.3525",
+          "imr": "0.365",
+          "max_leverage": "2.73"
+        },
+        {
+          "tier": 73,
+          "min_size": "1400000.01",
+          "max_size": "1420000",
+          "mmr": "0.3575",
+          "imr": "0.37",
+          "max_leverage": "2.7"
+        },
+        {
+          "tier": 74,
+          "min_size": "1420000.01",
+          "max_size": "1440000",
+          "mmr": "0.3625",
+          "imr": "0.375",
+          "max_leverage": "2.66"
+        },
+        {
+          "tier": 75,
+          "min_size": "1440000.01",
+          "max_size": "1460000",
+          "mmr": "0.3675",
+          "imr": "0.38",
+          "max_leverage": "2.63"
+        },
+        {
+          "tier": 76,
+          "min_size": "1460000.01",
+          "max_size": "1480000",
+          "mmr": "0.3725",
+          "imr": "0.385",
+          "max_leverage": "2.59"
+        },
+        {
+          "tier": 77,
+          "min_size": "1480000.01",
+          "max_size": "1500000",
+          "mmr": "0.3775",
+          "imr": "0.39",
+          "max_leverage": "2.56"
+        },
+        {
+          "tier": 78,
+          "min_size": "1500000.01",
+          "max_size": "1520000",
+          "mmr": "0.3825",
+          "imr": "0.395",
+          "max_leverage": "2.53"
+        },
+        {
+          "tier": 79,
+          "min_size": "1520000.01",
+          "max_size": "1540000",
+          "mmr": "0.3875",
+          "imr": "0.4",
+          "max_leverage": "2.5"
+        },
+        {
+          "tier": 80,
+          "min_size": "1540000.01",
+          "max_size": "1560000",
+          "mmr": "0.3925",
+          "imr": "0.405",
+          "max_leverage": "2.46"
+        },
+        {
+          "tier": 81,
+          "min_size": "1560000.01",
+          "max_size": "1580000",
+          "mmr": "0.3975",
+          "imr": "0.41",
+          "max_leverage": "2.43"
+        },
+        {
+          "tier": 82,
+          "min_size": "1580000.01",
+          "max_size": "1600000",
+          "mmr": "0.4025",
+          "imr": "0.415",
+          "max_leverage": "2.4"
+        },
+        {
+          "tier": 83,
+          "min_size": "1600000.01",
+          "max_size": "1620000",
+          "mmr": "0.4075",
+          "imr": "0.42",
+          "max_leverage": "2.38"
+        },
+        {
+          "tier": 84,
+          "min_size": "1620000.01",
+          "max_size": "1640000",
+          "mmr": "0.4125",
+          "imr": "0.425",
+          "max_leverage": "2.35"
+        },
+        {
+          "tier": 85,
+          "min_size": "1640000.01",
+          "max_size": "1660000",
+          "mmr": "0.4175",
+          "imr": "0.43",
+          "max_leverage": "2.32"
+        },
+        {
+          "tier": 86,
+          "min_size": "1660000.01",
+          "max_size": "1680000",
+          "mmr": "0.4225",
+          "imr": "0.435",
+          "max_leverage": "2.29"
+        },
+        {
+          "tier": 87,
+          "min_size": "1680000.01",
+          "max_size": "1700000",
+          "mmr": "0.4275",
+          "imr": "0.44",
+          "max_leverage": "2.27"
+        },
+        {
+          "tier": 88,
+          "min_size": "1700000.01",
+          "max_size": "1720000",
+          "mmr": "0.4325",
+          "imr": "0.445",
+          "max_leverage": "2.24"
+        },
+        {
+          "tier": 89,
+          "min_size": "1720000.01",
+          "max_size": "1740000",
+          "mmr": "0.4375",
+          "imr": "0.45",
+          "max_leverage": "2.22"
+        },
+        {
+          "tier": 90,
+          "min_size": "1740000.01",
+          "max_size": "1760000",
+          "mmr": "0.4425",
+          "imr": "0.455",
+          "max_leverage": "2.19"
+        },
+        {
+          "tier": 91,
+          "min_size": "1760000.01",
+          "max_size": "1780000",
+          "mmr": "0.4475",
+          "imr": "0.46",
+          "max_leverage": "2.17"
+        },
+        {
+          "tier": 92,
+          "min_size": "1780000.01",
+          "max_size": "1800000",
+          "mmr": "0.4525",
+          "imr": "0.465",
+          "max_leverage": "2.15"
+        },
+        {
+          "tier": 93,
+          "min_size": "1800000.01",
+          "max_size": "1820000",
+          "mmr": "0.4575",
+          "imr": "0.47",
+          "max_leverage": "2.12"
+        },
+        {
+          "tier": 94,
+          "min_size": "1820000.01",
+          "max_size": "1840000",
+          "mmr": "0.4625",
+          "imr": "0.475",
+          "max_leverage": "2.1"
+        },
+        {
+          "tier": 95,
+          "min_size": "1840000.01",
+          "max_size": "1860000",
+          "mmr": "0.4675",
+          "imr": "0.48",
+          "max_leverage": "2.08"
+        },
+        {
+          "tier": 96,
+          "min_size": "1860000.01",
+          "max_size": "1880000",
+          "mmr": "0.4725",
+          "imr": "0.485",
+          "max_leverage": "2.06"
+        },
+        {
+          "tier": 97,
+          "min_size": "1880000.01",
+          "max_size": "1900000",
+          "mmr": "0.4775",
+          "imr": "0.49",
+          "max_leverage": "2.04"
+        },
+        {
+          "tier": 98,
+          "min_size": "1900000.01",
+          "max_size": "1920000",
+          "mmr": "0.4825",
+          "imr": "0.495",
+          "max_leverage": "2.02"
+        },
+        {
+          "tier": 99,
+          "min_size": "1920000.01",
+          "max_size": "1940000",
+          "mmr": "0.4875",
+          "imr": "0.5",
+          "max_leverage": "2"
+        }
+      ]
+    }
+  },
+  "snapshot_hash": "06cd1508988a251bc9666e11fa099277d21bcb597a92223d599865efe2a44aee",
+  "schedule_admission": {
+    "policy": {
+      "name": "observed_funding_schedule_v1",
+      "max_age_ms": 180000,
+      "max_future_skew_ms": 5000,
+      "scope": "local_model_admission_not_venue_acceptance"
+    },
+    "state": "available",
+    "funding_ts": 1791549009246,
+    "future_boundaries": [
+      1791561600000,
+      1791590400000
+    ]
+  },
+  "error": "Simulation accounting rejected the request: maintenance margin tiers must be ascending and contiguous from zero",
+  "ended_at": 1791549041293,
+  "elapsed_seconds": 1.018,
+  "implementation_at_end": {
+    "schema_version": 1,
+    "application_version": "0.11.0",
+    "code_fingerprint": "7cd26659ebc5a9b100e1716c829d3626f364d2c37d429c23d50b71a8187e16c0",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "15a04c1403c458ff1792f51d05b5c9c3a963f684e8979dbd96b8d31191824121",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+      "pro_api.py": "e140ef02d74ead50ef52fb5f6c4cb0ebcb163d2d3565f811ae964b1112489bb5",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "b1e999be651c5770f12f4a4f55cb0bde2bd5ba98ef12dda5da58d9ddeb7b75a8",
+      "strategy_registry.py": "d11efc7a39e1c436643857da2428cfbcce55a4774a272bfbcfa0cb850bbf8741",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "5b94403613dc72f12ca3f2585e035cf84222d16f48fd12551a8238c330e311f4",
+      "research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+      "research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+      "portfolio_registry.py": "929b7f8755fe91d2e106a96f137761c54337e57befd411eafb11ba1dbe811dfb",
+      "portfolio_releases.py": "ce622f9e69dd0388cf11c950c13cbf187c45e8e608173279e6824c91f86840a6",
+      "managed_portfolios.py": "9ac1db43e51d87298948673efbd5ad3311f0a27f3cd92f45182f746f7526bcbc",
+      "portfolio_research.py": "71ad12b8b0d27a80201bf1179104a1949a29ecf9f79f43542208ebd01414fd54",
+      "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+      "portfolio_execution.py": "b51b3dd9d7747bf5dae5407b9b8a8083ee6f95578671675ef9fda909bd05c4ff",
+      "historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "7cb3d294c453a468bb93894fbea4055b96b7c733f4039ad3c3ce01e2f770e850",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "7672e4cd5f082983b589616ffa539726033f665d686a8caeeefc7185a25d69bb",
+      "forward_performance.py": "1237a6ac66c246e7dc913be82f3ea5fad71fa21d73b30279b1bed439bc871c28",
+      "liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+      "contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "implementation_unchanged": true,
+  "driver_sha256": "6b58d5bc95b20419f1efd52d35db2d942b3c5ea51490a0bfb66d2bf52f928799"
+}

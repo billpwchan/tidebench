@@ -1,6 +1,9 @@
 # Red-team record
 
-Latest: [fresh v0.10 independent review](fresh-institutional-review-0.10.0.zh-CN.md), separate [funding wait](fresh-institutional-review-0.10.0-funding-wait-addendum.zh-CN.md), [correct capital boundary](fresh-institutional-review-0.10.0-capital-boundary-addendum.zh-CN.md) and [v2 continuation/lineage](fresh-institutional-review-0.10.0-v2-allowance-addendum.zh-CN.md) addenda. [Completed acceptance history](acceptance-history-0.10.0.md) preserves adverse attempts. [Professional workflows](../professional-workflows-v0.10.md), [execution policy choices](../portfolio-execution-contracts.md) and [release verification](../verification.md) distinguish implemented contracts from measured scope.
+Latest: [v0.11 independent counterexamples and corrective verification](red-team-0.11.0.zh-CN.md), [byte-preserved before/after bundle](fresh-review-0.11.0/README.md), [adverse acceptance history](acceptance-history-0.11.0.md) and [operator workflow](../professional-workflows-v0.11.md). Public source-specific reports include all 28 strategy cases, seven real public-data portfolio decisions and an actual public perpetual entry/exit.
+
+
+Previous: [fresh v0.10 independent review](fresh-institutional-review-0.10.0.zh-CN.md), separate [funding wait](fresh-institutional-review-0.10.0-funding-wait-addendum.zh-CN.md), [correct capital boundary](fresh-institutional-review-0.10.0-capital-boundary-addendum.zh-CN.md) and [v2 continuation/lineage](fresh-institutional-review-0.10.0-v2-allowance-addendum.zh-CN.md) addenda. [Completed acceptance history](acceptance-history-0.10.0.md) preserves adverse attempts. [Professional workflows](../professional-workflows-v0.10.md), [execution policy choices](../portfolio-execution-contracts.md) and [release verification](../verification.md) distinguish implemented contracts from measured scope.
 
 Baseline: [fresh v0.9 institutional review](fresh-institutional-review-0.9.0.zh-CN.md).
 

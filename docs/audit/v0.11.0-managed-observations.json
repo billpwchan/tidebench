@@ -1,0 +1,48 @@
+{
+  "audited_version": "0.11.0",
+  "environment": {
+    "python": "3.13.15",
+    "system": "Darwin"
+  },
+  "source": "example; synthetic provider; real SQLite/economic engine",
+  "observations": [
+    {
+      "contract": "hard_exit_after_committed_child",
+      "child_exit_code": 23,
+      "committed_orders_before_recovery": 1,
+      "frozen_target_unchanged": true,
+      "frozen_additions_unchanged": true,
+      "orders_after_recovery": 4,
+      "command_count": 4,
+      "unique_fills": 4,
+      "status": "completed",
+      "cash_scale": "0.99840065083120655403452703378569544424031391490849",
+      "residual_pct": "0.15993997341491189700",
+      "contributions_reconciled": true,
+      "net_contribution": "-15.9939223215014583",
+      "account_net_pnl": "-15.9939223215014583"
+    },
+    {
+      "contract": "schema8_actual_backup_restore",
+      "schema": 8,
+      "group_status": "stopped",
+      "risk_halted": true,
+      "clock_paused": true,
+      "command_evidence_preserved": true,
+      "contribution_owners_preserved": true,
+      "reconciled": true
+    },
+    {
+      "contract": "failed_leg_and_failed_compensation_recovery",
+      "blocked_status": "compensating",
+      "retained_inventory_count": 1,
+      "blocked_error": "Compensation blocked: Temporary second-leg and compensation failure.",
+      "final_group_status": "failed",
+      "final_batch_status": "compensated",
+      "remaining_positions": 0,
+      "contributions_reconciled": true,
+      "final_net_contribution": "-39.9452014225470"
+    }
+  ],
+  "scope": "Hard process exit, financial recovery and real backup replacement in a temporary workspace. This is not a venue, uptime, liquidity or performance-capacity benchmark."
+}

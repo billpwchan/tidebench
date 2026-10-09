@@ -113,3 +113,20 @@ Object.assign(deskZh, {
   'Bound research evidence is incomplete. Refresh the review before approval.':
     '绑定研究证据不完整。批准前请刷新审阅。',
 });
+
+Object.assign(deskZh, {
+  'Public OKX market observations': '公开 OKX 行情观察',
+  'Market and wall-clock progress': '市场与真实时钟推进比例',
+  'Bound observation clocks': '已绑定的观察时钟',
+  'Actual elapsed duration': '实际经过时长',
+  'Observation count': '观察数量',
+  'Observed interval coverage': '观察区间覆盖率',
+  'Complete economics coverage': '经济状态完整覆盖率',
+  'Final observation age': '最后观察年龄',
+  'Pending funding observations': '待结资金费率观察数',
+  'Recorded recovery events': '已记录的恢复事件',
+  'Clock regressions': '时钟倒退次数',
+  'Financial discontinuities': '财务状态不连续次数',
+  'legacy clocks': '旧版未绑定时钟',
+  observations: '次观察',
+});

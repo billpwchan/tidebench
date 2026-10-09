@@ -1,0 +1,153 @@
+{
+  "implementation": {
+    "schema_version": 1,
+    "application_version": "0.11.0",
+    "code_fingerprint": "1735a8f70354b86a740f59666b42371ef42b6a263dd378a387566192d6123212",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "ff28ad8cb5641dfa407bd9d28e96c30587c33f0d1a3673bf6f12c83729c469fc",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+      "pro_api.py": "e140ef02d74ead50ef52fb5f6c4cb0ebcb163d2d3565f811ae964b1112489bb5",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "b1e999be651c5770f12f4a4f55cb0bde2bd5ba98ef12dda5da58d9ddeb7b75a8",
+      "strategy_registry.py": "d11efc7a39e1c436643857da2428cfbcce55a4774a272bfbcfa0cb850bbf8741",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "5b94403613dc72f12ca3f2585e035cf84222d16f48fd12551a8238c330e311f4",
+      "research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+      "research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+      "portfolio_registry.py": "929b7f8755fe91d2e106a96f137761c54337e57befd411eafb11ba1dbe811dfb",
+      "portfolio_releases.py": "ce622f9e69dd0388cf11c950c13cbf187c45e8e608173279e6824c91f86840a6",
+      "managed_portfolios.py": "9ac1db43e51d87298948673efbd5ad3311f0a27f3cd92f45182f746f7526bcbc",
+      "portfolio_research.py": "71ad12b8b0d27a80201bf1179104a1949a29ecf9f79f43542208ebd01414fd54",
+      "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+      "portfolio_execution.py": "b51b3dd9d7747bf5dae5407b9b8a8083ee6f95578671675ef9fda909bd05c4ff",
+      "historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "7cb3d294c453a468bb93894fbea4055b96b7c733f4039ad3c3ce01e2f770e850",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "7672e4cd5f082983b589616ffa539726033f665d686a8caeeefc7185a25d69bb",
+      "forward_performance.py": "1237a6ac66c246e7dc913be82f3ea5fad71fa21d73b30279b1bed439bc871c28",
+      "liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+      "contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "scope": "Isolated SQLite and blocked external requests; synthetic causal selection and actual backup/restore; no venue orders.",
+  "retained_single_trials": {
+    "before_counts": {
+      "run_count": 1,
+      "candidate_configurations": 2
+    },
+    "after_counts": {
+      "run_count": 1,
+      "candidate_configurations": 2
+    },
+    "retained": {
+      "research_reservations": 0,
+      "research_exposures": 1,
+      "research_consumptions": 0,
+      "research_trials": 1
+    },
+    "actual_facts": [
+      {
+        "kind": "single",
+        "run_id": "f75aa21cc83c497da40db86487e3cf3f",
+        "candidate_count": 2,
+        "project_id": "7ff902aaa2a14e12ab63f5d4cfdd4ab5"
+      }
+    ]
+  },
+  "unacknowledged_selection_refused": {
+    "code": "release_acknowledgement",
+    "message": "Explicitly acknowledge the displayed research/execution differences."
+  },
+  "selection_evidence": {
+    "source_result_hash": "efb8d3cf6c55ab7f72f0f67c3002f108a9e15940f2bbd4629b04eba828919817",
+    "selection": "fold-3",
+    "selected_strategy_hash": "0b9d2e877bf7f0a09cd54c39e0be2974e639bd00312b734e5c1841e54aec09f8",
+    "independent_final_validation": false,
+    "selection_policy": "operator_selected_after_test_results_available",
+    "selected_fold_id": "fold-3",
+    "test_result_hash": "3b5099d7e9e7e257085793c05ae810901c487aa900bb4ef907c005215082cc05",
+    "available_fold_ids": [
+      "fold-1",
+      "fold-2",
+      "fold-3"
+    ],
+    "test_results_available": true,
+    "scope": "Training-only parameter choice; completed chronological fold selection is not a pre-registered final test. No inference about whether the operator actually inspected test scores is made."
+  },
+  "post_test_fold_selection": {
+    "fold_returns": [
+      {
+        "id": "fold-1",
+        "test_return": -0.11846214241404,
+        "fast": 5
+      },
+      {
+        "id": "fold-2",
+        "test_return": -0.15891847841919,
+        "fast": 5
+      },
+      {
+        "id": "fold-3",
+        "test_return": 0.42798034154525694,
+        "fast": 5
+      }
+    ],
+    "winner": "fold-3",
+    "selection_scope": "training_selected_test_exposed_fold",
+    "required_acknowledgements": [
+      "post_test_selection"
+    ],
+    "approval_status": "approved",
+    "release_definition": {
+      "allocation": "0.1",
+      "atr_period": 14,
+      "efficiency_max": "0.35",
+      "entry": "30",
+      "exit": "60",
+      "fast": 5,
+      "kind": "sma_cross",
+      "max_bar_vol_pct": "5",
+      "max_holding_bars": 0,
+      "momentum_entry": "0.5",
+      "momentum_horizons": [
+        42,
+        84,
+        168
+      ],
+      "reversion_trend_window": 84,
+      "risk_per_trade_pct": "0",
+      "rsi_period": 14,
+      "rules": [],
+      "slow": 20,
+      "stop_loss_pct": "0",
+      "take_profit_pct": "0",
+      "trailing_stop_pct": "0",
+      "vol_window": 42,
+      "window": 20,
+      "z_entry": "2",
+      "z_exit": "0.5"
+    }
+  }
+}

@@ -11,6 +11,21 @@ import { Empty, ErrorBox, Loading, Metric, Field, Status } from './workspace';
 import { useSession } from './AuthGate';
 import { canTrade } from '../lib/permissions';
 
+const criterionLabels: Record<string, string> = {
+  public_okx_observations: 'Public OKX market observations',
+  market_clock_progress: 'Market and wall-clock progress',
+  bound_observation_clocks: 'Bound observation clocks',
+  real_wall_duration: 'Actual elapsed duration',
+  observation_count: 'Observation count',
+  observation_coverage: 'Observed interval coverage',
+  economic_coverage: 'Complete economics coverage',
+  fresh_final_observation: 'Final observation age',
+  no_pending_funding: 'Pending funding observations',
+  observed_recovery: 'Recorded recovery events',
+  no_clock_regression: 'Clock regressions',
+  no_financial_discontinuity: 'Financial discontinuities',
+};
+
 export default function ForwardPerformance({ source }: { source: Source }) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
@@ -132,7 +147,13 @@ export default function ForwardPerformance({ source }: { source: Source }) {
     public_okx_observations: [source + ' · ' + number(summary?.market_updates, 0), 'OKX · ≥ 2'],
     market_clock_progress: [number(summary?.market_wall_ratio, 3), '0.5–2.0'],
     bound_observation_clocks: [
-      number(summary?.legacy_clock_observations, 0),
+      number(summary?.legacy_clock_observations, 0) +
+        ' ' +
+        t('legacy clocks') +
+        ' · ' +
+        number(summary?.observations, 0) +
+        ' ' +
+        t('observations'),
       '0 legacy · ≥ 1 observation',
     ],
     real_wall_duration: [
@@ -312,7 +333,12 @@ export default function ForwardPerformance({ source }: { source: Source }) {
                 }),
               )}
               columns={[
-                { key: 'criterion', label: 'Criterion', render: (row) => t(String(row.criterion)) },
+                {
+                  key: 'criterion',
+                  label: 'Criterion',
+                  render: (row) =>
+                    t(criterionLabels[String(row.criterion)] ?? String(row.criterion)),
+                },
                 { key: 'actual', label: 'Observed value' },
                 { key: 'target', label: 'Required value' },
                 {

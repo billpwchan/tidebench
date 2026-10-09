@@ -51,6 +51,9 @@ test('real local-paper account freezes a whole observation window and verifies i
       .click();
     await page.getByRole('tab', { name: 'Forward performance', exact: true }).click();
     await expect(page.getByText('Window observations', { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'Public OKX market observations', exact: true }),
+    ).toBeVisible();
     const freezeResponse = page.waitForResponse(
       (r) => r.url().endsWith('/performance/snapshots') && r.request().method() === 'POST',
     );

@@ -1,0 +1,2280 @@
+{
+  "audited_version": "0.11.0",
+  "source_revision": "ed52b8ed8c43a9e38618ca8d9b1a0738ad9bd1a1",
+  "started_at_utc": "2026-10-09T12:44:01.446622+00:00",
+  "environment": {
+    "python": "3.13.15",
+    "system": "Darwin",
+    "machine": "arm64"
+  },
+  "configuration": {
+    "duration": 600.0,
+    "interval": 10.0,
+    "sample_interval": 5.0,
+    "step_hours": 4,
+    "research_interval": 90.0,
+    "read_clients": 2,
+    "http_timeout": 15
+  },
+  "scope": "Offline loopback HTTP, sequentially admitted three small-capital Example groups (concurrent-start capability excluded), real SQLite/fills/funding/owners, concurrent readers and research, one real SIGTERM restart. Synthetic market time does not count as wall time. This bounded single-host run is not a weeks-long soak, venue or availability/capacity SLA.",
+  "passed": true,
+  "monotonic_elapsed_seconds": 608.112,
+  "clock_steps": 60,
+  "synthetic_elapsed_hours": 240.0,
+  "acceptance": {
+    "requested_monotonic_duration_reached": true,
+    "three_groups_running_before_audit_stop": true,
+    "actual_confirmed_decisions_and_fills": true,
+    "actual_funding_settled": true,
+    "all_batches_completed": true,
+    "all_owner_observations_reconciled": true,
+    "final_owner_and_account_reconciled": true,
+    "graceful_restart_preserved_prior_economics": true,
+    "no_duplicate_keys_or_missing_filled_command_orders": true,
+    "no_unexpected_http_failures": true,
+    "database_integrity_and_foreign_keys": true,
+    "no_external_network_attempts": true,
+    "concurrent_short_research_completed": true
+  },
+  "groups": [
+    {
+      "id": "86c851c9793d437eac76dfee96142155",
+      "name": "BTC basis carry",
+      "definition": {
+        "bar": "1H",
+        "capital_pct": "8",
+        "carry_buffer_bps": "0",
+        "carry_cost_settlements": 0,
+        "carry_max_age_hours": 0,
+        "carry_threshold": "-0.01",
+        "carry_window": 1,
+        "correlation_stress": "0.75",
+        "covariance_shrinkage": "0.25",
+        "execution_contract": "reduce_group_v2_allowance",
+        "failure_policy": "reduce_group",
+        "legs": [
+          {
+            "direction": "long_only",
+            "inst_id": "BTC-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.5"
+          },
+          {
+            "direction": "short_only",
+            "inst_id": "BTC-USDT-SWAP",
+            "leverage": "2",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "-0.5"
+          }
+        ],
+        "lookback": 20,
+        "max_residual_pct": "2",
+        "mode": "funding_carry",
+        "rebalance_bars": 2,
+        "risk_window": 84,
+        "schema_version": 1,
+        "top_k": 1,
+        "vol_floor_pct": "20",
+        "vol_target_pct": "20"
+      }
+    },
+    {
+      "id": "d9cbd3b7467d4741851f7123f082f2db",
+      "name": "ETH SOL cash basket",
+      "definition": {
+        "bar": "1H",
+        "capital_pct": "8",
+        "carry_buffer_bps": "0",
+        "carry_cost_settlements": 0,
+        "carry_max_age_hours": 0,
+        "carry_threshold": "0",
+        "carry_window": 1,
+        "correlation_stress": "0.75",
+        "covariance_shrinkage": "0.25",
+        "execution_contract": "reduce_group_v2_allowance",
+        "failure_policy": "reduce_group",
+        "legs": [
+          {
+            "direction": "long_only",
+            "inst_id": "ETH-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.5"
+          },
+          {
+            "direction": "long_only",
+            "inst_id": "SOL-USDT",
+            "leverage": "1",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.5"
+          }
+        ],
+        "lookback": 20,
+        "max_residual_pct": "2",
+        "mode": "fixed_weights",
+        "rebalance_bars": 2,
+        "risk_window": 84,
+        "schema_version": 1,
+        "top_k": 1,
+        "vol_floor_pct": "20",
+        "vol_target_pct": "20"
+      }
+    },
+    {
+      "id": "1aa5d6ee3ba74e139955028cc09bb90f",
+      "name": "Independent swap exposure",
+      "definition": {
+        "bar": "1H",
+        "capital_pct": "8",
+        "carry_buffer_bps": "0",
+        "carry_cost_settlements": 0,
+        "carry_max_age_hours": 0,
+        "carry_threshold": "0",
+        "carry_window": 1,
+        "correlation_stress": "0.75",
+        "covariance_shrinkage": "0.25",
+        "execution_contract": "reduce_group_v2_allowance",
+        "failure_policy": "reduce_group",
+        "legs": [
+          {
+            "direction": "long_only",
+            "inst_id": "OKB-USDT-SWAP",
+            "leverage": "2",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "0.25"
+          },
+          {
+            "direction": "short_only",
+            "inst_id": "DOGE-USDT-SWAP",
+            "leverage": "2",
+            "strategy": {
+              "allocation": "0.25",
+              "atr_period": 14,
+              "efficiency_max": "0.35",
+              "entry": "30",
+              "exit": "60",
+              "fast": 12,
+              "kind": "sma_cross",
+              "max_bar_vol_pct": "5",
+              "max_holding_bars": 0,
+              "momentum_entry": "0.5",
+              "momentum_horizons": [
+                42,
+                84,
+                168
+              ],
+              "reversion_trend_window": 84,
+              "risk_per_trade_pct": "0",
+              "rsi_period": 14,
+              "rules": [],
+              "slow": 26,
+              "stop_loss_pct": "0",
+              "take_profit_pct": "0",
+              "trailing_stop_pct": "0",
+              "vol_window": 42,
+              "window": 20,
+              "z_entry": "2",
+              "z_exit": "0.5"
+            },
+            "weight": "-0.25"
+          }
+        ],
+        "lookback": 20,
+        "max_residual_pct": "2",
+        "mode": "fixed_weights",
+        "rebalance_bars": 2,
+        "risk_window": 84,
+        "schema_version": 1,
+        "top_k": 1,
+        "vol_floor_pct": "20",
+        "vol_target_pct": "20"
+      }
+    }
+  ],
+  "economic_counts": {
+    "orders": 154,
+    "decisions": 186,
+    "batches": 93,
+    "commands": 154,
+    "funding_settlements": 120,
+    "contribution_events": 274
+  },
+  "batch_status_counts": {
+    "completed": 93
+  },
+  "duplicate_key_count": 0,
+  "missing_filled_order_count": 0,
+  "restart": [
+    {
+      "at_elapsed_seconds": 300.097,
+      "sigterm_to_ready_ms": 778.868,
+      "orders_before": 77,
+      "orders_at_ready": 79,
+      "prior_order_ids_and_bodies_preserved": true,
+      "exit_code": -15,
+      "forced_kill": false,
+      "lifespan_shutdown_completed": true
+    }
+  ],
+  "research_jobs": [
+    {
+      "id": "7d4629173642465a83b38766875a54fb",
+      "phase": "initial",
+      "status": "completed",
+      "elapsed_ms": 899.925,
+      "result_hash": "7fb6325cd0974296fd4064dcb3a6a905b659dfc0e2e19750614a050ada439246"
+    },
+    {
+      "id": "232fcd3d480340769069c08a7f1800fc",
+      "phase": "initial",
+      "status": "completed",
+      "elapsed_ms": 702.7,
+      "result_hash": "e4324f2c98bad503601b2118166444c6d12a76f731837360ca18a0fb9a009376"
+    },
+    {
+      "id": "291edefc77b14b33bf5f43a42652659d",
+      "phase": "initial",
+      "status": "completed",
+      "elapsed_ms": 956.456,
+      "result_hash": "7c67e401d425bc7152fb8dd39434fd56bc719ed93f751b6a379bd7b05ee2192d"
+    },
+    {
+      "id": "b003199b6f464b65b55e59686ae5fddb",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 692.405,
+      "result_hash": "e4324f2c98bad503601b2118166444c6d12a76f731837360ca18a0fb9a009376"
+    },
+    {
+      "id": "25cf04beefda4bec9d120a88eae6090d",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 705.952,
+      "result_hash": "e4324f2c98bad503601b2118166444c6d12a76f731837360ca18a0fb9a009376"
+    },
+    {
+      "id": "791f8bf1fcd24768b80fb0116d696a88",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 690.785,
+      "result_hash": "e4324f2c98bad503601b2118166444c6d12a76f731837360ca18a0fb9a009376"
+    },
+    {
+      "id": "640f0158908a49aeb14e41aa5a3bdf7a",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 866.478,
+      "result_hash": "e4324f2c98bad503601b2118166444c6d12a76f731837360ca18a0fb9a009376"
+    },
+    {
+      "id": "a4b86b81795845dfb065dc0e6d9279d6",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 688.104,
+      "result_hash": "e4324f2c98bad503601b2118166444c6d12a76f731837360ca18a0fb9a009376"
+    },
+    {
+      "id": "b7e29ae5afb041758faf25225f9600f1",
+      "phase": "concurrent_soak",
+      "status": "completed",
+      "elapsed_ms": 689.484,
+      "result_hash": "e4324f2c98bad503601b2118166444c6d12a76f731837360ca18a0fb9a009376"
+    }
+  ],
+  "concurrent_reads": 720,
+  "http_status_counts": {
+    "202": 15,
+    "200": 1204,
+    "201": 6
+  },
+  "http_latency": {
+    "POST /api/v1/pro/catalog/packages": {
+      "count": 6,
+      "min_ms": 5.743,
+      "median_ms": 7.234,
+      "p95_ms": 64.592,
+      "p99_ms": 64.592,
+      "max_ms": 64.592
+    },
+    "GET /api/v1/pro/catalog/packages/1bcc641d24e2406296ff9e55ab81d9da": {
+      "count": 1,
+      "min_ms": 2.263,
+      "median_ms": 2.263,
+      "p95_ms": 2.263,
+      "p99_ms": 2.263,
+      "max_ms": 2.263
+    },
+    "GET /api/v1/pro/catalog/packages/9d43c10f98c04cfdb8d39e7f5ab1c0f6": {
+      "count": 3,
+      "min_ms": 2.217,
+      "median_ms": 5.914,
+      "p95_ms": 867.27,
+      "p99_ms": 867.27,
+      "max_ms": 867.27
+    },
+    "GET /api/v1/pro/catalog/packages/47d76e6877ae428582f83669c8038a06": {
+      "count": 2,
+      "min_ms": 3.281,
+      "median_ms": 3.466,
+      "p95_ms": 3.652,
+      "p99_ms": 3.652,
+      "max_ms": 3.652
+    },
+    "GET /api/v1/pro/catalog/packages/e02ecf84c1dd4ba28e9ac350a16f2ad1": {
+      "count": 2,
+      "min_ms": 2.807,
+      "median_ms": 4.624,
+      "p95_ms": 6.441,
+      "p99_ms": 6.441,
+      "max_ms": 6.441
+    },
+    "GET /api/v1/pro/catalog/packages/2be5d02ee3af4d5b8eb24477ab9c498c": {
+      "count": 3,
+      "min_ms": 2.117,
+      "median_ms": 3.287,
+      "p95_ms": 8.447,
+      "p99_ms": 8.447,
+      "max_ms": 8.447
+    },
+    "GET /api/v1/pro/catalog/packages/128cf0ef5cfb49e3a484ecfb3dcf08e8": {
+      "count": 3,
+      "min_ms": 2.257,
+      "median_ms": 3.767,
+      "p95_ms": 4.641,
+      "p99_ms": 4.641,
+      "max_ms": 4.641
+    },
+    "POST /api/v1/pro/portfolio-strategies": {
+      "count": 3,
+      "min_ms": 3.878,
+      "median_ms": 4.779,
+      "p95_ms": 5.098,
+      "p99_ms": 5.098,
+      "max_ms": 5.098
+    },
+    "POST /api/v1/pro/research/portfolios": {
+      "count": 9,
+      "min_ms": 36.47,
+      "median_ms": 39.68,
+      "p95_ms": 84.572,
+      "p99_ms": 84.572,
+      "max_ms": 84.572
+    },
+    "GET /api/v1/pro/research/portfolios/7d4629173642465a83b38766875a54fb": {
+      "count": 5,
+      "min_ms": 1.999,
+      "median_ms": 2.49,
+      "p95_ms": 27.777,
+      "p99_ms": 27.777,
+      "max_ms": 27.777
+    },
+    "POST /api/v1/pro/execution/portfolio-releases/preview": {
+      "count": 3,
+      "min_ms": 15.63,
+      "median_ms": 16.216,
+      "p95_ms": 19.325,
+      "p99_ms": 19.325,
+      "max_ms": 19.325
+    },
+    "POST /api/v1/pro/execution/portfolio-releases": {
+      "count": 3,
+      "min_ms": 14.027,
+      "median_ms": 14.401,
+      "p95_ms": 15.839,
+      "p99_ms": 15.839,
+      "max_ms": 15.839
+    },
+    "POST /api/v1/pro/execution/portfolio-releases/3ad3811fa69f433fbbc52cd18ef3740f/activate": {
+      "count": 1,
+      "min_ms": 14.557,
+      "median_ms": 14.557,
+      "p95_ms": 14.557,
+      "p99_ms": 14.557,
+      "max_ms": 14.557
+    },
+    "GET /api/v1/pro/execution/clock": {
+      "count": 91,
+      "min_ms": 1.637,
+      "median_ms": 4.561,
+      "p95_ms": 24.499,
+      "p99_ms": 328.525,
+      "max_ms": 328.525
+    },
+    "GET /api/v1/pro/execution/portfolios": {
+      "count": 30,
+      "min_ms": 1.874,
+      "median_ms": 4.19,
+      "p95_ms": 20.548,
+      "p99_ms": 25.321,
+      "max_ms": 25.321
+    },
+    "GET /api/v1/pro/research/portfolios/232fcd3d480340769069c08a7f1800fc": {
+      "count": 4,
+      "min_ms": 2.378,
+      "median_ms": 4.464,
+      "p95_ms": 33.25,
+      "p99_ms": 33.25,
+      "max_ms": 33.25
+    },
+    "POST /api/v1/pro/execution/portfolio-releases/b016cd44ea5443f88ab29e932806a12b/activate": {
+      "count": 1,
+      "min_ms": 14.746,
+      "median_ms": 14.746,
+      "p95_ms": 14.746,
+      "p99_ms": 14.746,
+      "max_ms": 14.746
+    },
+    "GET /api/v1/pro/research/portfolios/291edefc77b14b33bf5f43a42652659d": {
+      "count": 5,
+      "min_ms": 2.391,
+      "median_ms": 6.601,
+      "p95_ms": 37.384,
+      "p99_ms": 37.384,
+      "max_ms": 37.384
+    },
+    "POST /api/v1/pro/execution/portfolio-releases/1afc1994dc5d4952964e7df690f9d669/activate": {
+      "count": 1,
+      "min_ms": 15.509,
+      "median_ms": 15.509,
+      "p95_ms": 15.509,
+      "p99_ms": 15.509,
+      "max_ms": 15.509
+    },
+    "POST /api/v1/pro/execution/clock": {
+      "count": 60,
+      "min_ms": 2.826,
+      "median_ms": 3.838,
+      "p95_ms": 6.411,
+      "p99_ms": 18.555,
+      "max_ms": 18.555
+    },
+    "GET /api/v1/pro/execution/account": {
+      "count": 241,
+      "min_ms": 47.027,
+      "median_ms": 102.074,
+      "p95_ms": 121.285,
+      "p99_ms": 131.078,
+      "max_ms": 149.515
+    },
+    "GET /api/v1/pro/execution/contributions": {
+      "count": 241,
+      "min_ms": 19.083,
+      "median_ms": 108.431,
+      "p95_ms": 125.526,
+      "p99_ms": 149.186,
+      "max_ms": 152.024
+    },
+    "GET /api/v1/pro/execution/analytics": {
+      "count": 240,
+      "min_ms": 92.068,
+      "median_ms": 109.386,
+      "p95_ms": 127.125,
+      "p99_ms": 149.981,
+      "max_ms": 152.81
+    },
+    "GET /readyz": {
+      "count": 120,
+      "min_ms": 2.488,
+      "median_ms": 4.049,
+      "p95_ms": 7.192,
+      "p99_ms": 14.581,
+      "max_ms": 16.225
+    },
+    "GET /api/v1/pro/ops": {
+      "count": 120,
+      "min_ms": 13.989,
+      "median_ms": 21.374,
+      "p95_ms": 34.495,
+      "p99_ms": 55.064,
+      "max_ms": 56.048
+    },
+    "GET /api/v1/pro/research/portfolios/b003199b6f464b65b55e59686ae5fddb": {
+      "count": 4,
+      "min_ms": 2.629,
+      "median_ms": 4.491,
+      "p95_ms": 33.584,
+      "p99_ms": 33.584,
+      "max_ms": 33.584
+    },
+    "GET /api/v1/pro/research/portfolios/25cf04beefda4bec9d120a88eae6090d": {
+      "count": 4,
+      "min_ms": 2.627,
+      "median_ms": 13.277,
+      "p95_ms": 32.716,
+      "p99_ms": 32.716,
+      "max_ms": 32.716
+    },
+    "GET /api/v1/pro/research/portfolios/791f8bf1fcd24768b80fb0116d696a88": {
+      "count": 4,
+      "min_ms": 2.62,
+      "median_ms": 3.993,
+      "p95_ms": 34.037,
+      "p99_ms": 34.037,
+      "max_ms": 34.037
+    },
+    "GET /api/v1/pro/research/portfolios/640f0158908a49aeb14e41aa5a3bdf7a": {
+      "count": 4,
+      "min_ms": 2.622,
+      "median_ms": 3.814,
+      "p95_ms": 213.319,
+      "p99_ms": 213.319,
+      "max_ms": 213.319
+    },
+    "GET /api/v1/pro/research/portfolios/a4b86b81795845dfb065dc0e6d9279d6": {
+      "count": 4,
+      "min_ms": 2.565,
+      "median_ms": 5.03,
+      "p95_ms": 29.309,
+      "p99_ms": 29.309,
+      "max_ms": 29.309
+    },
+    "GET /api/v1/pro/research/portfolios/b7e29ae5afb041758faf25225f9600f1": {
+      "count": 4,
+      "min_ms": 2.526,
+      "median_ms": 2.873,
+      "p95_ms": 29.274,
+      "p99_ms": 29.274,
+      "max_ms": 29.274
+    },
+    "POST /api/v1/pro/execution/portfolios/86c851c9793d437eac76dfee96142155/stop": {
+      "count": 1,
+      "min_ms": 4.355,
+      "median_ms": 4.355,
+      "p95_ms": 4.355,
+      "p99_ms": 4.355,
+      "max_ms": 4.355
+    },
+    "POST /api/v1/pro/execution/portfolios/d9cbd3b7467d4741851f7123f082f2db/stop": {
+      "count": 1,
+      "min_ms": 4.427,
+      "median_ms": 4.427,
+      "p95_ms": 4.427,
+      "p99_ms": 4.427,
+      "max_ms": 4.427
+    },
+    "POST /api/v1/pro/execution/portfolios/1aa5d6ee3ba74e139955028cc09bb90f/stop": {
+      "count": 1,
+      "min_ms": 4.162,
+      "median_ms": 4.162,
+      "p95_ms": 4.162,
+      "p99_ms": 4.162,
+      "max_ms": 4.162
+    }
+  },
+  "owner_observations": {
+    "reconciled": 240
+  },
+  "health_and_rss_samples": [
+    {
+      "elapsed_seconds": 0.141,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 141344,
+      "tree_rss_kib": 141344,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 5.321,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 144336,
+      "tree_rss_kib": 144336,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 10.336,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 144800,
+      "tree_rss_kib": 144800,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 15.301,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 144864,
+      "tree_rss_kib": 144864,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 20.292,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148384,
+      "tree_rss_kib": 148384,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 25.261,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148480,
+      "tree_rss_kib": 148480,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 30.244,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148528,
+      "tree_rss_kib": 148528,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 35.228,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148528,
+      "tree_rss_kib": 148528,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 40.204,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148656,
+      "tree_rss_kib": 148656,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 45.199,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148688,
+      "tree_rss_kib": 148688,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 50.188,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148688,
+      "tree_rss_kib": 148688,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 55.184,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148832,
+      "tree_rss_kib": 148832,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 60.161,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148832,
+      "tree_rss_kib": 148832,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 65.352,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 148960,
+      "tree_rss_kib": 148960,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 70.331,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 149024,
+      "tree_rss_kib": 149024,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 75.298,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 149472,
+      "tree_rss_kib": 149472,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 80.294,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 149648,
+      "tree_rss_kib": 149648,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 85.271,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 149664,
+      "tree_rss_kib": 149664,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 90.269,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 149792,
+      "tree_rss_kib": 149792,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 95.26,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 155584,
+      "tree_rss_kib": 155584,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 100.273,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 155712,
+      "tree_rss_kib": 155712,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 105.247,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 155856,
+      "tree_rss_kib": 155856,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 110.209,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 155984,
+      "tree_rss_kib": 155984,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 115.198,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 156160,
+      "tree_rss_kib": 156160,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 120.256,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 156256,
+      "tree_rss_kib": 156256,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 125.229,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 156368,
+      "tree_rss_kib": 156368,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 130.213,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 156448,
+      "tree_rss_kib": 156448,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 135.19,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 156720,
+      "tree_rss_kib": 156720,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 140.188,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 156816,
+      "tree_rss_kib": 156816,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 145.193,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 156912,
+      "tree_rss_kib": 156912,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 150.206,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 157024,
+      "tree_rss_kib": 157024,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 155.194,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 157056,
+      "tree_rss_kib": 157056,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 160.181,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 157056,
+      "tree_rss_kib": 157056,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 165.163,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 157648,
+      "tree_rss_kib": 157648,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 170.34,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 157744,
+      "tree_rss_kib": 157744,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 175.335,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 157760,
+      "tree_rss_kib": 157760,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 180.35,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 157760,
+      "tree_rss_kib": 157760,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 185.341,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 159344,
+      "tree_rss_kib": 159344,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 190.34,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 159632,
+      "tree_rss_kib": 159632,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 195.326,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 160176,
+      "tree_rss_kib": 160176,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 200.303,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 160272,
+      "tree_rss_kib": 160272,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 205.293,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 160272,
+      "tree_rss_kib": 160272,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 210.28,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 160304,
+      "tree_rss_kib": 160304,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 215.282,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 160304,
+      "tree_rss_kib": 160304,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 220.275,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161008,
+      "tree_rss_kib": 161008,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 225.251,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161040,
+      "tree_rss_kib": 161040,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 230.261,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161072,
+      "tree_rss_kib": 161072,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 235.259,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161088,
+      "tree_rss_kib": 161088,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 240.27,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161152,
+      "tree_rss_kib": 161152,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 245.254,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161184,
+      "tree_rss_kib": 161184,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 250.252,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161200,
+      "tree_rss_kib": 161200,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 255.268,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161296,
+      "tree_rss_kib": 161296,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 260.256,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161488,
+      "tree_rss_kib": 161488,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 265.227,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161488,
+      "tree_rss_kib": 161488,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 270.238,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 161648,
+      "tree_rss_kib": 161648,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 275.253,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 162144,
+      "tree_rss_kib": 162144,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 280.248,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 162176,
+      "tree_rss_kib": 162176,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 285.25,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 162192,
+      "tree_rss_kib": 162192,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 290.27,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 162192,
+      "tree_rss_kib": 162192,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 295.251,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 162192,
+      "tree_rss_kib": 162192,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 301.037,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 112416,
+      "tree_rss_kib": 112416,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 305.211,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 119984,
+      "tree_rss_kib": 119984,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 310.214,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 120640,
+      "tree_rss_kib": 120640,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 315.195,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 121376,
+      "tree_rss_kib": 121376,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 320.177,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 125328,
+      "tree_rss_kib": 125328,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 325.154,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 128256,
+      "tree_rss_kib": 128256,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 330.371,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 128320,
+      "tree_rss_kib": 128320,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 335.154,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 128608,
+      "tree_rss_kib": 128608,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 340.336,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 128736,
+      "tree_rss_kib": 128736,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 345.324,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 129520,
+      "tree_rss_kib": 129520,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 350.317,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 129792,
+      "tree_rss_kib": 129792,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 355.287,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 129808,
+      "tree_rss_kib": 129808,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 360.299,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 129808,
+      "tree_rss_kib": 129808,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 365.276,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 138384,
+      "tree_rss_kib": 138384,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 370.268,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 138400,
+      "tree_rss_kib": 138400,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 375.242,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 138960,
+      "tree_rss_kib": 138960,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 380.234,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 138960,
+      "tree_rss_kib": 138960,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 385.226,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139376,
+      "tree_rss_kib": 139376,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 390.23,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139408,
+      "tree_rss_kib": 139408,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 395.215,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139440,
+      "tree_rss_kib": 139440,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 400.206,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139456,
+      "tree_rss_kib": 139456,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 405.187,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139632,
+      "tree_rss_kib": 139632,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 410.183,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139696,
+      "tree_rss_kib": 139696,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 415.154,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139744,
+      "tree_rss_kib": 139744,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 420.356,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139744,
+      "tree_rss_kib": 139744,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 425.372,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139920,
+      "tree_rss_kib": 139920,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 430.162,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 139920,
+      "tree_rss_kib": 139920,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 435.349,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 140112,
+      "tree_rss_kib": 140112,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 440.33,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 140224,
+      "tree_rss_kib": 140224,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 445.315,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 140336,
+      "tree_rss_kib": 140336,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 450.295,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 140352,
+      "tree_rss_kib": 140352,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 455.298,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145328,
+      "tree_rss_kib": 145328,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 460.314,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145328,
+      "tree_rss_kib": 145328,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 465.326,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145520,
+      "tree_rss_kib": 145520,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 470.314,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145520,
+      "tree_rss_kib": 145520,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 475.295,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145824,
+      "tree_rss_kib": 145824,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 480.298,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145824,
+      "tree_rss_kib": 145824,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 485.277,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145920,
+      "tree_rss_kib": 145920,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 490.289,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145920,
+      "tree_rss_kib": 145920,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 495.284,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145936,
+      "tree_rss_kib": 145936,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 500.268,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 145952,
+      "tree_rss_kib": 145952,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 505.258,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 146016,
+      "tree_rss_kib": 146016,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 510.223,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 146016,
+      "tree_rss_kib": 146016,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 515.206,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 146080,
+      "tree_rss_kib": 146080,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 520.203,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 146080,
+      "tree_rss_kib": 146080,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 525.193,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 146176,
+      "tree_rss_kib": 146176,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 530.176,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 146208,
+      "tree_rss_kib": 146208,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 535.169,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 146272,
+      "tree_rss_kib": 146272,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 540.168,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 146272,
+      "tree_rss_kib": 146272,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 545.157,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 150240,
+      "tree_rss_kib": 150240,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 550.348,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 150304,
+      "tree_rss_kib": 150304,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 555.355,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 150304,
+      "tree_rss_kib": 150304,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 560.357,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 150304,
+      "tree_rss_kib": 150304,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 565.365,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 150416,
+      "tree_rss_kib": 150416,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 570.355,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 150416,
+      "tree_rss_kib": 150416,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 575.327,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 151200,
+      "tree_rss_kib": 151200,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 580.319,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 151216,
+      "tree_rss_kib": 151216,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 585.307,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 151360,
+      "tree_rss_kib": 151360,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 590.315,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 151424,
+      "tree_rss_kib": 151424,
+      "descendant_count": 0
+    },
+    {
+      "elapsed_seconds": 595.38,
+      "ready": "ready",
+      "workers_healthy": true,
+      "worker_count": 5,
+      "operations_status": "ok",
+      "incident_count": 1,
+      "server_rss_kib": 151456,
+      "tree_rss_kib": 151456,
+      "descendant_count": 0
+    }
+  ],
+  "final": {
+    "equity": "10004.030965645130977514242800000000000000000000000",
+    "initial_cash": "10000",
+    "account_equity_net_pnl": "4.030965645130977514242800000000000000000000000",
+    "owner_net_pnl": "4.0309656451309775142428000000000000000000000000021",
+    "owner_minus_equity_net_delta": "2.1E-48",
+    "contribution_reconciliation_delta": "-4.9E-48",
+    "funding_paid": "0.0155448459325439857572",
+    "fees_paid": "2.6006512465213",
+    "open_position_count": 6,
+    "valuation_status": "example",
+    "owners": [
+      {
+        "owner": "portfolio:1aa5d6ee3ba74e139955028cc09bb90f",
+        "realized_pnl": "-0.93584511214579246266450451809974523762391030222853",
+        "unrealized_pnl": "-5.9015323501542075373354954819002547623760896977700",
+        "fees_paid": "0.51996723",
+        "funding_paid": "-0.00005021518323167332",
+        "net_pnl": "-6.8373272471167683266799999999999999999999999999985"
+      },
+      {
+        "owner": "portfolio:86c851c9793d437eac76dfee96142155",
+        "realized_pnl": "-0.53751309382400039907170283489551687226603928932940",
+        "unrealized_pnl": "-1.1555262044630191009282971651044831277339607106600",
+        "fees_paid": "1.041671296534",
+        "funding_paid": "0.0155950611157756590772",
+        "net_pnl": "-1.7086343594027951590771999999999999999999999999894"
+      },
+      {
+        "owner": "portfolio:d9cbd3b7467d4741851f7123f082f2db",
+        "realized_pnl": "1.63976224564287950792813736243823373016363518899002",
+        "unrealized_pnl": "10.93716500600766149207186263756176626983636481100000",
+        "fees_paid": "1.0390127199873",
+        "funding_paid": "0",
+        "net_pnl": "12.576927251650540999999999999999999999999999999990"
+      }
+    ]
+  },
+  "external_network_attempts": 0,
+  "final_process_shutdown": {
+    "exit_code": -15,
+    "forced_kill": false,
+    "lifespan_shutdown_completed": true
+  },
+  "terminal_diagnostics": {
+    "groups": [
+      {
+        "id": "86c851c9793d437eac76dfee96142155",
+        "status": "stopped",
+        "last_bar": 1768086000000,
+        "last_error": null
+      },
+      {
+        "id": "d9cbd3b7467d4741851f7123f082f2db",
+        "status": "stopped",
+        "last_bar": 1768086000000,
+        "last_error": null
+      },
+      {
+        "id": "1aa5d6ee3ba74e139955028cc09bb90f",
+        "status": "stopped",
+        "last_bar": 1768086000000,
+        "last_error": null
+      }
+    ],
+    "recent_batches": [
+      {
+        "id": "b56c6f0228844fedaf67de7faba4bd00",
+        "group_id": "1aa5d6ee3ba74e139955028cc09bb90f",
+        "bar": 1768086000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "362d989d1a5b424ab04406ba206a12ca",
+        "group_id": "d9cbd3b7467d4741851f7123f082f2db",
+        "bar": 1768086000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0.00011220006526697903640372250749612297341649364341694\",\"notional\":\"0.0008979628633285\",\"quantities\":{\"ETH-USDT\":\"2.9E-7\",\"SOL-USDT\":\"0.000000\"}}"
+      },
+      {
+        "id": "0271613c5c0440aea8af4c5b2c4070f6",
+        "group_id": "86c851c9793d437eac76dfee96142155",
+        "bar": 1768086000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "c8f416592d934544823bc6466353582b",
+        "group_id": "86c851c9793d437eac76dfee96142155",
+        "bar": 1768071600000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "169eaca68f1c478b9e73c1de22c39f60",
+        "group_id": "d9cbd3b7467d4741851f7123f082f2db",
+        "bar": 1768071600000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0.0011233228888511901967839154339761602368825828718974\",\"notional\":\"0.0089896212512710\",\"quantities\":{\"ETH-USDT\":\"0.00000290\",\"SOL-USDT\":\"0.000000\"}}"
+      },
+      {
+        "id": "3dcb5e8711af47dc8b0930b52a87ade9",
+        "group_id": "1aa5d6ee3ba74e139955028cc09bb90f",
+        "bar": 1768071600000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "af977cc05be447209288c6fe10749734",
+        "group_id": "86c851c9793d437eac76dfee96142155",
+        "bar": 1768042800000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "6a3d2b732d1a48f19579f788df01c81a",
+        "group_id": "d9cbd3b7467d4741851f7123f082f2db",
+        "bar": 1768042800000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0.0021626119293901984905357372563980891019610544211192\",\"notional\":\"0.0173071187797470\",\"quantities\":{\"ETH-USDT\":\"0.00000205\",\"SOL-USDT\":\"0.000080\"}}"
+      },
+      {
+        "id": "fcf306d3362e46999395d3e4e839ad9e",
+        "group_id": "1aa5d6ee3ba74e139955028cc09bb90f",
+        "bar": 1768042800000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "19812b3c054f4fc7ba72335c341c14e8",
+        "group_id": "1aa5d6ee3ba74e139955028cc09bb90f",
+        "bar": 1768014000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+35\",\"notional\":\"0E-10\",\"quantities\":{\"DOGE-USDT-SWAP\":\"0.00\",\"OKB-USDT-SWAP\":\"0.00\"}}"
+      },
+      {
+        "id": "2975e39fab2c42b4b64357fea47a5038",
+        "group_id": "d9cbd3b7467d4741851f7123f082f2db",
+        "bar": 1768014000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0.0020653994165149386178475662128846560743373300302557\",\"notional\":\"0.0165347592204000\",\"quantities\":{\"ETH-USDT\":\"0E-8\",\"SOL-USDT\":\"0.000120\"}}"
+      },
+      {
+        "id": "2bc4ebf15185440bb13b6a68f6fceee3",
+        "group_id": "86c851c9793d437eac76dfee96142155",
+        "bar": 1768014000000,
+        "status": "completed",
+        "error": null,
+        "residuals": "{\"capital_pct\":\"0E+29\",\"notional\":\"0E-16\",\"quantities\":{\"BTC-USDT\":\"0E-8\",\"BTC-USDT-SWAP\":\"0.00\"}}"
+      }
+    ],
+    "uncompleted_commands": [],
+    "positions": [
+      {
+        "inst_id": "BTC-USDT",
+        "quantity": "0.00675435"
+      },
+      {
+        "inst_id": "BTC-USDT-SWAP",
+        "quantity": "-0.67"
+      },
+      {
+        "inst_id": "DOGE-USDT-SWAP",
+        "quantity": "-1.61"
+      },
+      {
+        "inst_id": "ETH-USDT",
+        "quantity": "0.12923314"
+      },
+      {
+        "inst_id": "OKB-USDT-SWAP",
+        "quantity": "4.41"
+      },
+      {
+        "inst_id": "SOL-USDT",
+        "quantity": "2.918182"
+      }
+    ]
+  },
+  "runtime_identity": {
+    "schema_version": 1,
+    "application_version": "0.11.0",
+    "code_fingerprint": "1735a8f70354b86a740f59666b42371ef42b6a263dd378a387566192d6123212",
+    "modules": {
+      "engine.py": "d7cb9ec7f57a2a4a69b2aba9ebab5784b2cb88469b4ff8b2552ab68c4732ebd7",
+      "schemas.py": "f092a94342325b602fb3d4e56b6ad11434270257c43433a5e74f4a6760da058f",
+      "catalog.py": "ff28ad8cb5641dfa407bd9d28e96c30587c33f0d1a3673bf6f12c83729c469fc",
+      "instrument_observations.py": "be61bea672f8ac61183dd47a49e7cc9b68fe2350945429ef7adc9f4fb7964b90",
+      "market.py": "9ffa2960473790d606e128037253ef3776e2687da82f67151da38346c2790903",
+      "data_packages.py": "1c3c4e5596903e25a54e5e0e31750c12a27f2dd6628ceb5667f99b0f8500d837",
+      "store.py": "afab60b3997e1e4ee5f42497d2ad3138bfa1bb90f964c1a299fc7c7eabecf969",
+      "pro_api.py": "e140ef02d74ead50ef52fb5f6c4cb0ebcb163d2d3565f811ae964b1112489bb5",
+      "derivatives.py": "a64c5393e7f4335b9233e08e0cde8eb8f3cd9dd0fee65f0f184e4f74ffd76285",
+      "pro_research.py": "75067eab7072e14c4843a0ced8ac7bb8a41250a86e6974d112ad1bf20450606e",
+      "pro_service.py": "b1e999be651c5770f12f4a4f55cb0bde2bd5ba98ef12dda5da58d9ddeb7b75a8",
+      "strategy_registry.py": "d11efc7a39e1c436643857da2428cfbcce55a4774a272bfbcfa0cb850bbf8741",
+      "strategy_risk.py": "6fb3f6b071b89d5278e3725ab3e32dd145f8ad327b8bb941460a70852458b123",
+      "research_budget.py": "d76a28de2f0d765c67f9094f68b85f03209aaaef1aab5229db6d3d3528e761ff",
+      "research_process.py": "1ca85e0d29686d7fedcb11992628f9ab09815bb6c7f088b157cf4e4433e292fc",
+      "research_artifacts.py": "d2cc31039b77250cc1a80f5b6205488c715ecc04ec7fb907698d7d14335e009e",
+      "research_governance.py": "5b94403613dc72f12ca3f2585e035cf84222d16f48fd12551a8238c330e311f4",
+      "research_protocol.py": "c78c1693aa73ccc0e18bbacd4444d232f0316e075a1329e852b748f3c255bf55",
+      "research_economics.py": "400bd4a9b36cb58dea585bc67f38c442b491118e4ac22b9a6430252c1dfb6820",
+      "portfolio_registry.py": "929b7f8755fe91d2e106a96f137761c54337e57befd411eafb11ba1dbe811dfb",
+      "portfolio_releases.py": "ce622f9e69dd0388cf11c950c13cbf187c45e8e608173279e6824c91f86840a6",
+      "managed_portfolios.py": "9ac1db43e51d87298948673efbd5ad3311f0a27f3cd92f45182f746f7526bcbc",
+      "portfolio_research.py": "71ad12b8b0d27a80201bf1179104a1949a29ecf9f79f43542208ebd01414fd54",
+      "portfolio_targets.py": "332243dc13a4aaa11902febb95e2288ccf7fa3d5c5ecbcd34643b9e3145659f4",
+      "portfolio_execution.py": "b51b3dd9d7747bf5dae5407b9b8a8083ee6f95578671675ef9fda909bd05c4ff",
+      "historical_lifecycle.py": "442d68c3804e1eb8dbfe32f69b97d029ac0b7f796b7f98a746cea5ade695b79d",
+      "portfolio_construction.py": "e05bae21837cba160be30736eea4e2bb58d85c580858888cbf6148e6a7c02681",
+      "portfolio_risk.py": "fa6f47c98a79889f6816c474110399a828f38b98f2b2dae02d63a8768c8f0a84",
+      "pro_execution.py": "7cb3d294c453a468bb93894fbea4055b96b7c733f4039ad3c3ce01e2f770e850",
+      "pending_funding.py": "49c66347ab743679d20f5e8ef8e32b9642706a559cfad0b3295d607f06e162a5",
+      "account_capital.py": "7672e4cd5f082983b589616ffa539726033f665d686a8caeeefc7185a25d69bb",
+      "forward_performance.py": "1237a6ac66c246e7dc913be82f3ea5fad71fa21d73b30279b1bed439bc871c28",
+      "liquidity_evidence.py": "09a07bf2732ae44bffc406178af4eca30aea68ea6b4be90e3ea995a3e073b1fc",
+      "contributions.py": "c36476c9a096fbd244adf30213fd92bd48007340ea344708cb9272300b3fd200",
+      "strategy_program.py": "b7e622a6aa90d441436c8e1dcd3b2eb4aca88865d6ab29c7b1e43f04686fd505",
+      "strategy_models.py": "41b29696d2e8c0fec4696817ae6285fe86f427f9bbb3088d6bf31f456149fbff",
+      "forward_history.py": "83cebe64eaaa8a7502026d0eebaebf730d618340411c1dcbbf9070d7d95c4db3",
+      "simulation_clock.py": "dce27aec48b7b998358ed5913db41b413c030c6608872312fd9e2f32e6ff335b",
+      "provenance.py": "1cefa1437ad47e3f4bef6a75a4b665f37a57974365d72baeaecca579d4be87d9"
+    },
+    "python": "3.13.15",
+    "implementation": "CPython",
+    "accounting": {
+      "precision": 50,
+      "rounding": "ROUND_HALF_EVEN"
+    }
+  },
+  "errors": [],
+  "finished_at_utc": "2026-10-09T12:54:19.021311+00:00",
+  "server_log_tails": [
+    "",
+    ""
+  ],
+  "temporary_workspace_removed_on_exit": true
+}

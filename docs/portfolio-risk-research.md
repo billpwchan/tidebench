@@ -28,6 +28,10 @@ The per-decision evidence includes sample bounds, eligible and excluded markets,
 
 `vol_target_pct` refers to **allocated sleeve capital**. At `capital_pct=40`, a 20% sleeve target corresponds approximately to 8% account volatility **before execution**, assuming only this sleeve and cash. Costs, gaps, residual inventory, price drift between rebalances and changing covariance can exceed it. It is neither a VaR limit nor a realized-loss or volatility guarantee. Risk panels between scheduled rebalances show a model reference, while the recorded quantity targets identify retained inventory and protective reductions.
 
+## Recompute under v0.11
+
+The [v0.11 report](audit/v0.11.0-portfolio-risk-battery.json) recomputes every declared case from the same hash-verified raw public captures under core `ed52b8e`; the [v0.11 replay](audit/v0.11.0-portfolio-risk-replay.json) matches all 28 ordered input/result hashes. No data is silently refreshed and no winner is chosen after seeing the check windows. Risk momentum remains negative in A (−6.94% standard costs, −8.45% doubled costs); B falls from 2.73% to 0.169% under doubled costs. Corrected workflow accounting does not establish profitable edge.
+
 ## Recompute under v0.10
 
 The [v0.10 full report](audit/v0.10.0-portfolio-risk-battery.json) and [exact replay](audit/v0.10.0-portfolio-risk-replay.json) re-evaluate the preserved raw public captures under the current `reduce_group_v2_allowance` accounting/execution implementation (`d941806` core), without relabeling the v0.9 results. All 28 ordered input/result hash pairs match; the [manifest](audit/v0.10.0-public-evidence-manifest.json) records numerical identity and all returns. The adverse window and cost-sensitive conclusion remain. Economic decomposition is now available in individual portfolio studies; the battery does not become an alpha acceptance because execution contracts improved.
