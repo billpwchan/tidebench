@@ -2,6 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Source } from '../api';
 import type { Page } from './config';
 
+export type ResearchDataIntent = {
+  source: Source;
+  product: 'SPOT' | 'SWAP';
+  bar: string;
+  instId?: string;
+  startTs?: number;
+  endTs?: number;
+};
 export type WorkspaceLocation = {
   page: Page;
   source: Source;
@@ -11,6 +19,7 @@ export type WorkspaceLocation = {
   packageId?: string;
   returnTo?: 'advanced' | 'portfolio';
   symbol?: string;
+  dataIntent?: ResearchDataIntent;
 };
 const pages: Page[] = [
   'overview',
@@ -28,6 +37,7 @@ const views: Partial<Record<Page, string[]>> = {
   research: ['advanced', 'portfolio', 'governance', 'classic'],
   execution: [
     'positions',
+    'order',
     'orders',
     'ledger',
     'strategies',
@@ -73,9 +83,29 @@ export function readWorkspaceLocation(
   const page = path as Page;
   const params = new URLSearchParams(query);
   const source = params.get('source');
+  const resolvedSource = source === 'okx' || source === 'example' ? source : fallback;
+  const dataProduct = params.get('dataProduct');
+  const dataBar = params.get('dataBar');
+  const timestamp = (name: string) => {
+    const raw = params.get(name);
+    const value = raw && /^\d{1,16}$/.test(raw) ? Number(raw) : NaN;
+    return Number.isSafeInteger(value) && value > 0 && value < 253402300800000 ? value : undefined;
+  };
+  const dataIntent: ResearchDataIntent | undefined =
+    (dataProduct === 'SPOT' || dataProduct === 'SWAP') &&
+    ['1m', '5m', '15m', '1H', '4H', '1Dutc'].includes(dataBar ?? '')
+      ? {
+          source: resolvedSource,
+          product: dataProduct,
+          bar: dataBar!,
+          instId: identifier(params.get('dataMarket')),
+          startTs: timestamp('dataStart'),
+          endTs: timestamp('dataEnd'),
+        }
+      : undefined;
   return {
     page,
-    source: source === 'okx' || source === 'example' ? source : fallback,
+    source: resolvedSource,
     view: validView(page, params.get('view') ?? undefined),
     runId: identifier(params.get('run')),
     versionId: identifier(params.get('version')),
@@ -87,6 +117,7 @@ export function readWorkspaceLocation(
           ? 'advanced'
           : undefined,
     symbol: identifier(params.get('symbol')),
+    dataIntent,
   };
 }
 export function workspaceHash(location: WorkspaceLocation) {
@@ -98,6 +129,14 @@ export function workspaceHash(location: WorkspaceLocation) {
   if (location.packageId) params.set('package', location.packageId);
   if (location.returnTo) params.set('return', location.returnTo);
   if (location.symbol) params.set('symbol', location.symbol);
+  if (location.dataIntent?.source === location.source) {
+    const intent = location.dataIntent;
+    params.set('dataProduct', intent.product);
+    params.set('dataBar', intent.bar);
+    if (intent.instId) params.set('dataMarket', intent.instId);
+    if (intent.startTs) params.set('dataStart', String(intent.startTs));
+    if (intent.endTs) params.set('dataEnd', String(intent.endTs));
+  }
   return '#' + location.page + '?' + params.toString();
 }
 function preferredSource(): Source {

@@ -2,10 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Play, Square, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { Source, Strategy } from '../api';
+import type { ResearchDataIntent } from '../lib/workspaceLocation';
 import { defaultStrategy, downloadBlob } from '../api';
 import { proApi } from '../proApi';
 import { useSession } from '../components/AuthGate';
-import { DataTable, JsonDetails, RecordGrid, WorkspaceTabs } from '../components/ProWorkspace';
+import {
+  DataTable,
+  JsonDetails,
+  RecordGrid,
+  WorkspaceTabs,
+  valueText,
+} from '../components/ProWorkspace';
 import ResearchChart from '../components/ResearchChart';
 import PortfolioRiskEvidence from '../components/PortfolioRiskEvidence';
 import LifecycleEvidence, {
@@ -155,7 +162,7 @@ export default function PortfolioResearch({
   onClearDraft,
 }: {
   source: Source;
-  onData: () => void;
+  onData: (intent?: ResearchDataIntent) => void;
   onExecution: (id?: string) => void;
   initialRunId?: string;
   initialInputs?: ResearchInputs;
@@ -646,7 +653,20 @@ export default function PortfolioResearch({
   const prepareData = () => {
     const target = legs.findIndex((leg) => !leg.package_id);
     draft.flush({ dataLeg: target });
-    onData();
+    const targetLeg = target >= 0 ? legs[target] : legs[0];
+    const anchor = ready.find((item) => item.id === legs.find((leg) => leg.package_id)?.package_id);
+    const market =
+      targetLeg?.inst_id ||
+      (targetLeg?.package_id
+        ? ready.find((item) => item.id === targetLeg.package_id)?.inst_id
+        : undefined);
+    onData({
+      source,
+      product: market?.endsWith('-SWAP') ? 'SWAP' : 'SPOT',
+      bar: anchor?.bar ?? recipes.find((item) => item.id === recipeId)?.definition.bar ?? '1H',
+      ...(market ? { instId: market } : {}),
+      ...(anchor ? { startTs: anchor.start, endTs: anchor.end } : {}),
+    });
   };
   const plan = run.data?.result;
   const economicIncomplete = plan?.economic_state === 'incomplete_lifecycle';
@@ -660,6 +680,31 @@ export default function PortfolioResearch({
     (evaluationEvidence?.rejection as RecordData)?.status ?? 'unavailable',
   );
   const trainingMetrics = evaluationEvidence?.train_metrics as RecordData | undefined;
+  const resultLegs = (run.data?.config.legs as RecordData[] | undefined) ?? [];
+  const describeMarkets = (items: RecordData[]) =>
+    items
+      .map(
+        (leg, index) =>
+          packages.data?.items.find((item) => item.id === leg.package_id)?.inst_id ??
+          String(leg.inst_id ?? `${text('Leg', '组合腿')} ${index + 1}`),
+      )
+      .join(' · ');
+  const resultPackages = resultLegs.map((leg) =>
+    packages.data?.items.find((item) => item.id === leg.package_id),
+  );
+  const resultWindows = [
+    ...new Set(
+      resultPackages
+        .filter((item) => !!item)
+        .map((item) => `${date(item!.start, true)} → ${date(item!.end, true)}`),
+    ),
+  ];
+  const evaluationName = (value: unknown) =>
+    value === 'train_test'
+      ? text('Independent chronological test', '独立时间序列测试')
+      : value === 'sealed_holdout'
+        ? text('Sealed holdout', '封存评估')
+        : text('Full window development', '全时段开发评估');
   return (
     <>
       <PageHeading
@@ -743,8 +788,17 @@ export default function PortfolioResearch({
           </div>
         )}
       {showEditor ? (
-        <section className="pro-panel portfolio-study-editor">
+        <section className="pro-panel portfolio-study-editor research-desk">
           <form
+            id="portfolio-research-form"
+            className="research-desk-form"
+            onInvalidCapture={(event) => {
+              let node = event.target as HTMLElement | null;
+              while (node) {
+                if (node instanceof HTMLDetailsElement) node.open = true;
+                node = node.parentElement;
+              }
+            }}
             onChangeCapture={() => {
               revisionGeneration.current += 1;
             }}
@@ -768,510 +822,576 @@ export default function PortfolioResearch({
                 <X size={18} />
               </button>
             </div>
-            {!projectId && (
-              <Field
-                label="Portfolio starting point"
-                hint="Reference hypotheses with failure criteria; no investment edge is claimed."
-              >
-                <select
-                  value={recipeId}
-                  onChange={(e) => {
-                    setRecipeId(e.target.value);
-                    const recipe = recipes.find((r) => r.id === e.target.value);
-                    if (!recipe) return;
-                    const d = recipe.definition;
-                    setName(recipe.name);
-                    setHypothesis(recipe.hypothesis);
-                    setMode(d.mode);
-                    setUniverseMode('static');
-                    setLifecycleWarmup(2);
-                    setCapitalPct(d.capital_pct);
-                    loadExecution(d, false);
-                    setCarryThreshold(d.carry_threshold);
-                    loadCarry(d);
-                    loadRisk(d);
-                    setRebalance(d.rebalance_bars);
-                    setLookback(d.lookback);
-                    setTopK(d.top_k);
-                    setEvaluation('train_test');
-                    const matching = ready.filter((p) => p.bar === d.bar);
-                    const anchor = matching.find((p) => p.inst_id === d.legs[0].inst_id);
-                    setLegs(
-                      d.legs.map((leg) => ({
-                        inst_id: leg.inst_id,
-                        programDraft: undefined,
-                        weight: leg.weight,
-                        leverage: leg.leverage,
-                        direction: leg.direction,
-                        strategy: { ...leg.strategy },
-                        package_id:
-                          matching.find(
-                            (p) =>
-                              p.inst_id === leg.inst_id &&
-                              p.start === anchor?.start &&
-                              p.end === anchor?.end,
-                          )?.id ?? '',
-                      })),
-                    );
-                  }}
-                >
-                  <option value="">{t('Custom hypothesis')}</option>
-                  {recipes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {t(r.name)}
-                    </option>
-                  ))}
-                </select>
-                {recipeId && (
-                  <p className="quiet-copy">
-                    {recipes
-                      .find((r) => r.id === recipeId)
-                      ?.definition.legs.map((l) => l.inst_id)
-                      .join(' · ')}{' '}
-                    · 1H
-                  </p>
-                )}
-              </Field>
-            )}
-            <div className="form-grid">
-              <Field label="Saved portfolio">
-                <select
-                  value={projectId}
-                  disabled={loadProject.isPending && currentTask(loadProject.variables?.request)}
-                  onChange={(e) =>
-                    e.target.value
-                      ? loadProject.mutate({ id: e.target.value, request: beginRequest('load') })
-                      : (setProjectId(''), setParentId(''))
-                  }
-                >
-                  <option value="">{t('New portfolio definition')}</option>
-                  {projects.data?.items.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} · v{p.latest_revision}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Study name">
-                <input
-                  required
-                  minLength={2}
-                  maxLength={100}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </Field>
-              <Field label="Construction">
-                <select value={mode} onChange={(e) => setMode(e.target.value)}>
-                  <option value="fixed_weights">{t('Fixed notional weights')}</option>
-                  <option value="independent_signals">
-                    {t('Independent signals, shared capital')}
-                  </option>
-                  <option value="risk_momentum">{t('Risk-budgeted momentum')}</option>
-                  <option value="momentum">{t('Positive momentum rotation')}</option>
-                  <option value="funding_carry">{t('Lagged funding carry')}</option>
-                </select>
-              </Field>
-            </div>
-            <Field label="Economic hypothesis">
-              <textarea
-                className="study-hypothesis-input"
-                required
-                minLength={12}
-                maxLength={4000}
-                rows={3}
-                value={hypothesis}
-                onChange={(e) => setHypothesis(e.target.value)}
-              />
-            </Field>
-            <LifecycleScenario
-              mode={universeMode}
-              warmup={lifecycleWarmup}
-              onMode={setUniverseMode}
-              onWarmup={setLifecycleWarmup}
-            />
-            <p className="quiet-copy">
-              {universeMode === 'static' &&
-                t(
-                  'Use ready packages with identical source, interval and UTC window. Weights are signed notional / account equity. Spot weights must be nonnegative.',
-                )}
-            </p>
-            {packages.isError && <ErrorBox error={packages.error} />}
-            {!ready.length && (
-              <Empty title="No ready packages">
-                {t('Prepare at least two aligned market packages in the data library.')}
-              </Empty>
-            )}
-            {legs.map((leg, i) => (
-              <div className="portfolio-study-leg" key={i}>
-                <div className="section-heading">
-                  <h3>
-                    {t('Leg')} {i + 1}
-                  </h3>
-                  {legs.length > 2 && (
-                    <button
-                      type="button"
-                      className="text-button"
-                      onClick={() => setLegs((old) => old.filter((_, index) => index !== i))}
-                    >
-                      {t('Remove')}
-                    </button>
-                  )}
-                </div>
-                <div className="portfolio-leg-fields">
-                  <Field label={`Package ${i + 1}`}>
-                    <select
-                      required
-                      value={leg.package_id}
-                      onChange={(e) =>
-                        patch(i, {
-                          package_id: e.target.value,
-                          inst_id: ready.find((p) => p.id === e.target.value)?.inst_id ?? '',
-                          lifecycle_events: [],
-                        })
-                      }
-                    >
-                      <option value="">{t('Choose a ready package')}</option>
-                      {(i === 0 ? ready : choices).map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.inst_id} · {p.bar} · {date(p.start)} · {p.id.slice(0, 7)}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Notional weight %">
-                    <input
-                      required
-                      type="number"
-                      min={-500}
-                      max={500}
-                      step={0.1}
-                      value={Number(leg.weight) * 100}
-                      onChange={(e) => patch(i, { weight: String(Number(e.target.value) / 100) })}
-                    />
-                  </Field>
-                  <Field label="Leverage">
-                    <input
-                      required
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={leg.leverage}
-                      onChange={(e) => patch(i, { leverage: e.target.value })}
-                    />
-                  </Field>
-                </div>
-                {universeMode === 'historical_lifecycle' && (
-                  <LifecycleImport
-                    symbol={ready.find((p) => p.id === leg.package_id)?.inst_id ?? ''}
-                    events={leg.lifecycle_events ?? []}
-                    onChange={(events) => patch(i, { lifecycle_events: events })}
-                  />
-                )}
-                {mode !== 'independent_signals' && (
-                  <StrategyExitFields
-                    value={leg.strategy}
-                    onChange={(strategy) => patch(i, { strategy })}
-                  />
-                )}
-                {mode === 'independent_signals' && (
-                  <details>
-                    <summary>{t('Signal policy')}</summary>
-                    <Field label="Direction">
-                      <select
-                        value={leg.direction}
-                        onChange={(e) => patch(i, { direction: e.target.value })}
-                      >
-                        <option value="long_only">{t('Long only')}</option>
-                        <option value="short_only">{t('Short only')}</option>
-                        <option value="long_short">{t('Long / short')}</option>
-                      </select>
-                    </Field>
-                    <StrategyFields
-                      professional
-                      showAllocation={false}
-                      value={leg.strategy}
-                      onChange={(strategy) => patch(i, { strategy })}
-                      programDraft={leg.programDraft}
-                      onProgramDraftChange={(programDraft) => patch(i, { programDraft })}
-                    />
-                  </details>
-                )}
+            <div className="research-submit-bar">
+              <div>
+                <strong>{text('Prepare a portfolio trial', '准备组合研究试验')}</strong>
+                <span>
+                  {legs.length} {text('market legs', '个组合腿')} · {evaluationName(evaluation)} ·{' '}
+                  {fee} + {slip} bps
+                </span>
               </div>
-            ))}
-            <button
-              type="button"
-              className="text-button"
-              disabled={legs.length >= 10}
-              onClick={() => setLegs((old) => [...old, newLeg()])}
-            >
-              <Plus size={13} />
-              {t('Add market leg')}
-            </button>
-            {mode === 'funding_carry' && (
-              <p className="inline-warning">
-                {t(
-                  'Carry requires exactly two ordered legs: spot long, matching perpetual short, equal absolute weights. Only prior realized funding is used; positive funding is not guaranteed to persist.',
-                )}
-              </p>
-            )}
-            <div className="form-grid portfolio-study-policy">
-              <Field label="Evaluation">
-                <select value={evaluation} onChange={(e) => setEvaluation(e.target.value)}>
-                  <option value="full">{t('Full window development')}</option>
-                  <option value="train_test">{t('Independent chronological test')}</option>
-                </select>
-              </Field>
-              {evaluation === 'train_test' && (
-                <>
-                  <Field label="Training window %">
-                    <input
-                      required
-                      type="number"
-                      min={50}
-                      max={85}
-                      value={trainPct}
-                      onChange={(e) => setTrainPct(Number(e.target.value))}
-                    />
-                  </Field>
-                  <Field label="Embargo bars">
-                    <input
-                      required
-                      type="number"
-                      min={0}
-                      max={400}
-                      value={embargo}
-                      onChange={(e) => setEmbargo(Number(e.target.value))}
-                    />
-                  </Field>
-                </>
-              )}
-              <Field label="Capital allocation %">
-                <input
-                  required
-                  type="number"
-                  min={0.01}
-                  max={100}
-                  step="any"
-                  value={capitalPct}
-                  onChange={(e) => setCapitalPct(e.target.value)}
-                />
-              </Field>
-              <div className="portfolio-execution-controls">
-                <Field label="Execution policy">
+              <button
+                className="button button-citrus"
+                disabled={
+                  !canOperate ||
+                  (create.isPending && currentTask(create.variables?.request)) ||
+                  legs.some(
+                    (l) =>
+                      !l.package_id || (l.strategy.kind === 'program' && !l.strategy.rules?.length),
+                  )
+                }
+              >
+                <Play size={14} />
+                {t('Run portfolio research')}
+              </button>
+            </div>
+            <section className="research-form-section" aria-labelledby="portfolio-strategy-section">
+              <h3 id="portfolio-strategy-section">{text('Strategy', '策略')}</h3>
+              {!projectId && (
+                <Field
+                  label="Portfolio starting point"
+                  hint="Reference hypotheses with failure criteria; no investment edge is claimed."
+                >
                   <select
-                    value={executionContract}
+                    value={recipeId}
+                    onChange={(e) => {
+                      setRecipeId(e.target.value);
+                      const recipe = recipes.find((r) => r.id === e.target.value);
+                      if (!recipe) return;
+                      const d = recipe.definition;
+                      setName(recipe.name);
+                      setHypothesis(recipe.hypothesis);
+                      setMode(d.mode);
+                      setUniverseMode('static');
+                      setLifecycleWarmup(2);
+                      setCapitalPct(d.capital_pct);
+                      loadExecution(d, false);
+                      setCarryThreshold(d.carry_threshold);
+                      loadCarry(d);
+                      loadRisk(d);
+                      setRebalance(d.rebalance_bars);
+                      setLookback(d.lookback);
+                      setTopK(d.top_k);
+                      setEvaluation('train_test');
+                      const matching = ready.filter((p) => p.bar === d.bar);
+                      const anchor = matching.find((p) => p.inst_id === d.legs[0].inst_id);
+                      setLegs(
+                        d.legs.map((leg) => ({
+                          inst_id: leg.inst_id,
+                          programDraft: undefined,
+                          weight: leg.weight,
+                          leverage: leg.leverage,
+                          direction: leg.direction,
+                          strategy: { ...leg.strategy },
+                          package_id:
+                            matching.find(
+                              (p) =>
+                                p.inst_id === leg.inst_id &&
+                                p.start === anchor?.start &&
+                                p.end === anchor?.end,
+                            )?.id ?? '',
+                        })),
+                      );
+                    }}
+                  >
+                    <option value="">{t('Custom hypothesis')}</option>
+                    {recipes.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {t(r.name)}
+                      </option>
+                    ))}
+                  </select>
+                  {recipeId && (
+                    <p className="quiet-copy">
+                      {recipes
+                        .find((r) => r.id === recipeId)
+                        ?.definition.legs.map((l) => l.inst_id)
+                        .join(' · ')}{' '}
+                      · 1H
+                    </p>
+                  )}
+                </Field>
+              )}
+              <div className="form-grid">
+                <Field label="Saved portfolio">
+                  <select
+                    value={projectId}
+                    disabled={loadProject.isPending && currentTask(loadProject.variables?.request)}
                     onChange={(e) =>
-                      setExecutionContract(
-                        e.target.value as NonNullable<PortfolioDefinition['execution_contract']>,
-                      )
+                      e.target.value
+                        ? loadProject.mutate({ id: e.target.value, request: beginRequest('load') })
+                        : (setProjectId(''), setParentId(''))
                     }
                   >
-                    <option value="reduce_group_v2_allowance">
-                      {t(executionPolicyName('reduce_group_v2_allowance'))}
-                    </option>
-                    <option value="reduce_group_v1">
-                      {t(executionPolicyName('reduce_group_v1'))}
-                    </option>
+                    <option value="">{t('New portfolio definition')}</option>
+                    {projects.data?.items.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} · v{p.latest_revision}
+                      </option>
+                    ))}
                   </select>
                 </Field>
-                <Field
-                  label="Maximum execution residual %"
-                  hint="Deviation beyond this allocated-capital limit triggers group reduction; recovery fills can also fail."
-                >
+                <Field label="Study name">
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={100}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </Field>
+                <Field label="Construction">
+                  <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                    <option value="fixed_weights">{t('Fixed notional weights')}</option>
+                    <option value="independent_signals">
+                      {t('Independent signals, shared capital')}
+                    </option>
+                    <option value="risk_momentum">{t('Risk-budgeted momentum')}</option>
+                    <option value="momentum">{t('Positive momentum rotation')}</option>
+                    <option value="funding_carry">{t('Lagged funding carry')}</option>
+                  </select>
+                </Field>
+              </div>
+              <div className="form-grid">
+                {['momentum', 'risk_momentum'].includes(mode) && (
+                  <>
+                    <Field label="Lookback window">
+                      <input
+                        required
+                        type="number"
+                        min={2}
+                        max={400}
+                        value={lookback}
+                        onChange={(e) => setLookback(Number(e.target.value))}
+                      />
+                    </Field>
+                    <Field label="Top K markets">
+                      <input
+                        required
+                        type="number"
+                        min={1}
+                        max={legs.length}
+                        value={topK}
+                        onChange={(e) => setTopK(Number(e.target.value))}
+                      />
+                    </Field>
+                  </>
+                )}
+              </div>
+              <Field label="Economic hypothesis">
+                <textarea
+                  className="study-hypothesis-input"
+                  required
+                  minLength={12}
+                  maxLength={4000}
+                  rows={3}
+                  value={hypothesis}
+                  onChange={(e) => setHypothesis(e.target.value)}
+                />
+              </Field>
+            </section>
+            <section className="research-form-section" aria-labelledby="portfolio-market-section">
+              <h3 id="portfolio-market-section">{text('Market & data', '市场与数据')}</h3>
+              <LifecycleScenario
+                mode={universeMode}
+                warmup={lifecycleWarmup}
+                onMode={setUniverseMode}
+                onWarmup={setLifecycleWarmup}
+              />
+              <p className="quiet-copy">
+                {universeMode === 'static' &&
+                  t(
+                    'Use ready packages with identical source, interval and UTC window. Weights are signed notional / account equity. Spot weights must be nonnegative.',
+                  )}
+              </p>
+              {packages.isError && <ErrorBox error={packages.error} />}
+              {!ready.length && (
+                <Empty title="No ready packages">
+                  {t('Prepare at least two aligned market packages in the data library.')}
+                </Empty>
+              )}
+              {legs.map((leg, i) => (
+                <div className="portfolio-study-leg" key={i}>
+                  <div className="section-heading">
+                    <h3>
+                      {t('Leg')} {i + 1}
+                    </h3>
+                    {legs.length > 2 && (
+                      <button
+                        type="button"
+                        className="text-button"
+                        onClick={() => setLegs((old) => old.filter((_, index) => index !== i))}
+                      >
+                        {t('Remove')}
+                      </button>
+                    )}
+                  </div>
+                  <div className="portfolio-leg-fields">
+                    <Field label={`Package ${i + 1}`}>
+                      <select
+                        required
+                        value={leg.package_id}
+                        onChange={(e) =>
+                          patch(i, {
+                            package_id: e.target.value,
+                            inst_id: ready.find((p) => p.id === e.target.value)?.inst_id ?? '',
+                            lifecycle_events: [],
+                          })
+                        }
+                      >
+                        <option value="">{t('Choose a ready package')}</option>
+                        {(i === 0 ? ready : choices).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.inst_id} · {p.bar} · {date(p.start)} · {p.id.slice(0, 7)}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Notional weight %">
+                      <input
+                        required
+                        type="number"
+                        min={-500}
+                        max={500}
+                        step={0.1}
+                        value={Number(leg.weight) * 100}
+                        onChange={(e) => patch(i, { weight: String(Number(e.target.value) / 100) })}
+                      />
+                    </Field>
+                    <Field label="Leverage">
+                      <input
+                        required
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={leg.leverage}
+                        onChange={(e) => patch(i, { leverage: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                  {universeMode === 'historical_lifecycle' && (
+                    <LifecycleImport
+                      symbol={ready.find((p) => p.id === leg.package_id)?.inst_id ?? ''}
+                      events={leg.lifecycle_events ?? []}
+                      onChange={(events) => patch(i, { lifecycle_events: events })}
+                    />
+                  )}
+                  {mode !== 'independent_signals' && (
+                    <StrategyExitFields
+                      value={leg.strategy}
+                      onChange={(strategy) => patch(i, { strategy })}
+                    />
+                  )}
+                  {mode === 'independent_signals' && (
+                    <details>
+                      <summary>{t('Signal policy')}</summary>
+                      <Field label="Direction">
+                        <select
+                          value={leg.direction}
+                          onChange={(e) => patch(i, { direction: e.target.value })}
+                        >
+                          <option value="long_only">{t('Long only')}</option>
+                          <option value="short_only">{t('Short only')}</option>
+                          <option value="long_short">{t('Long / short')}</option>
+                        </select>
+                      </Field>
+                      <StrategyFields
+                        professional
+                        showAllocation={false}
+                        value={leg.strategy}
+                        onChange={(strategy) => patch(i, { strategy })}
+                        programDraft={leg.programDraft}
+                        onProgramDraftChange={(programDraft) => patch(i, { programDraft })}
+                      />
+                    </details>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                className="text-button"
+                disabled={legs.length >= 10}
+                onClick={() => setLegs((old) => [...old, newLeg()])}
+              >
+                <Plus size={13} />
+                {t('Add market leg')}
+              </button>
+              {mode === 'funding_carry' && (
+                <p className="inline-warning">
+                  {t(
+                    'Carry requires exactly two ordered legs: spot long, matching perpetual short, equal absolute weights. Only prior realized funding is used; positive funding is not guaranteed to persist.',
+                  )}
+                </p>
+              )}
+            </section>
+            <section className="research-form-section" aria-labelledby="portfolio-cost-section">
+              <h3 id="portfolio-cost-section">
+                {text('Capital & cost assumptions', '资金与成本假设')}
+              </h3>
+              <div className="form-grid portfolio-study-policy research-core-policy">
+                <Field label="Capital allocation %">
                   <input
                     required
                     type="number"
                     min={0.01}
                     max={100}
                     step="any"
-                    value={residualPct}
-                    onChange={(e) => setResidualPct(e.target.value)}
+                    value={capitalPct}
+                    onChange={(e) => setCapitalPct(e.target.value)}
                   />
                 </Field>
-                <PortfolioExecutionPolicy contract={executionContract} residual={residualPct} />
+                <Field label="Initial capital">
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    max={1000000000}
+                    value={cash}
+                    onChange={(e) => setCash(e.target.value)}
+                  />
+                </Field>
+                <Field label="Rebalance every N bars">
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={rebalance}
+                    onChange={(e) => setRebalance(Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="Fee (bps)">
+                  <input
+                    required
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={fee}
+                    onChange={(e) => setFee(e.target.value)}
+                  />
+                </Field>
+                <Field label="Slippage (bps)">
+                  <input
+                    required
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={slip}
+                    onChange={(e) => setSlip(e.target.value)}
+                  />
+                </Field>
               </div>
-              {mode === 'funding_carry' && (
-                <>
-                  <Field label="Prior funding threshold">
-                    <input
-                      required
-                      type="number"
-                      min={-0.01}
-                      max={0.01}
-                      step="any"
-                      value={carryThreshold}
-                      onChange={(e) => setCarryThreshold(e.target.value)}
-                    />
-                  </Field>
-                  {(
-                    [
-                      ['carry_window', 'Prior settlements', 1, 30],
-                      ['carry_cost_settlements', 'Projected settlement count', 0, 300],
-                      ['carry_max_age_hours', 'Maximum funding age (hours)', 0, 168],
-                      ['carry_buffer_bps', 'Additional carry hurdle (bps)', 0, 1000],
-                    ] as const
-                  ).map(([key, label, min, max]) => (
-                    <Field key={key} label={label}>
+            </section>
+            <section
+              className="research-form-section"
+              aria-labelledby="portfolio-evaluation-section"
+            >
+              <h3 id="portfolio-evaluation-section">{text('Evaluation', '评估方式')}</h3>
+              <div className="form-grid portfolio-study-policy">
+                <Field label="Evaluation">
+                  <select value={evaluation} onChange={(e) => setEvaluation(e.target.value)}>
+                    <option value="full">{t('Full window development')}</option>
+                    <option value="train_test">{t('Independent chronological test')}</option>
+                  </select>
+                </Field>
+                {evaluation === 'train_test' && (
+                  <>
+                    <Field label="Training window %">
                       <input
                         required
                         type="number"
-                        min={min}
-                        max={max}
-                        step={key === 'carry_buffer_bps' ? 'any' : 1}
-                        value={carryConfig[key]}
-                        onChange={(e) =>
-                          setCarryConfig((old) => ({
-                            ...old,
-                            [key]:
-                              key === 'carry_buffer_bps' ? e.target.value : Number(e.target.value),
-                          }))
-                        }
+                        min={50}
+                        max={85}
+                        value={trainPct}
+                        onChange={(e) => setTrainPct(Number(e.target.value))}
                       />
                     </Field>
-                  ))}
-                  <p className="quiet-copy">
-                    {t('Four-fill entry/exit cost hurdle')}:{' '}
-                    {(
-                      4 * (Number(fee) + Number(slip)) +
-                      Number(carryConfig.carry_buffer_bps)
-                    ).toFixed(2)}{' '}
-                    bps.{' '}
-                    {t(
-                      'Projection is per settlement, not APR. Zero projected settlements retains the legacy rate-only gate; zero maximum age disables freshness checks.',
+                    <Field label="Embargo bars">
+                      <input
+                        required
+                        type="number"
+                        min={0}
+                        max={400}
+                        value={embargo}
+                        onChange={(e) => setEmbargo(Number(e.target.value))}
+                      />
+                    </Field>
+                  </>
+                )}
+              </div>
+              <p className="research-evaluation-scope">
+                {evaluation === 'train_test'
+                  ? text(
+                      'Construction is fixed before the reserved test window. Each window starts with independent capital and flat inventory.',
+                      '组合构建在保留测试时段前固定。各时段从独立资金与空仓开始。',
+                    )
+                  : text(
+                      'This is development evidence. Choose an independent chronological test before interpreting the result as independent evaluation.',
+                      '这是开发阶段证据。若要独立评估，请选择独立时间序列测试。',
                     )}
-                  </p>
-                </>
-              )}
-              <Field label="Initial capital">
-                <input
-                  required
-                  type="number"
-                  min={1}
-                  max={1000000000}
-                  value={cash}
-                  onChange={(e) => setCash(e.target.value)}
-                />
-              </Field>
-              <Field label="Rebalance every N bars">
-                <input
-                  required
-                  type="number"
-                  min={1}
-                  max={1000}
-                  value={rebalance}
-                  onChange={(e) => setRebalance(Number(e.target.value))}
-                />
-              </Field>
-              <Field label="Fee (bps)">
-                <input
-                  required
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={fee}
-                  onChange={(e) => setFee(e.target.value)}
-                />
-              </Field>
-              <Field label="Slippage (bps)">
-                <input
-                  required
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={slip}
-                  onChange={(e) => setSlip(e.target.value)}
-                />
-              </Field>
-              <Field
-                label="Maximum order notional (USDT)"
-                hint="A leg is split into at most twenty lot-aligned child orders under this cap. Unexecutable plans enter the shared failure policy."
-              >
-                <input
-                  required
-                  type="number"
-                  min={0.01}
-                  max={1000000000}
-                  step="any"
-                  value={maxOrder}
-                  onChange={(e) => setMaxOrder(e.target.value)}
-                />
-              </Field>
-              <Field
-                label="Underlying asset gross limit (%)"
-                hint="Combine absolute spot and perpetual exposure to the same underlying without netting directions."
-              >
-                <input
-                  required
-                  type="number"
-                  min={1}
-                  max={1000}
-                  step="any"
-                  value={maxBaseGross}
-                  onChange={(e) => setMaxBaseGross(e.target.value)}
-                />
-              </Field>
-              <Field label="Gross exposure limit %">
-                <input
-                  required
-                  type="number"
-                  min={1}
-                  max={1000}
-                  value={gross}
-                  onChange={(e) => setGross(Number(e.target.value))}
-                />
-              </Field>
-              <Field label="Daily loss limit %">
-                <input
-                  required
-                  type="number"
-                  min={0.1}
-                  max={50}
-                  step={0.1}
-                  value={daily}
-                  onChange={(e) => setDaily(Number(e.target.value))}
-                />
-              </Field>
-              {['momentum', 'risk_momentum'].includes(mode) && (
-                <>
-                  <Field label="Lookback window">
+              </p>
+            </section>
+            <details className="research-advanced-details">
+              <summary>
+                {text('Execution policy & risk limits', '执行规则与风险限制')} ·{' '}
+                {t(executionPolicyName(executionContract))} · {text('Order cap', '单笔上限')}{' '}
+                {maxOrder} USDT
+              </summary>
+              <div className="form-grid portfolio-study-policy">
+                <div className="portfolio-execution-controls">
+                  <Field label="Execution policy">
+                    <select
+                      value={executionContract}
+                      onChange={(e) =>
+                        setExecutionContract(
+                          e.target.value as NonNullable<PortfolioDefinition['execution_contract']>,
+                        )
+                      }
+                    >
+                      <option value="reduce_group_v2_allowance">
+                        {t(executionPolicyName('reduce_group_v2_allowance'))}
+                      </option>
+                      <option value="reduce_group_v1">
+                        {t(executionPolicyName('reduce_group_v1'))}
+                      </option>
+                    </select>
+                  </Field>
+                  <Field
+                    label="Maximum execution residual %"
+                    hint="Deviation beyond this allocated-capital limit triggers group reduction; recovery fills can also fail."
+                  >
                     <input
                       required
                       type="number"
-                      min={2}
-                      max={400}
-                      value={lookback}
-                      onChange={(e) => setLookback(Number(e.target.value))}
+                      min={0.01}
+                      max={100}
+                      step="any"
+                      value={residualPct}
+                      onChange={(e) => setResidualPct(e.target.value)}
                     />
                   </Field>
-                  <Field label="Top K markets">
-                    <input
-                      required
-                      type="number"
-                      min={1}
-                      max={legs.length}
-                      value={topK}
-                      onChange={(e) => setTopK(Number(e.target.value))}
-                    />
-                  </Field>
-                </>
-              )}
-            </div>
-            <p className="quiet-copy">
-              {t('Shared failure policy')}: <strong>{t('Reduce the group on failure')}</strong>.{' '}
-              {t(
-                'Research and managed paper execution use the same sequential reduction, addition and compensation policy. A completed research job can still contain a halted simulation.',
-              )}
-            </p>
-            {legacyUpgrade && (
-              <p className="inline-warning">
+                  <PortfolioExecutionPolicy contract={executionContract} residual={residualPct} />
+                </div>
+                {mode === 'funding_carry' && (
+                  <>
+                    <Field label="Prior funding threshold">
+                      <input
+                        required
+                        type="number"
+                        min={-0.01}
+                        max={0.01}
+                        step="any"
+                        value={carryThreshold}
+                        onChange={(e) => setCarryThreshold(e.target.value)}
+                      />
+                    </Field>
+                    {(
+                      [
+                        ['carry_window', 'Prior settlements', 1, 30],
+                        ['carry_cost_settlements', 'Projected settlement count', 0, 300],
+                        ['carry_max_age_hours', 'Maximum funding age (hours)', 0, 168],
+                        ['carry_buffer_bps', 'Additional carry hurdle (bps)', 0, 1000],
+                      ] as const
+                    ).map(([key, label, min, max]) => (
+                      <Field key={key} label={label}>
+                        <input
+                          required
+                          type="number"
+                          min={min}
+                          max={max}
+                          step={key === 'carry_buffer_bps' ? 'any' : 1}
+                          value={carryConfig[key]}
+                          onChange={(e) =>
+                            setCarryConfig((old) => ({
+                              ...old,
+                              [key]:
+                                key === 'carry_buffer_bps'
+                                  ? e.target.value
+                                  : Number(e.target.value),
+                            }))
+                          }
+                        />
+                      </Field>
+                    ))}
+                    <p className="quiet-copy">
+                      {t('Four-fill entry/exit cost hurdle')}:{' '}
+                      {(
+                        4 * (Number(fee) + Number(slip)) +
+                        Number(carryConfig.carry_buffer_bps)
+                      ).toFixed(2)}{' '}
+                      bps.{' '}
+                      {t(
+                        'Projection is per settlement, not APR. Zero projected settlements retains the legacy rate-only gate; zero maximum age disables freshness checks.',
+                      )}
+                    </p>
+                  </>
+                )}
+                <Field
+                  label="Maximum order notional (USDT)"
+                  hint="A leg is split into at most twenty lot-aligned child orders under this cap. Unexecutable plans enter the shared failure policy."
+                >
+                  <input
+                    required
+                    type="number"
+                    min={0.01}
+                    max={1000000000}
+                    step="any"
+                    value={maxOrder}
+                    onChange={(e) => setMaxOrder(e.target.value)}
+                  />
+                </Field>
+                <Field
+                  label="Underlying asset gross limit (%)"
+                  hint="Combine absolute spot and perpetual exposure to the same underlying without netting directions."
+                >
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    max={1000}
+                    step="any"
+                    value={maxBaseGross}
+                    onChange={(e) => setMaxBaseGross(e.target.value)}
+                  />
+                </Field>
+                <Field label="Gross exposure limit %">
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={gross}
+                    onChange={(e) => setGross(Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="Daily loss limit %">
+                  <input
+                    required
+                    type="number"
+                    min={0.1}
+                    max={50}
+                    step={0.1}
+                    value={daily}
+                    onChange={(e) => setDaily(Number(e.target.value))}
+                  />
+                </Field>
+              </div>
+              <p className="quiet-copy">
+                {t('Shared failure policy')}: <strong>{t('Reduce the group on failure')}</strong>.{' '}
                 {t(
-                  'This saved evidence has no bound execution policy. Saving this revision explicitly adopts your selected policy; the old version and result stay unchanged.',
+                  'Research and managed paper execution use the same sequential reduction, addition and compensation policy. A completed research job can still contain a halted simulation.',
                 )}
               </p>
-            )}
+              {legacyUpgrade && (
+                <p className="inline-warning">
+                  {t(
+                    'This saved evidence has no bound execution policy. Saving this revision explicitly adopts your selected policy; the old version and result stay unchanged.',
+                  )}
+                </p>
+              )}
+            </details>
             {mode === 'risk_momentum' && (
               <section className="portfolio-risk-controls">
                 <h3>{t('Portfolio risk budget')}</h3>
@@ -1338,46 +1458,13 @@ export default function PortfolioResearch({
             {create.isError && currentTask(create.variables?.request) && (
               <ErrorBox error={create.error} />
             )}
-            <button
-              className="button button-citrus"
-              disabled={
-                !canOperate ||
-                (create.isPending && currentTask(create.variables?.request)) ||
-                legs.some(
-                  (l) =>
-                    !l.package_id || (l.strategy.kind === 'program' && !l.strategy.rules?.length),
-                )
-              }
-            >
-              <Play size={14} />
-              {t('Run portfolio research')}
-            </button>
           </form>
         </section>
       ) : (
-        <div className="portfolio-research-layout">
-          <aside className="portfolio-study-history">
-            <h2>{t('Saved portfolio studies')}</h2>
-            {runs.isError ? (
-              <ErrorBox error={runs.error} />
-            ) : runs.isPending ? (
-              <Loading />
-            ) : (
-              runs.data?.items.map((r) => (
-                <button
-                  key={r.id}
-                  className={`strategy-project${r.id === id ? ' active' : ''}`}
-                  onClick={() => selectRun(r.id)}
-                >
-                  <strong>{String(r.config.name)}</strong>
-                  <span>
-                    {t(r.status)} · {date(r.created_at)}
-                  </span>
-                </button>
-              ))
-            )}
-          </aside>
-          <section className="pro-panel portfolio-study-result">
+        <div
+          className={`portfolio-research-layout research-desk-layout${runs.data?.items.length ? '' : ' research-empty-history'}`}
+        >
+          <section className="pro-panel portfolio-study-result research-desk">
             {!id ? (
               <Empty title="Research portfolios with one book">
                 {t(
@@ -1444,6 +1531,82 @@ export default function PortfolioResearch({
                               : 'Its saved results remain available for audit. A new immutable revision is required to bind the shared failure and residual policy.',
                           )}
                     </p>
+                  </section>
+                )}
+                {run.data && (
+                  <section
+                    className="research-run-context"
+                    aria-label={text('Selected run configuration', '所选运行配置')}
+                  >
+                    <div className="research-context-heading">
+                      <strong>{text('Evaluated configuration', '本次评估配置')}</strong>
+                      <span>
+                        {evaluationName(evaluationEvidence?.mode ?? run.data.config.evaluation)}
+                      </span>
+                    </div>
+                    <dl className="research-context-grid">
+                      <div>
+                        <dt>{text('Markets', '品种')}</dt>
+                        <dd>
+                          {describeMarkets(resultLegs)} · {run.data.source}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{text('Data window', '数据时段')}</dt>
+                        <dd>
+                          {resultWindows.length
+                            ? resultWindows.join(' · ')
+                            : text('See captured input manifest', '见已捕获的输入清单')}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{text('Cost assumptions', '成本假设')}</dt>
+                        <dd>
+                          {text('Fee', '费用')} {valueText(run.data.config.fee_bps)} +{' '}
+                          {text('Slippage', '滑点')} {valueText(run.data.config.slippage_bps)} bps
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{text('Capital & allocation', '资金与分配')}</dt>
+                        <dd>
+                          {valueText(run.data.config.initial_cash)} USDT ·{' '}
+                          {valueText(run.data.config.capital_pct)}% ·{' '}
+                          {resultLegs
+                            .map(
+                              (leg, i) =>
+                                `${text('Leg', '组合腿')} ${i + 1}: ${String(leg.weight)} · ${String(leg.leverage)}×`,
+                            )
+                            .join(' / ')}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{text('Evaluation', '评估方式')}</dt>
+                        <dd>
+                          {evaluationName(evaluationEvidence?.mode ?? run.data.config.evaluation)}
+                          {evaluationEvidence?.test_start !== undefined
+                            ? ` · ${date(Number(evaluationEvidence.test_start), true)} → ${date(Number(evaluationEvidence.test_end), true)}`
+                            : ''}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{text('Execution policy', '执行规则')}</dt>
+                        <dd>
+                          {t(executionPolicyName(String(run.data.config.execution_contract)))} ·{' '}
+                          {text('Residual limit', '残余上限')}{' '}
+                          {String(run.data.config.max_residual_pct)}%
+                        </dd>
+                      </div>
+                    </dl>
+                    {!!run.data.config.portfolio_version_id && (
+                      <p className="research-run-identity">
+                        {text('Run portfolio version', '本次组合版本')} ·{' '}
+                        <code>{String(run.data.config.portfolio_version_id)}</code>
+                      </p>
+                    )}
+                    <JsonDetails
+                      value={run.data.config}
+                      label={text('Saved run configuration', '已保存运行配置')}
+                    />
                   </section>
                 )}
                 <p className="strategy-hypothesis">{String(run.data?.config.hypothesis)}</p>
@@ -1611,14 +1774,6 @@ export default function PortfolioResearch({
                   </section>
                 )}
 
-                {run.data?.status === 'completed' && (
-                  <PortfolioReleaseReview
-                    key={run.data.id}
-                    runId={run.data.id}
-                    bound={!!run.data.config.portfolio_version_id && executionBound}
-                    onExecution={onExecution}
-                  />
-                )}
                 {run.data?.error && <ErrorBox error={new Error(run.data.error)} />}
                 {['queued', 'running'].includes(run.data?.status ?? '') && (
                   <p className="quiet-copy">
@@ -1788,11 +1943,56 @@ export default function PortfolioResearch({
                         ]}
                       />
                     )}
+                    <div className="research-next-step">
+                      <div>
+                        <strong>{text('Next research decision', '下一步研究决策')}</strong>
+                        <p>
+                          {text(
+                            'Review the evaluated window, costs and execution outcome before preparing another trial or reviewing paper release.',
+                            '先检查评估时段、成本与执行结果，再准备下一次试验或审查模拟发布。',
+                          )}
+                        </p>
+                      </div>
+                      {run.data?.status === 'completed' && (
+                        <PortfolioReleaseReview
+                          key={run.data.id}
+                          runId={run.data.id}
+                          bound={!!run.data.config.portfolio_version_id && executionBound}
+                          onExecution={onExecution}
+                        />
+                      )}
+                    </div>
                   </>
                 )}
               </>
             )}
           </section>
+          <aside className="portfolio-study-history">
+            <h2>{t('Saved portfolio studies')}</h2>
+            {runs.isError ? (
+              <ErrorBox error={runs.error} />
+            ) : runs.isPending ? (
+              <Loading />
+            ) : (
+              runs.data?.items.map((r) => (
+                <button
+                  key={r.id}
+                  className={`strategy-project${r.id === id ? ' active' : ''}`}
+                  onClick={() => selectRun(r.id)}
+                >
+                  <strong>{String(r.config.name)}</strong>
+                  <span>{describeMarkets((r.config.legs as RecordData[] | undefined) ?? [])}</span>
+                  <span>
+                    {evaluationName(r.config.evaluation)} · {valueText(r.config.fee_bps)} +{' '}
+                    {valueText(r.config.slippage_bps)} bps
+                  </span>
+                  <span>
+                    {t(r.status)} · {date(r.created_at)}
+                  </span>
+                </button>
+              ))
+            )}
+          </aside>
         </div>
       )}
     </>

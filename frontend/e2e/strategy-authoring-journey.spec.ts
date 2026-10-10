@@ -315,7 +315,8 @@ test('strategy authoring survives navigation and refresh; historical inspection 
     .filter({ hasText: 'v1' })
     .getByRole('button', { name: 'Inspect', exact: true })
     .click();
-  await expect(page.getByText(older.hypothesis, { exact: true })).toBeVisible();
+  await expect(page.locator('.strategy-hypothesis')).toBeVisible();
+  await expect(page.locator('.strategy-hypothesis')).toHaveText(older.hypothesis);
   await page.getByRole('button', { name: 'Create new version', exact: true }).click();
   const replacement = page.getByRole('region', { name: 'Replace strategy draft', exact: true });
   await expect(replacement).toContainText(newName);
@@ -580,7 +581,8 @@ test('an invalid stored draft schema is rejected before filling controls and sav
     await page.evaluate((key) => sessionStorage.getItem(key), draftKey(state.user)),
   ).toBeNull();
   await page.getByRole('button', { name: 'My strategy versions', exact: true }).click();
-  await expect(page.getByText(latest.hypothesis, { exact: true })).toBeVisible();
+  await expect(page.locator('.strategy-hypothesis')).toBeVisible();
+  await expect(page.locator('.strategy-hypothesis')).toHaveText(latest.hypothesis);
   await page.getByRole('button', { name: 'New strategy', exact: true }).click();
   await expect(page.getByLabel('Fast window', { exact: true })).toHaveValue('12');
   expect(state.registrations).toEqual([]);

@@ -9,18 +9,18 @@ import { WorkspaceTabs } from './components/ProWorkspace';
 import { ErrorBox, Loading, PageHeading, SourceBadge } from './components/workspace';
 import { MarketSearch, Sidebar, Topbar } from './components/WorkspaceShell';
 import type { Page } from './lib/config';
-import { useWorkspaceLocation, validView } from './lib/workspaceLocation';
+import { useWorkspaceLocation, validView, type ResearchDataIntent } from './lib/workspaceLocation';
 import WorkspaceJourney from './components/WorkspaceJourney';
 import WorkspaceActivity from './components/WorkspaceActivity';
 import type { ResearchInputs } from './proApi';
 import { proApi } from './proApi';
 import { useDialogFocus, useMediaQuery } from './lib/hooks';
 import { LanguageProvider, useI18n } from './lib/i18n';
-import Overview from './pages/Overview';
-import ClassicPaper from './pages/Paper';
-import ClassicResearch from './pages/Research';
+const Overview = lazy(() => import('./pages/Overview'));
+const ClassicPaper = lazy(() => import('./pages/Paper'));
+const ClassicResearch = lazy(() => import('./pages/Research'));
 import SettingsPage from './pages/Settings';
-import DataLibrary from './pages/DataLibrary';
+const DataLibrary = lazy(() => import('./pages/DataLibrary'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 const ExecutionRisk = lazy(() =>
   import('./pages/Portfolio').then((module) => ({ default: module.ExecutionRisk })),
@@ -44,6 +44,8 @@ function Workspace() {
   const { t } = useI18n();
   const [location, setLocation] = useWorkspaceLocation();
   const { page, source } = location;
+  const currentLocation = useRef(location);
+  currentLocation.current = location;
   const symbol = location.symbol ?? 'BTC-USDT';
   const setSymbol = (symbol: string) => setLocation({ ...location, symbol }, true);
   const [bar, setBar] = useState<Bar>('1H');
@@ -98,6 +100,16 @@ function Workspace() {
       setLocation(next);
     }
     setMobileNav(false);
+    window.scrollTo(0, 0);
+  };
+  const openResearchData = (intent?: ResearchDataIntent) => {
+    setLocation({
+      ...location,
+      page: 'data',
+      view: 'packages',
+      returnTo: researchTab === 'portfolio' ? 'portfolio' : 'advanced',
+      dataIntent: intent?.source === source ? intent : undefined,
+    });
     window.scrollTo(0, 0);
   };
   const lastPage = useRef(page);
@@ -247,10 +259,10 @@ function Workspace() {
                       value={researchTab}
                       onChange={setResearchTab}
                       items={[
-                        { key: 'advanced', label: 'Advanced' },
+                        { key: 'advanced', label: 'Single strategy' },
                         { key: 'portfolio', label: 'Portfolio research' },
                         { key: 'governance', label: 'Research governance' },
-                        { key: 'classic', label: 'Classic' },
+                        { key: 'classic', label: 'Legacy research' },
                       ]}
                     />
                     {researchTab === 'governance' ? (
@@ -282,7 +294,7 @@ function Workspace() {
                             true,
                           );
                         }}
-                        onData={() => navigate('data')}
+                        onData={openResearchData}
                         onExecution={(id) =>
                           navigate('execution', id ? 'managed:' + id : 'managed')
                         }
@@ -310,7 +322,7 @@ function Workspace() {
                         onClearStrategyVersion={() =>
                           setLocation({ ...location, versionId: undefined }, true)
                         }
-                        onOpenData={() => navigate('data')}
+                        onOpenData={openResearchData}
                         onOpenExecution={(id) =>
                           navigate('execution', id ? 'strategies:' + id : 'strategies')
                         }
@@ -348,8 +360,8 @@ function Workspace() {
                       value={page === 'risk' ? 'risk' : 'portfolio'}
                       onChange={(value) => navigate(value === 'risk' ? 'risk' : 'execution')}
                       items={[
-                        { key: 'portfolio', label: 'Portfolio' },
-                        { key: 'risk', label: 'Risk' },
+                        { key: 'portfolio', label: 'Account & orders' },
+                        { key: 'risk', label: 'Risk & limits' },
                       ]}
                     />
                     {page === 'execution' && (
@@ -391,15 +403,18 @@ function Workspace() {
                     initialPackageId={location.packageId}
                     onViewChange={(view) => setLocation({ ...location, view })}
                     returnTo={location.returnTo}
+                    preparation={location.dataIntent}
                     onReturn={() =>
                       setLocation({
                         ...location,
                         page: 'research',
                         view: location.returnTo ?? 'advanced',
                         returnTo: undefined,
+                        dataIntent: undefined,
                       })
                     }
                     onResearch={(inputs) => {
+                      if (currentLocation.current !== location || location.page !== 'data') return;
                       setManualInputs({ source, inputs });
                       setLocation({
                         ...location,
@@ -408,6 +423,7 @@ function Workspace() {
                         runId: undefined,
                         packageId: inputs.package_id,
                         returnTo: undefined,
+                        dataIntent: undefined,
                       });
                     }}
                   />
@@ -439,7 +455,7 @@ function Workspace() {
             page: target,
             source,
             symbol,
-            view: target === 'execution' ? 'positions' : 'market',
+            view: target === 'execution' ? 'order' : 'market',
           });
           setSearchOpen(false);
           setSearch('');

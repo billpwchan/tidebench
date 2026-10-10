@@ -1,6 +1,8 @@
 # Red-team record
 
-Latest: [v0.12 user-journey review](user-journey-0.12.0.zh-CN.md), [acceptance history](acceptance-history-0.12.0.md) and [trader journey guide](../trader-journeys.md).
+Latest: [v0.13 trader desk review](trader-desk-0.13.0.zh-CN.md), [acceptance history](acceptance-history-0.13.0.md) and [trader journey guide](../trader-journeys.md).
+
+Previous: [v0.12 user-journey review](user-journey-0.12.0.zh-CN.md), [acceptance history](acceptance-history-0.12.0.md) and [trader journey guide](../trader-journeys.md).
 
 Previous: [v0.11 independent counterexamples and corrective verification](red-team-0.11.0.zh-CN.md), [byte-preserved before/after bundle](fresh-review-0.11.0/README.md), [adverse acceptance history](acceptance-history-0.11.0.md) and [operator workflow](../professional-workflows-v0.11.md). Public source-specific reports include all 28 strategy cases, seven real public-data portfolio decisions and an actual public perpetual entry/exit.
 

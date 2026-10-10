@@ -14,13 +14,7 @@ import { useI18n } from '../lib/i18n';
 import { canTrade } from '../lib/permissions';
 import { researchReturn, resultScope } from '../lib/research';
 import { useSession } from '../components/AuthGate';
-import {
-  DataTable,
-  JsonDetails,
-  ProductSymbol,
-  WorkspaceTabs,
-  valueText,
-} from '../components/ProWorkspace';
+import { DataTable, JsonDetails, ProductSymbol, valueText } from '../components/ProWorkspace';
 import { ErrorBox, Loading, Metric, PageHeading, Status } from '../components/workspace';
 
 type Alert = {
@@ -69,11 +63,20 @@ export default function Overview({
   setSymbol: (symbol: string) => void;
   navigate: (page: Page, view?: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
+  const [allMetrics, setAllMetrics] = useState(false);
+  const [conditionsOpen, setConditionsOpen] = useState(false);
+  const conditionsRef = useRef<HTMLDetailsElement>(null);
   const qc = useQueryClient();
   const now = useNow();
   const canOperate = canTrade(useSession()?.user?.role);
   const [bookTab, setBookTab] = useState('positions');
+  const bookChosen = useRef(false);
+  const chooseBook = (next: string) => {
+    bookChosen.current = true;
+    setBookTab(next);
+  };
   const account = useQuery({
     queryKey: ['pro-account', source],
     queryFn: () => proApi.account(source),
@@ -153,6 +156,11 @@ export default function Overview({
   const positions =
     Array.isArray(a?.positions) && a.positions.every(isRecord) ? a.positions : undefined;
   const pending = orders.data?.items.filter((o) => o.status === 'pending') ?? [];
+  useEffect(() => {
+    if (bookChosen.current || !positions || !orders.isSuccess) return;
+    bookChosen.current = true;
+    setBookTab(!positions.length && pending.length ? 'orders' : 'positions');
+  }, [positions, orders.isSuccess, pending.length]);
   const strategies = deployments.data?.items ?? [];
   const currentPackages = packages.data?.items.filter((p) => p.source === source) ?? [];
   const currentRuns = runs.data?.items.filter((r) => r.source === source) ?? [];
@@ -281,92 +289,117 @@ export default function Overview({
     [account, analytics, orders, deployments, groups, risk, ops, packages, runs].every(
       (q) => q.isSuccess,
     );
+  const showJourneyInBook =
+    !!journey &&
+    ready &&
+    !economicAttention &&
+    positions?.length === 0 &&
+    pending.length === 0 &&
+    strategies.length === 0 &&
+    currentGroups.length === 0;
+  const priorityIssue =
+    issues.find((issue) => issue.severity === 'bad') ??
+    (alerts.some((alert) => alert.severity === 'bad') ? undefined : issues[0]);
+  const priorityAlert = priorityIssue
+    ? undefined
+    : (alerts.find((alert) => alert.severity === 'bad') ??
+      alerts.find((alert) => alert.severity === 'warning'));
+  const inspectConditions = () => {
+    setConditionsOpen(true);
+    requestAnimationFrame(() => {
+      conditionsRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      conditionsRef.current?.querySelector('summary')?.focus({ preventScroll: true });
+    });
+  };
   return (
-    <>
+    <div className="desk-overview">
       <PageHeading
         eyebrow="TRADING WORKSPACE"
         title="Trading overview"
         description="Current account state, working orders, strategy health, and research readiness."
       >
-        <button className="button button-secondary" onClick={refresh}>
+        <button className="button button-secondary" aria-label={t('Refresh')} onClick={refresh}>
           <RefreshCw size={14} />
-          {t('Refresh')}
+          <span className="desk-refresh-label">{t('Refresh')}</span>
         </button>
         <button className="button button-dark" onClick={() => navigate('execution')}>
           {t('Open execution')}
           <ArrowRight size={14} />
         </button>
       </PageHeading>
-      {journey}
       <div className="overview-state-line">
         <span>
           <Clock3 size={12} />
-          {t('Account snapshot')}: {date(a?.as_of)}
+          {t('Account snapshot')}: {date(a?.as_of, true)}
         </span>
         <Status type={risk.data?.halted ? 'bad' : 'neutral'}>
           {risk.data
             ? t(risk.data.halted ? 'New risk halted' : 'New risk enabled')
             : t('Risk status unavailable')}
         </Status>
-        <span>
-          {t('Execution engine')}: {a?.execution_mode ?? '—'}
-        </span>
-        {a && (
-          <Status type={a.valuation_status === 'fresh' ? 'good' : 'neutral'}>
-            {a.valuation_status ?? 'unavailable'}
+        <span className="overview-economic-state" aria-label={t('Trading conditions')}>
+          <Status type={economicAttention ? 'bad' : ready ? 'neutral' : 'warning'}>
+            {t(
+              economicAttention
+                ? 'Action required'
+                : ready
+                  ? 'No known unresolved conditions'
+                  : 'Monitoring incomplete',
+            )}
           </Status>
-        )}
+        </span>
       </div>
-      {matchedReport ? (
-        <p className="snapshot-footnote">
-          {t('Account and exposure values share one captured snapshot.')}
-        </p>
-      ) : (
-        !analytics.isPending && (
-          <p role="status" className="inline-warning">
-            {t('Exposure unavailable')}.{' '}
-            {t('A matching account capture was not returned. Refresh the exposure snapshot.')}{' '}
-            <button className="text-button" onClick={() => void analytics.refetch()}>
-              {t('Refresh snapshot')}
-            </button>
-          </p>
-        )
-      )}
-      <div className="overview-economic-state">
-        <span>{t('Trading conditions')}</span>
-        <Status type={economicAttention ? 'bad' : ready ? 'neutral' : 'warning'}>
-          {t(
-            economicAttention
-              ? 'Action required'
-              : ready
-                ? 'No known unresolved conditions'
-                : 'Monitoring incomplete',
-          )}
-        </Status>
-        <small>{t('Service health does not confirm trading risk is clear.')}</small>
-      </div>
-      <DeskAttention issues={issues} source={source} now={now} navigate={navigate} />
-      {a?.economic_status === 'funding_pending' && (
-        <div className="overview-funding-notice">
-          <CircleAlert size={15} />
+      {(priorityIssue || priorityAlert) && (
+        <section className="desk-risk-summary" aria-label={t('Trading conditions')}>
+          <CircleAlert size={17} />
           <div>
-            <strong>{t('Funding settlement remains pending')}</strong>
-            <p>
-              {t(
-                'Account equity remains provisional until the historical funding obligation is settled. Inspect the ledger and protective exits before adding risk.',
-              )}
-            </p>
+            <strong>{priorityIssue?.name ?? priorityAlert?.title}</strong>
+            <span>
+              {priorityIssue
+                ? `${t(priorityIssue.phase)} · ${priorityIssue.group ? `${number(priorityIssue.inventoryNotional)} USDT · ${t('Current group inventory')}` : t('Durable incident')}`
+                : priorityAlert?.detail}
+            </span>
           </div>
-          <button className="text-button" onClick={() => navigate('execution', 'ledger')}>
-            {t('Inspect funding & ledger')}
+          <button
+            className="text-button"
+            onClick={() => {
+              if (priorityIssue?.group) navigate('execution', `managed:${priorityIssue.group.id}`);
+              else if (priorityIssue?.incident)
+                navigate('operations', `incidents:${priorityIssue.incident.id}`);
+              else if (priorityAlert) navigate(priorityAlert.page, priorityAlert.view);
+            }}
+          >
+            {priorityIssue?.group
+              ? t('Inspect group & recovery')
+              : priorityIssue?.incident
+                ? t('Inspect incident & response')
+                : priorityAlert?.key === 'funding'
+                  ? t('Inspect funding & ledger')
+                  : priorityAlert?.key === 'halt'
+                    ? text('Review risk controls', '审查风险控制')
+                    : priorityAlert?.key === 'valuation'
+                      ? text('Inspect account valuation', '检查账户估值')
+                      : ['analytics', 'analytics-capture'].includes(priorityAlert?.key ?? '')
+                        ? text('Inspect exposure', '检查风险敞口')
+                        : priorityAlert?.key === 'strategies'
+                          ? text('Inspect strategies', '检查策略')
+                          : priorityAlert?.key === 'funding-schedule'
+                            ? text('Inspect account positions', '检查账户持仓')
+                            : text('Inspect condition', '检查当前状况')}
             <ArrowRight size={13} />
           </button>
-        </div>
+          <button className="text-button desk-all-conditions" onClick={inspectConditions}>
+            {text('All conditions', '全部状况')} ·{' '}
+            {issues.length + alerts.filter((alert) => alert.severity !== 'neutral').length}
+          </button>
+        </section>
       )}
-      <div className="pro-metric-strip trader-metrics">
+      <div
+        className={`pro-metric-strip trader-metrics desk-account-strip${allMetrics ? ' is-expanded' : ''}`}
+      >
         <Metric label="Account equity" value={number(a?.equity)} unit="USDT" />
-        <Metric label="Available cash" value={number(a?.available_cash)} unit="USDT" />
         <Metric label="Gross exposure" value={number(summary?.gross_notional)} unit="USDT" />
+        <Metric label="Available cash" value={number(a?.available_cash)} unit="USDT" />
         <Metric label="Net exposure" value={number(summary?.net_notional)} unit="USDT" />
         <Metric
           label="Used margin"
@@ -381,19 +414,16 @@ export default function Overview({
           unit="USDT"
         />
       </div>
+      <button
+        className="text-button desk-metrics-toggle"
+        aria-expanded={allMetrics}
+        onClick={() => setAllMetrics((value) => !value)}
+      >
+        {allMetrics
+          ? text('Fewer account values', '收起账户数值')
+          : text('Cash, margin & P&L', '现金、保证金与盈亏')}
+      </button>
       {!a && account.isPending && <Loading label="Loading account state…" />}
-      {!!errors.length && (
-        <div className="overview-errors">
-          <p className="inline-warning">
-            {t(
-              'Some snapshots could not be refreshed. Timestamped values may be from the previous successful capture.',
-            )}
-          </p>
-          {errors.map((q, i) => (
-            <ErrorBox key={i} error={q.error} onRetry={() => void q.refetch()} />
-          ))}
-        </div>
-      )}
       <div className="trader-overview-layout">
         <div className="trader-primary">
           <section className="pro-panel overview-book">
@@ -411,14 +441,52 @@ export default function Overview({
                 <ArrowRight size={13} />
               </button>
             </div>
-            <WorkspaceTabs
-              value={bookTab}
-              onChange={setBookTab}
-              items={[
-                { key: 'positions', label: 'Positions' },
-                { key: 'orders', label: 'Pending orders' },
-              ]}
-            />
+            <div
+              className="desk-book-tabs"
+              role="tablist"
+              aria-label={t('Portfolio & working orders')}
+              onKeyDown={(event) => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const next =
+                  event.key === 'Home'
+                    ? 'positions'
+                    : event.key === 'End'
+                      ? 'orders'
+                      : bookTab === 'positions'
+                        ? 'orders'
+                        : 'positions';
+                chooseBook(next);
+                event.currentTarget
+                  .querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                  [next === 'positions' ? 0 : 1]?.focus();
+              }}
+            >
+              <button
+                role="tab"
+                tabIndex={bookTab === 'positions' ? 0 : -1}
+                aria-selected={bookTab === 'positions'}
+                className={bookTab === 'positions' ? 'active' : ''}
+                onClick={() => chooseBook('positions')}
+              >
+                {t('Positions')} <span>{positions ? positions.length : '—'}</span>
+              </button>
+              <button
+                role="tab"
+                tabIndex={bookTab === 'orders' ? 0 : -1}
+                aria-selected={bookTab === 'orders'}
+                className={bookTab === 'orders' ? 'active' : ''}
+                onClick={() => chooseBook('orders')}
+              >
+                {t('Pending orders')} <span>{orders.isSuccess ? pending.length : '—'}</span>
+              </button>
+            </div>
+            <p className="desk-money-unit">
+              {text(
+                'Monetary values in USDT. Instrument units are shown per position.',
+                '金额单位为 USDT；持仓数量单位按品种标明。',
+              )}
+            </p>
             {bookTab === 'positions' ? (
               !a && account.isPending ? (
                 <Loading />
@@ -429,10 +497,23 @@ export default function Overview({
               ) : (
                 <DataTable
                   rows={positions}
+                  rowKey={(position) => String(position.inst_id)}
+                  searchLabel="Search positions"
+                  searchKeys={['inst_id', 'side', 'inst_type']}
+                  compactColumns={[
+                    'inst_id',
+                    'quantity',
+                    'market_value',
+                    'unrealized_pnl',
+                    'protect',
+                  ]}
+                  compactLabel={t('Positions')}
                   empty="No open positions"
                   columns={[
                     {
                       key: 'inst_id',
+                      sticky: 'identity',
+                      sortable: true,
                       label: 'Market',
                       render: (p) => (
                         <div className="table-stacked">
@@ -445,6 +526,8 @@ export default function Overview({
                     },
                     {
                       key: 'quantity',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Quantity',
                       render: (p) => (
                         <div className="table-stacked">
@@ -455,6 +538,8 @@ export default function Overview({
                     },
                     {
                       key: 'mark',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Mark',
                       render: (p) => (
                         <div className="table-stacked">
@@ -465,12 +550,16 @@ export default function Overview({
                     },
                     {
                       key: 'market_value',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Market value',
                       render: (p) => number(p.market_value),
                     },
                     { key: 'margin', label: 'Margin', render: (p) => number(p.margin) },
                     {
                       key: 'unrealized_pnl',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Unrealized P&L',
                       render: (p) => (
                         <span className={tone(p.unrealized_pnl)}>{number(p.unrealized_pnl)}</span>
@@ -478,6 +567,7 @@ export default function Overview({
                     },
                     {
                       key: 'protect',
+                      sticky: 'action',
                       label: 'Actions',
                       render: (p) => (
                         <button
@@ -499,10 +589,17 @@ export default function Overview({
             ) : (
               <DataTable
                 rows={pending}
+                rowKey={(order) => String(order.id)}
+                searchLabel="Search orders"
+                searchKeys={['inst_id', 'side', 'order_type']}
+                compactColumns={['inst_id', 'side', 'quantity', 'trigger', 'actions']}
+                compactLabel={t('Pending orders')}
                 empty="No working orders"
                 columns={[
                   {
                     key: 'inst_id',
+                    sticky: 'identity',
+                    sortable: true,
                     label: 'Market',
                     render: (o) => (
                       <div className="table-stacked">
@@ -530,6 +627,7 @@ export default function Overview({
                   },
                   {
                     key: 'actions',
+                    sticky: 'action',
                     label: 'Actions',
                     render: (o) => (
                       <button
@@ -546,6 +644,7 @@ export default function Overview({
             )}{' '}
             {cancel.isError && <ErrorBox error={cancel.error} />}
           </section>
+          {showJourneyInBook && <section className="desk-onboarding-next">{journey}</section>}
           <section className="pro-panel overview-exposures">
             <div className="section-heading">
               <div>
@@ -650,42 +749,113 @@ export default function Overview({
           </section>
         </div>
         <aside className="trader-secondary">
-          <section className="pro-panel attention-panel">
-            <div className="section-heading">
-              <h2>{t('Attention queue')}</h2>
-              <span className="subtle-tag">{ready ? alerts.length + issues.length : '—'}</span>
-            </div>
-            {alerts.length ? (
-              <div className="attention-list">
-                {alerts.map((alert) => (
-                  <button
-                    key={alert.key}
-                    className={`attention-item attention-${alert.severity}`}
-                    onClick={() => navigate(alert.page, alert.view)}
-                  >
-                    <CircleAlert size={15} />
-                    <span>
-                      <strong>{alert.title}</strong>
-                      <small>{alert.detail}</small>
-                    </span>
-                    <ArrowRight size={13} />
-                  </button>
-                ))}
-              </div>
-            ) : ready ? (
-              <p className="quiet-state">
-                {t(
-                  issues.length
-                    ? 'Unresolved conditions are listed above with their current inventory and response links.'
-                    : 'No known unresolved conditions in the loaded snapshots.',
-                )}
+          <details className="desk-snapshot-basis">
+            <summary>{text('Snapshot basis', '快照依据')}</summary>{' '}
+            {matchedReport ? (
+              <p className="snapshot-footnote">
+                {t('Account and exposure values share one captured snapshot.')}
               </p>
             ) : (
-              <p className="quiet-state">
-                {t('Waiting for service snapshots. Missing data does not mean zero risk.')}
-              </p>
+              !analytics.isPending && (
+                <p role="status" className="inline-warning">
+                  {t('Exposure unavailable')}.{' '}
+                  {t('A matching account capture was not returned. Refresh the exposure snapshot.')}{' '}
+                  <button className="text-button" onClick={() => void analytics.refetch()}>
+                    {t('Refresh snapshot')}
+                  </button>
+                </p>
+              )
             )}
-          </section>
+            <p className="snapshot-footnote">
+              {t('Execution engine')}: {a?.execution_mode ?? '—'} · {t('Valuation status')}:{' '}
+              {a?.valuation_status ?? '—'}
+            </p>
+            <p className="snapshot-footnote">
+              {t('Service health does not confirm trading risk is clear.')}
+            </p>
+          </details>
+          <details
+            className="desk-conditions"
+            ref={conditionsRef}
+            open={conditionsOpen}
+            onToggle={(event) => setConditionsOpen(event.currentTarget.open)}
+          >
+            <summary>
+              {text('Condition details', '当前状况详情')}{' '}
+              <span>
+                {issues.length + alerts.filter((alert) => alert.severity !== 'neutral').length}
+                {errors.length > 0 ? ` · ${text('Monitoring incomplete', '监控不完整')}` : ''}
+              </span>
+            </summary>
+            <DeskAttention issues={issues} source={source} now={now} navigate={navigate} />
+            {a?.economic_status === 'funding_pending' && (
+              <div className="overview-funding-notice">
+                <CircleAlert size={15} />
+                <div>
+                  <strong>{t('Funding settlement remains pending')}</strong>
+                  <p>
+                    {t(
+                      'Account equity remains provisional until the historical funding obligation is settled. Inspect the ledger and protective exits before adding risk.',
+                    )}
+                  </p>
+                </div>
+                <button className="text-button" onClick={() => navigate('execution', 'ledger')}>
+                  {t('Inspect funding & ledger')}
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+            )}
+            {!!errors.length && (
+              <div className="overview-errors">
+                <p className="inline-warning">
+                  {t(
+                    'Some snapshots could not be refreshed. Timestamped values may be from the previous successful capture.',
+                  )}
+                </p>
+                {errors.map((q, i) => (
+                  <ErrorBox key={i} error={q.error} onRetry={() => void q.refetch()} />
+                ))}
+              </div>
+            )}
+            <section className="pro-panel attention-panel">
+              <div className="section-heading">
+                <h2>{t('Attention queue')}</h2>
+                <span className="subtle-tag">{ready ? alerts.length + issues.length : '—'}</span>
+              </div>
+              {alerts.length ? (
+                <div className="attention-list">
+                  {alerts.map((alert) => (
+                    <button
+                      key={alert.key}
+                      className={`attention-item attention-${alert.severity}`}
+                      onClick={() => navigate(alert.page, alert.view)}
+                    >
+                      <CircleAlert size={15} />
+                      <span>
+                        <strong>{alert.title}</strong>
+                        <small>{alert.detail}</small>
+                      </span>
+                      <ArrowRight size={13} />
+                    </button>
+                  ))}
+                </div>
+              ) : ready ? (
+                <p className="quiet-state">
+                  {t(
+                    issues.length
+                      ? 'Unresolved conditions are listed above with their current inventory and response links.'
+                      : 'No known unresolved conditions in the loaded snapshots.',
+                  )}
+                </p>
+              ) : (
+                <p className="quiet-state">
+                  {t('Waiting for service snapshots. Missing data does not mean zero risk.')}
+                </p>
+              )}
+            </section>
+          </details>
+          {journey && !showJourneyInBook && <div className="desk-continue-work">{journey}</div>}
+
           <section className="pro-panel overview-strategies">
             <div className="section-heading">
               <h2>{t('Deployment health')}</h2>
@@ -829,7 +999,7 @@ export default function Overview({
         onSymbol={setSymbol}
         now={now}
       />
-    </>
+    </div>
   );
 }
 function MarketContext({
@@ -871,6 +1041,7 @@ function MarketContext({
     refetchInterval: open ? 5000 : false,
   });
   const m = market.data;
+  const tick = isRecord(m?.instrument) ? m.instrument.tick_size : undefined;
   const stale = source === 'okx' && m && now - Number(m.ts) >= 15000;
   return (
     <section ref={marketSection} className="pro-panel overview-market-context">
@@ -908,12 +1079,12 @@ function MarketContext({
           ) : (
             <>
               <div className="market-snapshot-strip">
-                <Metric label="Last price" value={price(m?.last)} />
-                <Metric label="Bid" value={price(m?.bid)} />
-                <Metric label="Ask" value={price(m?.ask)} />
+                <Metric label="Last price" value={price(m?.last, tick)} />
+                <Metric label="Bid" value={price(m?.bid, tick)} />
+                <Metric label="Ask" value={price(m?.ask, tick)} />
                 {product === 'SWAP' && (
                   <>
-                    <Metric label="Mark price" value={price(m?.mark)} />
+                    <Metric label="Mark price" value={price(m?.mark, tick)} />
                     <Metric
                       label="Funding rate"
                       value={

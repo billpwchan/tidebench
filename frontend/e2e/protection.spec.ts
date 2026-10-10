@@ -1,3 +1,4 @@
+import { visibleBookRecord } from './desk-helpers';
 import { expect, test as base, type APIRequestContext, type Page } from '@playwright/test';
 const test = base.extend({ request: async ({ context }, use) => use(context.request) });
 async function enter(page: Page, request: APIRequestContext) {
@@ -95,9 +96,7 @@ test('protection stops the controller before reducing and prevents the next auto
       { timeout: 30000 },
     )
     .toBe(true);
-  await page
-    .getByRole('row')
-    .filter({ hasText: 'DOGE-USDT' })
+  await visibleBookRecord(page, 'DOGE-USDT')
     .getByRole('button', { name: 'Reduce account position', exact: true })
     .click();
   const dialog = page.getByRole('dialog', { name: 'Reduce account position', exact: true });
@@ -169,9 +168,7 @@ test('short protection locks buy-to-reduce and rejects a stale reviewed quantity
     data: body,
   });
   expect(open.ok(), await open.text()).toBeTruthy();
-  await page
-    .getByRole('row')
-    .filter({ hasText: 'BTC-USDT-SWAP' })
+  await visibleBookRecord(page, 'BTC-USDT-SWAP')
     .getByRole('button', { name: 'Reduce account position', exact: true })
     .click();
   const dialog = page.getByRole('dialog', { name: 'Reduce account position', exact: true });

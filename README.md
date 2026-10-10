@@ -11,22 +11,32 @@ An open-source crypto research and paper trading workbench for OKX spot and line
 
 English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Research model](docs/pro-research.md) · [Operations](docs/operations.md)
 
-![Tidebench trading overview, using explicitly synthetic prices](docs/assets/journey-overview-v0.12-desktop.png)
+![Tidebench trading overview, using explicitly synthetic prices](docs/assets/desk-overview-v0.13-desktop.png)
 
-## Continue the same work after an interruption
+## Work from the account, through the evidence, to the next decision
 
-Prepare data without losing the strategy version or edited costs. Restore strategy and portfolio drafts, return to the exact result or controller after refresh, and distinguish a saved activation from a controller that is running now. Overview money, positions and exposure share one captured account; incomplete economics remain unknown. The task desk suggests concrete next steps from observed state; whole-portfolio stops explain their full effect, and a research cancellation waits for actual cleanup. [Trader journeys](docs/trader-journeys.md) · [Before/after audit](docs/audit/user-journey-0.12.0.zh-CN.md).
+Open the desk to see equity, available cash, exposure, positions and working orders first. Search and sort the actual book; mobile records keep market identity, quantities and actions together. Open a ticket deliberately, size a market order in native units or USDT notional, inspect its risk preview, and return to monitoring without losing the draft. Micro prices retain the instrument's tick precision.
 
-## A trading desk with evidence you can inspect
+Research has its own working context. Market inputs, strategy and evaluation sit side by side on a wide screen. A selected result states its **saved** market, window, costs and method; editing the next trial cannot rewrite the result. Preparing data carries the chosen product, interval and UTC window, then returns the exact versioned package to the same draft. Late receipts cannot take over a task you have already left.
 
-Account capital promises, settlement-time funding obligations, shared group failure contracts, current economic incidents and frozen whole-window forward reports connect research to the actual paper account. Post-fill fees and spread losses count at admission; a stopped controller does not erase inventory. Attributed lifecycle events and immutable public order-book cost reports make data limitations inspectable. [Professional workflows](docs/professional-workflows-v0.11.md) · [Historical lifecycle](docs/historical-lifecycle.md) · [Forward evidence](docs/forward-evidence.md) · [Independent reviews](docs/audit/README.md).
+[See the trader paths](docs/trader-journeys.md) · [Read the before/after review](docs/audit/trader-desk-0.13.0.zh-CN.md) · [Inspect the verification record](docs/verification.md).
 
+<details>
+<summary>Research desk and mobile book — synthetic acceptance fixtures</summary>
 
-New portfolio studies can explicitly choose bounded smaller continuations after shared-account allowance drift, with immutable original orders and unchanged hard guards. Existing frozen-order versions keep their recorded behavior. [Execution policy choices](docs/portfolio-execution-contracts.md).
+![Parallel research configuration, on a synthetic dataset](docs/assets/desk-research-v0.13-desktop.png)
 
-Protect an actual position from the desk: stop its controllers, cancel working entries, review an exact native-unit reduce-only exit and inspect the receipt. Pending protection follows the remaining original inventory, with requested/filled/canceled amounts preserved. Portfolio review shows actual account capital owners and economic research evidence before approval. UTC-selected forward windows persist and can be independently recomputed; post-test fold selection and recovery-retained trials stay explicit. [v0.11 before/after audit](docs/audit/red-team-0.11.0.zh-CN.md).
+![Mobile current book, with market identity and account quantities preserved](docs/assets/desk-book-v0.13-mobile.png)
 
-Instrument evidence preserves full forward REST data-array observations, including unavailable preopen rows. Compare responses, inspect missing rules, review information known by a UTC time and export exact hashes; older listing timestamps do not manufacture historical coverage. [Observation and recovery guide](docs/instrument-evidence.md).
+</details>
+
+## Follow the money after a simulated fill
+
+Shared account capital, settlement-time funding, group failure contracts and frozen forward reports connect research to the paper account. Post-fill fees and spread losses count at admission. Contribution quantities, fees, funding and P&L reconcile to the actual account and link to fill/event evidence. Stopping a controller retains inventory; protecting a position is a separate reviewed reduce-only exit.
+
+Managed groups preserve targets and commands through interruption, expose failed-leg compensation and distinguish recorded activation from current controller state. Explicit execution-policy versions govern bounded smaller continuations after account allowance drift. [Managed portfolios](docs/managed-portfolios.md) · [Execution contracts](docs/portfolio-execution-contracts.md) · [Forward evidence](docs/forward-evidence.md).
+
+Instrument observations and immutable order-book cost reports keep public-data limitations inspectable. Historical listing timestamps do not manufacture historical coverage. [Instrument evidence](docs/instrument-evidence.md) · [Historical lifecycle](docs/historical-lifecycle.md) · [Independent reviews](docs/audit/README.md).
 
 ## Strategies with evidence, including failed hypotheses
 
@@ -87,8 +97,8 @@ For an offline walkthrough, choose **Example**:
 1. Open **Strategies**, load a reference hypothesis or define your own, and save a version. Choose **Research this version**.
 2. Open **Data library → Research packages**, choose a spot or perpetual market and UTC range, then **Prepare research package**. A perpetual package gathers trade, mark, realized funding and settlement marks before becoming ready.
 3. Prepare and select the exact data version in the bound study. Evaluate costs and independent test windows; export or replay the captured evidence. **Research governance** freezes a one-use final test before evaluation. The portfolio protocol also captures complete inputs, displays fixed cash-benchmark rejection criteria and verifies frozen replay. [Protocol and recovery guide](docs/research-governance.md).
-4. **Review paper release** from the result, inspect the selected configuration and current policy, approve and activate. In **Execution**, advance the synthetic clock and inspect actual decisions, orders, exits and observed account performance. Order previews and captured exposure scenarios remain available.
-5. For a multi-market workflow, open **Portfolio research**, choose ready aligned packages and save a version-bound study. **Review portfolio release** approves the whole group. In **Execution → Managed portfolios**, inspect targets, cash scale, actual commands and residuals; **Contributions** reconciles its monetary P&L to the account. See the [full guide](docs/managed-portfolios.md).
+4. **Review paper release** from the result, inspect the selected configuration and current policy, approve and activate. In **Execution → Account & orders → Account details → Synthetic market clock**, advance time and inspect actual decisions, orders, exits and observed account performance. Order previews and captured exposure scenarios remain available.
+5. For a multi-market workflow, open **Portfolio research**, choose ready aligned packages and save a version-bound study. **Review portfolio release** approves the whole group. In **Execution → Account & orders → Analysis & controls → Managed portfolios**, inspect targets, cash scale, actual commands and residuals; **Contributions** reconciles its monetary P&L to the account. See the [full guide](docs/managed-portfolios.md).
 6. Open **Operations**. Create and verify a backup. A restore replaces workspace state, revokes sessions, cancels pending orders/commands, stops groups and halts accounts.
 
 Example time can be paused, accelerated or stepped forward, with separate capital. OKX failures remain visible; the application never substitutes synthetic prices automatically.

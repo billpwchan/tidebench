@@ -1,0 +1,628 @@
+/* Current account work comes before research continuation and configuration. */
+.desk-overview,
+.desk-execution {
+  min-width: 0;
+}
+.desk-overview .page-heading,
+.desk-execution .page-heading {
+  margin-bottom: 14px;
+  gap: 16px;
+}
+.desk-overview .page-heading h1,
+.desk-execution .page-heading h1 {
+  font-size: 26px;
+  letter-spacing: -0.7px;
+}
+.desk-overview .page-heading .eyebrow,
+.desk-execution .page-heading .eyebrow {
+  display: none;
+}
+.desk-overview .page-heading p,
+.desk-execution .page-heading p {
+  margin-top: 5px;
+  max-width: 620px;
+  line-height: 1.5;
+}
+.desk-overview .overview-state-line,
+.desk-execution-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0 0 7px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.desk-execution-state > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.desk-snapshot-basis {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 7px;
+}
+.desk-snapshot-basis summary,
+.desk-account-details > summary,
+.desk-conditions > summary,
+.desk-view-disclosure > summary {
+  cursor: pointer;
+}
+.desk-snapshot-basis p {
+  margin: 7px 0;
+}
+.desk-overview .overview-economic-state {
+  margin-bottom: 7px;
+  gap: 6px 10px;
+}
+.desk-risk-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 3px solid var(--negative);
+  background: #fff5f3;
+  padding: 12px 14px;
+  margin: 10px 0 4px;
+}
+.desk-risk-summary > svg {
+  flex-shrink: 0;
+  color: var(--negative);
+}
+.desk-risk-summary > div {
+  min-width: 0;
+  flex: 1;
+}
+.desk-risk-summary strong,
+.desk-risk-summary > div > span {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.desk-risk-summary > div > span {
+  margin-top: 3px;
+  color: #6c4840;
+}
+.desk-risk-summary .text-button {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.desk-account-strip {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+  padding: 13px 0 16px;
+  margin: 0 0 8px;
+  background: transparent;
+  border-bottom: 1px solid var(--line);
+}
+.desk-account-strip .metric-label {
+  font-size: 11px;
+}
+.desk-account-strip .metric-value {
+  font-size: 23px;
+  line-height: 1.35;
+  letter-spacing: -0.45px;
+  font-variant-numeric: tabular-nums;
+}
+.desk-account-strip .metric-note {
+  font-size: 10px;
+}
+.desk-metrics-toggle {
+  display: none;
+}
+.desk-overview .trader-overview-layout {
+  grid-template-columns: minmax(0, 1fr) 286px;
+  gap: 24px;
+  margin-top: 16px;
+}
+.desk-overview .trader-secondary {
+  padding-left: 20px;
+}
+.desk-overview .trader-overview-layout .section-heading {
+  margin-bottom: 10px;
+}
+.desk-overview .section-description {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.desk-book-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  margin: 0 0 14px;
+}
+.desk-book-tabs > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 0;
+  min-height: 42px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.desk-book-tabs > button.active {
+  color: var(--ink);
+  border-color: #315845;
+}
+.desk-book-tabs > button > span {
+  font-size: 11px;
+  background: #edf2ef;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+}
+.desk-conditions {
+  margin-bottom: 20px;
+  border-block: 1px solid var(--line);
+  scroll-margin-top: 90px;
+}
+.desk-conditions > summary {
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.desk-conditions > summary > span {
+  margin-left: 8px;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+}
+.desk-conditions .desk-attention {
+  margin-top: 10px;
+}
+.desk-conditions .desk-issue {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 14px 0;
+  gap: 10px;
+}
+.desk-conditions .desk-issue-actions {
+  flex-direction: row;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.desk-conditions .desk-attention-heading p {
+  font-size: 11px;
+}
+.desk-conditions .overview-funding-notice {
+  flex-wrap: wrap;
+}
+.desk-conditions .overview-funding-notice button {
+  margin-left: 0;
+}
+.desk-conditions .attention-panel {
+  margin-top: 16px;
+}
+.desk-continue-work {
+  min-width: 0;
+}
+.journey-compact {
+  margin: 0 0 18px;
+  padding: 0 0 14px;
+  border-top: 0;
+}
+.journey-compact .journey-heading {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+}
+.journey-compact .journey-heading h2 {
+  font-size: 16px;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+.journey-compact .journey-status {
+  font-size: 10px;
+}
+.journey-compact .journey-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px 0;
+}
+.journey-compact .journey-detail > strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 4px;
+}
+.journey-item-context {
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.journey-item-context > summary {
+  cursor: pointer;
+}
+.journey-compact .journey-action {
+  font-size: 12px;
+}
+.journey-compact .journey-history {
+  margin-top: 6px;
+  font-size: 11px;
+}
+.journey-compact .journey-history > summary {
+  padding-block: 8px;
+}
+.desk-execution .simulation-clock {
+  margin: 10px 0;
+  padding: 10px 0;
+  border-block: 1px solid var(--line);
+}
+.desk-execution-layout {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 14px;
+  gap: 22px;
+}
+.desk-execution-layout.has-ticket {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.desk-execution .account-book-panel {
+  padding: 0;
+  background: transparent;
+}
+.desk-execution .account-book-panel > .section-heading {
+  margin-bottom: 8px;
+}
+.desk-execution .account-book-panel > .section-heading h2 {
+  font-size: 18px;
+}
+.desk-book-navigation {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.desk-book-navigation .desk-book-tabs {
+  margin-bottom: 0;
+}
+.desk-view-disclosure {
+  padding: 9px 0;
+}
+.desk-view-disclosure > summary {
+  font-size: 12px;
+  color: #4e6257;
+}
+.desk-view-disclosure > summary > span {
+  margin-left: 10px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.desk-view-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  margin-top: 12px;
+  padding: 4px 0 3px;
+}
+.desk-view-groups > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+.desk-view-groups > div > span {
+  font-size: 10px;
+  color: var(--muted);
+  width: 100%;
+  margin-bottom: 2px;
+}
+.desk-view-groups button,
+.desk-order-scope button {
+  font-size: 12px;
+  padding: 7px 9px;
+  border-radius: 3px;
+  color: #4e6257;
+}
+.desk-view-groups button.active,
+.desk-order-scope button.active {
+  background: #e7eeea;
+  color: #213d2e;
+  font-weight: 500;
+}
+.desk-money-unit {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.desk-order-scope {
+  display: flex;
+  gap: 7px;
+  margin: 0 0 12px;
+}
+.desk-account-details {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.desk-account-details > summary {
+  display: list-item;
+  padding: 13px 0;
+  font-size: 13px;
+}
+.desk-account-details > summary > span {
+  margin-left: 14px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.desk-account-details .pro-panel {
+  margin-top: 0;
+  padding: 16px 0;
+  background: transparent;
+}
+.desk-order-ticket {
+  border-left: 1px solid var(--line);
+  padding: 0 0 0 22px;
+  background: transparent;
+  grid-row: auto;
+}
+.desk-order-ticket > .section-heading {
+  align-items: center;
+  margin-bottom: 8px;
+}
+.desk-order-ticket h2:focus-visible {
+  outline: 2px solid #315845;
+  outline-offset: 3px;
+}
+.desk-ticket-context {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+}
+.desk-order-ticket .ticket-quotes {
+  gap: 9px;
+}
+@media (max-width: 1250px) {
+  .desk-overview .trader-overview-layout {
+    grid-template-columns: minmax(0, 1fr) 252px;
+    gap: 20px;
+  }
+  .desk-account-strip {
+    gap: 14px;
+  }
+  .desk-account-strip .metric-value {
+    font-size: 20px;
+  }
+  .desk-execution-layout.has-ticket {
+    grid-template-columns: minmax(0, 1fr) 310px;
+  }
+}
+@media (max-width: 1000px) {
+  .desk-execution-layout.has-ticket {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .desk-execution-layout .desk-order-ticket {
+    grid-row: auto;
+    position: static;
+    border-left: 0;
+    border-top: 2px solid #315845;
+    padding: 18px 0;
+    scroll-margin-top: 90px;
+  }
+  .desk-overview .trader-overview-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .desk-overview .trader-secondary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 24px;
+    padding: 0;
+    border-left: 0;
+  }
+  .desk-overview .desk-conditions {
+    grid-column: 1 / -1;
+  }
+  .desk-overview .trader-secondary .overview-work {
+    grid-column: auto;
+  }
+  .desk-account-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .desk-overview .page-heading,
+  .desk-execution .page-heading {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .desk-overview .page-heading h1,
+  .desk-execution .page-heading h1 {
+    font-size: 23px;
+    margin: 0;
+    letter-spacing: -0.6px;
+  }
+  .desk-overview .page-heading p,
+  .desk-execution .page-heading p {
+    display: none;
+  }
+  .desk-overview .heading-actions,
+  .desk-execution .heading-actions {
+    padding-top: 0;
+    gap: 7px;
+  }
+  .desk-overview .page-heading .button,
+  .desk-execution .page-heading .button {
+    font-size: 12px;
+    min-height: 40px;
+    padding: 9px 11px;
+  }
+  .desk-execution .heading-actions > .subtle-tag {
+    display: none;
+  }
+  .desk-overview .overview-state-line,
+  .desk-execution-state {
+    gap: 6px 9px;
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .desk-account-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 15px;
+    padding: 12px 0;
+    margin-bottom: 2px;
+  }
+  .desk-account-strip:not(.is-expanded) > .metric:nth-child(n + 3) {
+    display: none;
+  }
+  .desk-account-strip .metric-value {
+    font-size: 23px;
+  }
+  .desk-account-strip .metric-label {
+    font-size: 11px;
+  }
+  .desk-metrics-toggle {
+    display: inline-flex;
+    font-size: 12px;
+    min-height: 36px;
+    padding: 8px 0;
+  }
+  .desk-risk-summary {
+    flex-wrap: wrap;
+    gap: 9px 11px;
+    padding: 10px 12px;
+  }
+  .desk-risk-summary > div {
+    flex-basis: calc(100% - 32px);
+  }
+  .desk-risk-summary .text-button {
+    min-height: 36px;
+  }
+  .desk-risk-summary > .desk-all-conditions {
+    margin-left: auto;
+  }
+  .desk-overview .trader-overview-layout {
+    margin-top: 12px;
+    gap: 18px;
+  }
+  .desk-overview .trader-overview-layout .section-heading {
+    gap: 8px;
+    margin-bottom: 7px;
+  }
+  .desk-overview .overview-book .section-heading h2 {
+    font-size: 16px;
+  }
+  .desk-book-tabs {
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+  .desk-book-tabs > button {
+    min-height: 44px;
+    font-size: 13px;
+    padding-block: 10px;
+  }
+  .desk-overview .trader-secondary {
+    display: block;
+  }
+  .desk-continue-work {
+    margin-top: 18px;
+  }
+  .journey-compact .journey-item {
+    gap: 7px;
+    padding-block: 11px;
+  }
+  .desk-execution .simulation-clock {
+    padding-block: 8px;
+    margin-block: 8px;
+  }
+  .desk-execution .simulation-clock .toolbar {
+    flex-wrap: wrap;
+  }
+  .desk-execution .simulation-clock .toolbar .button {
+    font-size: 11px;
+    min-height: 36px;
+  }
+  .desk-view-groups {
+    gap: 14px;
+  }
+  .desk-view-groups button,
+  .desk-order-scope button {
+    min-height: 40px;
+  }
+  .desk-order-scope {
+    flex-wrap: wrap;
+  }
+  .desk-execution-layout {
+    margin-top: 10px;
+  }
+  .desk-account-details > summary {
+    min-height: 44px;
+  }
+}
+
+.desk-overview .desk-snapshot-basis {
+  margin-bottom: 12px;
+}
+.desk-overview .trader-overview-layout .desk-conditions {
+  grid-column: 1 / -1;
+}
+.desk-execution .halt-notice {
+  padding: 10px 12px;
+  margin-block: 8px;
+  font-size: 12px;
+}
+@media (max-width: 720px) {
+  .desk-overview .section-description {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .desk-overview .overview-book .section-heading > .text-button {
+    font-size: 12px;
+  }
+  .desk-overview .desk-snapshot-basis {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 720px) {
+  .desk-overview .heading-actions .button-dark {
+    display: none;
+  }
+  .desk-overview .heading-actions .desk-refresh-label {
+    display: none;
+  }
+  .desk-overview .heading-actions .button-secondary {
+    min-width: 42px;
+    min-height: 42px;
+    justify-content: center;
+  }
+}
+
+.desk-overview .overview-state-line .overview-economic-state {
+  margin: 0;
+  gap: 6px;
+}
+
+.desk-onboarding-next {
+  margin: 18px 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.desk-onboarding-next .journey-compact .journey-item {
+  flex-direction: row;
+  align-items: center;
+}
+.desk-overview .overview-book .empty-state {
+  min-height: 68px;
+  padding: 13px 0;
+  align-items: flex-start;
+  text-align: left;
+}
+.desk-overview .overview-book .empty-state .empty-icon,
+.desk-overview .overview-book .empty-state p {
+  display: none;
+}
+@media (max-width: 720px) {
+  .desk-onboarding-next .journey-compact .journey-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

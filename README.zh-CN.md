@@ -9,11 +9,24 @@
 
 简体中文 · [English](README.md) · [研究模型](docs/pro-research.md) · [部署与运维](docs/operations.md)
 
-![交易总览实际截图，使用明确标注的合成数据](docs/assets/journey-overview-v0.12-desktop.png)
+![交易总览实际截图，使用明确标注的合成数据](docs/assets/desk-overview-v0.13-desktop.png)
 
-## 中断之后，继续同一件工作
+## 从账户出发，带着上下文完成下一步
 
-选好策略再准备数据，版本与编辑成本继续保留；策略／组合草稿可在当前浏览器会话恢复。刷新返回同一任务，审批记录与控制器当前状态分开显示。首页金额、持仓与敞口使用同一捕获，未知权益保持不可用；任务总览按实际状态给出下一步，全组停止明确影响范围，取消研究等待实际进程清理完成。[用户路径指南](docs/trader-journeys.md) · [断点与修复审查](docs/audit/user-journey-0.12.0.zh-CN.md)。
+进入工作台先看权益、可用资金、敞口、持仓和工作订单。真实账本可以搜索与排序，手机记录保留市场身份、数量和操作。明确打开订单票据后，可输入原生数量或按 USDT 名义金额换算市价单数量，再审查风险预览；关闭票据后继续监控，草稿仍在。微小价格按品种 tick 精度显示。
+
+宽屏研究配置并列展示市场数据、策略资金与评估方式。选中结果显示它自己保存的市场、区间、成本和方法，下一次研究的草稿与它区分。准备数据时携带品种、周期与 UTC 区间，返回精确版本的数据包；延迟回执不能把已经离开的用户拉回旧任务。
+
+[用户操作路径](docs/trader-journeys.md) · [本轮多维审查与修复](docs/audit/trader-desk-0.13.0.zh-CN.md) · [验证记录](docs/verification.md)。
+
+<details>
+<summary>研究布局与手机账本截图（明确标注的合成验收数据）</summary>
+
+![宽屏研究配置](docs/assets/desk-research-v0.13-desktop.png)
+
+![手机当前持仓账本](docs/assets/desk-book-v0.13-mobile.png)
+
+</details>
 
 ## 交易员工作流与可复核证据
 
@@ -85,8 +98,8 @@ make dev
 1. 在 Strategies 载入参考假设或自定义策略，保存不可变版本，点击 Research this version。
 2. 在 Data library → Research packages 选择现货或永续及 UTC 日期，一键准备研究数据包。永续会收集交易价、标记价、实际资金费与结算时点价格，全部校验后才就绪。
 3. 在绑定版本的研究中选择已校验数据，设置成本和独立测试窗口，导出或重放证据。Research governance 可在评估前冻结一次性保留集；组合协议捕获完整输入、固定现金基准与拒绝判据，支持哈希一致的冻结重放。[协议与恢复指南](docs/research-governance.md)。
-4. 从研究结果 Review paper release，核对候选、成本和当前风险政策，批准并激活。在 Execution 推进合成时钟，查看实际决策、订单、退出、净值与压力情景。
-5. 多市场流程在 Portfolio research 选择同步就绪数据包并保存绑定版本的研究。Review portfolio release 审查整组；Execution → Managed portfolios 显示冻结目标、共同现金缩放、实际命令及残差；Contributions 核对该组货币 P&L。详见[指南](docs/managed-portfolios.md)。
+4. 从研究结果 Review paper release，核对候选、成本和当前风险政策，批准并激活。在 Execution → Account & orders → Synthetic market clock 推进合成时钟，查看实际决策、订单、退出、净值与压力情景。
+5. 多市场流程在 Portfolio research 选择同步就绪数据包并保存绑定版本的研究。Review portfolio release 审查整组；Execution → Account & orders → Analysis & controls → Managed portfolios 显示冻结目标、共同现金缩放、实际命令及残差；Contributions 核对该组货币 P&L。详见[指南](docs/managed-portfolios.md)。
 6. 在 Operations 创建、校验备份。恢复会撤销所有会话、取消待执行订单／命令、停止全组并暂停账户新增风险。
 
 Example 使用可暂停、加速和向前步进的合成行情时钟与独立账户。OKX 连接失败会明确显示，不会自动换成假数据。

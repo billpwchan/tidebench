@@ -1,3 +1,4 @@
+import { expandSnapshotBasis } from './desk-helpers';
 import { expect, test as base, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -190,6 +191,7 @@ test('real saved strategy survives data preparation, reload, approval and exact-
 
   await navigate(page, 'Overview');
   await expect(page.getByRole('heading', { name: 'Next actions', exact: true })).toBeVisible();
+  await expandSnapshotBasis(page);
   await expect(
     page.getByText('Account and exposure values share one captured snapshot.', { exact: true }),
   ).toBeVisible();

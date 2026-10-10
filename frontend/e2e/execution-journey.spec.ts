@@ -314,11 +314,14 @@ test('explicit missing entities remain visible and a perpetual ticket restores i
   await expect(
     page.getByText('Selected deployment is unavailable in this account.', { exact: true }),
   ).toBeVisible();
+  await page.getByRole('button', { name: 'New order', exact: true }).click();
   await expect(page.getByLabel('Product', { exact: true })).toHaveValue('SWAP');
   await expect(page.getByLabel('Market', { exact: true })).toHaveValue('ETH-USDT-SWAP');
-  await page.getByRole('tab', { name: 'Orders', exact: true }).click();
+  await page.getByRole('tab', { name: /^Working orders/ }).click();
   await page.reload();
-  await expect(page.getByRole('tab', { name: 'Orders', exact: true })).toHaveAttribute(
+  await page.getByRole('button', { name: 'New order', exact: true }).click();
+  await page.getByRole('tab', { name: /^Working orders/ }).click();
+  await expect(page.getByRole('tab', { name: /^Working orders/ })).toHaveAttribute(
     'aria-selected',
     'true',
   );
@@ -326,6 +329,7 @@ test('explicit missing entities remain visible and a perpetual ticket restores i
   await page.getByLabel('Product', { exact: true }).selectOption('SPOT');
   await page.getByLabel('Market', { exact: true }).selectOption('SOL-USDT');
   await page.reload();
+  await page.getByRole('button', { name: 'New order', exact: true }).click();
   await expect(page.getByLabel('Product', { exact: true })).toHaveValue('SPOT');
   await expect(page.getByLabel('Market', { exact: true })).toHaveValue('SOL-USDT');
   await page.goto('/#execution?source=example&view=managed%3Amissing-group');
@@ -683,7 +687,7 @@ for (const kind of ['release', 'portfolio', 'deploy'] as const) {
             .getByRole('dialog')
             .getByRole('button', { name: 'Close', exact: true })
             .click();
-        await page.getByRole('tab', { name: 'Orders', exact: true }).click();
+        await page.getByRole('tab', { name: /^Working orders/ }).click();
       } else if (departure === 'new-draft') {
         await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
         await page.getByRole('button', { name: 'Deploy strategy', exact: true }).click();
@@ -809,6 +813,12 @@ for (const kind of ['single', 'portfolio'] as const) {
         exact: true,
       });
       await field.fill('Original review sent before requesting a fresh preview.');
+      if (kind === 'portfolio' && page.viewportSize()!.width <= 720) {
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+          'A mobile release preview must fit the viewport before its approval controls are used.',
+        ).toBeTruthy();
+      }
       const heldApproval = delay(
         approvePath,
         (body) => {

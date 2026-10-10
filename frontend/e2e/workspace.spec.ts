@@ -1,3 +1,10 @@
+import {
+  executionView,
+  expandClock,
+  expandResearchPolicy,
+  showConditions,
+  visibleBookRecord,
+} from './desk-helpers';
 import { expect, test as base, type Page, type APIRequestContext } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 
@@ -149,7 +156,9 @@ test('strategy version flows through research approval, activation and observed 
       { timeout: 30000 },
     )
     .toBeGreaterThan(0);
+  await expandClock(page);
   await page.getByRole('button', { name: 'Step 1 hour', exact: true }).click();
+  await expandClock(page);
   await page.getByRole('button', { name: 'Step 1 hour', exact: true }).click();
   await expect
     .poll(
@@ -169,7 +178,7 @@ test('strategy version flows through research approval, activation and observed 
       { timeout: 30000 },
     )
     .toBeTruthy();
-  await page.getByRole('tab', { name: 'Forward performance', exact: true }).click();
+  await executionView(page, 'Forward performance');
   await expect(page.getByText('Decision journal', { exact: true })).toBeVisible();
   await page
     .getByLabel('Deployment decisions', { exact: true })
@@ -338,7 +347,7 @@ test('shared-capital portfolio study and one-use holdout governance', async ({
     .fill('A fixed two-market basket must pay all costs from a shared finite cash balance.');
   await page.getByLabel('Package 1', { exact: true }).selectOption(packages[0]);
   await page.getByLabel('Package 2', { exact: true }).selectOption(packages[1]);
-  await page.getByLabel('Evaluation', { exact: true }).selectOption('train_test');
+  await page.getByRole('combobox', { name: 'Evaluation', exact: true }).selectOption('train_test');
   const queued = page.waitForResponse(
     (r) => r.url().endsWith('/pro/research/portfolios') && r.request().method() === 'POST',
   );
@@ -360,7 +369,10 @@ test('shared-capital portfolio study and one-use holdout governance', async ({
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
   expect((await download).suggestedFilename()).toContain(portfolio.id);
-  await page.getByRole('tab', { name: 'Orders', exact: true }).click();
+  await page
+    .locator('.portfolio-study-result')
+    .getByRole('tab', { name: 'Orders', exact: true })
+    .click();
   await expect(
     page
       .locator('.portfolio-study-result')
@@ -538,7 +550,7 @@ test('versioned portfolio release, managed execution and reconciled owner contri
   await page.getByLabel('Package 1', { exact: true }).selectOption(packages[0]);
   await page.getByLabel('Package 2', { exact: true }).selectOption(packages[1]);
   await page.getByLabel('Capital allocation %', { exact: true }).fill('20');
-  await page.getByLabel('Evaluation', { exact: true }).selectOption('train_test');
+  await page.getByRole('combobox', { name: 'Evaluation', exact: true }).selectOption('train_test');
   await expect(
     page.locator('.portfolio-study-editor [aria-label="Portfolio execution policy"]'),
   ).toContainText('at most three times');
@@ -629,7 +641,7 @@ test('versioned portfolio release, managed execution and reconciled owner contri
     fullPage: true,
     animations: 'disabled',
   });
-  await page.getByRole('tab', { name: 'Contribution', exact: true }).click();
+  await executionView(page, 'Contribution');
   await expect(
     page.getByRole('heading', { name: 'Economic contribution', exact: true }),
   ).toBeVisible();
@@ -650,7 +662,7 @@ test('versioned portfolio release, managed execution and reconciled owner contri
     fullPage: true,
     animations: 'disabled',
   });
-  await page.getByRole('tab', { name: 'Managed portfolios', exact: true }).click();
+  await executionView(page, 'Managed portfolios');
   await page.getByRole('button', { name: 'Stop whole portfolio', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Stop whole portfolio', exact: true })
@@ -672,7 +684,7 @@ test('versioned portfolio release, managed execution and reconciled owner contri
     ).length,
   ).toBe(2);
   await cleanup();
-  await page.getByRole('tab', { name: 'Contribution', exact: true }).click();
+  await executionView(page, 'Contribution');
   await page.getByLabel('Interface language', { exact: true }).selectOption('zh-CN');
   await expect(page.getByRole('heading', { name: '经济贡献', exact: true })).toBeVisible();
   expect(
@@ -685,6 +697,7 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
   request,
 }, testInfo) => {
   await navigate(page, 'Execution');
+  await page.getByRole('button', { name: 'New order', exact: true }).click();
   await page.getByLabel('Quantity', { exact: false }).fill('0.001');
   await page.getByRole('button', { name: 'Preview order', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Order preview', exact: true })).toBeVisible();
@@ -721,13 +734,17 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
       ),
     )
     .toBeLessThan(10000);
+  if (!(await page.locator('.execution-ticket').count()))
+    await page.getByRole('button', { name: 'New order', exact: true }).click();
   await page.getByLabel('Product', { exact: true }).selectOption('SWAP');
   await page.getByLabel('Quantity', { exact: false }).fill('1');
   await page.getByLabel('Leverage', { exact: true }).fill('3');
   await page.getByRole('button', { name: 'Preview order', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Order preview', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Submit order', exact: true }).click();
-  await expect(page.getByRole('cell').getByText('BTC-USDT-SWAP', { exact: true })).toBeVisible();
+  await expect(
+    visibleBookRecord(page, 'BTC-USDT-SWAP').getByText('BTC-USDT-SWAP', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Account equity', { exact: true })).toBeVisible();
   if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop') {
     await expect(page.getByText('Loading workspace data…', { exact: true })).toHaveCount(0);
@@ -735,7 +752,7 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: '../docs/assets/workspace.png', animations: 'disabled' });
   }
-  await page.getByRole('tab', { name: 'Exposure & scenarios', exact: true }).click();
+  await executionView(page, 'Exposure & scenarios');
   await expect(page.locator('.metric-label').filter({ hasText: /^Gross exposure$/ })).toBeVisible();
   await page.getByRole('tab', { name: 'Stress scenarios', exact: true }).click();
   await page.getByLabel('Scenario name', { exact: true }).fill('Browser stress');
@@ -753,18 +770,20 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
   }
   await navigate(page, 'Overview');
   await expect(page.getByRole('heading', { name: 'Trading overview', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell').getByText('BTC-USDT-SWAP', { exact: true })).toBeVisible();
+  await expect(
+    visibleBookRecord(page, 'BTC-USDT-SWAP').getByText('BTC-USDT-SWAP', { exact: true }),
+  ).toBeVisible();
   if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop') {
     await expect(page.getByText('Loading account state…', { exact: true })).toHaveCount(0);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: '../docs/assets/overview.png', animations: 'disabled' });
   }
   await navigate(page, 'Execution');
-  await page.getByRole('tab', { name: 'Risk', exact: true }).click();
+  await page.getByRole('tab', { name: 'Risk & limits', exact: true }).click();
   await page.getByLabel('Reason', { exact: true }).fill('Browser verification halt');
   await page.getByRole('button', { name: 'Halt execution', exact: true }).click();
   await page.reload();
-  await page.getByRole('tab', { name: 'Risk', exact: true }).click();
+  await page.getByRole('tab', { name: 'Risk & limits', exact: true }).click();
   await expect(page.getByText('Execution halted', { exact: true })).toBeVisible();
 });
 
@@ -924,6 +943,7 @@ test('portfolio holdout captures a final contract, evaluates once and replays fr
   await page
     .getByLabel('UTC final end', { exact: true })
     .fill(new Date(end).toISOString().slice(0, 16));
+  await expandResearchPolicy(page);
   await page.getByLabel('Maximum order notional (USDT)', { exact: true }).fill('1800');
   await page.getByLabel('Underlying asset gross limit (%)', { exact: true }).fill('80');
   await page.getByLabel('Minimum return versus cash %', { exact: true }).fill('0');
@@ -1217,10 +1237,12 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   );
   await page.getByLabel('Portfolio starting point', { exact: true }).selectOption('risk-rotation');
   await expect(page.getByLabel('Risk estimation bars', { exact: true })).toHaveValue('84');
+  await expandResearchPolicy(page);
   await page.getByLabel('Maximum execution residual %', { exact: true }).fill('3');
   await page.getByLabel('Maximum order notional (USDT)', { exact: true }).fill('1750');
   await page.getByLabel('Underlying asset gross limit (%)', { exact: true }).fill('75');
   await page.getByLabel('Sleeve volatility target (%)', { exact: true }).fill('15');
+  await expandResearchPolicy(page);
   await page.getByLabel('Execution policy', { exact: true }).selectOption('reduce_group_v1');
   await expect(
     page.locator('.portfolio-study-editor [aria-label="Portfolio execution policy"]'),
@@ -1513,6 +1535,7 @@ test('trading desk surfaces unresolved group risk even when members and service 
     }),
   );
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await showConditions(page);
   const desk = page.getByRole('region', { name: 'Unresolved conditions', exact: true });
   await expect(desk.locator('.desk-issue')).toHaveCount(3);
   const group = desk.locator('[data-issue-id="group:blocked-group"]');
@@ -1545,6 +1568,7 @@ test('trading desk surfaces unresolved group risk even when members and service 
       .getByRole('heading', { name: 'Blocked recovery basket', exact: true }),
   ).toBeVisible();
   await navigate(page, 'Overview');
+  await showConditions(page);
   await desk
     .locator('[data-issue-id="group:blocked-group"]')
     .getByRole('button', { name: 'Inspect incident & response', exact: true })
@@ -1559,6 +1583,7 @@ test('trading desk surfaces unresolved group risk even when members and service 
   await navigate(page, 'Overview');
   await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
   await page.reload();
+  await showConditions(page);
   const zh = page.getByRole('region', { name: '未解决事项', exact: true });
   await expect(zh).toContainText('已响应 · 尚未恢复');
   await expect(zh).toContainText('当前组内持仓');
@@ -1577,6 +1602,7 @@ test('trading desk surfaces unresolved group risk even when members and service 
   }
   await page.evaluate(() => localStorage.setItem('tidebench:language', 'en'));
   await page.reload();
+  await showConditions(page);
   if (testInfo.project.name === 'desktop') {
     await expect(
       page
@@ -1631,6 +1657,7 @@ test('pending funding marks account economics provisional even when service heal
     }),
   );
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await showConditions(page);
   await expect(page.locator('.overview-funding-notice')).toContainText(
     'Funding settlement remains pending',
   );
@@ -1638,11 +1665,13 @@ test('pending funding marks account economics provisional even when service heal
   await expect(
     page.locator('.trader-metrics .metric').filter({ hasText: 'Account equity' }),
   ).toContainText('—');
-  await page.getByRole('button', { name: 'Inspect funding & ledger', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Ledger', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await page
+    .locator('.desk-risk-summary')
+    .getByRole('button', { name: 'Inspect funding & ledger', exact: true })
+    .click();
+  await expect(
+    page.locator('.desk-view-disclosure').getByRole('button', { name: 'Ledger', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('completed research keeps a failed simulated execution visibly ineligible for deployment', async ({
@@ -1730,7 +1759,7 @@ test('risk operator can persist the shared underlying capital policy without cha
   ).json();
   try {
     await navigate(page, 'Execution');
-    await page.getByRole('tab', { name: 'Risk', exact: true }).click();
+    await page.getByRole('tab', { name: 'Risk & limits', exact: true }).click();
     const policy = page.locator('.account-capital-control');
     await expect(
       policy.getByRole('heading', { name: 'Account capital policy', exact: true }),
@@ -1821,6 +1850,7 @@ test('a flat failed group remains a warning until the operator explicitly stops 
     return route.fulfill({ json: group() });
   });
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await showConditions(page);
   const desk = page.getByRole('region', { name: 'Unresolved conditions', exact: true });
   const issue = desk.locator('[data-issue-id="group:qa-flat-failure"]');
   await expect(issue).toHaveClass(/desk-issue-warning/);

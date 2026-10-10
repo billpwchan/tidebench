@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Database, Download, Loader2, RefreshCw, Square, X } from 'lucide-react';
 import type { Source } from '../api';
+import type { ResearchDataIntent } from '../lib/workspaceLocation';
 import { proApi } from '../proApi';
 import type { Dataset, Job, ResearchInputs } from '../proApi';
 import { useSession } from '../components/AuthGate';
@@ -31,7 +32,17 @@ import {
   WorkspaceTabs,
 } from '../components/ProWorkspace';
 
-const utcInput = (time: number) => new Date(time).toISOString().slice(0, 16);
+const utcInput = (time: number) => {
+  if (!Number.isFinite(time)) return '';
+  const value = new Date(time);
+  if (
+    !Number.isFinite(value.getTime()) ||
+    value.getUTCFullYear() < 1 ||
+    value.getUTCFullYear() > 9999
+  )
+    return '';
+  return value.toISOString().slice(0, 16);
+};
 const datasetRows = (d: Dataset) =>
   d.quality?.records ?? d.rows ?? d.count ?? d.candle_count ?? d.row_count;
 const datasetStart = (d: Dataset) => Number(d.start ?? d.start_ts ?? d.first_ts ?? 0);
@@ -44,6 +55,7 @@ export default function DataLibrary({
   onViewChange,
   returnTo,
   onReturn,
+  preparation,
 }: {
   source: Source;
   onResearch: (inputs: ResearchInputs) => void;
@@ -52,8 +64,10 @@ export default function DataLibrary({
   onViewChange?: (view: string) => void;
   returnTo?: 'advanced' | 'portfolio';
   onReturn?: () => void;
+  preparation?: ResearchDataIntent;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const canOperate = canResearch(useSession()?.user?.role);
   const qc = useQueryClient();
   const [catalogTab, setCatalogTab] = useState(initialView);
@@ -71,6 +85,21 @@ export default function DataLibrary({
     utcInput(Math.floor(Date.now() / 3600000) * 3600000 - 30 * 86400000),
   );
   const [end, setEnd] = useState(() => utcInput(Math.floor(Date.now() / 3600000) * 3600000));
+  const preparationKey = preparation?.source === source ? JSON.stringify(preparation) : '';
+  useEffect(() => {
+    if (!preparationKey || !preparation) return;
+    setProduct(preparation.product);
+    setSymbol(
+      preparation.instId ?? (preparation.product === 'SWAP' ? 'BTC-USDT-SWAP' : 'BTC-USDT'),
+    );
+    setBar(preparation.bar);
+    setKind('trade');
+    const preparedStart = preparation.startTs === undefined ? '' : utcInput(preparation.startTs);
+    const preparedEnd = preparation.endTs === undefined ? '' : utcInput(preparation.endTs);
+    if (preparedStart) setStart(preparedStart);
+    if (preparedEnd) setEnd(preparedEnd);
+  }, [preparationKey]);
+  const [datasetFilter, setDatasetFilter] = useState('');
   const [selected, setSelected] = useState<Dataset | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
@@ -100,7 +129,12 @@ export default function DataLibrary({
     },
   });
   const cancel = useMutation({ mutationFn: proApi.cancelJob, onSuccess: refresh });
-  const visibleDatasets = datasets.data?.items.filter((d) => d.source === source) ?? [];
+  const sourceDatasets = datasets.data?.items.filter((d) => d.source === source) ?? [];
+  const visibleDatasets = sourceDatasets.filter((d) =>
+    `${d.inst_id} ${d.kind} ${d.bar} ${d.id}`
+      .toLowerCase()
+      .includes(datasetFilter.toLowerCase().trim()),
+  );
   const visibleJobs = jobs.data?.items.filter((j) => !j.source || j.source === source) ?? [];
   const submit = () => {
     const startTs = Date.parse(`${start}Z`),
@@ -165,6 +199,7 @@ export default function DataLibrary({
         <ResearchPackages
           source={source}
           initialPackageId={initialPackageId}
+          preparation={preparation}
           onResearch={onResearch}
           onOpenRaw={() => changeView('raw')}
         />
@@ -179,6 +214,18 @@ export default function DataLibrary({
                 <h2>{t('Dataset versions')}</h2>
                 <span className="subtle-tag">
                   {visibleDatasets.length} {t('Dataset')}
+                </span>
+              </div>
+              <div className="research-catalog-filter">
+                <input
+                  type="search"
+                  aria-label={text('Search datasets', '搜索数据集')}
+                  placeholder={text('Market, interval or dataset ID', '品种、周期或数据集 ID')}
+                  value={datasetFilter}
+                  onChange={(event) => setDatasetFilter(event.target.value)}
+                />
+                <span>
+                  {visibleDatasets.length} / {sourceDatasets.length}
                 </span>
               </div>
               {datasets.isPending ? (

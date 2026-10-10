@@ -43,7 +43,21 @@ export default function Strategies({
   source: Source;
   onResearch: (version: StrategyVersion) => void;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
+  const strategyName = (kind: string) =>
+    (
+      ({
+        sma_cross: text('SMA crossover', '均线交叉'),
+        rsi_reversion: text('RSI reversion', 'RSI 回归'),
+        buy_hold: text('Buy & hold', '买入持有'),
+        ts_momentum: text('Multi-horizon momentum', '多窗口动量'),
+        regime_reversion: text('Range-gated reversion', '区间过滤回归'),
+        zscore_reversion: text('Z-score reversion', 'Z 值回归'),
+        close_breakout: text('Closing-channel breakout', '收盘通道突破'),
+        program: text('Rule program', '规则程序'),
+      }) as Record<string, string>
+    )[kind] ?? kind;
   const qc = useQueryClient();
   const session = useSession();
   const canOperate = canResearch(session?.user?.role);
@@ -217,6 +231,26 @@ export default function Strategies({
         ? JSON.stringify(recipe.definition.strategy.rules, null, 2)
         : '',
     });
+  };
+  const parameterSummary = (version: StrategyVersion) => {
+    const value = version.definition.strategy;
+    const fields: Record<string, string[]> = {
+      sma_cross: ['fast', 'slow', 'allocation'],
+      rsi_reversion: ['rsi_period', 'entry', 'exit', 'allocation'],
+      ts_momentum: ['momentum_horizons', 'momentum_entry', 'vol_window', 'allocation'],
+      zscore_reversion: ['window', 'z_entry', 'z_exit', 'allocation'],
+      regime_reversion: ['window', 'z_entry', 'z_exit', 'efficiency_max', 'allocation'],
+      close_breakout: ['window', 'allocation'],
+      buy_hold: ['allocation'],
+      program: ['rules', 'allocation'],
+    };
+    return (fields[value.kind] ?? ['window', 'allocation'])
+      .filter((key) => value[key as keyof typeof value] !== undefined)
+      .map((key) => {
+        const item = value[key as keyof typeof value];
+        return `${({ fast: ['Fast', '快线'], slow: ['Slow', '慢线'], allocation: ['Allocation', '分配'], rsi_period: ['RSI period', 'RSI 周期'], entry: ['Entry', '入场'], exit: ['Exit', '退出'], momentum_horizons: ['Horizons', '动量窗口'], momentum_entry: ['Momentum threshold', '动量阈值'], vol_window: ['Volatility window', '波动窗口'], window: ['Window', '窗口'], z_entry: ['Entry z-score', '入场 z 值'], z_exit: ['Exit z-score', '退出 z 值'], efficiency_max: ['Efficiency ceiling', '效率上限'], rules: ['Rules', '规则'] } as Record<string, string[]>)[key]?.[language === 'zh-CN' ? 1 : 0] ?? key}: ${key === 'rules' && Array.isArray(item) ? item.length : Array.isArray(item) ? item.join('/') : String(item)}`;
+      })
+      .join(' · ');
   };
   return (
     <>
@@ -396,7 +430,7 @@ export default function Strategies({
               </p>
             )}
           </aside>
-          <section className="strategy-detail pro-panel">
+          <section className="strategy-detail pro-panel research-desk">
             {editing ? (
               <form
                 className="strategy-editor"
@@ -422,117 +456,135 @@ export default function Strategies({
                     {t('View saved versions')}
                   </button>
                 </div>
-                {!parent && (
-                  <Field
-                    label="Research starting point"
-                    hint="Reference hypotheses with failure criteria; no investment edge is claimed."
+                <div className="research-submit-bar strategy-save-bar">
+                  <div>
+                    <strong>
+                      {parent
+                        ? `${parent.name} · ${text('New version', '新版本')}`
+                        : text('New hypothesis', '新假设')}
+                    </strong>
+                    <span>
+                      {product} · {bar} · {strategyName(strategy.kind)}
+                    </span>
+                  </div>
+                  <button
+                    className="button button-citrus"
+                    disabled={!canOperate || save.isPending || invalidProgram}
                   >
-                    <select
-                      value=""
-                      disabled={save.isPending}
-                      onChange={(e) => useRecipe(e.target.value)}
-                    >
-                      <option value="">{t('Custom hypothesis')}</option>
-                      {recipes.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {t(r.name)}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                )}
-                {!parent && (
-                  <Field label="Strategy name">
-                    <input
-                      required
-                      minLength={2}
-                      maxLength={100}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </Field>
-                )}
-                <Field
-                  label="Economic hypothesis"
-                  hint="Describe why the effect may exist, when it should fail, and what evidence would reject it."
-                >
-                  <textarea
-                    required
-                    minLength={12}
-                    maxLength={4000}
-                    rows={4}
-                    value={hypothesis}
-                    onChange={(e) => setHypothesis(e.target.value)}
-                  />
-                </Field>
-                <div className="form-grid">
-                  <Field label="Product">
-                    <select
-                      value={product}
-                      onChange={(e) => setProduct(e.target.value as 'SPOT' | 'SWAP')}
-                    >
-                      <option value="SPOT">{t('Spot')}</option>
-                      <option value="SWAP">{t('USDT perpetual')}</option>
-                    </select>
-                  </Field>
-                  <Field label="Interval">
-                    <select value={bar} onChange={(e) => setBar(e.target.value)}>
-                      {['1m', '5m', '15m', '1H', '4H', '1Dutc'].map((v) => (
-                        <option key={v}>{v}</option>
-                      ))}
-                    </select>
-                  </Field>
+                    <Save size={14} />
+                    {t('Save version')}
+                  </button>
                 </div>
-                <StrategyFields
-                  professional
-                  value={strategy}
-                  onChange={setStrategy}
-                  programDraft={programDraft}
-                  onProgramDraftChange={setProgramDraft}
-                />
-                {product === 'SWAP' && (
-                  <div className="form-grid">
-                    <Field label="Direction">
+                <section className="research-form-section">
+                  <h3>{text('Hypothesis', '研究假设')}</h3>
+                  {!parent && (
+                    <Field
+                      label="Research starting point"
+                      hint="Reference hypotheses with failure criteria; no investment edge is claimed."
+                    >
                       <select
-                        value={direction}
-                        onChange={(e) => setDirection(e.target.value as Direction)}
+                        value=""
+                        disabled={save.isPending}
+                        onChange={(e) => useRecipe(e.target.value)}
                       >
-                        <option value="long_only">{t('Long only')}</option>
-                        <option value="short_only">{t('Short only')}</option>
-                        <option value="long_short">{t('Long / short')}</option>
+                        <option value="">{t('Custom hypothesis')}</option>
+                        {recipes.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {t(r.name)}
+                          </option>
+                        ))}
                       </select>
                     </Field>
-                    <Field label="Leverage">
+                  )}
+                  {!parent && (
+                    <Field label="Strategy name">
                       <input
                         required
-                        type="number"
-                        min={1}
-                        max={50}
-                        step={1}
-                        value={leverage}
-                        onChange={(e) => setLeverage(Number(e.target.value))}
+                        minLength={2}
+                        maxLength={100}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                       />
                     </Field>
-                  </div>
-                )}
-                <p className="quiet-copy">
-                  {t(
-                    'Saving creates an immutable version. Existing research and deployments retain their original definition.',
                   )}
-                </p>
-                {invalidProgram && (
-                  <p role="alert" className="inline-warning">
-                    {t('The rule program must contain one to four valid rules before saving.')}
+                  <Field
+                    label="Economic hypothesis"
+                    hint="Describe why the effect may exist, when it should fail, and what evidence would reject it."
+                  >
+                    <textarea
+                      required
+                      minLength={12}
+                      maxLength={4000}
+                      rows={4}
+                      value={hypothesis}
+                      onChange={(e) => setHypothesis(e.target.value)}
+                    />
+                  </Field>
+                </section>
+                <section className="research-form-section">
+                  <h3>{text('Strategy', '策略')}</h3>
+                  <div className="form-grid">
+                    <Field label="Product">
+                      <select
+                        value={product}
+                        onChange={(e) => setProduct(e.target.value as 'SPOT' | 'SWAP')}
+                      >
+                        <option value="SPOT">{t('Spot')}</option>
+                        <option value="SWAP">{t('USDT perpetual')}</option>
+                      </select>
+                    </Field>
+                    <Field label="Interval">
+                      <select value={bar} onChange={(e) => setBar(e.target.value)}>
+                        {['1m', '5m', '15m', '1H', '4H', '1Dutc'].map((v) => (
+                          <option key={v}>{v}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                  <StrategyFields
+                    professional
+                    value={strategy}
+                    onChange={setStrategy}
+                    programDraft={programDraft}
+                    onProgramDraftChange={setProgramDraft}
+                  />
+                  {product === 'SWAP' && (
+                    <div className="form-grid">
+                      <Field label="Direction">
+                        <select
+                          value={direction}
+                          onChange={(e) => setDirection(e.target.value as Direction)}
+                        >
+                          <option value="long_only">{t('Long only')}</option>
+                          <option value="short_only">{t('Short only')}</option>
+                          <option value="long_short">{t('Long / short')}</option>
+                        </select>
+                      </Field>
+                      <Field label="Leverage">
+                        <input
+                          required
+                          type="number"
+                          min={1}
+                          max={50}
+                          step={1}
+                          value={leverage}
+                          onChange={(e) => setLeverage(Number(e.target.value))}
+                        />
+                      </Field>
+                    </div>
+                  )}
+                  <p className="quiet-copy">
+                    {t(
+                      'Saving creates an immutable version. Existing research and deployments retain their original definition.',
+                    )}
                   </p>
-                )}
+                  {invalidProgram && (
+                    <p role="alert" className="inline-warning">
+                      {t('The rule program must contain one to four valid rules before saving.')}
+                    </p>
+                  )}
+                </section>
                 {save.isError && save.variables?.scope === scope && <ErrorBox error={save.error} />}
-                <button
-                  className="button button-citrus"
-                  disabled={!canOperate || save.isPending || invalidProgram}
-                >
-                  <Save size={14} />
-                  {t('Save version')}
-                </button>
               </form>
             ) : project.isPending && activeId ? (
               <Loading />
@@ -580,8 +632,15 @@ export default function Strategies({
                 />
                 <div className="strategy-contract">
                   <h3>{t('Definition')}</h3>
-                  <RecordGrid value={activeVersion.definition.strategy} />
-                  <code className="content-hash">{activeVersion.content_hash}</code>
+                  <p className="strategy-parameter-summary">{parameterSummary(activeVersion)}</p>
+                  <p className="research-version-id">
+                    {text('Version ID', '版本 ID')} · <code>{activeVersion.id}</code>
+                  </p>
+                  <details className="research-advanced-details">
+                    <summary>{text('Full strategy definition', '完整策略定义')}</summary>
+                    <RecordGrid value={activeVersion.definition.strategy} />
+                    <code className="content-hash">{activeVersion.content_hash}</code>
+                  </details>
                 </div>
                 <h3>
                   <GitBranch size={15} /> {t('Version history')}
@@ -593,7 +652,21 @@ export default function Strategies({
                     {
                       key: 'kind',
                       label: 'Strategy',
-                      render: (row) => row.definition.strategy.kind,
+                      render: (row) => strategyName(row.definition.strategy.kind),
+                    },
+                    {
+                      key: 'hypothesis',
+                      label: text('Hypothesis', '研究假设'),
+                      render: (row) => (
+                        <span className="research-version-hypothesis">{row.hypothesis}</span>
+                      ),
+                    },
+                    {
+                      key: 'parameters',
+                      label: text('Parameters', '参数'),
+                      render: (row) => (
+                        <span className="research-version-parameters">{parameterSummary(row)}</span>
+                      ),
                     },
                     { key: 'created_at', label: 'Created', render: (row) => date(row.created_at) },
                     {

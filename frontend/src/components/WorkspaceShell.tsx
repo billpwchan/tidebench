@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   Activity,
@@ -5,7 +6,6 @@ import {
   Gauge,
   ArrowRight,
   ArrowUpRight,
-  ChevronDown,
   ChevronRight,
   FlaskConical,
   GitBranch,
@@ -27,10 +27,10 @@ import { LanguageSelect, useSession } from './AuthGate';
 import { ErrorBox, Loading } from './workspace';
 
 export const pages: { id: Page; label: string; icon: typeof Activity; group: string }[] = [
-  { id: 'overview', label: 'Overview', icon: Layers3, group: 'Research' },
+  { id: 'overview', label: 'Overview', icon: Layers3, group: 'Trading' },
   { id: 'strategies', label: 'Strategies', icon: GitBranch, group: 'Research' },
   { id: 'research', label: 'Research', icon: FlaskConical, group: 'Research' },
-  { id: 'execution', label: 'Execution', icon: Wallet, group: 'Execution' },
+  { id: 'execution', label: 'Execution', icon: Wallet, group: 'Trading' },
   { id: 'data', label: 'Data library', icon: Database, group: 'Workspace' },
   { id: 'operations', label: 'Operations', icon: Gauge, group: 'Workspace' },
   { id: 'settings', label: 'Settings', icon: Settings2, group: 'Workspace' },
@@ -84,10 +84,9 @@ export function Sidebar({
             {t('Self-hosted')} · {system.data?.version ? `v${system.data.version}` : '—'}
           </span>
         </div>
-        <ChevronDown size={13} />
       </div>
       <nav aria-label="Main navigation">
-        {['Research', 'Execution', 'Workspace'].map((group) => (
+        {['Trading', 'Research', 'Workspace'].map((group) => (
           <div className="nav-group" key={group}>
             <span className="nav-label">{t(group)}</span>
             {pages
@@ -234,9 +233,22 @@ export function MarketSearch({
     staleTime: 60000,
     retry: 1,
   });
-  const matching = (catalog.data ?? []).filter((symbol) =>
-    symbol.toLowerCase().includes(search.trim().toLowerCase()),
-  );
+  const [productFilter, setProductFilter] = useState<'all' | 'spot' | 'swap'>('all');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const marketRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [activeMarket, setActiveMarket] = useState<string>();
+  const term = search.trim().toLowerCase();
+  const matching = (catalog.data ?? [])
+    .filter(
+      (symbol) =>
+        symbol.toLowerCase().includes(term) &&
+        (productFilter === 'all' || symbol.endsWith('-SWAP') === (productFilter === 'swap')),
+    )
+    .sort(
+      (a, b) =>
+        Number(b.toLowerCase().startsWith(term)) - Number(a.toLowerCase().startsWith(term)) ||
+        a.localeCompare(b),
+    );
   const selectMarket = (symbol: string, target: 'overview' | 'execution') => {
     if (onSelect) onSelect(symbol, target);
     else {
@@ -261,6 +273,14 @@ export function MarketSearch({
             <div className="search-dialog-input">
               <Search size={20} />
               <input
+                ref={inputRef}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowDown' && matching.length) {
+                    event.preventDefault();
+                    marketRefs.current[0]?.focus();
+                  }
+                }}
+                aria-describedby="market-search-help"
                 placeholder={t('Search markets…')}
                 aria-label={t('Search market symbol')}
                 value={search}
@@ -273,6 +293,28 @@ export function MarketSearch({
               >
                 <X size={18} />
               </button>
+            </div>
+            <div className="market-search-filters" aria-label={text('Market type', '市场类型')}>
+              {(['all', 'spot', 'swap'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  aria-pressed={productFilter === filter}
+                  onClick={() => {
+                    setProductFilter(filter);
+                    setActiveMarket(undefined);
+                  }}
+                >
+                  {filter === 'all'
+                    ? text('All markets', '全部市场')
+                    : filter === 'spot'
+                      ? text('Spot', '现货')
+                      : text('USDT perpetuals', 'USDT 永续')}
+                </button>
+              ))}
+              <span>
+                {matching.length} {text('markets', '个市场')}
+              </span>
             </div>
             <div className="search-results">
               {catalog.isPending ? (
@@ -299,10 +341,25 @@ export function MarketSearch({
                   )}
                 </p>
               ) : (
-                matching.map((symbol) => (
-                  <div className="market-search-result" key={symbol} data-market={symbol}>
+                matching.map((symbol, index) => (
+                  <div
+                    className={`market-search-result${activeMarket === symbol ? ' is-keyboard-active' : ''}`}
+                    key={symbol}
+                    data-market={symbol}
+                  >
                     <button
                       className="market-search-identity"
+                      ref={(node) => {
+                        marketRefs.current[index] = node;
+                      }}
+                      onFocus={() => setActiveMarket(symbol)}
+                      onKeyDown={(event) => {
+                        if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+                        event.preventDefault();
+                        const next = index + (event.key === 'ArrowDown' ? 1 : -1);
+                        if (next < 0) inputRef.current?.focus();
+                        else marketRefs.current[Math.min(next, matching.length - 1)]?.focus();
+                      }}
                       onClick={() => selectMarket(symbol, 'overview')}
                       aria-label={`${text('Inspect', '查看')} ${symbol}`}
                     >
@@ -339,8 +396,9 @@ export function MarketSearch({
                 {' · '}
                 {text('Spot & USDT perpetuals', '现货与 USDT 永续')}
               </span>
-              <span>
-                <kbd>esc</kbd> {text('to close', '关闭')}
+              <span id="market-search-help">
+                <kbd>↓</kbd> <kbd>↑</kbd> {text('navigate', '选择')} · <kbd>enter</kbd>{' '}
+                {text('inspect', '查看')} · <kbd>esc</kbd> {text('to close', '关闭')}
               </span>
             </div>
           </section>

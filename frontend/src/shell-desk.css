@@ -1,0 +1,352 @@
+/* The desk uses space for decisions; chrome remains quiet and compact. */
+:root {
+  --muted: #53665c;
+  font-variant-numeric: tabular-nums;
+}
+.sidebar {
+  width: 184px;
+  padding-inline: 16px;
+}
+.workspace-main {
+  margin-left: 184px;
+}
+.sidebar .brand {
+  font-size: 23px;
+}
+.workspace-selector {
+  margin-block: 28px 24px;
+  padding-inline: 4px;
+}
+.workspace-selector strong {
+  font-size: 12px;
+}
+.workspace-selector div > span,
+.sidebar-status {
+  font-size: 11px;
+  color: #b5c7bb;
+}
+.nav-label {
+  font-size: 10px;
+  color: #afc1b5;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+.nav-group {
+  margin-bottom: 8px;
+}
+.nav-group + .nav-group {
+  margin-top: 14px;
+}
+.nav-item {
+  font-size: 13px;
+  padding: 11px 12px;
+  border-radius: 3px;
+}
+.sidebar-session > span,
+.sidebar-help {
+  font-size: 12px;
+  color: #b5c7bb;
+}
+.topbar {
+  height: 52px;
+  padding-inline: 28px;
+  background: #fff;
+}
+.breadcrumbs,
+.search-trigger,
+.execution-badge {
+  font-size: 12px;
+  color: #53665c;
+}
+.topbar-actions {
+  gap: 14px;
+}
+.search-trigger kbd {
+  margin-left: 12px;
+  font-size: 11px;
+}
+.page-content {
+  max-width: 1800px;
+  padding: 12px 28px 0;
+}
+.source-bar {
+  min-height: 26px;
+  margin-bottom: 8px;
+}
+.source-badge,
+.source-control,
+.source-control select {
+  font-size: 12px;
+  color: #53665c;
+}
+.example-notice {
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #675c35;
+}
+.page-heading {
+  margin-bottom: 18px;
+  align-items: center;
+  gap: 16px;
+}
+.page-heading .eyebrow {
+  display: none;
+}
+.page-heading h1 {
+  font-size: 24px;
+  letter-spacing: -0.7px;
+  line-height: 1.25;
+}
+.page-heading p {
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.5;
+  max-width: 740px;
+  color: #53665c;
+}
+.heading-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.button {
+  min-height: 36px;
+  font-size: 12px;
+}
+.workspace-tabs {
+  margin-bottom: 16px;
+  gap: 22px;
+}
+.pro-panel {
+  padding: 18px;
+}
+.pro-panel .section-heading {
+  margin-bottom: 12px;
+}
+.pro-panel .section-heading h2 {
+  font-size: 15px;
+}
+.field > span,
+.field > label,
+.field-label {
+  color: #53665c;
+}
+.field-hint,
+.section-description,
+.quiet-copy,
+.snapshot-footnote,
+.journey-note,
+.journey-status {
+  color: #53665c;
+}
+.market-search-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.market-search-filters button {
+  font-size: 12px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 3px;
+  color: #53665c;
+}
+.market-search-filters button[aria-pressed='true'] {
+  background: #e8efea;
+  color: var(--ink);
+  font-weight: 600;
+}
+.market-search-filters > span {
+  margin-left: auto;
+  color: #53665c;
+  font-size: 11px;
+}
+.search-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(660px, calc(100vw - 32px));
+  max-height: min(680px, calc(100dvh - 48px));
+  margin: 0;
+}
+.search-results {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+.search-dialog-input,
+.search-dialog-footer,
+.market-search-filters {
+  flex-shrink: 0;
+}
+.search-dialog-input > input {
+  font-size: 16px;
+}
+.market-search-result {
+  min-height: 74px;
+}
+.market-search-result.is-keyboard-active {
+  background: #eef4ef;
+}
+.market-search-identity {
+  min-width: 0;
+}
+.market-search-identity small {
+  font-size: 12px;
+  color: #53665c;
+}
+.search-dialog-footer {
+  font-size: 11px;
+  padding: 12px 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #53665c;
+}
+.search-dialog-footer kbd {
+  color: #334c3e;
+}
+@media (max-width: 1000px) {
+  .topbar {
+    padding-inline: 20px;
+  }
+  .page-content {
+    padding-inline: 20px;
+  }
+  .page-heading {
+    align-items: flex-start;
+  }
+}
+@media (max-width: 850px) {
+  .workspace-main {
+    margin-left: 0;
+  }
+  .sidebar {
+    width: 228px;
+  }
+  .topbar {
+    height: 48px;
+  }
+}
+@media (max-width: 600px) {
+  .topbar {
+    padding-inline: 14px;
+  }
+  .page-content {
+    padding: 8px 14px 0;
+  }
+  .source-bar {
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  .source-control {
+    gap: 4px;
+  }
+  .source-control > span {
+    display: none;
+  }
+  .source-control select,
+  .source-badge {
+    font-size: 11px;
+  }
+  .example-notice {
+    padding: 5px 8px;
+    font-size: 10px;
+    margin-bottom: 10px;
+  }
+  .page-heading {
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+  .page-heading h1 {
+    font-size: 21px;
+  }
+  .page-heading p {
+    font-size: 11px;
+  }
+  .page-heading .button {
+    min-height: 34px;
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+  .pro-panel {
+    padding: 14px;
+  }
+  .topbar-actions {
+    gap: 8px;
+  }
+  .execution-badge {
+    font-size: 11px;
+  }
+  .search-dialog {
+    max-height: calc(100dvh - 24px);
+    width: calc(100vw - 24px);
+  }
+  .market-search-filters {
+    gap: 3px;
+    padding-inline: 10px;
+  }
+  .market-search-filters button {
+    font-size: 11px;
+    padding-inline: 7px;
+  }
+  .market-search-filters > span {
+    font-size: 10px;
+  }
+  .market-search-result {
+    padding-inline: 10px;
+    gap: 8px;
+  }
+  .search-dialog-footer > span:first-child {
+    font-size: 10px;
+  }
+}
+
+.budget-sizing {
+  padding-block: 10px;
+  border-block: 1px solid var(--line);
+}
+.budget-sizing summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding-block: 6px;
+}
+.budget-sizing .field {
+  margin-block: 8px;
+}
+.budget-sizing input {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  background: #fafcfb;
+  border-radius: 3px;
+}
+.budget-estimate {
+  display: grid;
+  gap: 5px;
+  margin-block: 10px;
+  font-size: 11px;
+  color: #53665c;
+}
+.budget-estimate strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.data-preparation-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.data-preparation-context small {
+  flex-basis: 100%;
+  color: #53665c;
+  font-size: 11px;
+}

@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Database, Download, Loader2, RefreshCw, Square } from 'lucide-react';
 import type { Source } from '../api';
+import { useReceiptOwnership, type ReceiptTask } from '../lib/receiptOwnership';
+import type { ResearchDataIntent } from '../lib/workspaceLocation';
 import { downloadBlob } from '../api';
 import { proApi } from '../proApi';
 import type { DataPackage, Dataset, ResearchInputs } from '../proApi';
@@ -20,19 +22,25 @@ const intervals: Record<string, number> = {
   '4H': 14400000,
   '1Dutc': 86400000,
 };
-const utcInput = (time: number) => new Date(time).toISOString().slice(0, 16);
+const utcInput = (time: number) =>
+  Number.isFinite(time) && time > 0 && time < 253402300800000
+    ? new Date(time).toISOString().slice(0, 16)
+    : '';
 export default function ResearchPackages({
   source,
   onResearch,
   onOpenRaw,
   initialPackageId,
+  preparation,
 }: {
   source: Source;
   onResearch: (inputs: ResearchInputs) => void;
   onOpenRaw: () => void;
   initialPackageId?: string;
+  preparation?: ResearchDataIntent;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const canOperate = canResearch(useSession()?.user?.role);
   const qc = useQueryClient();
   const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
@@ -50,7 +58,45 @@ export default function ResearchPackages({
       source === 'example' ? Date.UTC(2025, 0, 31) : Math.floor(Date.now() / 3600000) * 3600000,
     ),
   );
+  const appliedPreparation = useRef('');
+  useEffect(() => {
+    if (!preparation || preparation.source !== source || !intervals[preparation.bar]) return;
+    const key = JSON.stringify(preparation);
+    if (appliedPreparation.current === key) return;
+    appliedPreparation.current = key;
+    setProduct(preparation.product);
+    const candidate = preparation.instId;
+    setSymbol(
+      candidate &&
+        (preparation.product === 'SWAP'
+          ? candidate.endsWith('-USDT-SWAP')
+          : candidate.endsWith('-USDT'))
+        ? candidate
+        : preparation.product === 'SWAP'
+          ? 'BTC-USDT-SWAP'
+          : 'BTC-USDT',
+    );
+    setBar(preparation.bar);
+    const interval = intervals[preparation.bar];
+    const aligned = (value: number) => utcInput(Math.floor(value / interval) * interval);
+    setStart((value) => aligned(preparation.startTs ?? Date.parse(`${value}Z`)));
+    setEnd((value) => aligned(preparation.endTs ?? Date.parse(`${value}Z`)));
+    setValidation(null);
+  }, [preparation, source]);
   const [includeIndex, setIncludeIndex] = useState(false);
+  const openReceipt = useReceiptOwnership(
+    JSON.stringify([
+      source,
+      initialPackageId,
+      preparation,
+      product,
+      symbol,
+      bar,
+      start,
+      end,
+      includeIndex,
+    ]),
+  );
   const [validation, setValidation] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const requestKey = useRef<{ payload: string; key: string } | null>(null);
@@ -113,6 +159,20 @@ export default function ResearchPackages({
   return (
     <>
       <ActionNote text={notice} />
+      {preparation?.source === source && (
+        <div className="data-preparation-context" role="status">
+          <strong>{text('Preparing inputs for your research', '正在为当前研究准备输入')}</strong>
+          <span>
+            {preparation.instId ?? preparation.product} · {preparation.product} · {preparation.bar}
+          </span>
+          <small>
+            {text(
+              'These values came from your research configuration. Review the market and UTC window before preparing.',
+              '这些值来自当前研究配置。准备前请核对市场和 UTC 区间。',
+            )}
+          </small>
+        </div>
+      )}
       {initialPackageId && packages.isSuccess && !selectedPackage && (
         <ErrorBox
           error={new Error(t('The selected research package is unavailable for this source.'))}
@@ -149,6 +209,7 @@ export default function ResearchPackages({
                   item={p}
                   datasets={datasets.data?.items.filter((d) => d.source === source) ?? []}
                   onResearch={onResearch}
+                  openReceipt={openReceipt}
                   onRefresh={refresh}
                   canOperate={canOperate}
                 />
@@ -281,12 +342,14 @@ function PackageRow({
   onResearch,
   onRefresh,
   canOperate,
+  openReceipt,
 }: {
   item: DataPackage;
   datasets: Dataset[];
   onResearch: (inputs: ResearchInputs) => void;
   onRefresh: () => void;
   canOperate: boolean;
+  openReceipt: ReturnType<typeof useReceiptOwnership>;
 }) {
   const { t } = useI18n();
   const qc = useQueryClient();
@@ -296,9 +359,11 @@ function PackageRow({
   const cancel = useMutation({ mutationFn: proApi.cancelPackage, onSuccess: onRefresh });
   const retry = useMutation({ mutationFn: proApi.retryPackage, onSuccess: onRefresh });
   const open = useMutation({
-    mutationFn: () => proApi.packageInputs(item.id),
-    onSuccess: async (inputs) => {
+    mutationFn: (_task: ReceiptTask) => proApi.packageInputs(item.id),
+    onSuccess: async (inputs, task) => {
+      if (!openReceipt.owns(task) || inputs.package_id !== item.id) return;
       await qc.fetchQuery({ queryKey: ['pro-datasets'], queryFn: proApi.datasets, staleTime: 0 });
+      if (!openReceipt.owns(task)) return;
       onResearch({
         dataset_id: inputs.dataset_id,
         mark_dataset_id: inputs.mark_dataset_id,
@@ -445,7 +510,7 @@ function PackageRow({
           <button
             className="button button-secondary"
             disabled={!item.ready || open.isPending}
-            onClick={() => open.mutate()}
+            onClick={() => open.mutate(openReceipt.capture('open'))}
           >
             {open.isPending ? <Loader2 className="spin" size={12} /> : <ArrowRight size={12} />}{' '}
             {t('Open in research')}

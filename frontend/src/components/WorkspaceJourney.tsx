@@ -33,8 +33,10 @@ const measuredProgress = (progress: unknown) =>
 export default function WorkspaceJourney({
   source,
   navigate,
+  compact = true,
 }: {
   source: Source;
+  compact?: boolean;
   navigate: (page: Page, view?: string) => void;
 }) {
   const { language, t } = useI18n();
@@ -385,8 +387,18 @@ export default function WorkspaceJourney({
         {item.status && (
           <Status type={item.attention ? 'warning' : 'neutral'}>{t(item.status)}</Status>
         )}
-        <p>{item.detail}</p>
-        {item.id && <code>{item.id}</code>}
+        {compact && item.key !== 'prepare' ? (
+          <details className="journey-item-context">
+            <summary>{text('Context & task ID', '任务依据与编号')}</summary>
+            <p>{item.detail}</p>
+            {item.id && <code>{item.id}</code>}
+          </details>
+        ) : (
+          <>
+            <p>{item.detail}</p>
+            {item.id && <code>{item.id}</code>}
+          </>
+        )}
         {item.progress !== undefined && (
           <div className="journey-progress">
             <progress
@@ -406,10 +418,13 @@ export default function WorkspaceJourney({
   );
 
   return (
-    <section className="workspace-journey" aria-label={text('Next actions', '下一步操作')}>
+    <section
+      className={`workspace-journey${compact ? ' journey-compact' : ''}${items[0]?.key === 'prepare' ? ' journey-onboarding' : ''}`}
+      aria-label={text('Next actions', '下一步操作')}
+    >
       <div className="journey-heading">
         <div>
-          <span className="eyebrow">{text('CONTINUE YOUR WORK', '继续工作')}</span>
+          {!compact && <span className="eyebrow">{text('CONTINUE YOUR WORK', '继续工作')}</span>}
           <h2>{text('Next actions', '下一步操作')}</h2>
         </div>
         {snapshot.isSuccess && !snapshot.isError && (
@@ -418,18 +433,20 @@ export default function WorkspaceJourney({
           </span>
         )}
       </div>
-      <p className="journey-note">
-        {source === 'example'
-          ? text('Synthetic example · separate paper account.', '合成示例 · 独立模拟账户。')
-          : text(
-              'OKX public data · local simulated execution.',
-              'OKX 公开数据 · 本地模拟执行。',
-            )}{' '}
-        {text(
-          'Data → research review → paper release → observed performance.',
-          '数据 → 研究审查 → 模拟发布 → 实测表现。',
-        )}
-      </p>
+      {!compact && (
+        <p className="journey-note">
+          {source === 'example'
+            ? text('Synthetic example · separate paper account.', '合成示例 · 独立模拟账户。')
+            : text(
+                'OKX public data · local simulated execution.',
+                'OKX 公开数据 · 本地模拟执行。',
+              )}{' '}
+          {text(
+            'Data → research review → paper release → observed performance.',
+            '数据 → 研究审查 → 模拟发布 → 实测表现。',
+          )}
+        </p>
+      )}
       {snapshot.isPending ? (
         <Loading label={text('Loading current tasks…', '正在加载当前任务…')} />
       ) : snapshot.isError ? (
@@ -444,8 +461,10 @@ export default function WorkspaceJourney({
         </div>
       ) : (
         <>
-          <ol className="journey-list">{(showAll ? items : items.slice(0, 6)).map(renderItem)}</ol>
-          {items.length > 6 && (
+          <ol className="journey-list">
+            {(showAll ? items : items.slice(0, compact ? 2 : 6)).map(renderItem)}
+          </ol>
+          {items.length > (compact ? 2 : 6) && (
             <button
               className="text-button journey-expand"
               onClick={() => setShowAll((value) => !value)}
@@ -492,7 +511,18 @@ export default function WorkspaceJourney({
           )}
         </>
       )}
-      {snapshot.isSuccess && (
+      {snapshot.isSuccess && compact && (
+        <details className="journey-note journey-scope">
+          <summary>{text('Task suggestions & scope', '任务建议与范围')}</summary>
+          <p>
+            {text(
+              'Suggested actions reflect stored task states. Completed research does not establish paper eligibility or clear trading risk.',
+              '建议操作来自保存的任务状态。研究完成不代表具备模拟发布资格，也不代表交易风险已解除。',
+            )}
+          </p>
+        </details>
+      )}
+      {snapshot.isSuccess && !compact && (
         <p className="journey-note">
           {text(
             'Suggested actions reflect stored task states. Completed research does not establish paper eligibility or clear trading risk.',

@@ -1,3 +1,4 @@
+import { expandResearchPolicy } from './desk-helpers';
 import { expect, test, type Page } from '@playwright/test';
 
 const HOUR = 3600000;
@@ -263,7 +264,8 @@ test('strategy identity and edited costs survive choosing a prepared package bef
   const state = await mockWorkspace(page, { emptyDatasets: true });
   await page.goto('/#research?source=example&view=advanced&version=' + versionId);
   await expect(page.getByText('Bound strategy version', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Fast window', { exact: true })).toHaveValue('17');
+  await expect(page.locator('[aria-label="Bound strategy definition"]')).toContainText('17');
+  await expect(page.getByLabel('Fast window', { exact: true })).toHaveCount(0);
   await page.getByLabel('Fee', { exact: true }).fill('23');
   await page.getByLabel('Slippage', { exact: true }).fill('7');
   await page.getByRole('button', { name: 'Open Data library', exact: true }).click();
@@ -282,7 +284,8 @@ test('strategy identity and edited costs survive choosing a prepared package bef
   await expect(page.getByText(/Research draft restored/)).toBeVisible();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('23');
   await expect(page.getByLabel('Slippage', { exact: true })).toHaveValue('7');
-  await expect(page.getByLabel('Fast window', { exact: true })).toHaveValue('17');
+  await expect(page.locator('[aria-label="Bound strategy definition"]')).toContainText('17');
+  await expect(page.getByLabel('Fast window', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Dataset', { exact: true })).toHaveValue(datasetId);
   await page.getByRole('button', { name: 'Run research', exact: true }).click();
   await expect.poll(() => state.createdRun?.strategy_version_id).toBe(versionId);
@@ -302,6 +305,7 @@ test('portfolio data handoffs fill two legs without losing hypothesis, weights, 
     .getByLabel('Economic hypothesis', { exact: true })
     .fill('Carry this hypothesis and capital controls through both data preparations.');
   await page.getByLabel('Notional weight %', { exact: true }).nth(0).fill('30');
+  await expandResearchPolicy(page);
   await page.getByLabel('Maximum order notional (USDT)', { exact: true }).fill('1200');
   await page.getByRole('button', { name: 'Prepare data', exact: true }).click();
   await page
@@ -839,7 +843,8 @@ test('a selected historical run shows its evaluated version and holdout independ
     else await route.fallback();
   });
   await page.goto('/#research?source=example&view=advanced&version=' + versionId);
-  await expect(page.getByLabel('Fast window', { exact: true })).toHaveValue('17');
+  await expect(page.locator('[aria-label="Bound strategy definition"]')).toContainText('17');
+  await expect(page.getByLabel('Fast window', { exact: true })).toHaveCount(0);
   await page.getByLabel('Fee', { exact: true }).fill('37');
   await page.getByLabel('Slippage', { exact: true }).fill('11');
   await page.getByLabel('Mode', { exact: true }).selectOption('walk_forward');
@@ -855,7 +860,8 @@ test('a selected historical run shows its evaluated version and holdout independ
   await expect(
     page.locator('.prepared-input-note').filter({ hasText: 'Bound strategy version' }),
   ).toContainText(versionId.slice(0, 12));
-  await expect(page.getByLabel('Fast window', { exact: true })).toHaveValue('17');
+  await expect(page.locator('[aria-label="Bound strategy definition"]')).toContainText('17');
+  await expect(page.getByLabel('Fast window', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('37');
   await expect(page.getByLabel('Slippage', { exact: true })).toHaveValue('11');
   await expect(page.getByLabel('Mode', { exact: true })).toHaveValue('walk_forward');
@@ -883,6 +889,7 @@ test('an explicit portfolio run overrides a restored editor without replacing it
   await expect(editor).toBeVisible();
   await page.getByLabel('Study name', { exact: true }).fill('Keep my revised portfolio');
   await page.getByLabel('Fee (bps)', { exact: true }).fill('37');
+  await expandResearchPolicy(page);
   await page.getByLabel('Maximum order notional (USDT)', { exact: true }).fill('1234');
   await page.getByLabel('Interface language', { exact: true }).selectOption('zh-CN');
   await page.reload();
@@ -1461,3 +1468,52 @@ test('a delayed advanced replay cannot replace candidate inspection after select
     page.getByRole('button', { name: 'View submitted research', exact: true }),
   ).toBeVisible();
 });
+
+for (const change of ['navigate', 'edit preparation'] as const) {
+  test(`a delayed package handoff cannot replace the current ${change} intent`, async ({
+    page,
+  }) => {
+    await mockWorkspace(page);
+    const held = await heldApiResponse(
+      page,
+      '/pro/catalog/packages/' + packageId,
+      'GET',
+      packages[0],
+    );
+    await page.goto('/#research?source=example&view=advanced');
+    await page.getByLabel('Fee', { exact: true }).fill('37');
+    await page.getByRole('button', { name: 'Open Data library', exact: true }).click();
+    const packageRow = page.locator('.package-row').filter({ hasText: 'BTC-USDT' });
+    const open = packageRow.getByRole('button', { name: 'Open in research', exact: true });
+    await open.click();
+    await expect.poll(() => held.state.requested).toBe(true);
+    if (change === 'navigate') {
+      await navigate(page, 'Overview');
+      await expect(
+        page.getByRole('heading', { name: 'Trading overview', exact: true }),
+      ).toBeVisible();
+    } else {
+      await page.getByLabel('Interval', { exact: true }).selectOption('4H');
+      await expect(page.getByLabel('Interval', { exact: true })).toHaveValue('4H');
+    }
+    const currentUrl = page.url();
+    await held.finish();
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(currentUrl);
+    if (change === 'navigate') {
+      await expect(
+        page.getByRole('heading', { name: 'Trading overview', exact: true }),
+      ).toBeVisible();
+      await navigate(page, 'Data library');
+    } else {
+      await expect(page.getByLabel('Interval', { exact: true })).toHaveValue('4H');
+      await expect(open).toBeEnabled();
+    }
+    // A fresh explicit handoff still works after discarding the obsolete receipt.
+    await open.click();
+    await expect(page).toHaveURL(/#research/);
+    await expect(page).toHaveURL(/package=bbbb/);
+    await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('37');
+    await expect(page.getByLabel('Dataset', { exact: true })).toHaveValue(datasetId);
+  });
+}

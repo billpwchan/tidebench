@@ -1,5 +1,18 @@
 # Verification record
 
+## v0.13.0 · 2026-10-11 · account and research decision desk
+
+Final frozen-source local validation passed **997 backend/core/property/API tests** in **271.38 seconds** and **208 desktop/mobile Chromium paths** in **8.7 minutes**. Two specifically targeted mobile release-review paths separately passed in **6.7 seconds**, using normal clicks. All stores are disposable synthetic acceptance environments. The real saved-strategy and portfolio workflows retain actual API/SQLite version saving, input preparation, research, review, activation, controller selection/stop, protective reduction, contributions and frozen evidence checks.
+
+The new desk paths check account/book priority with twelve markets and three hundred orders, all-record search, numeric sorting, stable action identity, pagination and bounded mobile scrolling; exact native lot sizing and micro prices; a hidden invalid optional budget alongside a valid native tiny-tick limit preview; Example logical time versus stale/future OKX quotes; market-search keyboard navigation; preparation product/bar/UTC retention; invalid date-edge independence; and parallel research at both 1440px and the actual 1111px desktop window. Delayed package replies are tested after leaving the workspace and after editing preparation, followed by a fresh explicit handoff.
+
+Ruff lint/format (105 Python files), frozen offline Python synchronization, Prettier, TypeScript and the Vite production build passed. The main JavaScript bundle is **414.02 kB** before compression (**134.07 kB** gzip); the main CSS is **133.09 kB** (**24.75 kB** gzip). No chunk warning threshold was raised. The existing Starlette/HTTPX test-client deprecation remains visible. Chromium phone emulation is not physical-device or Safari acceptance.
+
+The [before/after review](audit/trader-desk-0.13.0.zh-CN.md), [trader paths](trader-journeys.md) and [adverse acceptance history](audit/acceptance-history-0.13.0.md) distinguish tested behavior from broader commercial acceptance. Independent read-only source review reproduced the clock/input issues and found no additional provable P0/P1 in its inspected request, quantity and table paths; this is internal review, not institutional certification. The v0.13 screenshots use explicitly labelled synthetic acceptance fixtures. All earlier published report JSON and image bytes are retained. Backend numerical behavior, historical strategy counterevidence and venue-execution scope are unchanged.
+
+Primary workspace upgrade acceptance is recorded after installation. The exact published revision's Linux tests, isolated workload, offline red team, managed recovery and nonroot container acceptance are supplied by its completed [CI run](https://github.com/billpwchan/tidebench/actions/workflows/ci.yml).
+
+
 ## v0.12.0 · 2026-10-10 · connected trader journeys
 
 Final frozen-source local validation passed **997 backend/core/property/API tests** in **201.40 seconds** and **172 desktop/mobile Chromium paths** in **7.2m**. The separately targeted late-response, reset, explicit-result and real-backend paths passed **42/42** in **1.8m**; coherent-account counterexamples separately passed **20/20** in **31.4 seconds**. Fixtures are identified as such. The real saved-strategy journey uses the actual isolated API and SQLite from version saving through package preparation, research submission, approval, activation and exact-controller inspection/stop, retaining inventory. A separate real-backend basket journey verifies whole-group stop disclosure, cancellation without a stop request and retained native inventory. No existing operational database or venue order is used by those tests.

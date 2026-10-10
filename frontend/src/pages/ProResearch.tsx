@@ -14,6 +14,7 @@ import { defaultStrategy, downloadCsv } from '../api';
 import type { Source } from '../api';
 import { useSession } from '../components/AuthGate';
 import { canResearch } from '../lib/permissions';
+import type { ResearchDataIntent } from '../lib/workspaceLocation';
 import { proApi } from '../proApi';
 import type {
   Direction,
@@ -71,6 +72,30 @@ const modeNames: Record<ResearchMode, string> = {
   walk_forward: 'Walk-forward',
   grid: 'Parameter grid',
   cost_stress: 'Cost stress',
+};
+
+const strategyParameterKeys: Record<string, string[]> = {
+  sma_cross: ['fast', 'slow', 'allocation'],
+  rsi_reversion: ['rsi_period', 'entry', 'exit', 'allocation'],
+  buy_hold: ['allocation'],
+  ts_momentum: ['momentum_horizons', 'momentum_entry', 'vol_window', 'allocation'],
+  zscore_reversion: ['window', 'z_entry', 'z_exit', 'allocation'],
+  regime_reversion: ['window', 'z_entry', 'z_exit', 'efficiency_max', 'allocation'],
+  close_breakout: ['window', 'allocation'],
+  program: ['rules', 'allocation'],
+};
+const readableParameters = (strategy: RecordData | undefined, language = 'en') => {
+  if (!strategy) return '—';
+  const keys = strategyParameterKeys[String(strategy.kind)] ?? ['window', 'allocation'];
+  return (
+    keys
+      .filter((key) => strategy[key] !== undefined)
+      .map(
+        (key) =>
+          `${({ fast: ['Fast', '快线'], slow: ['Slow', '慢线'], allocation: ['Allocation', '分配'], rsi_period: ['RSI period', 'RSI 周期'], entry: ['Entry', '入场'], exit: ['Exit', '退出'], momentum_horizons: ['Horizons', '动量窗口'], momentum_entry: ['Momentum threshold', '动量阈值'], vol_window: ['Volatility window', '波动窗口'], window: ['Window', '窗口'], z_entry: ['Entry z-score', '入场 z 值'], z_exit: ['Exit z-score', '退出 z 值'], efficiency_max: ['Efficiency ceiling', '效率上限'], rules: ['Rules', '规则'] } as Record<string, string[]>)[key]?.[language === 'zh-CN' ? 1 : 0] ?? key}: ${key === 'rules' && Array.isArray(strategy[key]) ? strategy[key].length : valueText(strategy[key])}`,
+      )
+      .join(' · ') || '—'
+  );
 };
 const newAdvancedDraft = () => ({
   datasetId: '',
@@ -148,12 +173,29 @@ export default function ProResearch({
   initialRunId?: string;
   initialStrategyVersion?: StrategyVersion;
   onClearStrategyVersion: () => void;
-  onOpenData: () => void;
+  onOpenData: (intent?: ResearchDataIntent) => void;
   onOpenExecution: (id?: string) => void;
   onRunSelect?: (id: string) => void;
   onClearDraft?: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
+  const directionName = (value: unknown) =>
+    value === 'short_only'
+      ? text('Short only', '仅做空')
+      : value === 'long_short'
+        ? text('Long / short', '多空')
+        : text('Long only', '仅做多');
+  const strategyName = (kind: string) =>
+    (
+      ({
+        ts_momentum: text('Multi-horizon momentum', '多窗口动量'),
+        regime_reversion: text('Range-gated reversion', '区间过滤回归'),
+        zscore_reversion: text('Z-score reversion', 'Z 值回归'),
+        close_breakout: text('Closing-channel breakout', '收盘通道突破'),
+        program: text('Rule program', '规则程序'),
+      }) as Record<string, string>
+    )[kind] ?? t(nameOf(kind));
   const session = useSession();
   const canOperate = canResearch(session?.user?.role);
   const userId = session?.user?.id ?? session?.user?.username ?? 'service';
@@ -558,7 +600,13 @@ export default function ProResearch({
   const plan = run.data?.result;
   const experiments = arrayRecords(plan?.experiments);
   const folds = arrayRecords(plan?.folds);
-  const variants: { key: string; label: string; scope: string; result: ProResult }[] = [];
+  const variants: {
+    key: string;
+    label: string;
+    scope: string;
+    result: ProResult;
+    parameters?: RecordData;
+  }[] = [];
   if (plan?.metrics)
     variants.push({ key: 'single', label: t('Single run'), scope: 'single', result: plan });
   if (plan?.result && typeof plan.result === 'object')
@@ -575,6 +623,7 @@ export default function ProResearch({
         label: String(experiment.id),
         scope: run.data?.config.mode === 'grid' ? 'in_sample' : 'cost_sensitivity',
         result: experiment.result as ProResult,
+        parameters: experiment.parameters as RecordData | undefined,
       });
   for (const fold of folds) {
     if (fold.test_result && typeof fold.test_result === 'object')
@@ -583,6 +632,7 @@ export default function ProResearch({
         label: `${fold.id} · ${t('Out-of-sample')}`,
         scope: 'out_of_sample',
         result: fold.test_result as ProResult,
+        parameters: { strategy: fold.selected_strategy },
       });
     for (const training of arrayRecords(fold.training_experiments))
       if (training.result && typeof training.result === 'object')
@@ -591,9 +641,56 @@ export default function ProResearch({
           label: `${fold.id} · ${t('Training')} · ${training.id}`,
           scope: 'training',
           result: training.result as ProResult,
+          parameters: training.parameters as RecordData | undefined,
         });
   }
   const variant = variants.find((v) => v.key === variantKey) ?? variants[0];
+  const inspectedConfig = run.data
+    ? {
+        ...run.data.config,
+        ...variant?.parameters,
+        strategy:
+          (variant?.parameters?.strategy as RecordData | undefined) ?? run.data.config.strategy,
+      }
+    : undefined;
+  const inspectedDataset = catalog.find((item) => item.id === run.data?.config.dataset_id);
+  const inspectedFold = folds.find((fold) => variant?.key.startsWith(`${fold.id}:`));
+  const inspectedStart = inspectedFold
+    ? variant?.scope === 'training'
+      ? inspectedFold.train_start_ts
+      : inspectedFold.test_start_ts
+    : (run.data?.config.start_ts ?? inspectedDataset?.start);
+  const inspectedEnd = inspectedFold
+    ? variant?.scope === 'training'
+      ? inspectedFold.train_end_ts
+      : inspectedFold.test_end_ts
+    : (run.data?.config.end_ts ?? inspectedDataset?.end);
+  const runTitle = (item: ProRun) => {
+    const market = catalog.find((input) => input.id === item.config.dataset_id)?.inst_id;
+    return `${market ?? text('Saved market data', '已保存市场数据')} · ${strategyName(item.config.strategy.kind)}`;
+  };
+  const scopeLabel = (item: ProRun) =>
+    ['train_test', 'walk_forward'].includes(item.config.mode)
+      ? text('Independent test', '独立测试')
+      : text('Development', '开发评估');
+  const openData = () => {
+    draft.flush();
+    onOpenData({
+      source,
+      product: boundVersion.data?.definition.product ?? (isSwap ? 'SWAP' : 'SPOT'),
+      bar: boundVersion.data?.definition.bar ?? dataset?.bar ?? '1H',
+      ...(dataset &&
+      (!boundVersion.data || boundVersion.data.definition.product === (isSwap ? 'SWAP' : 'SPOT'))
+        ? { instId: dataset.inst_id }
+        : {}),
+      ...(windowStart && Number.isFinite(Date.parse(`${windowStart}Z`))
+        ? { startTs: Date.parse(`${windowStart}Z`) }
+        : {}),
+      ...(windowEnd && Number.isFinite(Date.parse(`${windowEnd}Z`))
+        ? { endTs: Date.parse(`${windowEnd}Z`) }
+        : {}),
+    });
+  };
   const result = variant?.result;
   const metrics = result?.metrics ?? {};
   const fills = arrayRecords(result?.fills ?? result?.trades);
@@ -643,11 +740,11 @@ export default function ProResearch({
       aria-labelledby={activeId ? 'research-result-heading' : 'research-runs-heading'}
     >
       {activeId && (
-        <section className="pro-panel pro-result-panel">
+        <section className="pro-panel pro-result-panel research-desk">
           <div className="section-heading">
             <div>
               <h2 id="research-result-heading" ref={resultHeading} tabIndex={-1}>
-                {run.data ? t(nameOf(run.data.config.strategy.kind)) : t('Research result')}
+                {run.data ? strategyName(run.data.config.strategy.kind) : t('Research result')}
               </h2>
               <p className="section-description">
                 {run.data
@@ -684,6 +781,68 @@ export default function ProResearch({
               </Status>
             )}
           </div>
+          {inspectedConfig && (
+            <section
+              className="research-run-context"
+              aria-label={text('Selected run configuration', '所选运行配置')}
+            >
+              <div className="research-context-heading">
+                <strong>{text('Evaluated configuration', '本次评估配置')}</strong>
+                <span>
+                  {variant?.scope === 'out_of_sample'
+                    ? text('Independent test', '独立测试')
+                    : variant?.scope === 'training'
+                      ? text('Training candidate', '训练候选')
+                      : scopeLabel(run.data!)}
+                </span>
+              </div>
+              <dl className="research-context-grid">
+                <div>
+                  <dt>{text('Market & data', '市场与数据')}</dt>
+                  <dd>
+                    {inspectedDataset?.inst_id ?? run.data!.config.dataset_id} ·{' '}
+                    {inspectedDataset?.bar ?? '—'} · {run.data!.source ?? source}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{text('Evaluated UTC window', '评估 UTC 时段')}</dt>
+                  <dd>
+                    {date(Number(inspectedStart), true)} → {date(Number(inspectedEnd), true)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{text('Cost assumptions', '成本假设')}</dt>
+                  <dd>
+                    {text('Fee', '费用')} {valueText(inspectedConfig.fee_bps)} +{' '}
+                    {text('Slippage', '滑点')} {valueText(inspectedConfig.slippage_bps)} bps
+                  </dd>
+                </div>
+                <div>
+                  <dt>{text('Capital & exposure', '资金与敞口')}</dt>
+                  <dd>
+                    {valueText(inspectedConfig.initial_cash)} USDT ·{' '}
+                    {directionName(inspectedConfig.direction)} ·{' '}
+                    {valueText(inspectedConfig.leverage)}×
+                  </dd>
+                </div>
+                <div>
+                  <dt>{text('Evaluation', '评估方式')}</dt>
+                  <dd>
+                    {t(modeNames[run.data!.config.mode])} ·{' '}
+                    {variant?.label ?? text('Saved result', '已保存结果')}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{text('Parameters', '参数')}</dt>
+                  <dd>{readableParameters(inspectedConfig.strategy as RecordData, language)}</dd>
+                </div>
+              </dl>
+              <JsonDetails
+                value={run.data!.config}
+                label={text('Saved run configuration', '已保存运行配置')}
+              />
+            </section>
+          )}
           {run.isError ? (
             <ErrorBox error={run.error} onRetry={() => void run.refetch()} />
           ) : datasets.isPending || runs.isPending || (!!activeId && run.isPending) ? (
@@ -998,6 +1157,25 @@ export default function ProResearch({
                   <JsonDetails value={result?.assumptions} label="Assumptions" open />
                 </>
               )}
+              <div className="research-next-step">
+                <div>
+                  <strong>{text('Next research decision', '下一步研究决策')}</strong>
+                  <p>
+                    {text(
+                      'Inspect costs and the independent window, compare alternatives, or prepare another trial before reviewing paper release.',
+                      '检查成本与独立时段、比较其他方案，或准备下一次试验，再审查模拟发布。',
+                    )}
+                  </p>
+                </div>
+                {run.data?.status === 'completed' && variant && (
+                  <ResearchRelease
+                    key={`${run.data.id}:${variant.key}`}
+                    run={run.data}
+                    variant={variant.key}
+                    onExecution={onOpenExecution}
+                  />
+                )}
+              </div>
             </>
           ) : (
             <div className="research-onboarding">
@@ -1008,7 +1186,7 @@ export default function ProResearch({
           )}
         </section>
       )}
-      <section className="pro-panel run-catalog-panel">
+      <section className="pro-panel run-catalog-panel research-desk">
         <div className="section-heading">
           <h2 id="research-runs-heading">{t('Research runs')}</h2>
           <button
@@ -1029,6 +1207,9 @@ export default function ProResearch({
             <div className="research-run-list">
               {visibleRuns.map((item) => (
                 <div className="research-run-card" key={item.id}>
+                  <button className="research-run-title" onClick={() => selectRun(item.id)}>
+                    {runTitle(item)}
+                  </button>
                   <div className="research-run-card-heading">
                     <input
                       type="checkbox"
@@ -1064,6 +1245,24 @@ export default function ProResearch({
                   <p className="research-run-card-meta">
                     {t(modeNames[item.config.mode])} · {date(item.created_at)}
                   </p>
+                  <p className="research-run-card-context">
+                    {date(
+                      Number(
+                        item.config.start_ts ??
+                          catalog.find((input) => input.id === item.config.dataset_id)?.start,
+                      ),
+                    )}{' '}
+                    →{' '}
+                    {date(
+                      Number(
+                        item.config.end_ts ??
+                          catalog.find((input) => input.id === item.config.dataset_id)?.end,
+                      ),
+                    )}
+                    <br />
+                    {text('Fee', '费用')} {valueText(item.config.fee_bps)} +{' '}
+                    {text('Slippage', '滑点')} {valueText(item.config.slippage_bps)} bps
+                  </p>
                 </div>
               ))}
             </div>
@@ -1098,10 +1297,17 @@ export default function ProResearch({
                 key: 'id',
                 label: 'Selected run',
                 render: (r) => (
-                  <button className="text-button" onClick={() => selectRun(r.id)}>
-                    {r.id.slice(0, 10)}
-                    {activeId === r.id && <Check size={12} />}
-                  </button>
+                  <div className="table-stacked research-run-name">
+                    <strong>{runTitle(r)}</strong>
+                    <button className="text-button" onClick={() => selectRun(r.id)}>
+                      {r.id.slice(0, 10)}
+                      {activeId === r.id && <Check size={12} />}
+                    </button>
+                    <small>
+                      {text('Fee', '费用')} {valueText(r.config.fee_bps)} +{' '}
+                      {text('Slippage', '滑点')} {valueText(r.config.slippage_bps)} bps
+                    </small>
+                  </div>
                 ),
               },
               { key: 'mode', label: 'Mode', render: (r) => t(modeNames[r.config.mode]) },
@@ -1177,6 +1383,124 @@ export default function ProResearch({
               {!!compare.data.warning && (
                 <p className="inline-warning">{String(compare.data.warning)}</p>
               )}
+              {!!arrayRecords(compare.data.items ?? compare.data.runs).length && (
+                <div className="research-comparison-context">
+                  <p>
+                    <strong>{text('Input differences', '输入差异')}</strong> ·{' '}
+                    {Array.isArray(compare.data.different_assumptions) &&
+                    compare.data.different_assumptions.length
+                      ? compare.data.different_assumptions
+                          .map(
+                            (key) =>
+                              (
+                                ({
+                                  dataset_id: text('Market data', '市场数据'),
+                                  mark_dataset_id: text('Mark data', '标记价格数据'),
+                                  funding_dataset_id: text('Funding data', '资金费率数据'),
+                                  start_ts: text('Window start', '时段开始'),
+                                  end_ts: text('Window end', '时段结束'),
+                                  initial_cash: text('Capital', '资金'),
+                                  direction: text('Direction', '方向'),
+                                  leverage: text('Leverage', '杠杆'),
+                                  fee_bps: text('Fee', '费用'),
+                                  slippage_bps: text('Slippage', '滑点'),
+                                  liquidation_fee_bps: text('Liquidation fee', '清算费用'),
+                                  mode: text('Evaluation', '评估方式'),
+                                  options: text('Evaluation parameters', '评估参数'),
+                                  implementation: text('Research implementation', '研究实现'),
+                                  model_version: text('Model version', '模型版本'),
+                                  maintenance_tiers: text('Maintenance tiers', '维持保证金档位'),
+                                  funding_observations: text(
+                                    'Funding observations',
+                                    '资金费率观测',
+                                  ),
+                                  maintenance_tiers_unavailable: text(
+                                    'Maintenance tiers unavailable',
+                                    '维持保证金档位缺失',
+                                  ),
+                                  funding_observations_unavailable: text(
+                                    'Funding observations unavailable',
+                                    '资金费率观测缺失',
+                                  ),
+                                }) as Record<string, string>
+                              )[String(key)] ?? String(key),
+                          )
+                          .join(' · ')
+                      : text('Matching inputs', '输入一致')}
+                  </p>
+                  <div
+                    className="table-scroll"
+                    tabIndex={0}
+                    role="region"
+                    aria-label={text('Compared configurations', '比较配置')}
+                  >
+                    <table className="research-config-comparison">
+                      <thead>
+                        <tr>
+                          <th>{text('Configuration', '配置')}</th>
+                          {arrayRecords(compare.data.items ?? compare.data.runs).map((item) => (
+                            <th key={String(item.id)}>
+                              {runTitle(item as ProRun)}
+                              <small>{String(item.id).slice(0, 10)}</small>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          [
+                            text('Market & data', '市场与数据'),
+                            (item: ProRun) =>
+                              `${catalog.find((input) => input.id === item.config.dataset_id)?.inst_id ?? item.config.dataset_id} · ${catalog.find((input) => input.id === item.config.dataset_id)?.bar ?? '—'}`,
+                          ],
+                          [
+                            text('UTC window', 'UTC 时段'),
+                            (item: ProRun) =>
+                              `${date(Number(item.config.start_ts), true)} → ${date(Number(item.config.end_ts), true)}`,
+                          ],
+                          [
+                            text('Cost assumptions', '成本假设'),
+                            (item: ProRun) =>
+                              `${text('Fee', '费用')} ${valueText(item.config.fee_bps)} + ${text('Slippage', '滑点')} ${valueText(item.config.slippage_bps)} bps`,
+                          ],
+                          [
+                            text('Capital & exposure', '资金与敞口'),
+                            (item: ProRun) =>
+                              `${item.config.initial_cash} USDT · ${directionName(item.config.direction)} · ${item.config.leverage}×`,
+                          ],
+                          [
+                            text('Strategy version', '策略版本'),
+                            (item: ProRun) =>
+                              item.config.strategy_version_id ?? text('Exploratory', '探索研究'),
+                          ],
+                          [
+                            text('Parameters', '参数'),
+                            (item: ProRun) =>
+                              readableParameters(
+                                item.config.strategy as unknown as RecordData,
+                                language,
+                              ),
+                          ],
+                          [
+                            text('Evaluation', '评估方式'),
+                            (item: ProRun) =>
+                              `${t(modeNames[item.config.mode])} · ${scopeLabel(item)}`,
+                          ],
+                        ].map(([label, read]) => (
+                          <tr key={String(label)}>
+                            <th>{String(label)}</th>
+                            {arrayRecords(compare.data.items ?? compare.data.runs).map((item) => (
+                              <td key={String(item.id)}>
+                                {(read as (item: ProRun) => string)(item as ProRun)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
               <DataTable
                 rows={arrayRecords(compare.data.items ?? compare.data.runs)}
                 columns={[
@@ -1197,7 +1521,9 @@ export default function ProResearch({
                     render: (r) => {
                       const p = r.result as ProResult;
                       const m = (p?.result as ProResult)?.metrics ?? p?.metrics;
-                      return m ? percent(m.total_return_pct) : '—';
+                      return m
+                        ? percent(m.total_return_pct)
+                        : percent((p?.oos_summary as RecordData | undefined)?.median_return_pct);
                     },
                   },
                   {
@@ -1222,7 +1548,7 @@ export default function ProResearch({
   const configuration = (
     <section
       key="configuration"
-      className="pro-panel pro-research-form"
+      className="pro-panel pro-research-form research-desk"
       data-research-region="configuration"
       aria-labelledby="research-configuration-heading"
     >
@@ -1234,353 +1560,21 @@ export default function ProResearch({
           </button>
         )}
       </div>
-      <form
-        className="compact-form"
-        onChangeCapture={() => {
-          editorGeneration.current += 1;
-        }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit();
-        }}
-      >
-        {datasets.isError && <ErrorBox error={datasets.error} />}
-        <Field label="Dataset">
-          <select
-            required
-            aria-label={t('Dataset')}
-            value={datasetId}
-            onChange={(e) => {
-              setDatasetId(e.target.value);
-              const d = tradeDatasets.find((x) => x.id === e.target.value);
-              setWindowStart(utcInput(d?.start));
-              setWindowEnd(utcInput(d?.end));
-              setMarkId('');
-              setFundingId('');
-            }}
-          >
-            <option value="">{t('Select a dataset')}</option>
-            {tradeDatasets.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.inst_id} · {d.bar} ·{' '}
-                {String(d.content_hash ?? d.dataset_hash ?? d.hash ?? d.id).slice(0, 7)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <button
-          type="button"
-          className="text-button"
-          onClick={() => {
-            draft.flush();
-            onOpenData();
-          }}
-        >
-          {t('Open Data library')}
-        </button>
-        {dataset && (
-          <div className="selected-dataset">
-            <span>
-              {dataset.inst_id} ·{' '}
-              {dataset.transport === 'user_import' ? t('Imported') : dataset.source.toUpperCase()}
-            </span>
-            <span>
-              {date(Number(dataset.start ?? dataset.start_ts))} —{' '}
-              {date(Number(dataset.end ?? dataset.end_ts))}
-            </span>
-          </div>
-        )}
-        {!!dataset?.warning && (
-          <p className="inline-warning dataset-warning">{String(dataset.warning)}</p>
-        )}
-        {dataset && (
-          <div className="research-date-range">
-            <Field label="Start (UTC)">
-              <input
-                required
-                type="datetime-local"
-                min={utcInput(dataset.start)}
-                max={utcInput(dataset.end)}
-                value={windowStart}
-                onChange={(e) => setWindowStart(e.target.value)}
-              />
-            </Field>
-            <Field label="End (UTC)">
-              <input
-                required
-                type="datetime-local"
-                min={utcInput(dataset.start)}
-                max={utcInput(dataset.end)}
-                value={windowEnd}
-                onChange={(e) => setWindowEnd(e.target.value)}
-              />
-            </Field>
-          </div>
-        )}
-        {dataset && (
-          <p className="range-hint">
-            {t(
-              'Maximum 98,000 selected bars. Up to 2,000 preceding bars are captured for indicator warmup.',
-            )}
-          </p>
-        )}
-        {isSwap && (
-          <>
-            <div className="form-grid">
-              <Field label="Mark dataset">
-                <select value={markId} onChange={(e) => setMarkId(e.target.value)}>
-                  <option value="">{t('None')}</option>
-                  {catalog
-                    .filter((d) => d.inst_id === dataset?.inst_id && d.kind === 'mark')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.bar} · {d.id.slice(0, 8)}
-                      </option>
-                    ))}
-                </select>
-              </Field>
-              <Field label="Funding dataset">
-                <select value={fundingId} onChange={(e) => setFundingId(e.target.value)}>
-                  <option value="">{t('None')}</option>
-                  {catalog
-                    .filter((d) => d.inst_id === dataset?.inst_id && d.kind === 'funding')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.id.slice(0, 8)}
-                      </option>
-                    ))}
-                </select>
-              </Field>
-            </div>
-            <div className="form-grid">
-              <Field label="Direction">
-                <select
-                  disabled={!!versionId}
-                  value={direction}
-                  onChange={(e) => setDirection(e.target.value as Direction)}
-                >
-                  <option value="long_only">{t('Long only')}</option>
-                  <option value="short_only">{t('Short only')}</option>
-                  <option value="long_short">{t('Long / short')}</option>
-                </select>
-              </Field>
-              <Field label="Leverage">
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  max="50"
-                  step="1"
-                  disabled={!!versionId}
-                  value={leverage}
-                  onChange={(e) => setLeverage(Number(e.target.value))}
-                />
-              </Field>
-            </div>
-          </>
-        )}
-        <fieldset className="strategy-bound-fields" disabled={!!versionId}>
-          <StrategyFields
-            professional
-            value={strategy}
-            onChange={setStrategy}
-            programDraft={programDraft}
-            onProgramDraftChange={setProgramDraft}
-          />
-        </fieldset>
-        <Field label="Initial capital">
-          <div className="input-suffix">
-            <input
-              required
-              type="number"
-              min="1"
-              step="0.01"
-              value={capital}
-              onChange={(e) => setCapital(e.target.value)}
-            />
-            <span>USDT</span>
-          </div>
-        </Field>
-        <div className="form-grid">
-          <Field label="Fee">
-            <div className="input-suffix">
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.1"
-                value={fee}
-                onChange={(e) => setFee(e.target.value)}
-              />
-              <span>bps</span>
-            </div>
-          </Field>
-          <Field label="Slippage">
-            <div className="input-suffix">
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.1"
-                value={slippage}
-                onChange={(e) => setSlippage(e.target.value)}
-              />
-              <span>bps</span>
-            </div>
-          </Field>
+      <div className="research-submit-bar">
+        <div>
+          <strong>
+            {activeId
+              ? text('Next trial draft', '下一次试验草稿')
+              : text('Prepare a research trial', '准备研究试验')}
+          </strong>
+          <span>
+            {dataset?.inst_id ?? text('Choose market data', '请选择市场数据')} ·{' '}
+            {t(modeNames[mode])} · {fee} + {slippage} bps
+          </span>
         </div>
-        {isSwap && (
-          <Field label="Liquidation fee">
-            <div className="input-suffix">
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.1"
-                value={liqFee}
-                onChange={(e) => setLiqFee(e.target.value)}
-              />
-              <span>bps</span>
-            </div>
-          </Field>
-        )}
-        <Field label="Mode">
-          <select value={mode} onChange={(e) => setMode(e.target.value as ResearchMode)}>
-            {Object.entries(modeNames).map(([key, label]) => (
-              <option key={key} value={key}>
-                {t(label)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {mode === 'train_test' && (
-          <Field label="Training fraction">
-            <input
-              required
-              type="number"
-              min="0.1"
-              max="0.9"
-              step="0.05"
-              value={trainFraction}
-              onChange={(e) => setTrainFraction(Number(e.target.value))}
-            />
-          </Field>
-        )}
-        {mode === 'train_test' && (
-          <Field label="Purge bars">
-            <input
-              required
-              type="number"
-              min="0"
-              value={purgeBars}
-              onChange={(e) => setPurgeBars(Number(e.target.value))}
-            />
-          </Field>
-        )}
-        {mode === 'walk_forward' && (
-          <div className="form-grid">
-            <Field label="Training bars">
-              <input
-                required
-                type="number"
-                min="30"
-                value={trainBars}
-                onChange={(e) => setTrainBars(Number(e.target.value))}
-              />
-            </Field>
-            <Field label="Test bars">
-              <input
-                required
-                type="number"
-                min="10"
-                value={testBars}
-                onChange={(e) => setTestBars(Number(e.target.value))}
-              />
-            </Field>
-            <Field label="Step bars">
-              <input
-                required
-                type="number"
-                min="1"
-                value={stepBars}
-                onChange={(e) => setStepBars(Number(e.target.value))}
-              />
-            </Field>
-            <Field label="Purge bars">
-              <input
-                required
-                type="number"
-                min="0"
-                value={purgeBars}
-                onChange={(e) => setPurgeBars(Number(e.target.value))}
-              />
-            </Field>
-          </div>
-        )}
-        {oosMode && (
-          <Field
-            label="Parameter selection"
-            hint="Candidates are ranked on training data only. Test data is reserved for evaluation."
-          >
-            <select
-              value={selectOnTraining ? 'training' : 'fixed'}
-              onChange={(e) => setSelectOnTraining(e.target.value === 'training')}
-            >
-              <option value="fixed">{t('Fixed parameters')}</option>
-              <option value="training">{t('Choose on training data')}</option>
-            </select>
-          </Field>
-        )}
-        {showGrid && strategy.kind === 'sma_cross' && (
-          <div className="form-grid">
-            <Field label="Fast windows">
-              <input required value={fastGrid} onChange={(e) => setFastGrid(e.target.value)} />
-            </Field>
-            <Field label="Slow windows">
-              <input required value={slowGrid} onChange={(e) => setSlowGrid(e.target.value)} />
-            </Field>
-          </div>
-        )}
-        {showGrid && strategy.kind === 'rsi_reversion' && (
-          <>
-            <Field label="RSI periods">
-              <input required value={rsiGrid} onChange={(e) => setRsiGrid(e.target.value)} />
-            </Field>
-            <div className="form-grid">
-              <Field label="Entry thresholds">
-                <input required value={entryGrid} onChange={(e) => setEntryGrid(e.target.value)} />
-              </Field>
-              <Field label="Exit thresholds">
-                <input required value={exitGrid} onChange={(e) => setExitGrid(e.target.value)} />
-              </Field>
-            </div>
-          </>
-        )}
-        {showGrid && strategy.kind === 'buy_hold' && (
-          <Field label="Allocation fractions" hint="Comma-separated fractions, from 0.01 to 1.">
-            <input
-              required
-              value={allocationGrid}
-              onChange={(e) => setAllocationGrid(e.target.value)}
-            />
-          </Field>
-        )}
-        {mode === 'cost_stress' && (
-          <>
-            <Field label="Fee scenarios (bps)">
-              <input required value={feeGrid} onChange={(e) => setFeeGrid(e.target.value)} />
-            </Field>
-            <Field label="Slippage scenarios (bps)">
-              <input required value={slipGrid} onChange={(e) => setSlipGrid(e.target.value)} />
-            </Field>
-          </>
-        )}
-        {validation && <ErrorBox error={new Error(validation)} />}
-        {create.isError && currentTask(create.variables?.request) && (
-          <ErrorBox error={create.error} />
-        )}
         <button
           type="submit"
+          form="advanced-research-form"
           className="button button-citrus full-width"
           disabled={
             !canOperate ||
@@ -1590,7 +1584,467 @@ export default function ProResearch({
           }
         >
           {busy ? <Loader2 size={15} className="spin" /> : <Play size={14} />} {t('Run research')}
-        </button>
+        </button>{' '}
+      </div>
+      <div className="research-draft-context">
+        <div className="prepared-input-note" role="status">
+          <span>
+            {draft.restoredAt
+              ? `${t('Research draft restored')} · ${date(draft.restoredAt, true)}`
+              : t('Research configuration is saved in this browser session.')}
+          </span>
+          <button
+            className="text-button"
+            onClick={() => {
+              draft.clear({
+                lastInputsKey: inputHandoffKey(initialInputs),
+                lastVersionId: initialStrategyVersion?.id ?? '',
+              });
+              selectRun('');
+              if (onClearDraft) onClearDraft();
+              else onClearStrategyVersion();
+              setValidation(null);
+              create.reset();
+            }}
+          >
+            {t('Clear research draft')}
+          </button>
+        </div>
+        {draft.problem && (
+          <p role="alert" className="inline-warning">
+            {t(
+              draft.problem === 'invalid'
+                ? 'A damaged research draft was discarded. Saved research evidence is unchanged.'
+                : 'The research draft could not be saved. Keep this page open or export your configuration before leaving.',
+            )}
+          </p>
+        )}
+
+        {versionId && (
+          <div className="prepared-input-note">
+            <span>{t('Bound strategy version')}</span>
+            <code>{versionId.slice(0, 12)}</code>
+            <button
+              className="text-button"
+              onClick={() => {
+                setVersionId(undefined);
+                onClearStrategyVersion();
+              }}
+            >
+              {t('Detach for exploratory research')}
+            </button>
+          </div>
+        )}
+        {preparedInputs?.package_id && (
+          <p className="prepared-input-note">
+            <span>
+              {t(packageAttached ? 'Prepared research package' : 'Package inputs modified')}
+            </span>
+            <code>{preparedInputs.package_id.slice(0, 12)}</code>
+            <span>
+              {t(
+                packageAttached
+                  ? 'Exact dataset versions and the prepared UTC window are selected. Editing inputs detaches the package manifest.'
+                  : 'Dataset or window changes have detached the package manifest. The run will use the explicitly selected raw versions.',
+              )}
+            </span>
+          </p>
+        )}
+      </div>
+      <form
+        id="advanced-research-form"
+        className="compact-form research-desk-form"
+        onInvalidCapture={(event) => {
+          let node = event.target as HTMLElement | null;
+          while (node) {
+            if (node instanceof HTMLDetailsElement) node.open = true;
+            node = node.parentElement;
+          }
+        }}
+        onChangeCapture={() => {
+          editorGeneration.current += 1;
+        }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <section className="research-form-section" aria-labelledby="research-market-section">
+          <h3 id="research-market-section">{text('Market & data', '市场与数据')}</h3>
+          {datasets.isError && <ErrorBox error={datasets.error} />}
+          <Field label="Dataset">
+            <select
+              required
+              aria-label={t('Dataset')}
+              value={datasetId}
+              onChange={(e) => {
+                setDatasetId(e.target.value);
+                const d = tradeDatasets.find((x) => x.id === e.target.value);
+                setWindowStart(utcInput(d?.start));
+                setWindowEnd(utcInput(d?.end));
+                setMarkId('');
+                setFundingId('');
+              }}
+            >
+              <option value="">{t('Select a dataset')}</option>
+              {tradeDatasets.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.inst_id} · {d.bar} ·{' '}
+                  {String(d.content_hash ?? d.dataset_hash ?? d.hash ?? d.id).slice(0, 7)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <button type="button" className="text-button" onClick={openData}>
+            {t('Open Data library')}
+          </button>
+          {dataset && (
+            <div className="selected-dataset">
+              <span>
+                {dataset.inst_id} ·{' '}
+                {dataset.transport === 'user_import' ? t('Imported') : dataset.source.toUpperCase()}
+              </span>
+              <span>
+                {date(Number(dataset.start ?? dataset.start_ts))} —{' '}
+                {date(Number(dataset.end ?? dataset.end_ts))}
+              </span>
+            </div>
+          )}
+          {!!dataset?.warning && (
+            <p className="inline-warning dataset-warning">{String(dataset.warning)}</p>
+          )}
+          {dataset && (
+            <div className="research-date-range">
+              <Field label="Start (UTC)">
+                <input
+                  required
+                  type="datetime-local"
+                  min={utcInput(dataset.start)}
+                  max={utcInput(dataset.end)}
+                  value={windowStart}
+                  onChange={(e) => setWindowStart(e.target.value)}
+                />
+              </Field>
+              <Field label="End (UTC)">
+                <input
+                  required
+                  type="datetime-local"
+                  min={utcInput(dataset.start)}
+                  max={utcInput(dataset.end)}
+                  value={windowEnd}
+                  onChange={(e) => setWindowEnd(e.target.value)}
+                />
+              </Field>
+            </div>
+          )}
+          {dataset && (
+            <p className="range-hint">
+              {t(
+                'Maximum 98,000 selected bars. Up to 2,000 preceding bars are captured for indicator warmup.',
+              )}
+            </p>
+          )}
+          {isSwap && (
+            <>
+              <div className="form-grid">
+                <Field label="Mark dataset">
+                  <select value={markId} onChange={(e) => setMarkId(e.target.value)}>
+                    <option value="">{t('None')}</option>
+                    {catalog
+                      .filter((d) => d.inst_id === dataset?.inst_id && d.kind === 'mark')
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.bar} · {d.id.slice(0, 8)}
+                        </option>
+                      ))}
+                  </select>
+                </Field>
+                <Field label="Funding dataset">
+                  <select value={fundingId} onChange={(e) => setFundingId(e.target.value)}>
+                    <option value="">{t('None')}</option>
+                    {catalog
+                      .filter((d) => d.inst_id === dataset?.inst_id && d.kind === 'funding')
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.id.slice(0, 8)}
+                        </option>
+                      ))}
+                  </select>
+                </Field>
+              </div>
+            </>
+          )}
+        </section>
+        <section className="research-form-section" aria-labelledby="research-strategy-section">
+          <h3 id="research-strategy-section">{text('Strategy & capital', '策略与资金')}</h3>
+          {isSwap && !versionId && (
+            <>
+              <div className="form-grid">
+                <Field label="Direction">
+                  <select
+                    disabled={!!versionId}
+                    value={direction}
+                    onChange={(e) => setDirection(e.target.value as Direction)}
+                  >
+                    <option value="long_only">{t('Long only')}</option>
+                    <option value="short_only">{t('Short only')}</option>
+                    <option value="long_short">{t('Long / short')}</option>
+                  </select>
+                </Field>
+                <Field label="Leverage">
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    max="50"
+                    step="1"
+                    disabled={!!versionId}
+                    value={leverage}
+                    onChange={(e) => setLeverage(Number(e.target.value))}
+                  />
+                </Field>
+              </div>
+            </>
+          )}
+          {versionId ? (
+            <div
+              className="research-bound-strategy"
+              aria-label={text('Bound strategy definition', '绑定策略定义')}
+            >
+              <strong>{strategyName(strategy.kind)}</strong>
+              <p>{readableParameters(strategy as unknown as RecordData, language)}</p>
+              <p>
+                {boundVersion.data?.definition.product ?? (isSwap ? 'SWAP' : 'SPOT')} ·{' '}
+                {boundVersion.data?.definition.bar ?? '—'} · {directionName(direction)} · {leverage}
+                ×
+              </p>
+              <JsonDetails
+                value={strategy}
+                label={text('Full strategy definition', '完整策略定义')}
+              />
+            </div>
+          ) : (
+            <fieldset className="strategy-bound-fields">
+              <StrategyFields
+                professional
+                value={strategy}
+                onChange={setStrategy}
+                programDraft={programDraft}
+                onProgramDraftChange={setProgramDraft}
+              />
+            </fieldset>
+          )}
+          <Field label="Initial capital">
+            <div className="input-suffix">
+              <input
+                required
+                type="number"
+                min="1"
+                step="0.01"
+                value={capital}
+                onChange={(e) => setCapital(e.target.value)}
+              />
+              <span>USDT</span>
+            </div>
+          </Field>
+          <div className="form-grid">
+            <Field label="Fee">
+              <div className="input-suffix">
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={fee}
+                  onChange={(e) => setFee(e.target.value)}
+                />
+                <span>bps</span>
+              </div>
+            </Field>
+            <Field label="Slippage">
+              <div className="input-suffix">
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={slippage}
+                  onChange={(e) => setSlippage(e.target.value)}
+                />
+                <span>bps</span>
+              </div>
+            </Field>
+          </div>
+          {isSwap && (
+            <Field label="Liquidation fee">
+              <div className="input-suffix">
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={liqFee}
+                  onChange={(e) => setLiqFee(e.target.value)}
+                />
+                <span>bps</span>
+              </div>
+            </Field>
+          )}
+        </section>
+        <section className="research-form-section" aria-labelledby="research-evaluation-section">
+          <h3 id="research-evaluation-section">{text('Evaluation', '评估方式')}</h3>
+          <Field label="Mode">
+            <select value={mode} onChange={(e) => setMode(e.target.value as ResearchMode)}>
+              {Object.entries(modeNames).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {t(label)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {mode === 'train_test' && (
+            <Field label="Training fraction">
+              <input
+                required
+                type="number"
+                min="0.1"
+                max="0.9"
+                step="0.05"
+                value={trainFraction}
+                onChange={(e) => setTrainFraction(Number(e.target.value))}
+              />
+            </Field>
+          )}
+          {mode === 'train_test' && (
+            <Field label="Purge bars">
+              <input
+                required
+                type="number"
+                min="0"
+                value={purgeBars}
+                onChange={(e) => setPurgeBars(Number(e.target.value))}
+              />
+            </Field>
+          )}
+          {mode === 'walk_forward' && (
+            <div className="form-grid">
+              <Field label="Training bars">
+                <input
+                  required
+                  type="number"
+                  min="30"
+                  value={trainBars}
+                  onChange={(e) => setTrainBars(Number(e.target.value))}
+                />
+              </Field>
+              <Field label="Test bars">
+                <input
+                  required
+                  type="number"
+                  min="10"
+                  value={testBars}
+                  onChange={(e) => setTestBars(Number(e.target.value))}
+                />
+              </Field>
+              <Field label="Step bars">
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  value={stepBars}
+                  onChange={(e) => setStepBars(Number(e.target.value))}
+                />
+              </Field>
+              <Field label="Purge bars">
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  value={purgeBars}
+                  onChange={(e) => setPurgeBars(Number(e.target.value))}
+                />
+              </Field>
+            </div>
+          )}
+          {oosMode && (
+            <Field
+              label="Parameter selection"
+              hint="Candidates are ranked on training data only. Test data is reserved for evaluation."
+            >
+              <select
+                value={selectOnTraining ? 'training' : 'fixed'}
+                onChange={(e) => setSelectOnTraining(e.target.value === 'training')}
+              >
+                <option value="fixed">{t('Fixed parameters')}</option>
+                <option value="training">{t('Choose on training data')}</option>
+              </select>
+            </Field>
+          )}
+          {showGrid && strategy.kind === 'sma_cross' && (
+            <div className="form-grid">
+              <Field label="Fast windows">
+                <input required value={fastGrid} onChange={(e) => setFastGrid(e.target.value)} />
+              </Field>
+              <Field label="Slow windows">
+                <input required value={slowGrid} onChange={(e) => setSlowGrid(e.target.value)} />
+              </Field>
+            </div>
+          )}
+          {showGrid && strategy.kind === 'rsi_reversion' && (
+            <>
+              <Field label="RSI periods">
+                <input required value={rsiGrid} onChange={(e) => setRsiGrid(e.target.value)} />
+              </Field>
+              <div className="form-grid">
+                <Field label="Entry thresholds">
+                  <input
+                    required
+                    value={entryGrid}
+                    onChange={(e) => setEntryGrid(e.target.value)}
+                  />
+                </Field>
+                <Field label="Exit thresholds">
+                  <input required value={exitGrid} onChange={(e) => setExitGrid(e.target.value)} />
+                </Field>
+              </div>
+            </>
+          )}
+          {showGrid && strategy.kind === 'buy_hold' && (
+            <Field label="Allocation fractions" hint="Comma-separated fractions, from 0.01 to 1.">
+              <input
+                required
+                value={allocationGrid}
+                onChange={(e) => setAllocationGrid(e.target.value)}
+              />
+            </Field>
+          )}
+          {mode === 'cost_stress' && (
+            <>
+              <Field label="Fee scenarios (bps)">
+                <input required value={feeGrid} onChange={(e) => setFeeGrid(e.target.value)} />
+              </Field>
+              <Field label="Slippage scenarios (bps)">
+                <input required value={slipGrid} onChange={(e) => setSlipGrid(e.target.value)} />
+              </Field>
+            </>
+          )}
+          <p className="research-evaluation-scope">
+            {oosMode
+              ? text(
+                  'Parameters are fixed or selected on training data. Evaluation uses the reserved test window.',
+                  '参数固定或仅在训练数据上选择，评估使用保留测试时段。',
+                )
+              : text(
+                  'This is development evidence. A full-window result does not provide an independent test.',
+                  '这是开发阶段证据，全时段结果不构成独立测试。',
+                )}
+          </p>
+        </section>
+        {validation && <ErrorBox error={new Error(validation)} />}
+        {create.isError && currentTask(create.variables?.request) && (
+          <ErrorBox error={create.error} />
+        )}
+
         <p className="form-footnote pro-form-note">
           {t('Training results are not test results. Inspect every fold and cost assumption.')}
         </p>
@@ -1655,14 +2109,6 @@ export default function ProResearch({
             {t(cancellationRequested ? 'Cancellation requested' : 'Cancel research')}
           </button>
         )}
-        {run.data?.status === 'completed' && variant && (
-          <ResearchRelease
-            key={`${run.data.id}:${variant.key}`}
-            run={run.data}
-            variant={variant.key}
-            onExecution={onOpenExecution}
-          />
-        )}
       </PageHeading>
       <ActionNote text={notice} error={exportError} />
       {submittedRun?.source === source &&
@@ -1684,70 +2130,9 @@ export default function ProResearch({
         disabled={!canOperate || (cancel.isPending && cancel.variables === activeId)}
         onRetry={() => activeId && cancel.mutate(activeId)}
       />
-      <div className="prepared-input-note" role="status">
-        <span>
-          {draft.restoredAt
-            ? `${t('Research draft restored')} · ${date(draft.restoredAt, true)}`
-            : t('Research configuration is saved in this browser session.')}
-        </span>
-        <button
-          className="text-button"
-          onClick={() => {
-            draft.clear({
-              lastInputsKey: inputHandoffKey(initialInputs),
-              lastVersionId: initialStrategyVersion?.id ?? '',
-            });
-            selectRun('');
-            if (onClearDraft) onClearDraft();
-            else onClearStrategyVersion();
-            setValidation(null);
-            create.reset();
-          }}
-        >
-          {t('Clear research draft')}
-        </button>
-      </div>
-      {draft.problem && (
-        <p role="alert" className="inline-warning">
-          {t(
-            draft.problem === 'invalid'
-              ? 'A damaged research draft was discarded. Saved research evidence is unchanged.'
-              : 'The research draft could not be saved. Keep this page open or export your configuration before leaving.',
-          )}
-        </p>
-      )}
-
-      {versionId && (
-        <div className="prepared-input-note">
-          <span>{t('Bound strategy version')}</span>
-          <code>{versionId.slice(0, 12)}</code>
-          <button
-            className="text-button"
-            onClick={() => {
-              setVersionId(undefined);
-              onClearStrategyVersion();
-            }}
-          >
-            {t('Detach for exploratory research')}
-          </button>
-        </div>
-      )}
-      {preparedInputs?.package_id && (
-        <p className="prepared-input-note">
-          <span>
-            {t(packageAttached ? 'Prepared research package' : 'Package inputs modified')}
-          </span>
-          <code>{preparedInputs.package_id.slice(0, 12)}</code>
-          <span>
-            {t(
-              packageAttached
-                ? 'Exact dataset versions and the prepared UTC window are selected. Editing inputs detaches the package manifest.'
-                : 'Dataset or window changes have detached the package manifest. The run will use the explicitly selected raw versions.',
-            )}
-          </span>
-        </p>
-      )}
-      <div className={`pro-research-layout${activeId ? '' : ' research-config-first'}`}>
+      <div
+        className={`pro-research-layout research-desk-layout${activeId ? '' : ' research-config-first'}${!activeId && !visibleRuns.length ? ' research-empty-history' : ''}`}
+      >
         {activeId ? [results, configuration] : [configuration, results]}
       </div>
     </>

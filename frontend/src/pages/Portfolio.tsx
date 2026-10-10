@@ -1,9 +1,9 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Activity,
   Check,
   CircleAlert,
+  Clock3,
   Loader2,
   Play,
   Plus,
@@ -19,6 +19,7 @@ const ProtectiveExit = lazy(() => import('../components/ProtectiveExit'));
 import ManagedPortfolios, { StopPortfolioDialog } from '../components/ManagedPortfolios';
 const Contributions = lazy(() => import('../components/Contributions'));
 import SimulationClock from '../components/SimulationClock';
+import BudgetSizing from '../components/BudgetSizing';
 const ReleaseHistory = lazy(() => import('../components/ReleaseHistory'));
 import PortfolioAnalytics from '../components/PortfolioAnalytics';
 import { proApi } from '../proApi';
@@ -44,7 +45,6 @@ import {
   JsonDetails,
   ProductSymbol,
   RecordGrid,
-  WorkspaceTabs,
   valueText,
 } from '../components/ProWorkspace';
 
@@ -54,30 +54,55 @@ export default function Portfolio({
   source,
   initialView = 'positions',
   initialSymbol = 'BTC-USDT',
+  marketRequested = false,
   onViewChange,
   onSymbolChange,
 }: {
   source: Source;
   initialView?: string;
   initialSymbol?: string;
+  marketRequested?: boolean;
   onViewChange?: (view: string) => void;
   onSymbolChange?: (symbol: string) => void;
 }) {
   const { t, language } = useI18n();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
+  const [ticketOpen, setTicketOpen] = useState(marketRequested || initialView === 'order');
+  const [allMetrics, setAllMetrics] = useState(false);
+  const [orderScope, setOrderScope] = useState<'working' | 'all'>('working');
+  const ticketRef = useRef<HTMLElement>(null);
+  const ticketReturnFocus = useRef<HTMLElement | null>(null);
+  const ticketRequest = useRef('');
   const canOperate = canTrade(useSession()?.user?.role);
   const qc = useQueryClient();
   const now = useNow();
   const protectiveLink = useRef('');
   const [protection, setProtection] = useState<{ source: Source; position: RecordData }>();
   const viewTable = (view: string) =>
-    view.startsWith('protect:')
+    view === 'order' || view.startsWith('protect:')
       ? 'positions'
       : view.startsWith('portfolio-release:')
         ? 'managed'
         : view.split(':')[0];
   const [table, setTable] = useState(viewTable(initialView));
   useEffect(() => setTable(viewTable(initialView)), [initialView]);
-  useEffect(() => setProtection(undefined), [source]);
+  const [viewsOpen, setViewsOpen] = useState(
+    !['positions', 'orders'].includes(viewTable(initialView)),
+  );
+  useEffect(() => {
+    setProtection(undefined);
+    setTicketOpen(false);
+  }, [source]);
+  useEffect(() => {
+    if (!['positions', 'orders'].includes(table)) setViewsOpen(true);
+  }, [table]);
+  useEffect(() => {
+    const requested = marketRequested || initialView === 'order';
+    const key = requested ? `${source}:${initialSymbol}:${initialView}` : '';
+    if (initialView.startsWith('protect:')) setTicketOpen(false);
+    else if (key && ticketRequest.current !== key) setTicketOpen(true);
+    ticketRequest.current = key;
+  }, [marketRequested, initialView, initialSymbol, source]);
   const initialGroupId = initialView.startsWith('managed:') ? initialView.slice(8) : undefined;
   const initialReleaseId = initialView.startsWith('portfolio-release:')
     ? initialView.slice('portfolio-release:'.length)
@@ -90,6 +115,45 @@ export default function Portfolio({
     setTable(viewTable(view));
     onViewChange?.(view);
   };
+  const closeTicket = () => {
+    setTicketOpen(false);
+    if (initialView === 'order') changeView('positions');
+    const target = ticketReturnFocus.current?.isConnected
+      ? ticketReturnFocus.current
+      : document.querySelector<HTMLButtonElement>(
+          '.desk-execution button[aria-controls="desk-order-ticket"]',
+        );
+    target?.focus({ preventScroll: true });
+  };
+  const openTicket = () => {
+    ticketReturnFocus.current = document.activeElement as HTMLElement | null;
+    setTicketOpen(true);
+    changeView('order');
+  };
+  const protectPosition = (position: RecordData) => {
+    setTicketOpen(false);
+    setProtection({ source, position });
+  };
+  const closeTicketRef = useRef(closeTicket);
+  closeTicketRef.current = closeTicket;
+  useEffect(() => {
+    if (!ticketOpen) return;
+    const frame = requestAnimationFrame(() => {
+      ticketRef.current?.scrollIntoView({ block: 'nearest' });
+      ticketRef.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+    });
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && ticketRef.current?.contains(document.activeElement)) {
+        event.preventDefault();
+        closeTicketRef.current();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [ticketOpen, initialSymbol, source]);
   const [product, setProduct] = useState<'SPOT' | 'SWAP'>(
     initialSymbol.endsWith('-SWAP') ? 'SWAP' : 'SPOT',
   );
@@ -252,17 +316,21 @@ export default function Portfolio({
   const a = account.data;
   useEffect(() => {
     const link = source + ':' + initialView;
-    if (!initialView.startsWith('protect:') || !account.data || protectiveLink.current === link)
+    if (!initialView.startsWith('protect:')) {
+      protectiveLink.current = '';
       return;
+    }
+    if (!account.data || protectiveLink.current === link) return;
     const selected = account.data.positions?.find((p) => p.inst_id === initialView.slice(8));
     if (selected) {
       protectiveLink.current = link;
+      setTicketOpen(false);
       setProtection({ source, position: selected });
     }
   }, [initialView, source, account.data]);
   const instrument = (market.data?.instrument ?? {}) as RecordData;
   return (
-    <>
+    <div className="desk-execution">
       {stopGroup && (
         <StopPortfolioDialog
           source={source}
@@ -305,7 +373,17 @@ export default function Portfolio({
         <button
           className="button button-dark"
           disabled={!canOperate}
+          onClick={openTicket}
+          aria-expanded={ticketOpen}
+          aria-controls="desk-order-ticket"
+        >
+          <Plus size={14} /> {text('New order', '新建订单')}
+        </button>
+        <button
+          className="button button-secondary"
+          disabled={!canOperate}
           onClick={() => {
+            setTicketOpen(false);
             deployReceipt.invalidate();
             setDeployOpen(true);
           }}
@@ -314,7 +392,6 @@ export default function Portfolio({
           {t('Deploy strategy')}
         </button>
       </PageHeading>
-      {source === 'example' && <SimulationClock />}
       <ActionNote text={notice} />
       {risk.data?.halted && (
         <div className="halt-notice">
@@ -328,27 +405,59 @@ export default function Portfolio({
       ) : account.isError ? (
         <ErrorBox error={account.error} onRetry={() => void account.refetch()} />
       ) : (
-        <div className="pro-metric-strip account-metrics">
+        <div
+          className={`pro-metric-strip account-metrics desk-account-strip${allMetrics ? ' is-expanded' : ''}`}
+        >
           <Metric
             label="Account equity"
             value={number(a?.equity)}
             unit="USDT"
             note={a?.valuation_status}
           />
-          <Metric label="Available cash" value={number(a?.available_cash)} unit="USDT" />
           <Metric label="Used margin" value={number(a?.used_margin)} unit="USDT" />
+          <Metric label="Available cash" value={number(a?.available_cash)} unit="USDT" />
           <Metric label="Maintenance margin" value={number(a?.maintenance_margin)} unit="USDT" />
           <Metric
             label="Unrealized P&L"
             value={number(a?.unrealized_pnl)}
             className={tone(a?.unrealized_pnl)}
+            unit="USDT"
           />
           <Metric label="Funding paid" value={number(a?.funding_paid)} unit="USDT" />
         </div>
       )}
-      <div
-        className={`execution-layout${['managed', 'contributions'].includes(table) ? ' execution-evidence-layout' : ''}`}
+      <button
+        className="text-button desk-metrics-toggle"
+        aria-expanded={allMetrics}
+        onClick={() => setAllMetrics((value) => !value)}
       >
+        {allMetrics
+          ? text('Fewer account values', '收起账户数值')
+          : text('Cash, P&L & funding', '现金、盈亏与资金费')}
+      </button>
+      <div className="desk-execution-state">
+        <span>
+          <Clock3 size={12} /> {t('Account snapshot')}: {date(a?.as_of, true)}
+        </span>
+        <Status type={risk.data?.halted ? 'bad' : risk.isSuccess ? 'neutral' : 'warning'}>
+          {risk.isSuccess
+            ? t(risk.data.halted ? 'New risk halted' : 'New risk enabled')
+            : t('Risk status unavailable')}
+        </Status>
+        {typeof a?.economic_status === 'string' && a.economic_status !== 'complete' && (
+          <span className="inline-warning">
+            {t(
+              (
+                {
+                  funding_pending: 'Funding settlement remains pending',
+                  funding_schedule_unavailable: 'Funding schedule needs attention',
+                } as Record<string, string>
+              )[a.economic_status] ?? 'Monitoring incomplete',
+            )}
+          </span>
+        )}
+      </div>
+      <div className={`execution-layout desk-execution-layout${ticketOpen ? ' has-ticket' : ''}`}>
         <div className="execution-main">
           <section className="pro-panel account-book-panel">
             <div className="section-heading">
@@ -363,21 +472,123 @@ export default function Portfolio({
                 {t('Export CSV')}
               </button>
             </div>
-            <WorkspaceTabs
-              value={table}
-              onChange={changeView}
-              items={[
-                { key: 'positions', label: 'Positions' },
-                { key: 'performance', label: 'Forward performance' },
-                { key: 'contributions', label: 'Contribution' },
-                { key: 'managed', label: 'Managed portfolios' },
-                { key: 'analytics', label: 'Exposure & scenarios' },
-                { key: 'orders', label: 'Orders' },
-                { key: 'ledger', label: 'Ledger' },
-                { key: 'strategies', label: 'Strategies' },
-                { key: 'releases', label: 'Paper releases' },
-              ]}
-            />
+            <div className="desk-book-navigation">
+              <div
+                className="desk-book-tabs"
+                role="tablist"
+                aria-label={t('Portfolio')}
+                onKeyDown={(event) => {
+                  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                  event.preventDefault();
+                  const next =
+                    event.key === 'Home'
+                      ? 'positions'
+                      : event.key === 'End'
+                        ? 'orders'
+                        : table === 'orders'
+                          ? 'positions'
+                          : 'orders';
+                  changeView(next);
+                  event.currentTarget
+                    .querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                    [next === 'positions' ? 0 : 1]?.focus();
+                }}
+              >
+                <button
+                  role="tab"
+                  tabIndex={table === 'orders' ? -1 : 0}
+                  aria-selected={table === 'positions'}
+                  className={table === 'positions' ? 'active' : ''}
+                  onClick={() => changeView('positions')}
+                >
+                  {t('Positions')}{' '}
+                  <span>{account.isSuccess ? (a?.positions?.length ?? '—') : '—'}</span>
+                </button>
+                <button
+                  role="tab"
+                  tabIndex={table === 'orders' ? 0 : -1}
+                  aria-selected={table === 'orders'}
+                  className={table === 'orders' ? 'active' : ''}
+                  onClick={() => changeView('orders')}
+                >
+                  {text('Working orders', '当前挂单')}{' '}
+                  <span>
+                    {orders.isSuccess
+                      ? orders.data.items.filter((order) => order.status === 'pending').length
+                      : '—'}
+                  </span>
+                </button>
+              </div>
+              <details
+                className="desk-view-disclosure"
+                open={viewsOpen}
+                onToggle={(event) => setViewsOpen(event.currentTarget.open)}
+              >
+                <summary>
+                  {text('Analysis & controls', '分析与控制')}
+                  {!['positions', 'orders'].includes(table) && (
+                    <span>
+                      {t(
+                        (
+                          {
+                            performance: 'Forward performance',
+                            contributions: 'Contribution',
+                            analytics: 'Exposure & scenarios',
+                            managed: 'Managed portfolios',
+                            strategies: 'Strategies',
+                            releases: 'Paper releases',
+                            ledger: 'Ledger',
+                          } as Record<string, string>
+                        )[table] ?? table,
+                      )}
+                    </span>
+                  )}
+                </summary>
+                <div className="desk-view-groups">
+                  <div>
+                    <span>{text('Account analysis', '账户分析')}</span>
+                    {[
+                      ['performance', 'Forward performance'],
+                      ['analytics', 'Exposure & scenarios'],
+                      ['contributions', 'Contribution'],
+                    ].map(([key, label]) => (
+                      <button
+                        key={key}
+                        className={table === key ? 'active' : ''}
+                        aria-pressed={table === key}
+                        onClick={() => changeView(key)}
+                      >
+                        {t(label)}
+                      </button>
+                    ))}
+                  </div>
+                  <div>
+                    <span>{text('Strategy operations', '策略操作')}</span>
+                    {[
+                      ['managed', 'Managed portfolios'],
+                      ['strategies', 'Strategies'],
+                      ['releases', 'Paper releases'],
+                      ['ledger', 'Ledger'],
+                    ].map(([key, label]) => (
+                      <button
+                        key={key}
+                        className={table === key ? 'active' : ''}
+                        aria-pressed={table === key}
+                        onClick={() => changeView(key)}
+                      >
+                        {t(label)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </details>
+            </div>
+            <p className="desk-money-unit">
+              {text(
+                'Monetary values in USDT. Quantities use the instrument units shown.',
+                '金额单位为 USDT；数量使用各品种标明的单位。',
+              )}
+            </p>
             {table === 'performance' && (
               <Suspense fallback={<Loading />}>
                 <ForwardPerformance
@@ -395,7 +606,7 @@ export default function Portfolio({
                 initialGroupId={initialGroupId}
                 initialReleaseId={initialReleaseId}
                 onSelectGroup={(id) => changeView(id ? `managed:${id}` : 'managed')}
-                onProtectPosition={(position) => setProtection({ source, position })}
+                onProtectPosition={protectPosition}
                 onInspectPositions={() => changeView('positions')}
               />
             )}
@@ -424,10 +635,23 @@ export default function Portfolio({
               ) : (
                 <DataTable
                   rows={a?.positions ?? []}
+                  rowKey={(position) => String(position.inst_id)}
+                  searchLabel="Search positions"
+                  searchKeys={['inst_id', 'side', 'inst_type']}
+                  compactColumns={[
+                    'inst_id',
+                    'quantity',
+                    'liquidation_price',
+                    'unrealized_pnl',
+                    'protect',
+                  ]}
+                  compactLabel={t('Positions')}
                   empty="No positions"
                   columns={[
                     {
                       key: 'inst_id',
+                      sticky: 'identity',
+                      sortable: true,
                       label: 'Market',
                       render: (p) => (
                         <div className="table-stacked">
@@ -440,6 +664,8 @@ export default function Portfolio({
                     },
                     {
                       key: 'quantity',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Quantity',
                       render: (p) => (
                         <div className="table-stacked">
@@ -450,11 +676,15 @@ export default function Portfolio({
                     },
                     {
                       key: 'entry_price',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Entry price',
                       render: (p) => price(p.entry_price),
                     },
                     {
                       key: 'mark',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Mark',
                       render: (p) => (
                         <div className="table-stacked">
@@ -466,11 +696,15 @@ export default function Portfolio({
                     { key: 'margin', label: 'Margin', render: (p) => number(p.margin) },
                     {
                       key: 'maintenance_margin',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Maintenance margin',
                       render: (p) => number(p.maintenance_margin),
                     },
                     {
                       key: 'liquidation_price',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Liquidation price',
                       render: (p) => (
                         <div className="table-stacked">
@@ -483,11 +717,15 @@ export default function Portfolio({
                     },
                     {
                       key: 'leverage',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Leverage',
                       render: (p) => (p.inst_type === 'SWAP' ? `${p.leverage}×` : '—'),
                     },
                     {
                       key: 'unrealized_pnl',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Unrealized P&L',
                       render: (p) => (
                         <span className={tone(p.unrealized_pnl)}>{number(p.unrealized_pnl)}</span>
@@ -495,12 +733,13 @@ export default function Portfolio({
                     },
                     {
                       key: 'protect',
+                      sticky: 'action',
                       label: 'Actions',
                       render: (p) => (
                         <button
                           className="text-button"
                           disabled={!canOperate}
-                          onClick={() => setProtection({ source, position: p })}
+                          onClick={() => protectPosition(p)}
                         >
                           {t('Reduce account position')}
                         </button>
@@ -509,6 +748,24 @@ export default function Portfolio({
                   ]}
                 />
               ))}{' '}
+            {table === 'orders' && (
+              <div className="desk-order-scope" aria-label={t('Orders')}>
+                <button
+                  className={orderScope === 'working' ? 'active' : ''}
+                  aria-pressed={orderScope === 'working'}
+                  onClick={() => setOrderScope('working')}
+                >
+                  {text('Working', '当前挂单')}
+                </button>
+                <button
+                  className={orderScope === 'all' ? 'active' : ''}
+                  aria-pressed={orderScope === 'all'}
+                  onClick={() => setOrderScope('all')}
+                >
+                  {text('All orders & outcomes', '全部订单与结果')}
+                </button>
+              </div>
+            )}
             {table === 'orders' &&
               (orders.isPending ? (
                 <Loading />
@@ -516,11 +773,27 @@ export default function Portfolio({
                 <ErrorBox error={orders.error} />
               ) : (
                 <DataTable
-                  rows={orders.data?.items ?? []}
-                  empty="No orders"
+                  rows={(orders.data?.items ?? []).filter(
+                    (order) => orderScope === 'all' || order.status === 'pending',
+                  )}
+                  rowKey={(order) => String(order.id)}
+                  searchLabel="Search orders"
+                  searchKeys={['inst_id', 'side', 'order_type', 'status']}
+                  compactColumns={[
+                    'inst_id',
+                    'side',
+                    'quantity',
+                    'limit_price',
+                    'status',
+                    'actions',
+                  ]}
+                  compactLabel={text('Working orders', '当前挂单')}
+                  empty={orderScope === 'working' ? 'No working orders' : 'No orders'}
                   columns={[
                     {
                       key: 'inst_id',
+                      sticky: 'identity',
+                      sortable: true,
                       label: 'Market',
                       render: (o) => (
                         <div className="table-stacked">
@@ -533,6 +806,9 @@ export default function Portfolio({
                     { key: 'order_type', label: 'Order type' },
                     {
                       key: 'quantity',
+                      sortValue: (order) => order.requested_quantity ?? order.quantity,
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Requested / filled',
                       render: (o) => (
                         <div className="table-stacked">
@@ -552,6 +828,14 @@ export default function Portfolio({
                     },
                     {
                       key: 'limit_price',
+                      sortValue: (order) =>
+                        order.order_type === 'limit'
+                          ? order.limit_price
+                          : order.order_type === 'stop_market'
+                            ? order.stop_price
+                            : null,
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Limit / trigger',
                       render: (o) =>
                         o.order_type === 'limit'
@@ -562,11 +846,15 @@ export default function Portfolio({
                     },
                     {
                       key: 'price',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Fill price',
                       render: (o) => (o.status === 'filled' ? price(o.price) : '—'),
                     },
                     {
                       key: 'fee',
+                      sortable: true,
+                      sortType: 'number',
                       label: 'Fee',
                       render: (o) => (o.status === 'filled' ? number(o.fee, 4) : '—'),
                     },
@@ -589,6 +877,7 @@ export default function Portfolio({
                     },
                     {
                       key: 'actions',
+                      sticky: 'action',
                       label: 'Actions',
                       render: (o) => (
                         <div className="table-actions">
@@ -738,51 +1027,88 @@ export default function Portfolio({
             {cancel.isError && <ErrorBox error={cancel.error} />}
             {stop.isError && <ErrorBox error={stop.error} />}
           </section>
-          <section className="pro-panel account-detail-panel">
-            <div className="section-heading">
-              <h2>{t('Account accounting')}</h2>
-              <span className="quiet-copy">{date(a?.as_of)}</span>
-            </div>
-            <RecordGrid
-              value={{
-                cash: a?.cash,
-                realized_pnl: a?.realized_pnl,
-                fees_paid: a?.fees_paid,
-                funding_paid: a?.funding_paid,
-                insurance_debt: a?.insurance_debt,
-                reserved_cash: a?.reserved_cash,
-                valuation_status: a?.valuation_status,
-              }}
-            />
-            <JsonDetails value={a} label="Details" />
-          </section>
-          <ExecutionRisk source={source} />
+          {source === 'example' && (
+            <details className="desk-account-details">
+              <summary>{t('Synthetic market clock')}</summary>
+              <SimulationClock />
+            </details>
+          )}
+          <details className="desk-account-details">
+            <summary>
+              {t('Account accounting')} <span>{t('Details')}</span>
+            </summary>
+            <section className="pro-panel account-detail-panel">
+              <div className="section-heading">
+                <h2>{t('Account accounting')}</h2>
+                <span className="quiet-copy">{date(a?.as_of)}</span>
+              </div>
+              <RecordGrid
+                value={{
+                  cash: a?.cash,
+                  realized_pnl: a?.realized_pnl,
+                  fees_paid: a?.fees_paid,
+                  funding_paid: a?.funding_paid,
+                  insurance_debt: a?.insurance_debt,
+                  reserved_cash: a?.reserved_cash,
+                  valuation_status: a?.valuation_status,
+                }}
+              />
+              <JsonDetails value={a} label="Details" />
+            </section>
+          </details>
+          <details className="desk-account-details desk-risk-controls">
+            <summary>
+              {t('Risk limits')}{' '}
+              <Status type={risk.data?.halted ? 'bad' : 'neutral'}>
+                {risk.isSuccess
+                  ? t(risk.data.halted ? 'Execution halted' : 'New risk enabled')
+                  : t('Risk status unavailable')}
+              </Status>
+            </summary>
+            <ExecutionRisk source={source} />
+          </details>
         </div>
-        {!['managed', 'contributions'].includes(table) && (
-          <aside className="pro-panel execution-ticket">
+        {ticketOpen && (
+          <aside
+            id="desk-order-ticket"
+            ref={ticketRef}
+            className="pro-panel execution-ticket desk-order-ticket"
+            aria-label={t('Submit order')}
+          >
             <div className="section-heading">
-              <h2>{t('Submit order')}</h2>
-              <Activity size={17} />
+              <h2 tabIndex={-1}>{t('Submit order')}</h2>
+              <button
+                className="icon-button"
+                aria-label={text('Close order ticket', '关闭订单面板')}
+                onClick={closeTicket}
+              >
+                <X size={18} />
+              </button>
             </div>
+            <p className="desk-ticket-context">
+              {symbol} · {a?.execution_mode ?? '—'} ·{' '}
+              {source === 'example' ? t('Example · synthetic') : t('OKX public')}
+            </p>
             {market.data && (
               <div className="ticket-quotes">
                 <div>
                   <span>{t('Last price')}</span>
-                  <strong>{price(market.data.last)}</strong>
+                  <strong>{price(market.data.last, instrument.tick_size)}</strong>
                 </div>
                 <div>
                   <span>
                     {t('Bid')} / {t('Ask')}
                   </span>
                   <strong>
-                    {price(market.data.bid)} / {price(market.data.ask)}
+                    {price(market.data.bid, instrument.tick_size)} /{' '}
+                    {price(market.data.ask, instrument.tick_size)}
                   </strong>
                 </div>
                 {product === 'SWAP' && (
                   <>
                     <div>
                       <span>{t('Mark price')}</span>
-                      <strong>{price(market.data.mark)}</strong>
+                      <strong>{price(market.data.mark, instrument.tick_size)}</strong>
                     </div>
                     <div>
                       <span>{t('Funding rate')}</span>
@@ -853,6 +1179,17 @@ export default function Portfolio({
                   <option value="stop_market">{t('Stop market order')}</option>
                 </select>
               </Field>
+              <BudgetSizing
+                source={source}
+                symbol={symbol}
+                product={product}
+                side={side}
+                orderType={orderType}
+                limitPrice={limitPrice}
+                market={market.data}
+                now={now}
+                onApply={setQuantity}
+              />
               <Field label="Quantity" hint={product === 'SWAP' ? t('Contracts') : t('Base units')}>
                 <input
                   required
@@ -868,8 +1205,8 @@ export default function Portfolio({
                   <input
                     required
                     type="number"
-                    min="0.00000001"
-                    step="any"
+                    min={String(instrument.tick_size ?? '0.00000000000000000001')}
+                    step={String(instrument.tick_size ?? 'any')}
                     value={limitPrice}
                     onChange={(e) => setLimitPrice(e.target.value)}
                   />
@@ -880,8 +1217,8 @@ export default function Portfolio({
                   <input
                     required
                     type="number"
-                    min="0.00000001"
-                    step="any"
+                    min={String(instrument.tick_size ?? '0.00000000000000000001')}
+                    step={String(instrument.tick_size ?? 'any')}
                     value={stopPrice}
                     onChange={(e) => setStopPrice(e.target.value)}
                   />
@@ -1059,7 +1396,7 @@ export default function Portfolio({
           </section>
         </div>
       )}
-    </>
+    </div>
   );
 }
 export function ExecutionRisk({

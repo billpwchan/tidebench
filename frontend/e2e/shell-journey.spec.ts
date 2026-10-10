@@ -1,3 +1,4 @@
+import { expandSnapshotBasis } from './desk-helpers';
 import { expect, test, type Page } from '@playwright/test';
 
 type Item = Record<string, unknown>;
@@ -321,6 +322,7 @@ test('returning from execution keeps money and positions paired with the exposur
   await expect(page.locator('.overview-book')).not.toContainText('ADA-USDT');
   await expect(page.locator('.overview-exposures')).toContainText('No asset exposure');
   await expect(page.locator('.trader-metrics')).not.toContainText('9,996.00');
+  await expandSnapshotBasis(page);
   await expect(
     page.getByText('Account and exposure values share one captured snapshot.', { exact: true }),
   ).toBeVisible();
@@ -360,6 +362,7 @@ for (const invalid of [
       page.getByText('Account and exposure values share one captured snapshot.', { exact: true }),
     ).toHaveCount(0);
     state.analytics = snapshotReport(captured);
+    await expandSnapshotBasis(page);
     await page.getByRole('button', { name: 'Refresh snapshot', exact: true }).click();
     await expect(overviewMetric(page, 'Account equity')).toContainText('9,995.00');
     await expect(overviewMetric(page, 'Gross exposure')).toHaveText(/^\s*0\.00\s*USDT\s*$/);
@@ -573,14 +576,14 @@ test('historical failures cannot bury active work and both task lists expose the
   });
   const next = page.getByRole('region', { name: 'Next actions', exact: true });
   const current = next.locator('ol.journey-list').first();
-  await expect(current.locator('.journey-item')).toHaveCount(6);
+  await expect(current.locator('.journey-item')).toHaveCount(2);
   await expect(current).toContainText('active-current-run-0');
   await expect(current).not.toContainText('failed-old-run-');
   await next.getByRole('button', { name: 'Show all 8 tasks', exact: true }).click();
   await expect(current.locator('.journey-item')).toHaveCount(8);
   await expect(next).toContainText('Older runs may not be shown.');
   const history = next.locator('.journey-history');
-  await history.locator('summary').click();
+  await history.locator(':scope > summary').click();
   await expect(history.locator('.journey-item')).toHaveCount(2);
   await expect(history.locator('.journey-item').first()).toContainText('failed-old-run-7');
   await history.getByRole('button', { name: 'Show all 8 failed tasks', exact: true }).click();

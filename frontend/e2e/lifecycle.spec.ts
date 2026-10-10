@@ -1,3 +1,4 @@
+import { expandResearchPolicy } from './desk-helpers';
 import { expect, test as base, type APIRequestContext, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -180,6 +181,7 @@ test('lifecycle source imports run causally, revise restores inputs, and one-use
   await page.getByLabel('Rebalance every N bars', { exact: true }).fill('1');
   await page.getByLabel('Fee (bps)', { exact: true }).fill('0');
   await page.getByLabel('Slippage (bps)', { exact: true }).fill('0');
+  await expandResearchPolicy(page);
   await page.getByLabel('Daily loss limit %', { exact: true }).fill('50');
   const queued = page.waitForResponse(
     (r) => r.url().endsWith('/pro/research/portfolios') && r.request().method() === 'POST',
@@ -291,6 +293,7 @@ test('lifecycle source imports run causally, revise restores inputs, and one-use
     .fill(new Date(holdEnd).toISOString().slice(0, 16));
   await page.getByLabel('Fee (bps)', { exact: true }).fill('0');
   await page.getByLabel('Slippage (bps)', { exact: true }).fill('0');
+  await expandResearchPolicy(page);
   await page.getByLabel('Daily loss limit %', { exact: true }).fill('50');
   await page.getByLabel('Minimum return versus cash %', { exact: true }).fill('-100');
   await page.getByLabel('Maximum accepted drawdown %', { exact: true }).fill('100');

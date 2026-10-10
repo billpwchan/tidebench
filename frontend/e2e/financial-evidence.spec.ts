@@ -1,3 +1,4 @@
+import { executionView } from './desk-helpers';
 import { expect, test as base } from '@playwright/test';
 
 const test = base.extend({ request: async ({ context }, use) => use(context.request) });
@@ -49,7 +50,7 @@ test('real local-paper account freezes a whole observation window and verifies i
       .getByRole('navigation')
       .getByRole('button', { name: 'Execution', exact: true })
       .click();
-    await page.getByRole('tab', { name: 'Forward performance', exact: true }).click();
+    await executionView(page, 'Forward performance');
     await expect(page.getByText('Window observations', { exact: true })).toBeVisible();
     await expect(
       page.getByRole('cell', { name: 'Public OKX market observations', exact: true }),
@@ -92,7 +93,7 @@ test('real local-paper account freezes a whole observation window and verifies i
     .getByRole('navigation')
     .getByRole('button', { name: 'Execution', exact: true })
     .click();
-  await page.getByRole('tab', { name: 'Forward performance', exact: true }).click();
+  await executionView(page, 'Forward performance');
   const history = page.getByRole('region', { name: 'Frozen account windows', exact: true });
   await expect(history).toContainText('Hash valid · not recomputed');
   await history.getByRole('button', { name: 'Open frozen window', exact: true }).first().click();
