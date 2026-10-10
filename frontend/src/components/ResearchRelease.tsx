@@ -7,6 +7,7 @@ import { ErrorBox, Field, Loading, Status } from './workspace';
 import { useDialogFocus } from '../lib/hooks';
 import { useI18n } from '../lib/i18n';
 import { canTrade } from '../lib/permissions';
+import { useReceiptOwnership, type ReceiptTask } from '../lib/receiptOwnership';
 import { proApi } from '../proApi';
 import type { PaperRelease, ProRun } from '../proApi';
 
@@ -34,7 +35,7 @@ export default function ResearchRelease({
 }: {
   run: ProRun;
   variant: string;
-  onExecution: () => void;
+  onExecution: (id?: string) => void;
 }) {
   const { t } = useI18n();
   const qc = useQueryClient();
@@ -45,15 +46,17 @@ export default function ResearchRelease({
   const [approved, setApproved] = useState<PaperRelease>();
   const training = variant.includes(':') && !variant.endsWith(':test');
   const selection = variant.endsWith(':test') ? variant.split(':')[0] : variant || 'single';
+  const receipt = useReceiptOwnership(JSON.stringify([run.id, selection]));
   const preview = useMutation({
-    mutationFn: () => proApi.previewRelease(run.id, selection),
-    onSuccess: () => {
+    mutationFn: (_task: ReceiptTask) => proApi.previewRelease(run.id, selection),
+    onSuccess: (_result, task) => {
+      if (!receipt.owns(task)) return;
       setAcknowledgements([]);
       setApproved(undefined);
     },
   });
   const approval = useMutation({
-    mutationFn: () =>
+    mutationFn: (_task: ReceiptTask) =>
       proApi.approveRelease({
         run_id: run.id,
         selection,
@@ -61,30 +64,45 @@ export default function ResearchRelease({
         acknowledgements,
         review,
       }),
-    onSuccess: (release) => {
-      setApproved(release);
+    onSuccess: (release, task) => {
       void qc.invalidateQueries({ queryKey: ['paper-releases'] });
       void qc.invalidateQueries({ queryKey: ['strategy-projects'] });
+      if (receipt.owns(task)) setApproved(release);
     },
   });
   const activation = useMutation({
-    mutationFn: () => proApi.activateRelease(approved!.id),
-    onSuccess: (release) => {
-      setApproved(release);
+    mutationFn: ({ id }: { id: string; task: ReceiptTask }) => proApi.activateRelease(id),
+    onSuccess: (release, submitted) => {
       void qc.invalidateQueries({ queryKey: ['pro-deployments'] });
       void qc.invalidateQueries({ queryKey: ['paper-releases'] });
+      if (receipt.owns(submitted.task) && release.id === submitted.id) setApproved(release);
     },
   });
-  useDialogFocus(open, '.release-dialog', () => setOpen(false));
+  const close = () => {
+    receipt.invalidate();
+    setOpen(false);
+  };
+  useDialogFocus(open, '.release-dialog', close);
   const start = () => {
+    receipt.invalidate();
     setOpen(true);
     setReview('');
     approval.reset();
     activation.reset();
     setApproved(undefined);
-    preview.mutate();
+    preview.mutate(receipt.capture('preview'));
   };
-  const data = preview.data;
+  const refreshPreview = () => {
+    receipt.invalidate();
+    approval.reset();
+    activation.reset();
+    setApproved(undefined);
+    preview.mutate(receipt.capture('preview'));
+  };
+  const data = receipt.owns(preview.variables) ? preview.data : undefined;
+  const previewPending = preview.isPending && receipt.owns(preview.variables);
+  const approvalPending = approval.isPending && receipt.owns(approval.variables);
+  const activationPending = activation.isPending && receipt.owns(activation.variables?.task);
   return (
     <>
       <button
@@ -101,7 +119,7 @@ export default function ResearchRelease({
         {t('Review paper release')}
       </button>
       {open && (
-        <div className="modal-backdrop" onClick={() => setOpen(false)}>
+        <div className="modal-backdrop" onClick={close}>
           <section
             className="wide-dialog release-dialog"
             role="dialog"
@@ -114,18 +132,14 @@ export default function ResearchRelease({
                 <p className="eyebrow">{t('RESEARCH → PAPER')}</p>
                 <h2>{t('Review paper release')}</h2>
               </div>
-              <button
-                className="icon-button"
-                aria-label={t('Close')}
-                onClick={() => setOpen(false)}
-              >
+              <button className="icon-button" aria-label={t('Close')} onClick={close}>
                 <X size={18} />
               </button>
             </div>
-            {preview.isPending ? (
+            {previewPending ? (
               <Loading />
-            ) : preview.isError ? (
-              <ErrorBox error={preview.error} onRetry={() => preview.mutate()} />
+            ) : preview.isError && receipt.owns(preview.variables) ? (
+              <ErrorBox error={preview.error} onRetry={refreshPreview} />
             ) : (
               data && (
                 <>
@@ -184,7 +198,7 @@ export default function ResearchRelease({
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
-                        approval.mutate();
+                        approval.mutate(receipt.capture('approval'));
                       }}
                     >
                       <Field label="Release review">
@@ -193,6 +207,7 @@ export default function ResearchRelease({
                           minLength={12}
                           maxLength={2000}
                           rows={3}
+                          disabled={approvalPending}
                           value={review}
                           onChange={(e) => setReview(e.target.value)}
                           placeholder={t(
@@ -205,6 +220,7 @@ export default function ResearchRelease({
                           <input
                             type="checkbox"
                             required
+                            disabled={approvalPending}
                             checked={acknowledgements.includes(code)}
                             onChange={(e) =>
                               setAcknowledgements((existing) =>
@@ -217,11 +233,13 @@ export default function ResearchRelease({
                           <span>{t(acknowledgementText[code] ?? code)}</span>
                         </label>
                       ))}
-                      {approval.isError && <ErrorBox error={approval.error} />}
+                      {approval.isError && receipt.owns(approval.variables) && (
+                        <ErrorBox error={approval.error} />
+                      )}
                       <div className="toolbar">
                         <button
                           className="button button-citrus"
-                          disabled={!canOperate || approval.isPending || data.blockers.length > 0}
+                          disabled={!canOperate || approvalPending || data.blockers.length > 0}
                         >
                           <Check size={14} />
                           {t('Approve paper release')}
@@ -229,10 +247,7 @@ export default function ResearchRelease({
                         <button
                           type="button"
                           className="button button-secondary"
-                          onClick={() => {
-                            approval.reset();
-                            preview.mutate();
-                          }}
+                          onClick={refreshPreview}
                         >
                           <RefreshCw size={14} />
                           {t('Refresh preview')}
@@ -248,14 +263,16 @@ export default function ResearchRelease({
                         {t('Approval is saved with its research, strategy and policy identities.')}
                       </p>
                       <code className="content-hash">{approved.approval_hash}</code>
-                      {activation.isError && <ErrorBox error={activation.error} />}
+                      {activation.isError && receipt.owns(activation.variables?.task) && (
+                        <ErrorBox error={activation.error} />
+                      )}
                       <div className="toolbar">
                         {approved.status === 'deployed' ? (
                           <button
                             className="button button-citrus"
                             onClick={() => {
-                              setOpen(false);
-                              onExecution();
+                              close();
+                              onExecution(approved.deployment_id ?? undefined);
                             }}
                           >
                             <ArrowUpRight size={14} />
@@ -264,8 +281,13 @@ export default function ResearchRelease({
                         ) : (
                           <button
                             className="button button-citrus"
-                            disabled={activation.isPending}
-                            onClick={() => activation.mutate()}
+                            disabled={activationPending}
+                            onClick={() =>
+                              activation.mutate({
+                                id: approved.id,
+                                task: receipt.capture('activation'),
+                              })
+                            }
                           >
                             <Play size={14} />
                             {t('Activate paper release')}

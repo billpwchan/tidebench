@@ -1,15 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { FlaskConical } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { Bar, Source } from './api';
 import { api } from './api';
 import AuthGate from './components/AuthGate';
 import WorkspaceViewBoundary from './components/WorkspaceViewBoundary';
 import { WorkspaceTabs } from './components/ProWorkspace';
-import { Loading, PageHeading, SourceBadge } from './components/workspace';
+import { ErrorBox, Loading, PageHeading, SourceBadge } from './components/workspace';
 import { MarketSearch, Sidebar, Topbar } from './components/WorkspaceShell';
 import type { Page } from './lib/config';
-import type { ResearchInputs, StrategyVersion } from './proApi';
+import { useWorkspaceLocation, validView } from './lib/workspaceLocation';
+import WorkspaceJourney from './components/WorkspaceJourney';
+import WorkspaceActivity from './components/WorkspaceActivity';
+import type { ResearchInputs } from './proApi';
+import { proApi } from './proApi';
 import { useDialogFocus, useMediaQuery } from './lib/hooks';
 import { LanguageProvider, useI18n } from './lib/i18n';
 import Overview from './pages/Overview';
@@ -27,17 +31,6 @@ const PortfolioResearch = lazy(() => import('./pages/PortfolioResearch'));
 const ResearchGovernance = lazy(() => import('./pages/ResearchGovernance'));
 const Strategies = lazy(() => import('./pages/Strategies'));
 
-const routes: Page[] = [
-  'strategies',
-  'overview',
-  'research',
-  'execution',
-  'paper',
-  'risk',
-  'data',
-  'operations',
-  'settings',
-];
 export default function App() {
   return (
     <LanguageProvider>
@@ -49,22 +42,71 @@ export default function App() {
 }
 function Workspace() {
   const { t } = useI18n();
-  const [page, setPage] = useState<Page>(() => {
-    const hash = window.location.hash.slice(1);
-    return routes.includes(hash as Page) ? (hash as Page) : 'overview';
-  });
-  const [source, setSourceState] = useState<Source>(() =>
-    localStorage.getItem('tidebench:source') === 'example' ? 'example' : 'okx',
-  );
-  const [symbol, setSymbol] = useState('BTC-USDT');
+  const [location, setLocation] = useWorkspaceLocation();
+  const { page, source } = location;
+  const symbol = location.symbol ?? 'BTC-USDT';
+  const setSymbol = (symbol: string) => setLocation({ ...location, symbol }, true);
   const [bar, setBar] = useState<Bar>('1H');
-  const [researchTab, setResearchTab] = useState('advanced');
-  const [selectedRunId, setSelectedRunId] = useState<string>();
-  const [selectedPortfolioRun, setSelectedPortfolioRun] = useState<string>();
-  const [selectedInputs, setSelectedInputs] = useState<ResearchInputs | undefined>();
-  const [selectedVersion, setSelectedVersion] = useState<StrategyVersion | undefined>();
-  const [executionView, setExecutionView] = useState('positions');
-  const [operationsView, setOperationsView] = useState('feeds');
+  const researchTab = page === 'research' ? (location.view ?? 'advanced') : 'advanced';
+  const setResearchTab = (view: string) =>
+    setLocation({ ...location, page: 'research', view, runId: undefined });
+  const [manualInputs, setManualInputs] = useState<{ source: Source; inputs: ResearchInputs }>();
+  const preparedPackage = useQuery({
+    queryKey: ['workspace-package', source, location.packageId],
+    queryFn: async () => {
+      const item = await proApi.package(location.packageId!);
+      if (item.source !== source)
+        throw new Error(t('The selected package belongs to another data source.'));
+      return item;
+    },
+    enabled: !!location.packageId && (page === 'research' || page === 'data'),
+  });
+  const strategyVersion = useQuery({
+    queryKey: ['workspace-strategy-version', location.versionId],
+    queryFn: () => proApi.strategyVersion(location.versionId!),
+    enabled: !!location.versionId && page === 'research' && researchTab === 'advanced',
+  });
+  const selectedInputs = location.packageId
+    ? preparedPackage.data?.research_inputs
+    : manualInputs?.source === source
+      ? manualInputs.inputs
+      : undefined;
+  const setSource = (next: Source) => {
+    setManualInputs(undefined);
+    setLocation({
+      page,
+      source: next,
+      view: validView(page, location.view?.split(':')[0]),
+      symbol,
+    });
+  };
+  const navigate = (nextPage: Page, requested?: string) => {
+    let next = { page: nextPage, source, symbol, view: validView(nextPage, requested) };
+    if (nextPage === 'research' && requested?.startsWith('run:')) {
+      setLocation({ ...next, view: 'advanced', runId: requested.slice(4) });
+    } else if (nextPage === 'research' && requested?.startsWith('portfolio:')) {
+      setLocation({ ...next, view: 'portfolio', runId: requested.slice(10) });
+    } else if (nextPage === 'data' && requested?.startsWith('package:')) {
+      setLocation({ ...next, view: 'packages', packageId: requested.slice(8) });
+    } else if (nextPage === 'data' && page === 'research') {
+      setLocation({
+        ...location,
+        ...next,
+        returnTo: researchTab === 'portfolio' ? 'portfolio' : 'advanced',
+      });
+    } else {
+      setLocation(next);
+    }
+    setMobileNav(false);
+    window.scrollTo(0, 0);
+  };
+  const lastPage = useRef(page);
+  useEffect(() => {
+    if (lastPage.current !== page) {
+      document.getElementById('main-content')?.focus({ preventScroll: true });
+      lastPage.current = page;
+    }
+  }, [page]);
   const [mobileNav, setMobileNav] = useState(false);
   const compactNavigation = useMediaQuery('(max-width: 850px)');
   useEffect(() => {
@@ -79,30 +121,6 @@ function Workspace() {
     refetchInterval: source === 'okx' ? 5000 : false,
     enabled: page === 'paper',
   });
-  const setSource = (s: Source) => {
-    setSourceState(s);
-    setSelectedInputs(undefined);
-    setSelectedVersion(undefined);
-    setSelectedRunId(undefined);
-    setSelectedPortfolioRun(undefined);
-    localStorage.setItem('tidebench:source', s);
-  };
-  const navigate = (p: Page, view?: string) => {
-    if (p === 'execution') setExecutionView(view ?? 'positions');
-    if (p === 'operations') setOperationsView(view ?? 'feeds');
-    setPage(p);
-    window.location.hash = p;
-    setMobileNav(false);
-    window.scrollTo(0, 0);
-  };
-  useEffect(() => {
-    const onHash = () => {
-      const p = window.location.hash.slice(1);
-      if (routes.includes(p as Page)) setPage(p as Page);
-    };
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -142,11 +160,21 @@ function Workspace() {
           setSearchOpen={setSearchOpen}
           executionMode={system.data?.execution}
         />
-        <main id="main-content" className={`page-content page-${page}`}>
+        <main id="main-content" tabIndex={-1} className={`page-content page-${page}`}>
           <div className="source-bar">
-            <SourceBadge source={source} />
+            {page === 'operations' ? (
+              <span className="scope-note">
+                {t(
+                  'Operations covers all data sources. Liquidity observations use public OKX data.',
+                )}
+              </span>
+            ) : (
+              <SourceBadge source={source} />
+            )}
             <div className="source-control">
-              <span>{t('Data source')}</span>
+              <span>
+                {t(page === 'operations' ? 'Source for research and execution' : 'Data source')}
+              </span>
               <select
                 aria-label="Market source"
                 value={source}
@@ -157,7 +185,8 @@ function Workspace() {
               </select>
             </div>
           </div>
-          {source === 'example' && (
+          <WorkspaceActivity source={source} navigate={navigate} />
+          {source === 'example' && page !== 'operations' && (
             <div className="example-notice">
               <FlaskConical size={14} />
               <span>
@@ -167,138 +196,234 @@ function Workspace() {
               </span>
             </div>
           )}
-          <WorkspaceViewBoundary key={`${page}:${researchTab}:${source}`}>
-            <Suspense fallback={<Loading />}>
-              {page === 'overview' && (
-                <Overview
-                  key={source}
-                  source={source}
-                  symbol={symbol}
-                  setSymbol={setSymbol}
-                  navigate={navigate}
-                />
-              )}
-              {page === 'research' && (
-                <>
-                  <WorkspaceTabs
-                    value={researchTab}
-                    onChange={setResearchTab}
-                    items={[
-                      { key: 'advanced', label: 'Advanced' },
-                      { key: 'portfolio', label: 'Portfolio research' },
-                      { key: 'governance', label: 'Research governance' },
-                      { key: 'classic', label: 'Classic' },
-                    ]}
+          {page === 'research' && preparedPackage.data?.ready === false ? (
+            <div>
+              <ErrorBox
+                error={
+                  new Error(
+                    t(
+                      'This research package is not ready. Inspect its preparation before binding it to a study.',
+                    ),
+                  )
+                }
+                onRetry={() => void preparedPackage.refetch()}
+              />
+              <button
+                className="button button-secondary"
+                onClick={() => navigate('data', 'package:' + location.packageId)}
+              >
+                {t('Inspect research package')}
+              </button>
+            </div>
+          ) : page === 'research' && (strategyVersion.isError || preparedPackage.isError) ? (
+            <ErrorBox
+              error={strategyVersion.error ?? preparedPackage.error}
+              onRetry={() => {
+                void strategyVersion.refetch();
+                void preparedPackage.refetch();
+              }}
+            />
+          ) : page === 'research' &&
+            ((!!location.versionId && strategyVersion.isPending && researchTab === 'advanced') ||
+              (!!location.packageId && preparedPackage.isPending)) ? (
+            <Loading />
+          ) : (
+            <WorkspaceViewBoundary key={`${page}:${researchTab}:${source}`}>
+              <Suspense fallback={<Loading />}>
+                {page === 'overview' && (
+                  <Overview
+                    key={source}
+                    source={source}
+                    marketRequested={location.view === 'market'}
+                    journey={<WorkspaceJourney source={source} navigate={navigate} />}
+                    symbol={symbol}
+                    setSymbol={setSymbol}
+                    navigate={navigate}
                   />
-                  {researchTab === 'governance' ? (
-                    <ResearchGovernance
-                      source={source}
-                      onPortfolioRun={(id) => {
-                        setSelectedPortfolioRun(id);
-                        setResearchTab('portfolio');
-                      }}
-                      onRun={(id) => {
-                        setSelectedVersion(undefined);
-                        setSelectedInputs(undefined);
-                        setSelectedRunId(id);
-                        setResearchTab('advanced');
-                      }}
+                )}
+                {page === 'research' && (
+                  <>
+                    <WorkspaceTabs
+                      value={researchTab}
+                      onChange={setResearchTab}
+                      items={[
+                        { key: 'advanced', label: 'Advanced' },
+                        { key: 'portfolio', label: 'Portfolio research' },
+                        { key: 'governance', label: 'Research governance' },
+                        { key: 'classic', label: 'Classic' },
+                      ]}
                     />
-                  ) : researchTab === 'portfolio' ? (
-                    <PortfolioResearch
-                      key={source}
-                      source={source}
-                      initialRunId={selectedPortfolioRun}
-                      onData={() => navigate('data')}
-                      onExecution={() => navigate('execution', 'managed')}
-                    />
-                  ) : researchTab === 'advanced' ? (
-                    <ProResearch
-                      key={source}
-                      source={source}
-                      initialRunId={selectedRunId}
-                      initialInputs={selectedInputs}
-                      initialStrategyVersion={selectedVersion}
-                      onClearStrategyVersion={() => setSelectedVersion(undefined)}
-                      onOpenData={() => navigate('data')}
-                      onOpenExecution={() => navigate('execution', 'strategies')}
-                    />
-                  ) : (
-                    <ClassicResearch
-                      key={source}
-                      source={source}
-                      symbol={symbol}
-                      setSymbol={setSymbol}
-                      bar={bar}
-                      setBar={setBar}
-                      onExample={() => setSource('example')}
-                    />
-                  )}
-                </>
-              )}
-              {page === 'strategies' && (
-                <Strategies
-                  onResearch={(version) => {
-                    setSelectedRunId(undefined);
-                    setSelectedVersion(version);
-                    setResearchTab('advanced');
-                    navigate('research');
-                  }}
-                />
-              )}
-              {execution && (
-                <>
-                  <WorkspaceTabs
-                    value={page === 'risk' ? 'risk' : 'portfolio'}
-                    onChange={(value) => navigate(value === 'risk' ? 'risk' : 'execution')}
-                    items={[
-                      { key: 'portfolio', label: 'Portfolio' },
-                      { key: 'risk', label: 'Risk' },
-                    ]}
-                  />
-                  {page === 'execution' && (
-                    <Portfolio key={source} source={source} initialView={executionView} />
-                  )}
-                  {page === 'paper' && (
-                    <ClassicPaper
-                      key={source}
-                      source={source}
-                      symbol={symbol}
-                      setSymbol={setSymbol}
-                      ticker={selectedTicker}
-                    />
-                  )}
-                  {page === 'risk' && (
-                    <>
-                      <PageHeading
-                        eyebrow="EXECUTION"
-                        title="Risk"
-                        description="Portfolio limits and durable execution controls."
+                    {researchTab === 'governance' ? (
+                      <ResearchGovernance
+                        source={source}
+                        onPortfolioRun={(id) => {
+                          navigate('research', 'portfolio:' + id);
+                        }}
+                        onRun={(id) => {
+                          navigate('research', 'run:' + id);
+                        }}
                       />
-                      <ExecutionRisk key={source} source={source} analytics />
-                    </>
-                  )}
-                </>
-              )}
-              {page === 'data' && (
-                <DataLibrary
-                  key={source}
-                  source={source}
-                  onResearch={(inputs) => {
-                    setSelectedRunId(undefined);
-                    setSelectedVersion(undefined);
-                    setSelectedInputs(inputs);
-                    setResearchTab('advanced');
-                    navigate('research');
-                  }}
-                />
-              )}
-              {page === 'operations' && <Operations initialView={operationsView} />}
-              {page === 'settings' && (
-                <SettingsPage system={system.data} source={source} setSource={setSource} />
-              )}
-            </Suspense>
-          </WorkspaceViewBoundary>
+                    ) : researchTab === 'portfolio' ? (
+                      <PortfolioResearch
+                        key={source}
+                        source={source}
+                        initialRunId={location.runId}
+                        initialInputs={selectedInputs}
+                        onRunSelect={(id) => setLocation({ ...location, runId: id || undefined })}
+                        onClearDraft={() => {
+                          setManualInputs(undefined);
+                          setLocation(
+                            {
+                              ...location,
+                              runId: undefined,
+                              versionId: undefined,
+                              packageId: undefined,
+                            },
+                            true,
+                          );
+                        }}
+                        onData={() => navigate('data')}
+                        onExecution={(id) =>
+                          navigate('execution', id ? 'managed:' + id : 'managed')
+                        }
+                      />
+                    ) : researchTab === 'advanced' ? (
+                      <ProResearch
+                        key={source}
+                        source={source}
+                        initialRunId={location.runId}
+                        onRunSelect={(id) => setLocation({ ...location, runId: id || undefined })}
+                        onClearDraft={() => {
+                          setManualInputs(undefined);
+                          setLocation(
+                            {
+                              ...location,
+                              runId: undefined,
+                              versionId: undefined,
+                              packageId: undefined,
+                            },
+                            true,
+                          );
+                        }}
+                        initialInputs={selectedInputs}
+                        initialStrategyVersion={strategyVersion.data}
+                        onClearStrategyVersion={() =>
+                          setLocation({ ...location, versionId: undefined }, true)
+                        }
+                        onOpenData={() => navigate('data')}
+                        onOpenExecution={(id) =>
+                          navigate('execution', id ? 'strategies:' + id : 'strategies')
+                        }
+                      />
+                    ) : (
+                      <ClassicResearch
+                        key={source}
+                        source={source}
+                        symbol={symbol}
+                        setSymbol={setSymbol}
+                        bar={bar}
+                        setBar={setBar}
+                        onExample={() => setSource('example')}
+                      />
+                    )}
+                  </>
+                )}
+                {page === 'strategies' && (
+                  <Strategies
+                    source={source}
+                    onResearch={(version) => {
+                      setLocation({
+                        page: 'research',
+                        source,
+                        view: 'advanced',
+                        versionId: version.id,
+                        symbol,
+                      });
+                    }}
+                  />
+                )}
+                {execution && (
+                  <>
+                    <WorkspaceTabs
+                      value={page === 'risk' ? 'risk' : 'portfolio'}
+                      onChange={(value) => navigate(value === 'risk' ? 'risk' : 'execution')}
+                      items={[
+                        { key: 'portfolio', label: 'Portfolio' },
+                        { key: 'risk', label: 'Risk' },
+                      ]}
+                    />
+                    {page === 'execution' && (
+                      <Portfolio
+                        key={source}
+                        source={source}
+                        initialView={location.view}
+                        initialSymbol={symbol}
+                        onSymbolChange={setSymbol}
+                        onViewChange={(view) => setLocation({ ...location, view })}
+                      />
+                    )}
+                    {page === 'paper' && (
+                      <ClassicPaper
+                        key={source}
+                        source={source}
+                        symbol={symbol}
+                        setSymbol={setSymbol}
+                        ticker={selectedTicker}
+                      />
+                    )}
+                    {page === 'risk' && (
+                      <>
+                        <PageHeading
+                          eyebrow="EXECUTION"
+                          title="Risk"
+                          description="Portfolio limits and durable execution controls."
+                        />
+                        <ExecutionRisk key={source} source={source} analytics />
+                      </>
+                    )}
+                  </>
+                )}
+                {page === 'data' && (
+                  <DataLibrary
+                    key={source}
+                    source={source}
+                    initialView={location.view}
+                    initialPackageId={location.packageId}
+                    onViewChange={(view) => setLocation({ ...location, view })}
+                    returnTo={location.returnTo}
+                    onReturn={() =>
+                      setLocation({
+                        ...location,
+                        page: 'research',
+                        view: location.returnTo ?? 'advanced',
+                        returnTo: undefined,
+                      })
+                    }
+                    onResearch={(inputs) => {
+                      setManualInputs({ source, inputs });
+                      setLocation({
+                        ...location,
+                        page: 'research',
+                        view: location.returnTo ?? 'advanced',
+                        runId: undefined,
+                        packageId: inputs.package_id,
+                        returnTo: undefined,
+                      });
+                    }}
+                  />
+                )}
+                {page === 'operations' && (
+                  <Operations
+                    initialView={location.view}
+                    onViewChange={(view) => setLocation({ ...location, view })}
+                  />
+                )}
+                {page === 'settings' && (
+                  <SettingsPage system={system.data} source={source} setSource={setSource} />
+                )}
+              </Suspense>
+            </WorkspaceViewBoundary>
+          )}
           <footer className="page-footer">
             <span>
               Tidebench <span className="footer-dot">·</span> {t('Self-hosted')}
@@ -308,6 +433,17 @@ function Workspace() {
         </main>
       </div>
       <MarketSearch
+        source={source}
+        onSelect={(symbol, target) => {
+          setLocation({
+            page: target,
+            source,
+            symbol,
+            view: target === 'execution' ? 'positions' : 'market',
+          });
+          setSearchOpen(false);
+          setSearch('');
+        }}
         searchOpen={searchOpen}
         setSearchOpen={setSearchOpen}
         search={search}

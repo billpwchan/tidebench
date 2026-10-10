@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.12.0 · 2026-10-10
+
+- Source-aware task routing preserves exact research, package, version, approval, controller and market selection across reload and browser history. Missing identities and incomplete snapshots stay explicit.
+- User/source/form-isolated session drafts preserve strategy authoring, research costs, portfolio legs and invalid program text. Data preparation returns to the same editing intent; reviewing a result no longer silently copies it into the draft.
+- Delayed project, study, replay, review and activation receipts are bound to their requesting task. New edits, navigation and restarted review windows cannot be overwritten or redirected; previously saved server facts remain inspectable. Reselecting an active tab retains the selected result.
+- Current-task next actions prioritize economic problems and active work, with separate expandable failed history. Catalog search uses actual eligible USDT spot/perpetual instruments and locks the selected market without submitting.
+- Approval history distinguishes recorded activation from observed controller state. Activation opens its precise controller/group; managed stops disclose whole-group effect and retained inventory before submission.
+- New research prioritizes configuration; explicit result links take priority over a recovered editor without discarding its draft. Late revision responses cannot replace a new task.
+- Overview money, positions and exposure use one source-matched account capture. Return navigation refreshes it; missing captures and unknown economic equity stay unavailable rather than mixing cached accounts and model values.
+- Single and portfolio research cancellation persists requested/confirmed states, verifies actual worker exit across abrupt restart, fences completion races and retains final consumption, trials and cancellation responsibility across older backup restoration.
+- Real-backend and controlled-fault desktop/mobile user journeys verify the new contracts. See the [workflow](docs/trader-journeys.md), [audit](docs/audit/user-journey-0.12.0.zh-CN.md) and [acceptance history](docs/audit/acceptance-history-0.12.0.md).
+
 ## 0.11.0 · 2026-10-09
 
 - Native-position protective exits stop controllers and cancel working entries before preview, recheck identity before submission and retain idempotent receipts. Shared net reductions disclose all affected owners.

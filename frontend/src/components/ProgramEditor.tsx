@@ -21,19 +21,39 @@ const example = [
 export default function ProgramEditor({
   value,
   onChange,
+  rawDraft,
+  onRawDraftChange,
 }: {
+  rawDraft?: string;
+  onRawDraftChange?: (text: string) => void;
   value: Strategy;
   onChange: (s: Strategy) => void;
 }) {
   const { t } = useI18n();
   const sent = useRef(JSON.stringify(value.rules ?? []));
-  const [draft, setDraft] = useState(JSON.stringify(value.rules ?? [], null, 2));
-  const [error, setError] = useState(false);
+  const invalid = (text: string) => {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      return !Array.isArray(parsed) || !parsed.length;
+    } catch {
+      return true;
+    }
+  };
+  const [draft, setDraft] = useState(rawDraft ?? JSON.stringify(value.rules ?? [], null, 2));
+  const [error, setError] = useState(rawDraft !== undefined && invalid(rawDraft));
+  useEffect(() => {
+    if (rawDraft !== undefined) {
+      setDraft(rawDraft);
+      setError(invalid(rawDraft));
+    }
+  }, [rawDraft]);
   useEffect(() => {
     const serialized = JSON.stringify(value.rules ?? []);
     if (serialized !== sent.current) {
       sent.current = serialized;
-      setDraft(JSON.stringify(value.rules, null, 2));
+      const updated = JSON.stringify(value.rules ?? [], null, 2);
+      setDraft(updated);
+      onRawDraftChange?.(updated);
       setError(false);
     }
   }, [value.rules]);
@@ -51,6 +71,7 @@ export default function ProgramEditor({
           aria-invalid={error}
           onChange={(e) => {
             setDraft(e.target.value);
+            onRawDraftChange?.(e.target.value);
             try {
               const rules: unknown = JSON.parse(e.target.value);
               if (!Array.isArray(rules) || !rules.length) throw new Error();

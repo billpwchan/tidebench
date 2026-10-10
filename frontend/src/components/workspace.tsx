@@ -204,7 +204,11 @@ export function StrategyFields({
   onChange,
   professional = false,
   showAllocation = true,
+  programDraft,
+  onProgramDraftChange,
 }: {
+  programDraft?: string;
+  onProgramDraftChange?: (text: string) => void;
   professional?: boolean;
   showAllocation?: boolean;
   value: Strategy;
@@ -428,7 +432,12 @@ export function StrategyFields({
         </>
       )}
       {professional && value.kind === 'program' && (
-        <ProgramEditor value={value} onChange={onChange} />
+        <ProgramEditor
+          value={value}
+          onChange={onChange}
+          rawDraft={programDraft}
+          onRawDraftChange={onProgramDraftChange}
+        />
       )}
       {professional && <StrategyExitFields value={value} onChange={onChange} />}
       {showAllocation && (

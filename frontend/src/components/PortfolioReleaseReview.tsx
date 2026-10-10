@@ -11,6 +11,7 @@ import { date, number } from '../lib/format';
 import PortfolioResearchSummary from './PortfolioResearchSummary';
 import PortfolioExecutionPolicy from './PortfolioExecutionPolicy';
 import { LiquidityReleaseEvidence } from './LiquidityEvidence';
+import { useReceiptOwnership, type ReceiptTask } from '../lib/receiptOwnership';
 
 const acknowledgement: Record<string, string> = {
   holdout_rejected:
@@ -50,32 +51,35 @@ export default function PortfolioReleaseReview({
 }: {
   runId: string;
   bound: boolean;
-  onExecution: () => void;
+  onExecution: (id?: string) => void;
 }) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const allowed = canTrade(useSession()?.user?.role);
   const [review, setReview] = useState('');
   const [checks, setChecks] = useState<string[]>([]);
+  const receipt = useReceiptOwnership(runId);
   const preview = useMutation({
-    mutationFn: () => proApi.previewPortfolioRelease(runId),
-    onSuccess: () => {
+    mutationFn: (_task: ReceiptTask) => proApi.previewPortfolioRelease(runId),
+    onSuccess: (_result, task) => {
+      if (!receipt.owns(task)) return;
       setChecks([]);
-      approve.reset();
-      activate.reset();
     },
   });
   const approve = useMutation({
-    mutationFn: () =>
+    mutationFn: (_task: ReceiptTask) =>
       proApi.approvePortfolioRelease({
         run_id: runId,
         preview_hash: preview.data!.preview_hash,
         review,
         acknowledgements: checks,
       }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portfolio-releases'] });
+    },
   });
   const activate = useMutation({
-    mutationFn: () => proApi.activatePortfolioRelease(approve.data!.id),
+    mutationFn: ({ id }: { id: string; task: ReceiptTask }) => proApi.activatePortfolioRelease(id),
     onSuccess: () => {
       for (const key of [
         'managed-portfolios',
@@ -86,7 +90,18 @@ export default function PortfolioReleaseReview({
         void qc.invalidateQueries({ queryKey: [key] });
     },
   });
-  const p = preview.data;
+  const reviewPreview = () => {
+    receipt.invalidate();
+    approve.reset();
+    activate.reset();
+    preview.mutate(receipt.capture('preview'));
+  };
+  const p = receipt.owns(preview.variables) ? preview.data : undefined;
+  const approved = receipt.owns(approve.variables) ? approve.data : undefined;
+  const activated = receipt.owns(activate.variables?.task) ? activate.data : undefined;
+  const previewPending = preview.isPending && receipt.owns(preview.variables);
+  const approvePending = approve.isPending && receipt.owns(approve.variables);
+  const activatePending = activate.isPending && receipt.owns(activate.variables?.task);
   return (
     <section className="portfolio-release-review">
       <div className="section-heading">
@@ -96,8 +111,8 @@ export default function PortfolioReleaseReview({
         </div>
         <button
           className="button button-secondary"
-          disabled={!allowed || !bound || preview.isPending}
-          onClick={() => preview.mutate()}
+          disabled={!allowed || !bound || previewPending}
+          onClick={reviewPreview}
         >
           <ShieldCheck size={14} />
           {t('Review portfolio release')}
@@ -108,7 +123,7 @@ export default function PortfolioReleaseReview({
           {t('Revise this legacy study to save an immutable portfolio version before release.')}
         </p>
       )}
-      {preview.isError && <ErrorBox error={preview.error} />}
+      {preview.isError && receipt.owns(preview.variables) && <ErrorBox error={preview.error} />}
       {p && (
         <>
           <p className="quiet-copy">
@@ -208,7 +223,7 @@ export default function PortfolioReleaseReview({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              approve.mutate();
+              approve.mutate(receipt.capture('approval'));
             }}
           >
             <Field label="Review note">
@@ -217,7 +232,7 @@ export default function PortfolioReleaseReview({
                 minLength={12}
                 maxLength={2000}
                 rows={3}
-                disabled={!!approve.data}
+                disabled={!!approved || approvePending}
                 value={review}
                 onChange={(e) => setReview(e.target.value)}
               />
@@ -227,7 +242,7 @@ export default function PortfolioReleaseReview({
                 <input
                   type="checkbox"
                   checked={checks.includes(a)}
-                  disabled={!!approve.data}
+                  disabled={!!approved || approvePending}
                   onChange={(e) =>
                     setChecks((c) => (e.target.checked ? [...c, a] : c.filter((x) => x !== a)))
                   }
@@ -235,12 +250,12 @@ export default function PortfolioReleaseReview({
                 <span>{t(acknowledgement[a] ?? a)}</span>
               </label>
             ))}
-            {!approve.data && (
+            {!approved && (
               <button
                 className="button button-secondary"
                 disabled={
                   !allowed ||
-                  approve.isPending ||
+                  approvePending ||
                   p.blockers.length > 0 ||
                   !p.metrics ||
                   !p.result_hash ||
@@ -252,25 +267,32 @@ export default function PortfolioReleaseReview({
               </button>
             )}
           </form>
-          {approve.isError && <ErrorBox error={approve.error} />}
-          {approve.data && (
+          {approve.isError && receipt.owns(approve.variables) && <ErrorBox error={approve.error} />}
+          {approved && (
             <div className="portfolio-release-actions">
               <Status type="good">{t('Approval saved')}</Status>
               <button
                 className="button button-citrus"
-                disabled={!allowed || activate.isPending || !!activate.data}
-                onClick={() => activate.mutate()}
+                disabled={!allowed || activatePending || !!activated}
+                onClick={() =>
+                  activate.mutate({ id: approved.id, task: receipt.capture('activation') })
+                }
               >
                 <Play size={14} />
                 {t('Activate managed paper portfolio')}
               </button>
             </div>
           )}
-          {activate.isError && <ErrorBox error={activate.error} />}
-          {activate.data && (
+          {activate.isError && receipt.owns(activate.variables?.task) && (
+            <ErrorBox error={activate.error} />
+          )}
+          {activated && (
             <div className="action-note">
               <p>{t('Portfolio activated. All markets are owned by one managed group.')}</p>
-              <button className="text-button" onClick={onExecution}>
+              <button
+                className="text-button"
+                onClick={() => onExecution(activated.group_id ?? undefined)}
+              >
                 {t('Open managed portfolios')}
               </button>
             </div>

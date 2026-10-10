@@ -26,7 +26,15 @@ const criterionLabels: Record<string, string> = {
   no_financial_discontinuity: 'Financial discontinuities',
 };
 
-export default function ForwardPerformance({ source }: { source: Source }) {
+export default function ForwardPerformance({
+  source,
+  initialSnapshotId,
+  onSnapshotSelect,
+}: {
+  source: Source;
+  initialSnapshotId?: string;
+  onSnapshotSelect?: (id: string) => void;
+}) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const mayFreeze = canTrade(useSession()?.user?.role);
@@ -41,7 +49,10 @@ export default function ForwardPerformance({ source }: { source: Source }) {
   const freeze = useMutation({
     mutationFn: proApi.freezePerformance,
     onSuccess: (data) => {
-      if (data.source === sourceRef.current) setSnapshot(data);
+      if (data.source === sourceRef.current) {
+        setSnapshot(data);
+        onSnapshotSelect?.(String(data.id));
+      }
       void snapshots.refetch();
     },
   });
@@ -86,12 +97,24 @@ export default function ForwardPerformance({ source }: { source: Source }) {
     queryFn: () => proApi.performanceSnapshots(source, snapshotBefore),
   });
   const openSnapshot = useMutation({
-    mutationFn: proApi.performanceSnapshot,
+    mutationFn: async (id: string) => {
+      const data = await proApi.performanceSnapshot(id);
+      if (data.source !== source)
+        throw new Error(t('The selected performance snapshot belongs to another data source.'));
+      return data;
+    },
     onSuccess: (data) => {
-      if (data.source === sourceRef.current) setSnapshot(data);
+      if (data.source === sourceRef.current) {
+        setSnapshot(data);
+        onSnapshotSelect?.(String(data.id));
+      }
       verify.reset();
     },
   });
+  useEffect(() => {
+    if (initialSnapshotId && String(snapshot?.id ?? '') !== initialSnapshotId)
+      openSnapshot.mutate(initialSnapshotId);
+  }, [initialSnapshotId, source]);
   const deployments = useQuery({
     queryKey: ['pro-deployments', source],
     queryFn: () => proApi.deployments(source),

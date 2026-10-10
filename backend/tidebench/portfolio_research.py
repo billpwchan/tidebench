@@ -526,7 +526,15 @@ class PortfolioResearch:
         copied = {
             k: v
             for k, v in manifest.items()
-            if k not in {"result_hash", "completed_at", "replay_verified", "input_artifact"}
+            if k
+            not in {
+                "result_hash",
+                "completed_at",
+                "replay_verified",
+                "input_artifact",
+                "execution_owner",
+                "owned_worker",
+            }
         }
         copied.update(
             replay_of=identifier,
@@ -537,15 +545,12 @@ class PortfolioResearch:
 
     def compute(self, identifier):
         run = self.get(identifier)
-        with self.store.write() as conn:
-            claim = conn.execute(
-                "UPDATE portfolio_runs SET status='running',progress=.01,updated_at=? WHERE id=? AND status='queued'",
-                (now_ms(), identifier),
-            )
-            if claim.rowcount != 1:
-                return
+        if not self.runtime.claim_research(identifier, "portfolio", 0.01):
+            return
+        cancellation = self.runtime.research_token(identifier, "portfolio")
         try:
-            manifest, config = run["manifest"], run["config"]
+            cancellation.check()
+            manifest, config = self.runtime.captured_research_manifest(run["manifest"]), run["config"]
             if (
                 manifest["config_hash"] != digest(config)
                 or manifest["implementation"]["code_fingerprint"]
@@ -573,12 +578,10 @@ class PortfolioResearch:
             legs = decode_legs(bundle)
 
             def progress(fraction):
-                with self.store.write() as conn:
-                    conn.execute(
-                        "UPDATE portfolio_runs SET progress=?,updated_at=? WHERE id=?",
-                        (fraction, now_ms(), identifier),
-                    )
+                cancellation.check()
+                self.runtime.research_checkpoint(identifier, "portfolio", progress=fraction)
 
+            cancellation.check()
             with localcontext(ACCOUNTING_CONTEXT):
                 if self.runtime.settings.research_process_isolation:
                     from .research_process import run_isolated
@@ -589,7 +592,8 @@ class PortfolioResearch:
                         timeout=self.runtime.settings.research_timeout_seconds,
                         memory_mb=self.runtime.settings.research_memory_budget_mb,
                         progress=progress,
-                        cancelled=self.runtime.research_cancelled,
+                        cancelled=cancellation,
+                        lifecycle=cancellation.lifecycle,
                     )
                 else:
                     if manifest.get("evaluation_plan"):
@@ -598,6 +602,7 @@ class PortfolioResearch:
                         result = evaluate_frozen_portfolio(config, manifest, legs, progress)
                     else:
                         result = simulate_portfolio(config, manifest, legs, progress)
+            cancellation.check()
             if manifest.get("replay_of"):
                 manifest["replay_verified"] = digest(result) == manifest["expected_result_hash"]
                 if not manifest["replay_verified"]:
@@ -608,25 +613,26 @@ class PortfolioResearch:
                     )
             manifest = manifest | {"result_hash": digest(result), "completed_at": now_ms()}
             with self.store.write() as conn:
+                if not self.runtime.research_can_complete(conn, identifier, "portfolio"):
+                    return
+                row = conn.execute("SELECT * FROM portfolio_runs WHERE id=?", (identifier,)).fetchone()
+                manifest = self.runtime.preserve_research_owner(manifest, row)
                 pointer = self.runtime.artifacts.put(conn, dumps(result))
                 conn.execute(
                     "UPDATE portfolio_runs SET status='completed',progress=1,result=?,manifest=?,updated_at=? WHERE id=?",
                     (dumps(pointer), dumps(manifest), now_ms(), identifier),
                 )
         except Exception as exc:
-            if isinstance(exc, PlatformError) and exc.code == "research_cancelled":
-                with self.store.write() as conn:
-                    conn.execute(
-                        "UPDATE portfolio_runs SET status='queued',progress=0,error=NULL,updated_at=? WHERE id=?",
-                        (now_ms(), identifier),
-                    )
-                return
-            logging.getLogger("tidebench.portfolio").exception("Portfolio research failed: %s", identifier)
-            with self.store.write() as conn:
-                conn.execute(
-                    "UPDATE portfolio_runs SET status='failed',error=?,updated_at=? WHERE id=?",
-                    (str(exc)[:1000], now_ms(), identifier),
+            if not isinstance(exc, PlatformError) or exc.code not in {
+                "research_cancel_requested",
+                "research_cancelled",
+            }:
+                logging.getLogger("tidebench.portfolio").exception(
+                    "Portfolio research failed: %s", identifier
                 )
+            self.runtime.fail_research(identifier, "portfolio", exc)
+        finally:
+            self.runtime.release_research_token(identifier, "portfolio")
 
 
 def simulate_portfolio(config, manifest, legs, progress=lambda _: None):

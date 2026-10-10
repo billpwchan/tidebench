@@ -1,9 +1,11 @@
 # Red-team record
 
-Latest: [v0.11 independent counterexamples and corrective verification](red-team-0.11.0.zh-CN.md), [byte-preserved before/after bundle](fresh-review-0.11.0/README.md), [adverse acceptance history](acceptance-history-0.11.0.md) and [operator workflow](../professional-workflows-v0.11.md). Public source-specific reports include all 28 strategy cases, seven real public-data portfolio decisions and an actual public perpetual entry/exit.
+Latest: [v0.12 user-journey review](user-journey-0.12.0.zh-CN.md), [acceptance history](acceptance-history-0.12.0.md) and [trader journey guide](../trader-journeys.md).
+
+Previous: [v0.11 independent counterexamples and corrective verification](red-team-0.11.0.zh-CN.md), [byte-preserved before/after bundle](fresh-review-0.11.0/README.md), [adverse acceptance history](acceptance-history-0.11.0.md) and [operator workflow](../professional-workflows-v0.11.md). Public source-specific reports include all 28 strategy cases, seven real public-data portfolio decisions and an actual public perpetual entry/exit.
 
 
-Previous: [fresh v0.10 independent review](fresh-institutional-review-0.10.0.zh-CN.md), separate [funding wait](fresh-institutional-review-0.10.0-funding-wait-addendum.zh-CN.md), [correct capital boundary](fresh-institutional-review-0.10.0-capital-boundary-addendum.zh-CN.md) and [v2 continuation/lineage](fresh-institutional-review-0.10.0-v2-allowance-addendum.zh-CN.md) addenda. [Completed acceptance history](acceptance-history-0.10.0.md) preserves adverse attempts. [Professional workflows](../professional-workflows-v0.10.md), [execution policy choices](../portfolio-execution-contracts.md) and [release verification](../verification.md) distinguish implemented contracts from measured scope.
+Earlier: [fresh v0.10 independent review](fresh-institutional-review-0.10.0.zh-CN.md), separate [funding wait](fresh-institutional-review-0.10.0-funding-wait-addendum.zh-CN.md), [correct capital boundary](fresh-institutional-review-0.10.0-capital-boundary-addendum.zh-CN.md) and [v2 continuation/lineage](fresh-institutional-review-0.10.0-v2-allowance-addendum.zh-CN.md) addenda. [Completed acceptance history](acceptance-history-0.10.0.md) preserves adverse attempts. [Professional workflows](../professional-workflows-v0.10.md), [execution policy choices](../portfolio-execution-contracts.md) and [release verification](../verification.md) distinguish implemented contracts from measured scope.
 
 Baseline: [fresh v0.9 institutional review](fresh-institutional-review-0.9.0.zh-CN.md).
 
@@ -15,7 +17,9 @@ Previous: [v0.7 instrument evidence self-audit](red-team-0.7.0.zh-CN.md) and [re
 
 The [v0.6.0 assessment](red-team-0.6.0.zh-CN.md) examines captured portfolio evaluation, recovery-retained research facts and real lifecycle failures. The [v0.5.0 assessment](red-team-0.5.0.zh-CN.md) examines managed multi-market execution, hard-interruption recovery, failed-leg compensation and contribution accounting. It records the discovered auxiliary-attribution safety and mixed-owner Decimal issues, their corrective contracts, and the remaining product work. The [v0.4.0 assessment](red-team-0.4.0.zh-CN.md) and [v0.3.0 assessment](red-team-0.3.0.zh-CN.md) remain historical evidence for those versions.
 
-Current observations: [611.289-second frozen-source lifecycle](v0.10.0-soak-observations.json), [current-source seven-decision local-paper path](v0.10.0-public-feed-paper-observations.json), [all 28 allocation cases](v0.10.0-portfolio-risk-battery.json), [exact replay](v0.10.0-portfolio-risk-replay.json), [72 L2 captures/six unsupported reports](v0.10.0-public-liquidity-observations.json), [hard-exit/schema-8 restore](v0.10.0-managed-observations-v2.json), [offline adversarial record](v0.10.0-offline-redteam-observations-v2.json), and [bounded HTTP workload](v0.10.0-http-workload-v2.json).
+Archived v0.10 observations: [611.289-second frozen-source lifecycle](v0.10.0-soak-observations.json), [current-source seven-decision local-paper path](v0.10.0-public-feed-paper-observations.json), [all 28 allocation cases](v0.10.0-portfolio-risk-battery.json), [exact replay](v0.10.0-portfolio-risk-replay.json), [72 L2 captures/six unsupported reports](v0.10.0-public-liquidity-observations.json), [hard-exit/schema-8 restore](v0.10.0-managed-observations-v2.json), [offline adversarial record](v0.10.0-offline-redteam-observations-v2.json), and [bounded HTTP workload](v0.10.0-http-workload-v2.json).
+
+Current bounded v0.12 observations: [HTTP workload](v0.12.0-http-workload.json), [offline counterexamples](v0.12.0-offline-redteam-observations.json) and [hard-exit/restore accounting](v0.12.0-managed-observations.json). These are isolated synthetic acceptance records; the earlier public OKX experiments retain their original revision and bytes.
 
 ## Reproduce
 

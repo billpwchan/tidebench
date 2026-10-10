@@ -16,18 +16,19 @@ import type { Source, Strategy } from '../api';
 import { useSession } from '../components/AuthGate';
 const ForwardPerformance = lazy(() => import('../components/ForwardPerformance'));
 const ProtectiveExit = lazy(() => import('../components/ProtectiveExit'));
-import ManagedPortfolios from '../components/ManagedPortfolios';
+import ManagedPortfolios, { StopPortfolioDialog } from '../components/ManagedPortfolios';
 const Contributions = lazy(() => import('../components/Contributions'));
 import SimulationClock from '../components/SimulationClock';
 const ReleaseHistory = lazy(() => import('../components/ReleaseHistory'));
 import PortfolioAnalytics from '../components/PortfolioAnalytics';
 import { proApi } from '../proApi';
-import type { Direction, OrderRequest, ProRisk, RecordData } from '../proApi';
+import type { Direction, ManagedPortfolio, OrderRequest, ProRisk, RecordData } from '../proApi';
 import { useI18n } from '../lib/i18n';
 import { canTrade, canManageRisk } from '../lib/permissions';
 import { bars } from '../lib/config';
 import { date, number, price, quantityText, tone } from '../lib/format';
 import { useDialogFocus, useNow } from '../lib/hooks';
+import { useReceiptOwnership, type ReceiptTask } from '../lib/receiptOwnership';
 import {
   ActionNote,
   ErrorBox,
@@ -52,27 +53,56 @@ const AccountCapitalPolicy = lazy(() => import('../components/AccountCapitalPoli
 export default function Portfolio({
   source,
   initialView = 'positions',
+  initialSymbol = 'BTC-USDT',
+  onViewChange,
+  onSymbolChange,
 }: {
   source: Source;
   initialView?: string;
+  initialSymbol?: string;
+  onViewChange?: (view: string) => void;
+  onSymbolChange?: (symbol: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const canOperate = canTrade(useSession()?.user?.role);
   const qc = useQueryClient();
   const now = useNow();
   const protectiveLink = useRef('');
   const [protection, setProtection] = useState<{ source: Source; position: RecordData }>();
-  const [table, setTable] = useState(
-    initialView.startsWith('protect:') ? 'positions' : initialView.split(':')[0],
-  );
-  useEffect(
-    () => setTable(initialView.startsWith('protect:') ? 'positions' : initialView.split(':')[0]),
-    [initialView],
-  );
+  const viewTable = (view: string) =>
+    view.startsWith('protect:')
+      ? 'positions'
+      : view.startsWith('portfolio-release:')
+        ? 'managed'
+        : view.split(':')[0];
+  const [table, setTable] = useState(viewTable(initialView));
+  useEffect(() => setTable(viewTable(initialView)), [initialView]);
   useEffect(() => setProtection(undefined), [source]);
   const initialGroupId = initialView.startsWith('managed:') ? initialView.slice(8) : undefined;
-  const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
-  const [symbol, setSymbol] = useState('BTC-USDT');
+  const initialReleaseId = initialView.startsWith('portfolio-release:')
+    ? initialView.slice('portfolio-release:'.length)
+    : undefined;
+  const initialDeploymentId = initialView.startsWith('strategies:')
+    ? initialView.slice('strategies:'.length)
+    : undefined;
+  const changeView = (view: string) => {
+    deployReceipt.invalidate();
+    setTable(viewTable(view));
+    onViewChange?.(view);
+  };
+  const [product, setProduct] = useState<'SPOT' | 'SWAP'>(
+    initialSymbol.endsWith('-SWAP') ? 'SWAP' : 'SPOT',
+  );
+  const [symbol, setSymbol] = useState(initialSymbol);
+  useEffect(() => {
+    setSymbol(initialSymbol);
+    setProduct(initialSymbol.endsWith('-SWAP') ? 'SWAP' : 'SPOT');
+  }, [initialSymbol]);
+  const selectSymbol = (next: string) => {
+    setSymbol(next);
+    setProduct(next.endsWith('-SWAP') ? 'SWAP' : 'SPOT');
+    onSymbolChange?.(next);
+  };
   const [side, setSide] = useState<'buy' | 'sell'>('buy');
   const [quantity, setQuantity] = useState('');
   const [leverage, setLeverage] = useState(1);
@@ -82,9 +112,28 @@ export default function Portfolio({
   const [stopPrice, setStopPrice] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [deployOpen, setDeployOpen] = useState(false);
+  const [stopGroup, setStopGroup] = useState<{ id: string; group?: ManagedPortfolio }>();
   const [strategy, setStrategy] = useState<Strategy>({ ...defaultStrategy });
   const [direction, setDirection] = useState<Direction>('long_only');
   const [bar, setBar] = useState('1H');
+  const deployReceipt = useReceiptOwnership(
+    JSON.stringify([
+      source,
+      initialView,
+      table,
+      symbol,
+      product,
+      strategy,
+      direction,
+      bar,
+      leverage,
+      deployOpen,
+    ]),
+  );
+  const closeDeployment = () => {
+    deployReceipt.invalidate();
+    setDeployOpen(false);
+  };
   const idempotency = useRef<{ payload: string; key: string } | null>(null);
   const account = useQuery({
     queryKey: ['pro-account', source],
@@ -104,6 +153,12 @@ export default function Portfolio({
   const deployments = useQuery({
     queryKey: ['pro-deployments', source],
     queryFn: () => proApi.deployments(source),
+    refetchInterval: 5000,
+  });
+  const groups = useQuery({
+    queryKey: ['managed-portfolios', source],
+    queryFn: () => proApi.managedPortfolios(source),
+    enabled: table === 'strategies',
     refetchInterval: 5000,
   });
   const risk = useQuery({
@@ -140,6 +195,9 @@ export default function Portfolio({
       'pro-deployments',
       'pro-risk',
       'portfolio-analytics',
+      'managed-portfolios',
+      'contributions',
+      'portfolio-releases',
     ])
       void qc.invalidateQueries({ queryKey: [key, source] });
     void qc.invalidateQueries({ queryKey: ['pro-ops'] });
@@ -161,13 +219,27 @@ export default function Portfolio({
     },
   });
   const cancel = useMutation({ mutationFn: proApi.cancelOrder, onSuccess: refresh });
-  const stop = useMutation({ mutationFn: proApi.stop, onSuccess: refresh });
-  const deploy = useMutation({
-    mutationFn: proApi.deploy,
+  const stop = useMutation({
+    mutationFn: proApi.stop,
     onSuccess: () => {
-      setDeployOpen(false);
-      setNotice(t('Strategy deployed'));
+      setNotice(t('Strategy stopped; positions retained'));
       refresh();
+    },
+  });
+  const deploy = useMutation({
+    mutationFn: ({ body }: { body: Parameters<typeof proApi.deploy>[0]; task: ReceiptTask }) =>
+      proApi.deploy(body),
+    onSuccess: (deployment, submitted) => {
+      refresh();
+      if (
+        deployReceipt.owns(submitted.task) &&
+        deployment.source === submitted.body.source &&
+        deployment.inst_id === submitted.body.inst_id
+      ) {
+        setDeployOpen(false);
+        setNotice(t('Strategy deployed'));
+        changeView(`strategies:${deployment.id}`);
+      }
     },
   });
   const submit = () => {
@@ -176,7 +248,7 @@ export default function Portfolio({
       idempotency.current = { payload, key: crypto.randomUUID() };
     order.mutate({ data: body, key: idempotency.current.key });
   };
-  useDialogFocus(deployOpen, '.deployment-dialog', () => setDeployOpen(false));
+  useDialogFocus(deployOpen, '.deployment-dialog', closeDeployment);
   const a = account.data;
   useEffect(() => {
     const link = source + ':' + initialView;
@@ -191,13 +263,34 @@ export default function Portfolio({
   const instrument = (market.data?.instrument ?? {}) as RecordData;
   return (
     <>
+      {stopGroup && (
+        <StopPortfolioDialog
+          source={source}
+          groupId={stopGroup.id}
+          name={stopGroup.group?.manifest?.name}
+          markets={stopGroup.group?.manifest?.legs.map((leg) => leg.inst_id)}
+          onClose={() => setStopGroup(undefined)}
+          onStopped={() => {
+            setNotice(
+              language === 'zh-CN'
+                ? '整个组合已停止。已成交库存仍保留在账户中；停止不代表清仓。'
+                : 'Whole portfolio stopped. Filled inventory remains in the account; stopping does not close positions.',
+            );
+            setStopGroup(undefined);
+            refresh();
+          }}
+        />
+      )}
       {protection?.source === source && (
         <Suspense fallback={<Loading />}>
           <ProtectiveExit
             key={source + ':' + String(protection.position.inst_id)}
             source={source}
             position={protection.position}
-            onClose={() => setProtection(undefined)}
+            onClose={() => {
+              setProtection(undefined);
+              if (initialView.startsWith('protect:')) changeView('positions');
+            }}
           />
         </Suspense>
       )}
@@ -212,7 +305,10 @@ export default function Portfolio({
         <button
           className="button button-dark"
           disabled={!canOperate}
-          onClick={() => setDeployOpen(true)}
+          onClick={() => {
+            deployReceipt.invalidate();
+            setDeployOpen(true);
+          }}
         >
           <Plus size={14} />
           {t('Deploy strategy')}
@@ -269,7 +365,7 @@ export default function Portfolio({
             </div>
             <WorkspaceTabs
               value={table}
-              onChange={setTable}
+              onChange={changeView}
               items={[
                 { key: 'positions', label: 'Positions' },
                 { key: 'performance', label: 'Forward performance' },
@@ -284,15 +380,23 @@ export default function Portfolio({
             />
             {table === 'performance' && (
               <Suspense fallback={<Loading />}>
-                <ForwardPerformance source={source} />
+                <ForwardPerformance
+                  source={source}
+                  initialSnapshotId={
+                    initialView.startsWith('performance:') ? initialView.slice(12) : undefined
+                  }
+                  onSnapshotSelect={(id) => changeView(`performance:${id}`)}
+                />
               </Suspense>
             )}
             {table === 'managed' && (
               <ManagedPortfolios
                 source={source}
                 initialGroupId={initialGroupId}
+                initialReleaseId={initialReleaseId}
+                onSelectGroup={(id) => changeView(id ? `managed:${id}` : 'managed')}
                 onProtectPosition={(position) => setProtection({ source, position })}
-                onInspectPositions={() => setTable('positions')}
+                onInspectPositions={() => changeView('positions')}
               />
             )}
             {table === 'contributions' && (
@@ -302,7 +406,13 @@ export default function Portfolio({
             )}
             {table === 'releases' && (
               <Suspense fallback={<Loading />}>
-                <ReleaseHistory source={source} />
+                <ReleaseHistory
+                  source={source}
+                  initialReleaseId={
+                    initialView.startsWith('releases:') ? initialView.slice(9) : undefined
+                  }
+                  onInspectDeployment={(id) => changeView(`strategies:${id}`)}
+                />
               </Suspense>
             )}
             {table === 'analytics' && <PortfolioAnalytics source={source} />}
@@ -524,54 +634,106 @@ export default function Portfolio({
               ) : deployments.isError ? (
                 <ErrorBox error={deployments.error} />
               ) : (
-                <DataTable
-                  rows={deployments.data?.items ?? []}
-                  empty="No strategy deployments"
-                  columns={[
-                    {
-                      key: 'inst_id',
-                      label: 'Market',
-                      render: (d) => (
-                        <div className="table-stacked">
-                          <strong>{d.inst_id}</strong>
-                          <small>
-                            {d.bar} · {d.direction} · {d.leverage}×
-                          </small>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'status',
-                      label: 'Status',
-                      render: (d) => (
-                        <Status type={d.status === 'running' ? 'good' : 'neutral'}>
-                          {d.status}
-                        </Status>
-                      ),
-                    },
-                    { key: 'last_bar', label: 'Last evaluation', render: (d) => date(d.last_bar) },
-                    {
-                      key: 'last_error',
-                      label: 'Last error',
-                      render: (d) => <span className="negative">{d.last_error ?? '—'}</span>,
-                    },
-                    {
-                      key: 'actions',
-                      label: 'Actions',
-                      render: (d) =>
-                        d.status === 'running' ? (
-                          <button
-                            className="text-button"
-                            disabled={!canOperate || stop.isPending}
-                            onClick={() => stop.mutate(d.id)}
-                          >
-                            <Square size={11} />
-                            {t('Stop')}
-                          </button>
-                        ) : null,
-                    },
-                  ]}
-                />
+                <>
+                  {initialDeploymentId &&
+                    !deployments.data?.items.some((d) => d.id === initialDeploymentId) && (
+                      <ErrorBox
+                        error={
+                          new Error(
+                            language === 'zh-CN'
+                              ? '指定的策略部署在此账户中不可用。'
+                              : 'Selected deployment is unavailable in this account.',
+                          )
+                        }
+                      />
+                    )}
+                  <DataTable
+                    rows={[...(deployments.data?.items ?? [])].sort(
+                      (a, b) =>
+                        Number(b.id === initialDeploymentId) - Number(a.id === initialDeploymentId),
+                    )}
+                    empty="No strategy deployments"
+                    columns={[
+                      {
+                        key: 'inst_id',
+                        label: 'Market',
+                        render: (d) => (
+                          <div className="table-stacked">
+                            <strong data-deployment-id={d.id}>{d.inst_id}</strong>
+                            <small>
+                              {d.bar} · {d.direction} · {d.leverage}×
+                            </small>
+                            <small>{d.id}</small>
+                            {d.id === initialDeploymentId && (
+                              <Status type="neutral">
+                                {language === 'zh-CN' ? '指定部署' : 'Selected deployment'}
+                              </Status>
+                            )}
+                            {!!d.group_id && (
+                              <small>
+                                {t('Portfolio group')}:{' '}
+                                {groups.data?.items.find((g) => g.id === d.group_id)?.manifest
+                                  ?.name ?? String(d.group_id)}
+                              </small>
+                            )}
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'status',
+                        label: 'Status',
+                        render: (d) => (
+                          <Status type={d.status === 'running' ? 'good' : 'neutral'}>
+                            {d.status}
+                          </Status>
+                        ),
+                      },
+                      {
+                        key: 'last_bar',
+                        label: 'Last evaluation',
+                        render: (d) => date(d.last_bar),
+                      },
+                      {
+                        key: 'last_error',
+                        label: 'Last error',
+                        render: (d) => <span className="negative">{d.last_error ?? '—'}</span>,
+                      },
+                      {
+                        key: 'actions',
+                        label: 'Actions',
+                        render: (d) => (
+                          <div className="table-actions">
+                            {!!d.group_id && (
+                              <button
+                                className="text-button"
+                                onClick={() => changeView(`managed:${String(d.group_id)}`)}
+                              >
+                                {t('Inspect group & recovery')}
+                              </button>
+                            )}
+                            {d.status === 'running' && (
+                              <button
+                                className="text-button"
+                                disabled={!canOperate || stop.isPending}
+                                onClick={() =>
+                                  d.group_id
+                                    ? setStopGroup({
+                                        id: String(d.group_id),
+                                        group: groups.data?.items.find((g) => g.id === d.group_id),
+                                      })
+                                    : stop.mutate(d.id)
+                                }
+                              >
+                                <Square size={11} />
+                                {t(d.group_id ? 'Stop whole portfolio' : 'Stop')}
+                              </button>
+                            )}
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
+                </>
               ))}
             {cancel.isError && <ErrorBox error={cancel.error} />}
             {stop.isError && <ErrorBox error={stop.error} />}
@@ -661,7 +823,7 @@ export default function Portfolio({
               <ProductSymbol
                 source={source}
                 value={symbol}
-                onChange={setSymbol}
+                onChange={selectSymbol}
                 product={product}
                 onProductChange={setProduct}
               />
@@ -803,7 +965,7 @@ export default function Portfolio({
         )}
       </div>
       {deployOpen && (
-        <div className="modal-backdrop" onClick={() => setDeployOpen(false)}>
+        <div className="modal-backdrop" onClick={closeDeployment}>
           <section
             className="wide-dialog deployment-dialog"
             role="dialog"
@@ -813,11 +975,7 @@ export default function Portfolio({
           >
             <div className="dialog-heading">
               <h2>{t('Deploy strategy')}</h2>
-              <button
-                className="icon-button"
-                aria-label={t('Close')}
-                onClick={() => setDeployOpen(false)}
-              >
+              <button className="icon-button" aria-label={t('Close')} onClick={closeDeployment}>
                 <X size={18} />
               </button>
             </div>
@@ -825,20 +983,23 @@ export default function Portfolio({
               onSubmit={(e) => {
                 e.preventDefault();
                 deploy.mutate({
-                  source,
-                  inst_id: symbol,
-                  bar,
-                  strategy,
-                  direction: product === 'SPOT' ? 'long_only' : direction,
-                  leverage: product === 'SPOT' ? 1 : leverage,
-                  allocation: strategy.allocation,
+                  task: deployReceipt.capture(),
+                  body: {
+                    source,
+                    inst_id: symbol,
+                    bar,
+                    strategy,
+                    direction: product === 'SPOT' ? 'long_only' : direction,
+                    leverage: product === 'SPOT' ? 1 : leverage,
+                    allocation: strategy.allocation,
+                  },
                 });
               }}
             >
               <ProductSymbol
                 source={source}
                 value={symbol}
-                onChange={setSymbol}
+                onChange={selectSymbol}
                 product={product}
                 onProductChange={setProduct}
               />
@@ -880,10 +1041,16 @@ export default function Portfolio({
                   'Start requires a flat market with no pending orders. Close positions and cancel orders first.',
                 )}
               </p>
-              {deploy.isError && <ErrorBox error={deploy.error} />}
+              {deploy.isError && deployReceipt.owns(deploy.variables?.task) && (
+                <ErrorBox error={deploy.error} />
+              )}
               <button
                 className="button button-citrus full-width"
-                disabled={!canOperate || deploy.isPending || risk.data?.halted}
+                disabled={
+                  !canOperate ||
+                  (deploy.isPending && deployReceipt.owns(deploy.variables?.task)) ||
+                  risk.data?.halted
+                }
               >
                 <Play size={14} />
                 {t('Start strategy')}

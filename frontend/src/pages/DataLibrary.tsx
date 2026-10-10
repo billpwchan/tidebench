@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Database, Download, Loader2, RefreshCw, Square, X } from 'lucide-react';
 import type { Source } from '../api';
@@ -39,14 +39,29 @@ const datasetEnd = (d: Dataset) => Number(d.end ?? d.end_ts ?? d.last_ts ?? 0);
 export default function DataLibrary({
   source,
   onResearch,
+  initialView = 'packages',
+  initialPackageId,
+  onViewChange,
+  returnTo,
+  onReturn,
 }: {
   source: Source;
   onResearch: (inputs: ResearchInputs) => void;
+  initialView?: string;
+  initialPackageId?: string;
+  onViewChange?: (view: string) => void;
+  returnTo?: 'advanced' | 'portfolio';
+  onReturn?: () => void;
 }) {
   const { t } = useI18n();
   const canOperate = canResearch(useSession()?.user?.role);
   const qc = useQueryClient();
-  const [catalogTab, setCatalogTab] = useState('packages');
+  const [catalogTab, setCatalogTab] = useState(initialView);
+  useEffect(() => setCatalogTab(initialView), [initialView]);
+  const changeView = (view: string) => {
+    setCatalogTab(view);
+    onViewChange?.(view);
+  };
   const [inputTab, setInputTab] = useState('download');
   const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
   const [symbol, setSymbol] = useState('BTC-USDT');
@@ -123,9 +138,23 @@ export default function DataLibrary({
           {t('Refresh')}
         </button>
       </PageHeading>
+      {returnTo && (
+        <div className="journey-return" role="status">
+          <span>
+            {t(
+              returnTo === 'portfolio'
+                ? 'Preparing data for your portfolio draft'
+                : 'Preparing data for your strategy draft',
+            )}
+          </span>
+          <button className="text-button" onClick={onReturn}>
+            {t('Return to research draft')} <ArrowRight size={13} />
+          </button>
+        </div>
+      )}
       <WorkspaceTabs
         value={catalogTab}
-        onChange={setCatalogTab}
+        onChange={changeView}
         items={[
           { key: 'packages', label: 'Research packages' },
           { key: 'raw', label: 'Raw datasets & imports' },
@@ -135,8 +164,9 @@ export default function DataLibrary({
       {catalogTab === 'packages' && (
         <ResearchPackages
           source={source}
+          initialPackageId={initialPackageId}
           onResearch={onResearch}
-          onOpenRaw={() => setCatalogTab('raw')}
+          onOpenRaw={() => changeView('raw')}
         />
       )}
       {catalogTab === 'instruments' && <InstrumentEvidence key={source} source={source} />}

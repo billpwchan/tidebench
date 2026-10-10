@@ -1,4 +1,4 @@
-import type { UseQueryResult } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   Activity,
   Database,
@@ -17,13 +17,14 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import type { System } from '../api';
+import type { Source, System } from '../api';
+import { proApi } from '../proApi';
 import { Logo } from '../components/workspace';
 import type { Page } from '../lib/config';
-import { symbols } from '../lib/config';
 import { useI18n } from '../lib/i18n';
 import { useMediaQuery } from '../lib/hooks';
 import { LanguageSelect, useSession } from './AuthGate';
+import { ErrorBox, Loading } from './workspace';
 
 export const pages: { id: Page; label: string; icon: typeof Activity; group: string }[] = [
   { id: 'overview', label: 'Overview', icon: Layers3, group: 'Research' },
@@ -58,7 +59,14 @@ export function Sidebar({
       aria-modal={compact && mobileNav ? true : undefined}
       aria-label={compact ? t('Main navigation') : undefined}
     >
-      <a className="brand" href="#overview" onClick={() => navigate('overview')}>
+      <a
+        className="brand"
+        href="#overview"
+        onClick={(event) => {
+          event.preventDefault();
+          navigate('overview');
+        }}
+      >
         <Logo />
         <span>
           tidebench<span className="brand-period">.</span>
@@ -183,21 +191,62 @@ export function Topbar({
 }
 
 export function MarketSearch({
+  source,
   searchOpen,
   setSearchOpen,
   search,
   setSearch,
   setSymbol,
   navigate,
+  onSelect,
 }: {
+  source: Source;
   searchOpen: boolean;
   setSearchOpen: (v: boolean) => void;
   search: string;
   setSearch: (v: string) => void;
   setSymbol: (v: string) => void;
   navigate: (p: Page) => void;
+  onSelect?: (symbol: string, target: 'overview' | 'execution') => void;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const session = useSession();
+  const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
+  const identity = session?.user?.id ?? session?.user?.username ?? 'anonymous';
+  const catalog = useQuery({
+    queryKey: ['market-search', window.location.origin, identity, session?.user?.role, source],
+    queryFn: async () => {
+      const [spot, swap] = await Promise.all([
+        proApi.instruments(source, 'SPOT'),
+        proApi.instruments(source, 'SWAP'),
+      ]);
+      return [...spot.items, ...swap.items]
+        .filter((item) => {
+          const id = String(item.inst_id ?? '');
+          const available = !item.state || item.state === 'live';
+          return available && (id.endsWith('-USDT') || id.endsWith('-USDT-SWAP'));
+        })
+        .map((item) => String(item.inst_id))
+        .filter((id, index, items) => items.indexOf(id) === index)
+        .sort();
+    },
+    enabled: searchOpen,
+    staleTime: 60000,
+    retry: 1,
+  });
+  const matching = (catalog.data ?? []).filter((symbol) =>
+    symbol.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+  const selectMarket = (symbol: string, target: 'overview' | 'execution') => {
+    if (onSelect) onSelect(symbol, target);
+    else {
+      if (target === 'execution') return;
+      setSymbol(symbol);
+      navigate('overview');
+    }
+    setSearchOpen(false);
+    setSearch('');
+  };
   return (
     <>
       {searchOpen && (
@@ -206,55 +255,92 @@ export function MarketSearch({
             className="search-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label="Find a market"
+            aria-label={t('Find a market')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="search-dialog-input">
               <Search size={20} />
               <input
-                autoFocus
                 placeholder={t('Search markets…')}
-                aria-label="Search market symbol"
+                aria-label={t('Search market symbol')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
               <button
                 className="icon-button"
                 onClick={() => setSearchOpen(false)}
-                aria-label="Close search"
+                aria-label={t('Close search')}
               >
                 <X size={18} />
               </button>
             </div>
             <div className="search-results">
-              {symbols
-                .filter((s) => s.toLowerCase().includes(search.toLowerCase()))
-                .map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => {
-                      setSymbol(s);
-                      navigate('overview');
-                      setSearchOpen(false);
-                      setSearch('');
-                    }}
-                  >
-                    <span className="coin-icon">{s.slice(0, 1)}</span>
-                    <span>
-                      <strong>{s.split('-')[0]}</strong>
-                      <small>{s}</small>
-                    </span>
-                    <ArrowRight size={16} />
-                  </button>
-                ))}
-              {!symbols.some((s) => s.toLowerCase().includes(search.toLowerCase())) && (
-                <p>No matching markets.</p>
+              {catalog.isPending ? (
+                <Loading label={text('Loading available markets…', '正在加载可用市场…')} />
+              ) : catalog.isError ? (
+                <div className="market-search-status">
+                  <p>
+                    {text('The market directory could not be refreshed.', '无法刷新市场目录。')}
+                  </p>
+                  <ErrorBox error={catalog.error} onRetry={() => void catalog.refetch()} />
+                </div>
+              ) : !catalog.data?.length ? (
+                <p className="market-search-status" role="status">
+                  {text(
+                    'This source reports no available USDT markets.',
+                    '此数据源没有报告可用的 USDT 市场。',
+                  )}
+                </p>
+              ) : !matching.length ? (
+                <p className="market-search-status" role="status">
+                  {text(
+                    'No matching markets. Try the asset name or a full symbol.',
+                    '没有匹配市场。请尝试资产名称或完整代码。',
+                  )}
+                </p>
+              ) : (
+                matching.map((symbol) => (
+                  <div className="market-search-result" key={symbol} data-market={symbol}>
+                    <button
+                      className="market-search-identity"
+                      onClick={() => selectMarket(symbol, 'overview')}
+                      aria-label={`${text('Inspect', '查看')} ${symbol}`}
+                    >
+                      <span className="coin-icon">{symbol.slice(0, 1)}</span>
+                      <span>
+                        <strong>{symbol.split('-')[0]}</strong>
+                        <small>{symbol}</small>
+                        <small>
+                          {symbol.endsWith('-SWAP')
+                            ? text('USDT perpetual', 'USDT 永续')
+                            : text('Spot', '现货')}
+                        </small>
+                      </span>
+                      <span className="market-search-inspect">{text('Inspect', '查看')}</span>
+                      <ArrowRight size={16} />
+                    </button>
+                    <button
+                      className="text-button market-search-actions"
+                      onClick={() => selectMarket(symbol, 'execution')}
+                      disabled={!onSelect}
+                      aria-label={`${text('Trade', '交易')} ${symbol}`}
+                    >
+                      {text('Trade', '交易')}
+                    </button>
+                  </div>
+                ))
               )}
             </div>
             <div className="search-dialog-footer">
-              <span>OKX spot universe</span>
               <span>
-                <kbd>esc</kbd> to close
+                {source === 'example'
+                  ? text('Synthetic example', '合成示例')
+                  : text('OKX public', 'OKX 公开市场')}
+                {' · '}
+                {text('Spot & USDT perpetuals', '现货与 USDT 永续')}
+              </span>
+              <span>
+                <kbd>esc</kbd> {text('to close', '关闭')}
               </span>
             </div>
           </section>

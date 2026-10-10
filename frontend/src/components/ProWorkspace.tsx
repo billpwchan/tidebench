@@ -203,10 +203,12 @@ export function WorkspaceTabs({
             const buttons =
               e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
             buttons?.[next]?.focus();
-            onChange(items[next].key);
+            if (items[next].key !== value) onChange(items[next].key);
           }}
           tabIndex={value === item.key ? 0 : -1}
-          onClick={() => onChange(item.key)}
+          onClick={() => {
+            if (item.key !== value) onChange(item.key);
+          }}
         >
           {t(item.label)}
         </button>

@@ -4,6 +4,90 @@ import { professionalZh } from './professionalI18n';
 import { deskZh } from './deskI18n';
 export type Language = 'en' | 'zh-CN';
 const zh: Record<string, string> = {
+  'Run strategy version': '本次运行策略版本',
+  'Run holdout': '本次运行封存评估',
+  'Cancellation needs exit evidence': '取消正在等待退出证据',
+  "Cancellation is recorded, but the previous worker's exit cannot yet be verified. This run will not restart or publish a result.":
+    '取消请求已记录，但尚无法核验先前工作进程已经退出。此任务不会重新启动或发布结果。',
+  'Retry checks the same cancellation; it does not start a new study. If evidence remains unavailable, keep this attempt and start a replacement study.':
+    '重查只核验同一取消请求，不会启动新研究。若证据仍无法取得，保留此试验记录并创建替代研究。',
+  'Recheck cancellation': '重新核验取消',
+
+  'This draft is only in memory. Save a version before leaving this page.':
+    '此草稿仅保留在当前内存中，请在离开前保存为版本。',
+  'Strategy authoring draft': '策略编辑草稿',
+  'Strategy draft restored': '已恢复策略草稿',
+  'Unsaved strategy draft': '未保存策略草稿',
+  'Automatically kept in this browser tab for this user and source. Save version creates an immutable registry record.':
+    '草稿按当前用户与来源自动保存在此浏览器标签页中。保存版本会建立不可变策略记录。',
+  'Parent version': '父版本',
+  'Resume strategy draft': '继续编辑策略草稿',
+  'Clear strategy draft': '清除策略草稿',
+  'A damaged strategy draft was discarded. Saved strategy versions are unchanged.':
+    '已舍弃损坏的策略草稿；已保存版本未受影响。',
+  'The strategy draft could not be saved in this browser. Keep this page open until you save a version.':
+    '此浏览器无法保存策略草稿，请保留当前页面，直到保存为版本。',
+  'Replace strategy draft': '替换策略草稿',
+  'You have an unsaved strategy draft. Replacing it discards its local edits; saved versions are unchanged.':
+    '当前有未保存的策略草稿。替换将丢弃其本地编辑，已保存版本不变。',
+  'Current draft': '当前草稿',
+  'Replacement draft': '替换后的草稿',
+  'Empty hypothesis': '空白假设',
+  'Keep current draft': '保留当前草稿',
+  'Replace draft': '替换草稿',
+  'View saved versions': '查看已保存版本',
+  'saved. Your newer edits remain in the local draft.':
+    '已保存；此后新增的编辑仍保留在本地草稿中。',
+  'saved. The submitted local draft was cleared.': '已保存；提交的本地草稿已清除。',
+  'The rule program must contain one to four valid rules before saving.':
+    '规则程序须含一至四条有效规则才可保存。',
+  'The server did not return a saved strategy version. Your draft is retained.':
+    '服务端未返回已保存策略版本，草稿仍被保留。',
+
+  'No result selected': '尚未选择研究结果',
+  'Choose a saved run to review, or configure and run a new study.':
+    '选择已保存的运行进行审查，或配置并运行新的研究。',
+  'Cancel research': '取消研究',
+  'Cancellation requested': '已请求取消',
+  'Cancellation requested. The worker is still stopping; this run remains active until cleanup completes.':
+    '已请求取消，工作进程仍在停止；完成清理前此运行仍处于活动状态。',
+  'Research cancelled': '研究已取消',
+  'The worker has stopped this run. Its configuration and trial record remain saved; run research again to create a new trial.':
+    '工作进程已停止本次运行，配置与试验记录仍被保留。再次运行研究将建立新的试验。',
+  'Operations covers all data sources. Liquidity observations use public OKX data.':
+    '运营监控覆盖所有数据来源；流动性观察使用 OKX 公开数据。',
+  'Source for research and execution': '研究与执行使用的来源',
+  'This research package is not ready. Inspect its preparation before binding it to a study.':
+    '此研究数据包尚未就绪，请先查看准备状态，再绑定到研究。',
+  'Inspect research package': '查看研究数据包',
+  'The selected performance snapshot belongs to another data source.':
+    '指定绩效快照属于另一个数据来源。',
+
+  'The selected package belongs to another data source.': '所选数据包属于另一个数据来源。',
+  'The selected research package is unavailable for this source.':
+    '当前来源中无法读取指定研究数据包。',
+  'Selected research package': '指定研究数据包',
+  'Preparing data for your portfolio draft': '正在为当前组合草稿准备数据',
+  'Preparing data for your strategy draft': '正在为当前策略草稿准备数据',
+  'Return to research draft': '返回研究草稿',
+  'Activation recorded': '已记录激活',
+  'Current controller state': '当前控制器状态',
+  'Current state unavailable': '当前状态无法读取',
+  'Not activated': '未激活',
+  'Controller unavailable': '控制器无法读取',
+  'Selected paper approval': '指定模拟批准',
+  'The selected paper approval is unavailable for this source.': '当前来源中无法读取指定模拟批准。',
+  'Activation rechecks the current account. Approval alone does not start a controller.':
+    '激活时会重新检查当前账户；保存批准并不会启动控制器。',
+  'Research draft restored': '已恢复研究草稿',
+  'Research configuration is saved in this browser session.': '研究配置保存在此浏览器会话中。',
+  'Clear research draft': '清除研究草稿',
+  'Use selected run configuration': '复用所选运行的配置',
+  'A damaged research draft was discarded. Saved research evidence is unchanged.':
+    '已舍弃损坏的研究草稿；保存的研究证据未受影响。',
+  'The research draft could not be saved. Keep this page open or export your configuration before leaving.':
+    '研究草稿无法保存。离开前请保持此页面打开或导出配置。',
+  'The selected run belongs to another data source.': '所选研究运行属于另一个数据来源。',
   Overview: '总览',
   Research: '策略研究',
   Execution: '组合与执行',
@@ -605,6 +689,14 @@ const zh: Record<string, string> = {
   'Combined spot and perpetual exposure, valued from a captured account and market snapshot.':
     '基于捕获的账户与市场快照，合并估值现货和永续敞口。',
   'Refresh snapshot': '刷新快照',
+  'Exposure unavailable': '敞口不可核定',
+  'A matching account capture was not returned. Refresh the exposure snapshot.':
+    '未返回来源一致的账户捕获。请刷新敞口快照。',
+  'Account and exposure values share one captured snapshot.': '账户与敞口使用同一份捕获快照。',
+  'Position snapshot unavailable': '持仓快照不可用',
+  'Earlier research was submitted. Your current configuration is unchanged.':
+    '之前的研究已提交，当前配置继续保留。',
+  'View submitted research': '查看已提交研究',
   'Captured custom scenario': '已捕获自定义情景',
   'Current risk snapshot': '当前风险快照',
   'Prices, rules or funding reconciliation are incomplete. Unknown values remain unavailable; they are not zero risk.':

@@ -19,7 +19,13 @@ import LiquidityEvidencePanel from '../components/LiquidityEvidence';
 
 const records = (v: unknown): RecordData[] =>
   Array.isArray(v) ? (v.filter((x) => x && typeof x === 'object') as RecordData[]) : [];
-export default function Operations({ initialView = 'feeds' }: { initialView?: string }) {
+export default function Operations({
+  initialView = 'feeds',
+  onViewChange,
+}: {
+  initialView?: string;
+  onViewChange?: (view: string) => void;
+}) {
   const { t } = useI18n();
   const session = useSession();
   const admin = session?.user?.role === 'admin';
@@ -157,7 +163,10 @@ export default function Operations({ initialView = 'feeds' }: { initialView?: st
           <section className="pro-panel ops-workspace">
             <WorkspaceTabs
               value={tab}
-              onChange={setTab}
+              onChange={(view) => {
+                setTab(view);
+                onViewChange?.(view);
+              }}
               items={[
                 { key: 'feeds', label: 'Feeds' },
                 { key: 'liquidity', label: 'Cost and depth' },

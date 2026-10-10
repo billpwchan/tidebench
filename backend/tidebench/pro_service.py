@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import shutil
 import threading
 import time
@@ -30,6 +31,12 @@ from .pro_execution import SimulationBook, base_size, number
 from .provenance import research_identity, serialized_result
 from .research_artifacts import ResearchArtifacts
 from .research_governance import ResearchGovernance
+from .research_process import (
+    ResearchCancellation,
+    process_exists,
+    research_cancellation,
+    worker_exit_evidence,
+)
 from .store import dumps, encode, new_id, now_ms
 from .strategy_registry import StrategyRegistry, digest
 from .strategy_risk import risk_notional
@@ -54,6 +61,9 @@ class ProfessionalRuntime:
         self.backup_error = None
         self.operating_conditions, self.operating_checked_at = [], 0
         self.research_cancelled = threading.Event()
+        self.research_cancel_requests = {}
+        self.research_cancel_lock = threading.Lock()
+        self.research_owner_token = new_id()
         self.artifacts = ResearchArtifacts(store)
         self.engine_identity = research_identity()
         self.registry = StrategyRegistry(store, self.engine_identity)
@@ -102,12 +112,18 @@ class ProfessionalRuntime:
             for name in ("research", "catalog", "execution", "strategies", "backups")
         }
         with self.store.write() as conn:
-            conn.execute(
-                "UPDATE portfolio_runs SET status='queued',updated_at=? WHERE status='running'", (now_ms(),)
-            )
-            conn.execute(
-                "UPDATE pro_runs SET status='queued',updated_at=? WHERE status='running'", (now_ms(),)
-            )
+            for kind in ("single", "portfolio"):
+                table = self.research_table(kind)
+                for row in conn.execute(
+                    f"SELECT * FROM {table} WHERE status IN ('queued','running')"
+                ).fetchall():
+                    if self.cancellation_requested(row):
+                        self.recover_research_cancel(conn, row, kind)
+                    elif row["status"] == "running":
+                        conn.execute(
+                            f"UPDATE {table} SET status='queued',updated_at=? WHERE id=?",
+                            (now_ms(), row["id"]),
+                        )
         self.tasks = [
             asyncio.create_task(self.jobs_loop(), name="professional-research"),
             asyncio.create_task(self.catalog_loop(), name="professional-catalog"),
@@ -125,6 +141,265 @@ class ProfessionalRuntime:
         await self.catalog.stop_polling()
         if self.inflight:
             await asyncio.gather(*self.inflight, return_exceptions=True)
+        # This identity's actual thread/process work is now drained. A cancelled
+        # coroutine alone was insufficient proof while shielded offloads continued.
+        with self.store.write() as conn:
+            for kind in ("single", "portfolio"):
+                table = self.research_table(kind)
+                for row in conn.execute(f"SELECT * FROM {table} WHERE status='running'").fetchall():
+                    manifest = json.loads(row["manifest"]) if row["manifest"] else {}
+                    owner = manifest.get("execution_owner") or {}
+                    if owner.get("token") == self.research_owner_token:
+                        manifest["execution_owner"] = owner | {"state": "drained", "drained_at": now_ms()}
+                        conn.execute(
+                            f"UPDATE {table} SET manifest=? WHERE id=?", (dumps(manifest), row["id"])
+                        )
+                        if self.cancellation_requested(row):
+                            row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (row["id"],)).fetchone()
+                            self.recover_research_cancel(conn, row, kind)
+
+    @staticmethod
+    def research_table(kind):
+        return {"single": "pro_runs", "portfolio": "portfolio_runs"}[kind]
+
+    @staticmethod
+    def cancellation_requested(row):
+        manifest = json.loads(row["manifest"]) if row["manifest"] else {}
+        return (manifest.get("cancellation") or {}).get("state") == "requested"
+
+    @staticmethod
+    def captured_research_manifest(manifest):
+        # Runtime ownership is mutable control evidence, never a captured input or
+        # deterministic result identity. Replay starts with its own fresh owner.
+        return {
+            key: value
+            for key, value in (manifest or {}).items()
+            if key not in {"execution_owner", "owned_worker"}
+        }
+
+    @staticmethod
+    def preserve_research_owner(manifest, row):
+        current = json.loads(row["manifest"]) if row["manifest"] else {}
+        return manifest | {key: current[key] for key in ("execution_owner", "owned_worker") if key in current}
+
+    def claim_research(self, identifier, kind, progress):
+        table = self.research_table(kind)
+        with self.store.write() as conn:
+            row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (identifier,)).fetchone()
+            if row["status"] != "queued" or self.cancellation_requested(row):
+                return False
+            manifest = self.captured_research_manifest(json.loads(row["manifest"]) if row["manifest"] else {})
+            manifest["execution_owner"] = {
+                "token": self.research_owner_token,
+                "pid": os.getpid(),
+                "state": "active",
+                "process_isolation": self.settings.research_process_isolation,
+                "claimed_at": now_ms(),
+            }
+            conn.execute(
+                f"UPDATE {table} SET status='running',manifest=?,progress=?,updated_at=? WHERE id=?",
+                (dumps(manifest), progress, now_ms(), identifier),
+            )
+            return True
+
+    def record_research_worker(self, identifier, kind, evidence):
+        table = self.research_table(kind)
+        with self.store.write() as conn:
+            row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (identifier,)).fetchone()
+            if evidence["state"] == "launching" and (
+                row["status"] != "running" or self.cancellation_requested(row)
+            ):
+                raise PlatformError("research_cancel_requested", "Research cancellation requested.", 409)
+            manifest = json.loads(row["manifest"]) if row["manifest"] else {}
+            manifest["owned_worker"] = evidence
+            conn.execute(
+                f"UPDATE {table} SET manifest=?,updated_at=? WHERE id=?",
+                (dumps(manifest), now_ms(), identifier),
+            )
+
+    def recover_research_cancel(self, conn, row, kind):
+        manifest = json.loads(row["manifest"]) if row["manifest"] else {}
+        owner = manifest.get("execution_owner") or {}
+        worker = manifest.get("owned_worker")
+        if owner.get("state") == "drained":
+            exited, reason = True, "Original runtime completed its owned-work drain."
+        elif worker is not None:
+            exited, reason = worker_exit_evidence(worker)
+        elif owner.get("token") and process_exists(owner.get("pid")) is False:
+            # Every child spawn must first persist a launch intent. With no such
+            # intent and a dead owner, no child from this study can still start.
+            exited, reason = True, "Original execution owner exited before any worker launch."
+        else:
+            exited, reason = False, "Previous execution ownership or exit evidence is unavailable."
+        if exited:
+            self.confirm_research_cancel(conn, row, kind)
+            return
+        cancellation = manifest["cancellation"]
+        previous = cancellation.get("recovery") or {}
+        recovery = {
+            "state": "blocked",
+            "reason": reason,
+            "checked_at": now_ms(),
+            "next_step": "Keep the workspace open or retry cancellation to recheck exit evidence. If ownership evidence cannot be recovered, create a replacement study; this attempt and final-evaluation consumption remain recorded.",
+        }
+        manifest["cancellation"] = cancellation | {"recovery": recovery}
+        conn.execute(
+            f"UPDATE {self.research_table(kind)} SET manifest=?,error=?,updated_at=? WHERE id=?",
+            (
+                dumps(manifest),
+                "Cancellation pending recovery: " + reason + " " + recovery["next_step"],
+                now_ms(),
+                row["id"],
+            ),
+        )
+        if previous.get("reason") != reason:
+            self.store.audit(
+                conn,
+                row["source"],
+                "pro.research_cancel_recovery_blocked",
+                "Research cancellation awaits owned-worker exit evidence",
+                {"run_id": row["id"], "kind": kind, "actor": cancellation["actor"], "reason": reason},
+            )
+
+    def recover_research_cancellations(self):
+        # Nonblocking evidence probes only; never wait for or signal old PIDs while
+        # holding SQLite. The supervisor retries at most once per second.
+        with self.store.write() as conn:
+            for kind in ("single", "portfolio"):
+                for row in conn.execute(
+                    f"SELECT * FROM {self.research_table(kind)} WHERE status='running'"
+                ).fetchall():
+                    if self.cancellation_requested(row):
+                        self.recover_research_cancel(conn, row, kind)
+
+    def confirm_research_cancel(self, conn, row, kind):
+        """Called only when never started, or after owned computation has returned."""
+        manifest = json.loads(row["manifest"]) if row["manifest"] else {}
+        cancellation = manifest["cancellation"]
+        if cancellation.get("recovery"):
+            cancellation = cancellation | {
+                "recovery": cancellation["recovery"] | {"state": "resolved", "resolved_at": now_ms()}
+            }
+        manifest["cancellation"] = cancellation | {"state": "confirmed", "confirmed_at": now_ms()}
+        conn.execute(
+            f"UPDATE {self.research_table(kind)} SET status='cancelled',manifest=?,error=?,updated_at=? WHERE id=?",
+            (dumps(manifest), "Research cancelled by " + cancellation["actor"], now_ms(), row["id"]),
+        )
+        self.store.audit(
+            conn,
+            row["source"],
+            "pro.research_cancelled",
+            "Research cancellation confirmed",
+            {"run_id": row["id"], "kind": kind, "actor": cancellation["actor"], "state": "confirmed"},
+        )
+
+    def cancel_research(self, identifier, actor, kind="single"):
+        table = self.research_table(kind)
+        with self.store.write() as conn:
+            row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (identifier,)).fetchone()
+            if row is None:
+                raise PlatformError("not_found", "Research run not found.", 404)
+            if row["status"] in {"queued", "running"} and not self.cancellation_requested(row):
+                manifest = json.loads(row["manifest"]) if row["manifest"] else {}
+                manifest["cancellation"] = {
+                    "state": "requested",
+                    "requested_at": now_ms(),
+                    "actor": actor,
+                }
+                conn.execute(
+                    f"UPDATE {table} SET manifest=?,updated_at=? WHERE id=?",
+                    (dumps(manifest), now_ms(), identifier),
+                )
+                self.store.audit(
+                    conn,
+                    row["source"],
+                    "pro.research_cancel_requested",
+                    "Research cancellation requested",
+                    {"run_id": identifier, "kind": kind, "actor": actor, "state": "requested"},
+                )
+                row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (identifier,)).fetchone()
+                if row["status"] == "queued":
+                    self.confirm_research_cancel(conn, row, kind)
+            elif row["status"] == "running" and self.cancellation_requested(row):
+                with self.research_cancel_lock:
+                    locally_owned = (kind, identifier) in self.research_cancel_requests
+                if not locally_owned:
+                    self.recover_research_cancel(conn, row, kind)
+        # Signal after commit. Token creation also reads the durable request to close
+        # the claim/register race; this event never stops another research or execution.
+        if row["status"] in {"queued", "running"}:
+            with self.research_cancel_lock:
+                event = self.research_cancel_requests.get((kind, identifier))
+                if event is not None:
+                    event.set()
+        return self.run(identifier) if kind == "single" else self.portfolios.get(identifier)
+
+    def research_token(self, identifier, kind):
+        with self.research_cancel_lock:
+            event = self.research_cancel_requests.setdefault((kind, identifier), threading.Event())
+        with self.store.read() as conn:
+            row = conn.execute(
+                f"SELECT * FROM {self.research_table(kind)} WHERE id=?", (identifier,)
+            ).fetchone()
+        if row["status"] == "cancelled" or self.cancellation_requested(row):
+            event.set()
+        token = ResearchCancellation(event, self.research_cancelled)
+        token.lifecycle = lambda evidence: self.record_research_worker(identifier, kind, evidence)
+        return token
+
+    def release_research_token(self, identifier, kind):
+        with self.research_cancel_lock:
+            self.research_cancel_requests.pop((kind, identifier), None)
+
+    def research_checkpoint(self, identifier, kind, *, progress=None, snapshot=None, manifest=None):
+        """Progress/input writes cannot erase a concurrent durable cancellation."""
+        table = self.research_table(kind)
+        with self.store.write() as conn:
+            row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (identifier,)).fetchone()
+            if row["status"] != "running" or self.cancellation_requested(row):
+                raise PlatformError("research_cancel_requested", "Research cancellation requested.", 409)
+            if manifest is not None:
+                manifest = self.preserve_research_owner(manifest, row)
+                conn.execute(
+                    f"UPDATE {table} SET manifest=?,updated_at=? WHERE id=?",
+                    (dumps(manifest), now_ms(), identifier),
+                )
+            if snapshot is not None:
+                conn.execute("UPDATE pro_runs SET snapshot=? WHERE id=?", (dumps(snapshot), identifier))
+            if progress is not None:
+                conn.execute(
+                    f"UPDATE {table} SET progress=MAX(progress,?),updated_at=? WHERE id=?",
+                    (progress, now_ms(), identifier),
+                )
+
+    def research_can_complete(self, conn, identifier, kind):
+        row = conn.execute(f"SELECT * FROM {self.research_table(kind)} WHERE id=?", (identifier,)).fetchone()
+        if row["status"] != "running":
+            return False
+        if self.cancellation_requested(row):
+            self.confirm_research_cancel(conn, row, kind)
+            return False
+        return True
+
+    def fail_research(self, identifier, kind, exc):
+        # The caller has left the compute function, including isolated-child cleanup.
+        table = self.research_table(kind)
+        with self.store.write() as conn:
+            row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (identifier,)).fetchone()
+            if row["status"] != "running":
+                return
+            if self.cancellation_requested(row):
+                self.confirm_research_cancel(conn, row, kind)
+            elif isinstance(exc, PlatformError) and exc.code == "research_cancelled":
+                conn.execute(
+                    f"UPDATE {table} SET status='queued',error=NULL,updated_at=? WHERE id=?",
+                    (now_ms(), identifier),
+                )
+            else:
+                conn.execute(
+                    f"UPDATE {table} SET status='failed',error=?,updated_at=? WHERE id=?",
+                    (str(exc)[:1000], now_ms(), identifier),
+                )
 
     def run(self, identifier, *, include_snapshot=False):
         with self.store.read() as conn:
@@ -379,7 +654,11 @@ class ProfessionalRuntime:
                 await asyncio.sleep(0.25)
 
     async def jobs_loop(self):
+        last_recovery = 0.0
         while True:
+            if time.monotonic() - last_recovery >= 1:
+                self.recover_research_cancellations()
+                last_recovery = time.monotonic()
             self.beat("research", "scanning")
             with self.store.read() as conn:
                 row = conn.execute(
@@ -397,14 +676,12 @@ class ProfessionalRuntime:
 
     async def perform_run(self, identifier):
         run = self.run(identifier, include_snapshot=True)
-        with self.store.write() as conn:
-            claimed = conn.execute(
-                "UPDATE pro_runs SET status='running',progress=.05,updated_at=? WHERE id=? AND status='queued'",
-                (now_ms(), identifier),
-            )
-            if claimed.rowcount != 1:
-                return
+        if not self.claim_research(identifier, "single", 0.05):
+            return
+        cancellation = self.research_token(identifier, "single")
+        cancellation_context = research_cancellation.set(cancellation)
         try:
+            cancellation.check()
             config, snapshot = run["config"], run["snapshot"]
             if snapshot is None:
                 dataset = self.catalog.get_dataset(config["dataset_id"])
@@ -442,8 +719,9 @@ class ProfessionalRuntime:
                                 )
                             captured_events.append(event)
                     snapshot["funding_events"] = encode(captured_events)
+            cancellation.check()
             manifest = {
-                **(run["manifest"] or {}),
+                **self.captured_research_manifest(run["manifest"]),
                 "version": 2,
                 "engine_version": __version__,
                 "build_sha": self.settings.build_sha,
@@ -486,22 +764,17 @@ class ProfessionalRuntime:
                 "indicator_warmup": "up to 2000 preceding bars; Wilder RSI seed depends on captured warmup; not an infinite-history equivalence claim",
                 "margin_tier_policy": "captured_current_tier_scenario",
             }
-            with self.store.write() as conn:
-                conn.execute(
-                    "UPDATE pro_runs SET snapshot=?,manifest=?,progress=.15,updated_at=? WHERE id=?",
-                    (dumps(snapshot), dumps(manifest), now_ms(), identifier),
-                )
+            self.research_checkpoint(
+                identifier, "single", snapshot=snapshot, manifest=manifest, progress=0.15
+            )
             from .pro_research import research_progress
 
             last_progress = [0.0]
 
             def progress(fraction):
+                cancellation.check()
                 if time.monotonic() - last_progress[0] >= 0.5 or fraction >= 1:
-                    with self.store.write() as conn:
-                        conn.execute(
-                            "UPDATE pro_runs SET progress=MAX(progress,?),updated_at=? WHERE id=? AND status='running'",
-                            (0.15 + 0.8 * fraction, now_ms(), identifier),
-                        )
+                    self.research_checkpoint(identifier, "single", progress=0.15 + 0.8 * fraction)
                     last_progress[0] = time.monotonic()
 
             token = research_progress.set(progress)
@@ -509,15 +782,14 @@ class ProfessionalRuntime:
                 result = await self.offload(self.compute, config, snapshot, manifest)
             finally:
                 research_progress.reset(token)
+            cancellation.check()
             payload, result_hash = await self.offload(serialized_result, result)
+            cancellation.check()
             manifest["result_hash"] = result_hash
             if manifest.get("replay_of"):
                 manifest["replay_verified"] = result_hash == manifest.get("expected_result_hash")
                 if not manifest["replay_verified"]:
-                    with self.store.write() as conn:
-                        conn.execute(
-                            "UPDATE pro_runs SET manifest=? WHERE id=?", (dumps(manifest), identifier)
-                        )
+                    self.research_checkpoint(identifier, "single", manifest=manifest)
                     raise PlatformError(
                         "replay_mismatch",
                         "Recomputed results differ from the captured original. No identical-replay claim is made; use the recorded application and input artifact.",
@@ -534,15 +806,22 @@ class ProfessionalRuntime:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            logger.exception("Professional research failed: %s", identifier)
-            with self.store.write() as conn:
-                conn.execute(
-                    "UPDATE pro_runs SET status='failed',error=?,updated_at=? WHERE id=?",
-                    (str(exc)[:1000], now_ms(), identifier),
-                )
+            if not isinstance(exc, PlatformError) or exc.code not in {
+                "research_cancel_requested",
+                "research_cancelled",
+            }:
+                logger.exception("Professional research failed: %s", identifier)
+            self.fail_research(identifier, "single", exc)
+        finally:
+            research_cancellation.reset(cancellation_context)
+            self.release_research_token(identifier, "single")
 
     def complete_run(self, identifier, source, payload, summary, manifest):
         with self.store.write() as conn:
+            if not self.research_can_complete(conn, identifier, "single"):
+                return
+            row = conn.execute("SELECT * FROM pro_runs WHERE id=?", (identifier,)).fetchone()
+            manifest = self.preserve_research_owner(manifest, row)
             pointer = self.artifacts.put(conn, payload)
             conn.execute(
                 "UPDATE pro_runs SET status='completed',result=?,summary=?,manifest=?,progress=1,updated_at=? WHERE id=?",
@@ -563,6 +842,9 @@ class ProfessionalRuntime:
     def compute(self, config, snapshot, manifest):
         from .pro_research import ResearchConfig, research_progress, run_research_plan
 
+        cancellation = research_cancellation.get()
+        if cancellation:
+            cancellation.check()
         raw = snapshot["instrument"]
         decimals = {
             key: D(str(value))
@@ -705,7 +987,8 @@ class ProfessionalRuntime:
                 timeout=self.settings.research_timeout_seconds,
                 memory_mb=self.settings.research_memory_budget_mb,
                 progress=research_progress.get(),
-                cancelled=self.research_cancelled,
+                cancelled=cancellation or self.research_cancelled,
+                lifecycle=getattr(cancellation, "lifecycle", None),
             )
         return run_research_plan(
             candles,

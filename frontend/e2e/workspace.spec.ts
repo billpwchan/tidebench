@@ -442,7 +442,8 @@ test('shared-capital portfolio study and one-use holdout governance', async ({
   const seal = await (await sealing).json();
   expect(seal.status).toBe('sealed');
   await page.getByRole('button', { name: 'Evaluate once', exact: true }).click();
-  await expect(page.getByText('Bound strategy version', { exact: true })).toBeVisible();
+  await expect(page.getByText('Run strategy version', { exact: true })).toBeVisible();
+  await expect(page.locator('.research-run-identity')).toContainText(project.version.id);
   await expect
     .poll(async () => {
       const list = (await (await request.get('/api/v1/pro/research/holdouts')).json()).items;
@@ -450,7 +451,8 @@ test('shared-capital portfolio study and one-use holdout governance', async ({
     })
     .toBe('consumed');
   await page.getByLabel('Interface language', { exact: true }).selectOption('zh-CN');
-  await expect(page.getByText('已绑定策略版本', { exact: true })).toBeVisible();
+  await expect(page.getByText('本次运行策略版本', { exact: true })).toBeVisible();
+  await expect(page.locator('.research-run-identity')).toContainText(project.version.id);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBeTruthy();
@@ -650,6 +652,10 @@ test('versioned portfolio release, managed execution and reconciled owner contri
   });
   await page.getByRole('tab', { name: 'Managed portfolios', exact: true }).click();
   await page.getByRole('button', { name: 'Stop whole portfolio', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Stop whole portfolio', exact: true })
+    .getByRole('button', { name: 'Confirm stop whole portfolio', exact: true })
+    .click();
   await expect
     .poll(
       async () =>
@@ -791,10 +797,12 @@ test('data download, operations, source failure and responsive layout', async ({
   await page.getByLabel('Search market symbol').fill('ETH');
   await page
     .getByRole('dialog', { name: 'Find a market' })
-    .getByRole('button')
-    .filter({ hasText: 'ETH' })
+    .getByRole('button', { name: 'Inspect ETH-USDT', exact: true })
     .click();
-  await page.getByRole('button', { name: /Market context/ }).click();
+  await expect(page.getByRole('button', { name: /Market context/ })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   await expect(page.getByLabel('Market', { exact: true })).toHaveValue('ETH-USDT');
 });
 
@@ -1266,8 +1274,8 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   );
   await page.evaluate(() => localStorage.setItem('tidebench:language', 'zh-CN'));
   await page.reload();
-  await navigate(page, '策略研究');
-  await page.getByRole('tab', { name: '组合研究', exact: true }).click();
+  // Revising returns to an editable draft; inspecting this exact historical run is explicit.
+  await page.goto(`/#research?source=example&view=portfolio&run=${run.id}`);
   await expect(page.getByRole('heading', { name: '仓位规模的依据', exact: true })).toBeVisible();
   await expect(page.getByText('最大回撤', { exact: true })).toBeVisible();
   await expect(page.getByText('分配资金压力波动率', { exact: true })).toBeVisible();
@@ -1427,35 +1435,35 @@ test('trading desk surfaces unresolved group risk even when members and service 
       .get('/api/v1/pro/execution/analytics?source=example')
       .then((response) => response.json()),
   ]);
+  const capturedAccount = () => ({
+    ...accountFixture,
+    equity: '10000',
+    available_cash: recovered ? '10000' : '8750',
+    cash: recovered ? '10000' : '8750',
+    positions: recovered
+      ? []
+      : [
+          {
+            inst_id: 'BTC-USDT',
+            inst_type: 'SPOT',
+            side: 'long',
+            quantity: '.02',
+            mark: '62500',
+            market_value: '1250',
+            margin: '0',
+            unrealized_pnl: '0',
+            as_of: now,
+          },
+        ],
+  });
   await page.route('**/api/v1/pro/execution/account?*', (route) =>
-    route.fulfill({
-      json: {
-        ...accountFixture,
-        equity: '10000',
-        available_cash: recovered ? '10000' : '8750',
-        cash: recovered ? '10000' : '8750',
-        positions: recovered
-          ? []
-          : [
-              {
-                inst_id: 'BTC-USDT',
-                inst_type: 'SPOT',
-                side: 'long',
-                quantity: '.02',
-                mark: '62500',
-                market_value: '1250',
-                margin: '0',
-                unrealized_pnl: '0',
-                as_of: now,
-              },
-            ],
-      },
-    }),
+    route.fulfill({ json: capturedAccount() }),
   );
   await page.route('**/api/v1/pro/execution/analytics?*', (route) =>
     route.fulfill({
       json: {
         ...analyticsFixture,
+        input_snapshot: { ...analyticsFixture.input_snapshot, account: capturedAccount() },
         status: 'available',
         summary: {
           ...analyticsFixture.summary,
@@ -1599,17 +1607,26 @@ test('trading desk surfaces unresolved group risk even when members and service 
 test('pending funding marks account economics provisional even when service health is ok', async ({
   page,
 }) => {
-  const accountFixture = await (
-    await page.request.get('/api/v1/pro/execution/account?source=example')
-  ).json();
+  const [accountFixture, analyticsFixture] = await Promise.all([
+    page.request.get('/api/v1/pro/execution/account?source=example').then((r) => r.json()),
+    page.request.get('/api/v1/pro/execution/analytics?source=example').then((r) => r.json()),
+  ]);
+  const fundingAccount = {
+    ...accountFixture,
+    economic_status: 'funding_pending',
+    equity: null,
+    equity_before_pending_funding: '10000',
+    pending_funding: [{ inst_id: 'BTC-USDT-SWAP', quantity: '1' }],
+  };
   await page.route('**/api/v1/pro/execution/account?*', (route) =>
+    route.fulfill({ json: fundingAccount }),
+  );
+  await page.route('**/api/v1/pro/execution/analytics?*', (route) =>
     route.fulfill({
       json: {
-        ...accountFixture,
-        economic_status: 'funding_pending',
-        equity: null,
-        equity_before_pending_funding: '10000',
-        pending_funding: [{ inst_id: 'BTC-USDT-SWAP', quantity: '1' }],
+        ...analyticsFixture,
+        input_snapshot: { ...analyticsFixture.input_snapshot, account: fundingAccount },
+        summary: { ...analyticsFixture.summary, reported_equity: null },
       },
     }),
   );
@@ -1681,8 +1698,7 @@ test('completed research keeps a failed simulated execution visibly ineligible f
   await page.route('**/api/v1/pro/research/portfolios/qa-execution-failure', (route) =>
     route.fulfill({ json: run }),
   );
-  await navigate(page, 'Research');
-  await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
+  await page.goto(`/#research?source=example&view=portfolio&run=${run.id}`);
   const outcome = page.getByRole('region', { name: 'Simulation execution state', exact: true });
   await expect(outcome).toContainText('This simulation is not eligible for paper deployment.');
   await expect(outcome).toContainText('Marked returns include any retained inventory');
@@ -1816,6 +1832,10 @@ test('a flat failed group remains a warning until the operator explicitly stops 
   const stop = page.getByRole('button', { name: 'Stop whole portfolio', exact: true });
   await expect(stop).toBeEnabled();
   await stop.click();
+  await page
+    .getByRole('dialog', { name: 'Stop whole portfolio', exact: true })
+    .getByRole('button', { name: 'Confirm stop whole portfolio', exact: true })
+    .click();
   await expect(stop).toBeDisabled();
   await navigate(page, 'Overview');
   await expect(
@@ -2084,8 +2104,7 @@ test('release depth evidence uses pinned reports and refuses a content hash mism
       },
     });
   });
-  await navigate(page, 'Research');
-  await page.getByRole('tab', { name: 'Portfolio research', exact: true }).click();
+  await page.goto(`/#research?source=example&view=portfolio&run=${run.id}`);
   await page.getByRole('button', { name: 'Review portfolio release', exact: true }).click();
   const evidence = page.locator('.liquidity-release-evidence');
   await expect(evidence).toContainText(

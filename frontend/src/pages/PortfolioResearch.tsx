@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, Plus, Play, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Download, Plus, Play, Square, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { Source, Strategy } from '../api';
 import { defaultStrategy, downloadBlob } from '../api';
 import { proApi } from '../proApi';
@@ -29,10 +29,23 @@ import type { RecordData } from '../proApi';
 import { useI18n } from '../lib/i18n';
 import { canResearch } from '../lib/permissions';
 import PortfolioReleaseReview from '../components/PortfolioReleaseReview';
+import ResearchCancellationStatus from '../components/ResearchCancellationStatus';
 import PortfolioExecutionPolicy, {
   executionPolicyName,
 } from '../components/PortfolioExecutionPolicy';
-import type { PortfolioDefinition, PortfolioVersion } from '../proApi';
+import {
+  inputHandoffKey,
+  isDraftRecord,
+  matchesDraftShape,
+  useResearchDraft,
+} from '../lib/researchDraft';
+import type {
+  DataPackage,
+  PortfolioDefinition,
+  PortfolioResearchRun,
+  PortfolioVersion,
+  ResearchInputs,
+} from '../proApi';
 import portfolioRecipeData from '../../../examples/portfolios.json';
 
 const recipes = portfolioRecipeData as unknown as {
@@ -43,14 +56,19 @@ const recipes = portfolioRecipeData as unknown as {
 }[];
 
 type Leg = {
+  inst_id?: string;
+  programDraft?: string;
   package_id: string;
   weight: string;
   leverage: string;
   direction: string;
   strategy: Strategy;
   lifecycle_events?: RecordData[];
+  rule_events?: RecordData[];
 };
 const newLeg = (): Leg => ({
+  inst_id: '',
+  programDraft: undefined,
   package_id: '',
   weight: '.5',
   leverage: '1',
@@ -58,21 +76,115 @@ const newLeg = (): Leg => ({
   strategy: { ...defaultStrategy },
   lifecycle_events: [],
 });
+const newPortfolioDraft = () => ({
+  editing: false,
+  name: '',
+  hypothesis: '',
+  mode: 'fixed_weights',
+  universeMode: 'static',
+  lifecycleWarmup: 2,
+  legs: [newLeg(), newLeg()],
+  projectId: '',
+  recipeId: '',
+  parentId: '',
+  capitalPct: '100',
+  residualPct: '2',
+  executionContract: 'reduce_group_v2_allowance' as NonNullable<
+    PortfolioDefinition['execution_contract']
+  >,
+  legacyUpgrade: false,
+  carryThreshold: '0',
+  carryConfig: {
+    carry_window: 1,
+    carry_cost_settlements: 0,
+    carry_buffer_bps: '0',
+    carry_max_age_hours: 0,
+  },
+  riskConfig: {
+    risk_window: 84,
+    vol_target_pct: '20',
+    vol_floor_pct: '20',
+    covariance_shrinkage: '.25',
+    correlation_stress: '.75',
+  },
+  cash: '10000',
+  fee: '10',
+  slip: '5',
+  rebalance: 24,
+  lookback: 20,
+  topK: 1,
+  gross: 200,
+  maxOrder: '2500',
+  maxBaseGross: '100',
+  daily: 5,
+  evaluation: 'full',
+  trainPct: 70,
+  embargo: 1,
+  dataLeg: -1,
+  lastInputsKey: '',
+});
+type PortfolioDraft = ReturnType<typeof newPortfolioDraft>;
+const validPortfolioDraft = (value: unknown): value is PortfolioDraft =>
+  matchesDraftShape(value, newPortfolioDraft()) &&
+  isDraftRecord(value) &&
+  Object.keys(value).every((key) => Object.hasOwn(newPortfolioDraft(), key)) &&
+  Array.isArray(value.legs) &&
+  value.legs.length >= 2 &&
+  value.legs.length <= 10 &&
+  value.legs.every(
+    (leg) =>
+      isDraftRecord(leg) &&
+      (leg.inst_id === undefined || typeof leg.inst_id === 'string') &&
+      (leg.programDraft === undefined || typeof leg.programDraft === 'string') &&
+      (leg.rule_events === undefined ||
+        (Array.isArray(leg.rule_events) && leg.rule_events.every(isDraftRecord))) &&
+      ['long_only', 'short_only', 'long_short'].includes(String(leg.direction)),
+  ) &&
+  ['fixed_weights', 'independent_signals', 'momentum', 'risk_momentum', 'funding_carry'].includes(
+    String(value.mode),
+  ) &&
+  ['static', 'historical_lifecycle'].includes(String(value.universeMode)) &&
+  ['reduce_group_v1', 'reduce_group_v2_allowance'].includes(String(value.executionContract));
 export default function PortfolioResearch({
   source,
   onData,
   onExecution,
   initialRunId,
+  initialInputs,
+  onRunSelect,
+  onClearDraft,
 }: {
   source: Source;
   onData: () => void;
-  onExecution: () => void;
+  onExecution: (id?: string) => void;
   initialRunId?: string;
+  initialInputs?: ResearchInputs;
+  onRunSelect?: (id: string) => void;
+  onClearDraft?: () => void;
 }) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const qc = useQueryClient();
-  const canOperate = canResearch(useSession()?.user?.role);
+  const session = useSession();
+  const canOperate = canResearch(session?.user?.role);
+  const userId = session?.user?.id ?? session?.user?.username ?? 'service';
+  const draft = useResearchDraft(
+    'portfolio',
+    userId,
+    source,
+    newPortfolioDraft,
+    validPortfolioDraft,
+  );
+  const latestDraft = useRef({ source, userId, value: draft.value });
+  latestDraft.current = { source, userId, value: draft.value };
+  const [submittedRun, setSubmittedRun] = useState<{
+    source: Source;
+    userId: string;
+    id: string;
+  }>();
+  const [dataLeg, setDataLeg] = draft.field('dataLeg');
+  const [lastInputsKey, setLastInputsKey] = draft.field('lastInputsKey');
+  const [handoffError, setHandoffError] = useState('');
   const packages = useQuery({
     queryKey: ['pro-packages', source],
     queryFn: () => proApi.packages(source),
@@ -85,49 +197,123 @@ export default function PortfolioResearch({
     refetchInterval: 5000,
   });
   const [active, setActive] = useState(initialRunId ?? '');
+  const revisionGeneration = useRef(0);
+  const selectedContext = useRef({ source, id: initialRunId ?? '' });
+  const mounted = useRef(true);
   useEffect(() => {
-    if (initialRunId) setActive(initialRunId);
-  }, [initialRunId]);
-  const id = active || runs.data?.items[0]?.id;
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      revisionGeneration.current += 1;
+    };
+  }, []);
+  useEffect(() => {
+    revisionGeneration.current += 1;
+    selectedContext.current = { source, id: initialRunId ?? '' };
+    setActive(initialRunId ?? '');
+  }, [initialRunId, source]);
+  const selectRun = (identifier: string) => {
+    revisionGeneration.current += 1;
+    selectedContext.current = { source, id: identifier };
+    setActive(identifier);
+    onRunSelect?.(identifier);
+  };
+  const id = active || undefined;
+  type RequestContext = {
+    task: 'load' | 'create' | 'replay' | 'revise';
+    source: Source;
+    userId: string;
+    id: string;
+    generation: number;
+    fingerprint: string;
+  };
+  const beginRequest = (task: RequestContext['task']): RequestContext => {
+    revisionGeneration.current += 1;
+    return {
+      task,
+      source,
+      userId,
+      id: selectedContext.current.id,
+      generation: revisionGeneration.current,
+      fingerprint: JSON.stringify(latestDraft.current.value),
+    };
+  };
+  const sameScope = (request: RequestContext) =>
+    mounted.current &&
+    latestDraft.current.source === request.source &&
+    latestDraft.current.userId === request.userId;
+  const currentTask = (request?: RequestContext) =>
+    !!request &&
+    sameScope(request) &&
+    revisionGeneration.current === request.generation &&
+    selectedContext.current.id === request.id;
+  const currentRequest = (request?: RequestContext) =>
+    currentTask(request) && JSON.stringify(latestDraft.current.value) === request!.fingerprint;
+  const rememberRun = (item: PortfolioResearchRun, request: RequestContext) => {
+    qc.setQueryData(['portfolio-run', item.id], item);
+    void qc.invalidateQueries({ queryKey: ['portfolio-runs', request.source] });
+    void qc.invalidateQueries({ queryKey: ['pro-ops'] });
+    if (!currentRequest(request) && sameScope(request))
+      setSubmittedRun({ source: request.source, userId: request.userId, id: item.id });
+  };
   const run = useQuery({
     queryKey: ['portfolio-run', id],
-    queryFn: () => proApi.portfolioRun(id!),
+    queryFn: async () => {
+      const item = await proApi.portfolioRun(id!);
+      if (item.source !== source)
+        throw new Error(t('The selected run belongs to another data source.'));
+      return item;
+    },
     enabled: !!id,
     refetchInterval: (q) =>
       ['queued', 'running'].includes(q.state.data?.status ?? '') ? 1500 : false,
   });
   useEffect(() => {
-    if (run.data?.status === 'completed' || run.data?.status === 'failed')
+    if (
+      run.data?.status === 'completed' ||
+      run.data?.status === 'failed' ||
+      run.data?.status === 'cancelled'
+    )
       void qc.invalidateQueries({ queryKey: ['portfolio-runs', source] });
   }, [run.data?.status, source, qc]);
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState('');
-  const [hypothesis, setHypothesis] = useState('');
-  const [mode, setMode] = useState('fixed_weights');
-  const [universeMode, setUniverseMode] = useState('static');
-  const [lifecycleWarmup, setLifecycleWarmup] = useState(2);
-  const [legs, setLegs] = useState<Leg[]>([newLeg(), newLeg()]);
-  const [projectId, setProjectId] = useState('');
-  const [recipeId, setRecipeId] = useState('');
-  const [parentId, setParentId] = useState('');
-  const [capitalPct, setCapitalPct] = useState('100');
-  const [residualPct, setResidualPct] = useState('2');
-  const [executionContract, setExecutionContract] = useState<
-    NonNullable<PortfolioDefinition['execution_contract']>
-  >('reduce_group_v2_allowance');
-  const [legacyUpgrade, setLegacyUpgrade] = useState(false);
+  const cancel = useMutation({
+    mutationFn: proApi.cancelPortfolioRun,
+    onSuccess: (item) => {
+      qc.setQueryData(['portfolio-run', item.id], item);
+      void qc.invalidateQueries({ queryKey: ['portfolio-runs', source] });
+      void qc.invalidateQueries({ queryKey: ['pro-ops'] });
+    },
+  });
+  const cancellationRequested =
+    (run.data?.manifest?.cancellation as RecordData | undefined)?.state === 'requested';
+  const [editing, setEditing] = draft.field('editing');
+  // A run in the URL is an explicit inspection request. Its result may
+  // temporarily cover an editing draft without replacing that draft's intent.
+  const showEditor = editing && !id;
+  const openDraft = () => {
+    setEditing(true);
+    selectRun('');
+  };
+  const [name, setName] = draft.field('name');
+  const [hypothesis, setHypothesis] = draft.field('hypothesis');
+  const [mode, setMode] = draft.field('mode');
+  const [universeMode, setUniverseMode] = draft.field('universeMode');
+  const [lifecycleWarmup, setLifecycleWarmup] = draft.field('lifecycleWarmup');
+  const [legs, setLegs] = draft.field('legs');
+  const [projectId, setProjectId] = draft.field('projectId');
+  const [recipeId, setRecipeId] = draft.field('recipeId');
+  const [, setParentId] = draft.field('parentId');
+  const [capitalPct, setCapitalPct] = draft.field('capitalPct');
+  const [residualPct, setResidualPct] = draft.field('residualPct');
+  const [executionContract, setExecutionContract] = draft.field('executionContract');
+  const [legacyUpgrade, setLegacyUpgrade] = draft.field('legacyUpgrade');
   const loadExecution = (definition: Partial<PortfolioDefinition>, savedEvidence = true) => {
     setResidualPct(definition.max_residual_pct ?? '2');
     setExecutionContract(definition.execution_contract ?? 'reduce_group_v2_allowance');
     setLegacyUpgrade(savedEvidence && !definition.execution_contract);
   };
-  const [carryThreshold, setCarryThreshold] = useState('0');
-  const [carryConfig, setCarryConfig] = useState({
-    carry_window: 1,
-    carry_cost_settlements: 0,
-    carry_buffer_bps: '0',
-    carry_max_age_hours: 0,
-  });
+  const [carryThreshold, setCarryThreshold] = draft.field('carryThreshold');
+  const [carryConfig, setCarryConfig] = draft.field('carryConfig');
   const loadCarry = (d: Partial<PortfolioDefinition>) =>
     setCarryConfig({
       carry_window: d.carry_window ?? 1,
@@ -135,13 +321,7 @@ export default function PortfolioResearch({
       carry_buffer_bps: d.carry_buffer_bps ?? '0',
       carry_max_age_hours: d.carry_max_age_hours ?? 0,
     });
-  const [riskConfig, setRiskConfig] = useState({
-    risk_window: 84,
-    vol_target_pct: '20',
-    vol_floor_pct: '20',
-    covariance_shrinkage: '.25',
-    correlation_stress: '.75',
-  });
+  const [riskConfig, setRiskConfig] = draft.field('riskConfig');
   const loadRisk = (d: Partial<PortfolioDefinition>) =>
     setRiskConfig({
       risk_window: d.risk_window ?? 84,
@@ -154,39 +334,50 @@ export default function PortfolioResearch({
     queryKey: ['portfolio-projects'],
     queryFn: proApi.portfolioProjects,
   });
-  const [cash, setCash] = useState('10000');
-  const [fee, setFee] = useState('10');
-  const [slip, setSlip] = useState('5');
-  const [rebalance, setRebalance] = useState(24);
-  const [lookback, setLookback] = useState(20);
-  const [topK, setTopK] = useState(1);
-  const [gross, setGross] = useState(200);
-  const [maxOrder, setMaxOrder] = useState('2500');
-  const [maxBaseGross, setMaxBaseGross] = useState('100');
-  const [daily, setDaily] = useState(5);
-  const [evaluation, setEvaluation] = useState('full');
-  const [trainPct, setTrainPct] = useState(70);
-  const [embargo, setEmbargo] = useState(1);
+  const [cash, setCash] = draft.field('cash');
+  const [fee, setFee] = draft.field('fee');
+  const [slip, setSlip] = draft.field('slip');
+  const [rebalance, setRebalance] = draft.field('rebalance');
+  const [lookback, setLookback] = draft.field('lookback');
+  const [topK, setTopK] = draft.field('topK');
+  const [gross, setGross] = draft.field('gross');
+  const [maxOrder, setMaxOrder] = draft.field('maxOrder');
+  const [maxBaseGross, setMaxBaseGross] = draft.field('maxBaseGross');
+  const [daily, setDaily] = draft.field('daily');
+  const [evaluation, setEvaluation] = draft.field('evaluation');
+  const [trainPct, setTrainPct] = draft.field('trainPct');
+  const [embargo, setEmbargo] = draft.field('embargo');
   const [tab, setTab] = useState('overview');
+  type Submission = {
+    request: RequestContext;
+    value: PortfolioDraft;
+    packages: DataPackage[];
+    savedVersion?: PortfolioVersion;
+  };
   const create = useMutation({
-    mutationFn: async () => {
-      const selected = legs.map((leg) => packages.data?.items.find((p) => p.id === leg.package_id));
+    mutationFn: async (submitted: Submission) => {
+      const v = submitted.value;
+      const selected = v.legs.map((leg) =>
+        submitted.packages.find(
+          (p) => p.id === leg.package_id && p.ready && p.source === submitted.request.source,
+        ),
+      );
       if (selected.some((p) => !p))
         throw new Error(t('Select a ready package for every portfolio leg.'));
       const definition: PortfolioDefinition = {
         bar: selected[0]!.bar,
-        mode,
-        capital_pct: capitalPct,
-        rebalance_bars: rebalance,
-        lookback,
-        top_k: topK,
-        carry_threshold: carryThreshold,
-        ...carryConfig,
-        ...riskConfig,
-        max_residual_pct: residualPct,
+        mode: v.mode,
+        capital_pct: v.capitalPct,
+        rebalance_bars: v.rebalance,
+        lookback: v.lookback,
+        top_k: v.topK,
+        carry_threshold: v.carryThreshold,
+        ...v.carryConfig,
+        ...v.riskConfig,
+        max_residual_pct: v.residualPct,
         failure_policy: 'reduce_group',
-        execution_contract: executionContract,
-        legs: legs.map((leg, i) => ({
+        execution_contract: v.executionContract,
+        legs: v.legs.map((leg, i) => ({
           inst_id: selected[i]!.inst_id,
           weight: leg.weight,
           leverage: leg.leverage,
@@ -195,70 +386,98 @@ export default function PortfolioResearch({
         })),
       };
       let version: PortfolioVersion;
-      if (projectId)
-        version = await proApi.createPortfolioVersion(projectId, {
-          hypothesis,
+      if (v.projectId)
+        version = await proApi.createPortfolioVersion(v.projectId, {
+          hypothesis: v.hypothesis,
           definition,
-          ...(parentId ? { parent_id: parentId } : {}),
+          ...(v.parentId ? { parent_id: v.parentId } : {}),
         });
       else {
-        const saved = await proApi.createPortfolioProject({ name, hypothesis, definition });
-        setProjectId(saved.id);
+        const saved = await proApi.createPortfolioProject({
+          name: v.name,
+          hypothesis: v.hypothesis,
+          definition,
+        });
+        qc.setQueryData(['portfolio-project', saved.id], saved);
         version = saved.version!;
       }
-      setParentId(version.id);
+      submitted.savedVersion = version;
+      qc.setQueryData(['portfolio-version', version.id], version);
       void qc.invalidateQueries({ queryKey: ['portfolio-projects'] });
-      return proApi.createPortfolioRun({
-        name,
-        hypothesis,
-        mode,
-        legs: legs.map((leg) => ({
-          ...leg,
+      const item = await proApi.createPortfolioRun({
+        name: v.name,
+        hypothesis: v.hypothesis,
+        mode: v.mode,
+        legs: v.legs.map((leg) => ({
+          package_id: leg.package_id,
+          weight: leg.weight,
+          leverage: leg.leverage,
+          direction: leg.direction,
+          strategy: leg.strategy,
+          ...(leg.rule_events ? { rule_events: leg.rule_events } : {}),
           lifecycle_events:
-            universeMode === 'historical_lifecycle' ? (leg.lifecycle_events ?? []) : [],
+            v.universeMode === 'historical_lifecycle' ? (leg.lifecycle_events ?? []) : [],
         })),
-        universe_mode: universeMode,
-        lifecycle_warmup_bars: lifecycleWarmup,
-        capital_pct: capitalPct,
+        universe_mode: v.universeMode,
+        lifecycle_warmup_bars: v.lifecycleWarmup,
+        capital_pct: v.capitalPct,
         portfolio_version_id: version.id,
-        initial_cash: cash,
-        fee_bps: fee,
-        slippage_bps: slip,
-        rebalance_bars: rebalance,
-        lookback,
-        top_k: topK,
-        carry_threshold: carryThreshold,
-        ...carryConfig,
-        ...riskConfig,
+        initial_cash: v.cash,
+        fee_bps: v.fee,
+        slippage_bps: v.slip,
+        rebalance_bars: v.rebalance,
+        lookback: v.lookback,
+        top_k: v.topK,
+        carry_threshold: v.carryThreshold,
+        ...v.carryConfig,
+        ...v.riskConfig,
         failure_policy: 'reduce_group',
-        max_residual_pct: residualPct,
-        execution_contract: executionContract,
-        max_gross_pct: gross,
-        max_order_notional: maxOrder,
-        max_base_asset_gross_pct: maxBaseGross,
-        max_daily_loss_pct: daily,
-        evaluation,
-        train_pct: trainPct,
-        embargo_bars: embargo,
+        max_residual_pct: v.residualPct,
+        execution_contract: v.executionContract,
+        max_gross_pct: v.gross,
+        max_order_notional: v.maxOrder,
+        max_base_asset_gross_pct: v.maxBaseGross,
+        max_daily_loss_pct: v.daily,
+        evaluation: v.evaluation,
+        train_pct: v.trainPct,
+        embargo_bars: v.embargo,
       });
+      return item;
     },
-    onSuccess: (r) => {
-      setActive(r.id);
+    onSuccess: (item, submitted) => {
+      rememberRun(item, submitted.request);
+      if (!currentRequest(submitted.request)) return;
+      setProjectId(submitted.savedVersion!.project_id);
+      setParentId(submitted.savedVersion!.id);
+      selectRun(item.id);
       setEditing(false);
-      void qc.invalidateQueries({ queryKey: ['portfolio-runs', source] });
+      setSubmittedRun(undefined);
+    },
+    onError: (_error, submitted) => {
+      // The immutable save remains a fact even if queuing the trial fails.
+      // Adopt its lineage only when this exact draft is still current.
+      if (submitted.savedVersion && currentRequest(submitted.request)) {
+        setProjectId(submitted.savedVersion.project_id);
+        setParentId(submitted.savedVersion.id);
+      }
     },
   });
   const replay = useMutation({
-    mutationFn: () => proApi.replayPortfolio(id!),
-    onSuccess: (r) => {
-      setActive(r.id);
-      void qc.invalidateQueries({ queryKey: ['portfolio-runs', source] });
+    mutationFn: (request: RequestContext) => proApi.replayPortfolio(request.id),
+    onSuccess: (item, request) => {
+      rememberRun(item, request);
       void qc.invalidateQueries({ queryKey: ['portfolio-governance'] });
+      if (currentRequest(request)) {
+        selectRun(item.id);
+        setSubmittedRun(undefined);
+      }
     },
   });
   const loadProject = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, request }: { id: string; request: RequestContext }) => {
       const project = await proApi.portfolioProject(id);
+      qc.setQueryData(['portfolio-project', project.id], project);
+      if (!currentRequest(request)) return;
       const version = project.versions![0];
       const d = version.definition;
       setProjectId(project.id);
@@ -276,11 +495,13 @@ export default function PortfolioResearch({
       setRebalance(d.rebalance_bars);
       setLookback(d.lookback);
       setTopK(d.top_k);
-      const ready = packages.data?.items.filter((p) => p.ready && p.bar === d.bar) ?? [];
+      const ready =
+        packages.data?.items.filter((p) => p.ready && p.source === source && p.bar === d.bar) ?? [];
       const first = ready.find((p) => p.inst_id === d.legs[0].inst_id);
       setLegs(
         d.legs.map((leg) => ({
           ...leg,
+          programDraft: undefined,
           lifecycle_events: [],
           package_id:
             ready.find(
@@ -291,14 +512,16 @@ export default function PortfolioResearch({
     },
   });
   const revise = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (request: RequestContext) => {
       const config = run.data!.config;
       const versionId = config.portfolio_version_id as string | undefined;
-      if (versionId) {
-        const v = await proApi.portfolioVersion(versionId);
-        setProjectId(v.project_id);
-        setParentId(v.id);
-        loadExecution(v.definition);
+      const version = versionId ? await proApi.portfolioVersion(versionId) : undefined;
+      if (version) qc.setQueryData(['portfolio-version', version.id], version);
+      if (!currentRequest(request)) return;
+      if (version) {
+        setProjectId(version.project_id);
+        setParentId(version.id);
+        loadExecution(version.definition);
       } else {
         setProjectId('');
         setParentId('');
@@ -309,7 +532,14 @@ export default function PortfolioResearch({
       setMode(String(config.mode));
       setUniverseMode(String(config.universe_mode ?? 'static'));
       setLifecycleWarmup(Number(config.lifecycle_warmup_bars ?? 2));
-      setLegs(config.legs as Leg[]);
+      setLegs(
+        (config.legs as Leg[]).map((leg) => ({
+          ...leg,
+          programDraft: undefined,
+          inst_id:
+            packages.data?.items.find((p) => p.id === leg.package_id)?.inst_id ?? leg.inst_id ?? '',
+        })),
+      );
       setCapitalPct(String(config.capital_pct ?? 100));
       setCarryThreshold(String(config.carry_threshold));
       loadCarry(config as Partial<PortfolioDefinition>);
@@ -328,12 +558,12 @@ export default function PortfolioResearch({
       setTrainPct(Number(config.train_pct));
       setEmbargo(Number(config.embargo_bars));
       create.reset();
-      setEditing(true);
+      openDraft();
     },
   });
   const patch = (i: number, value: Partial<Leg>) =>
     setLegs((old) => old.map((leg, index) => (index === i ? { ...leg, ...value } : leg)));
-  const ready = packages.data?.items.filter((p) => p.ready) ?? [];
+  const ready = packages.data?.items.filter((p) => p.ready && p.source === source) ?? [];
   const first = ready.find((p) => p.id === legs[0].package_id);
   const choices = ready.filter(
     (p) =>
@@ -342,6 +572,82 @@ export default function PortfolioResearch({
         (universeMode === 'historical_lifecycle' ||
           (p.start === first.start && p.end === first.end))),
   );
+  useEffect(() => {
+    if (!initialInputs || inputHandoffKey(initialInputs) === lastInputsKey || !packages.data)
+      return;
+    const packageItem = ready.find((p) => p.id === initialInputs.package_id);
+    if (!packageItem) {
+      setHandoffError(
+        text(
+          'The returned data must be a ready package from this data source. Prepare a research package to continue.',
+          '返回数据必须是当前来源的已就绪研究包，请先准备研究包。',
+        ),
+      );
+      return;
+    }
+    const matching = legs.findIndex(
+      (leg) =>
+        (leg.inst_id || ready.find((p) => p.id === leg.package_id)?.inst_id) ===
+        packageItem.inst_id,
+    );
+    const empty = legs.findIndex(
+      (leg) => !leg.package_id && (!leg.inst_id || leg.inst_id === packageItem.inst_id),
+    );
+    const target =
+      matching >= 0
+        ? matching
+        : dataLeg >= 0 &&
+            dataLeg < legs.length &&
+            (!legs[dataLeg].inst_id || legs[dataLeg].inst_id === packageItem.inst_id)
+          ? dataLeg
+          : empty;
+    if (target < 0) {
+      setHandoffError(
+        text(
+          'This package does not match an existing or empty portfolio leg. Add a leg or select its package explicitly.',
+          '该研究包与已有或空组合腿不匹配，请新增组合腿或明确选择研究包。',
+        ),
+      );
+      return;
+    }
+    const anchor = legs.find((leg, index) => index !== target && leg.package_id);
+    const aligned = ready.find((p) => p.id === anchor?.package_id);
+    if (
+      aligned &&
+      (aligned.bar !== packageItem.bar ||
+        (universeMode === 'static' &&
+          (aligned.start !== packageItem.start || aligned.end !== packageItem.end)))
+    ) {
+      setHandoffError(
+        text(
+          'The returned package does not share the interval and UTC window of the other legs. Prepare aligned data before running.',
+          '返回研究包的周期或 UTC 时间窗口与其他组合腿不一致，请准备对齐数据。',
+        ),
+      );
+      return;
+    }
+    setLegs((old) =>
+      old.map((leg, index) =>
+        index === target
+          ? {
+              ...leg,
+              inst_id: packageItem.inst_id,
+              package_id: packageItem.id,
+              lifecycle_events: [],
+            }
+          : leg,
+      ),
+    );
+    setEditing(true);
+    setDataLeg(-1);
+    setLastInputsKey(inputHandoffKey(initialInputs));
+    setHandoffError('');
+  }, [initialInputs, packages.data, legs, universeMode, dataLeg, lastInputsKey]);
+  const prepareData = () => {
+    const target = legs.findIndex((leg) => !leg.package_id);
+    draft.flush({ dataLeg: target });
+    onData();
+  };
   const plan = run.data?.result;
   const economicIncomplete = plan?.economic_state === 'incomplete_lifecycle';
   const executionFailed =
@@ -361,7 +667,7 @@ export default function PortfolioResearch({
         title="Portfolio research"
         description="One cash budget across spot and perpetual legs, causal decisions and a reconciled native-asset journal."
       >
-        <button className="button button-secondary" onClick={onData}>
+        <button className="button button-secondary" onClick={prepareData}>
           {t('Prepare data')}
         </button>
         <button
@@ -369,46 +675,86 @@ export default function PortfolioResearch({
           disabled={!canOperate}
           onClick={() => {
             create.reset();
-            setProjectId('');
-            setParentId('');
-            setRecipeId('');
-            setName('');
-            setHypothesis('');
-            setMode('fixed_weights');
-            setUniverseMode('static');
-            setLifecycleWarmup(2);
-            setLegs([newLeg(), newLeg()]);
-            setCapitalPct('100');
-            loadExecution({}, false);
-            setCarryThreshold('0');
-            loadCarry({});
-            loadRisk({});
-            setCash('10000');
-            setFee('10');
-            setSlip('5');
-            setRebalance(24);
-            setLookback(20);
-            setTopK(1);
-            setGross(200);
-            setMaxOrder('2500');
-            setMaxBaseGross('100');
-            setDaily(5);
-            setEvaluation('full');
-            setTrainPct(70);
-            setEmbargo(1);
-            setEditing(true);
+            draft.clear();
+            openDraft();
+            setLastInputsKey(inputHandoffKey(initialInputs));
+            setHandoffError('');
+            onClearDraft?.();
           }}
         >
           <Plus size={14} />
           {t('New portfolio study')}
         </button>
       </PageHeading>
-      {editing ? (
+      <div className="prepared-input-note" role="status">
+        <span>
+          {draft.restoredAt
+            ? `${text('Research draft restored', '已恢复研究草稿')} · ${date(draft.restoredAt, true)}`
+            : text(
+                'Portfolio configuration is saved in this browser session.',
+                '组合研究配置保存在当前浏览器会话中。',
+              )}
+        </span>
+        <button
+          className="text-button"
+          onClick={() => {
+            draft.clear({ lastInputsKey: inputHandoffKey(initialInputs) });
+            setHandoffError('');
+            create.reset();
+            selectRun('');
+            onClearDraft?.();
+          }}
+        >
+          {text('Clear research draft', '清除研究草稿')}
+        </button>
+        {!showEditor && draft.hasDraft && (
+          <button className="text-button" onClick={openDraft}>
+            {text('Resume portfolio draft', '继续组合草稿')}
+          </button>
+        )}
+      </div>
+      {draft.problem && (
+        <p role="alert" className="inline-warning">
+          {draft.problem === 'invalid'
+            ? text(
+                'A damaged research draft was discarded. Saved research evidence is unchanged.',
+                '已丢弃损坏的研究草稿，已保存研究证据不受影响。',
+              )
+            : text(
+                'The research draft could not be saved. Keep this page open before leaving.',
+                '研究草稿无法保存，请保留当前页面。',
+              )}
+        </p>
+      )}
+      {handoffError && <ErrorBox error={new Error(handoffError)} />}
+      {submittedRun?.source === source &&
+        submittedRun.userId === userId &&
+        submittedRun.id !== id && (
+          <div className="action-note" role="status">
+            <span>
+              {text(
+                'Earlier portfolio research was submitted. Your current draft is unchanged.',
+                '之前的组合研究已提交，当前草稿保持不变。',
+              )}
+            </span>{' '}
+            <button className="text-button" onClick={() => selectRun(submittedRun.id)}>
+              {text('View submitted research', '查看已提交研究')}
+            </button>
+          </div>
+        )}
+      {showEditor ? (
         <section className="pro-panel portfolio-study-editor">
           <form
+            onChangeCapture={() => {
+              revisionGeneration.current += 1;
+            }}
             onSubmit={(e) => {
               e.preventDefault();
-              create.mutate();
+              create.mutate({
+                request: beginRequest('create'),
+                value: structuredClone(draft.value),
+                packages: structuredClone(packages.data?.items ?? []),
+              });
             }}
           >
             <div className="section-heading">
@@ -452,6 +798,8 @@ export default function PortfolioResearch({
                     const anchor = matching.find((p) => p.inst_id === d.legs[0].inst_id);
                     setLegs(
                       d.legs.map((leg) => ({
+                        inst_id: leg.inst_id,
+                        programDraft: undefined,
                         weight: leg.weight,
                         leverage: leg.leverage,
                         direction: leg.direction,
@@ -489,10 +837,10 @@ export default function PortfolioResearch({
               <Field label="Saved portfolio">
                 <select
                   value={projectId}
-                  disabled={loadProject.isPending}
+                  disabled={loadProject.isPending && currentTask(loadProject.variables?.request)}
                   onChange={(e) =>
                     e.target.value
-                      ? loadProject.mutate(e.target.value)
+                      ? loadProject.mutate({ id: e.target.value, request: beginRequest('load') })
                       : (setProjectId(''), setParentId(''))
                   }
                 >
@@ -576,7 +924,11 @@ export default function PortfolioResearch({
                       required
                       value={leg.package_id}
                       onChange={(e) =>
-                        patch(i, { package_id: e.target.value, lifecycle_events: [] })
+                        patch(i, {
+                          package_id: e.target.value,
+                          inst_id: ready.find((p) => p.id === e.target.value)?.inst_id ?? '',
+                          lifecycle_events: [],
+                        })
                       }
                     >
                       <option value="">{t('Choose a ready package')}</option>
@@ -640,6 +992,8 @@ export default function PortfolioResearch({
                       showAllocation={false}
                       value={leg.strategy}
                       onChange={(strategy) => patch(i, { strategy })}
+                      programDraft={leg.programDraft}
+                      onProgramDraftChange={(programDraft) => patch(i, { programDraft })}
                     />
                   </details>
                 )}
@@ -973,16 +1327,27 @@ export default function PortfolioResearch({
                   'This form captures current instrument rules. Attributed point-in-time rule events are supported through the API. The chosen universe is explicit; no historical listing coverage is inferred. Multi-leg fills are sequential, with residuals and rejections reported.',
                 )}
             </p>
-            {loadProject.isError && <ErrorBox error={loadProject.error} />}
+            {loadProject.isError && currentTask(loadProject.variables?.request) && (
+              <ErrorBox error={loadProject.error} />
+            )}
             <p className="quiet-copy">
               {t(
                 'Running research first saves an immutable portfolio version. Changes create a revision; identical definitions reuse the saved version.',
               )}
             </p>
-            {create.isError && <ErrorBox error={create.error} />}
+            {create.isError && currentTask(create.variables?.request) && (
+              <ErrorBox error={create.error} />
+            )}
             <button
               className="button button-citrus"
-              disabled={!canOperate || create.isPending || legs.some((l) => !l.package_id)}
+              disabled={
+                !canOperate ||
+                (create.isPending && currentTask(create.variables?.request)) ||
+                legs.some(
+                  (l) =>
+                    !l.package_id || (l.strategy.kind === 'program' && !l.strategy.rules?.length),
+                )
+              }
             >
               <Play size={14} />
               {t('Run portfolio research')}
@@ -1002,7 +1367,7 @@ export default function PortfolioResearch({
                 <button
                   key={r.id}
                   className={`strategy-project${r.id === id ? ' active' : ''}`}
-                  onClick={() => setActive(r.id)}
+                  onClick={() => selectRun(r.id)}
                 >
                   <strong>{String(r.config.name)}</strong>
                   <span>
@@ -1083,10 +1448,29 @@ export default function PortfolioResearch({
                 )}
                 <p className="strategy-hypothesis">{String(run.data?.config.hypothesis)}</p>
                 <div className="portfolio-release-actions">
+                  {run.data && ['queued', 'running'].includes(run.data.status) && (
+                    <button
+                      className="button button-secondary"
+                      disabled={
+                        !canOperate ||
+                        (cancel.isPending && cancel.variables === id) ||
+                        cancellationRequested
+                      }
+                      onClick={() => id && cancel.mutate(id)}
+                    >
+                      <Square size={14} />
+                      {text(
+                        cancellationRequested
+                          ? 'Cancellation requested'
+                          : 'Cancel portfolio research',
+                        cancellationRequested ? '已请求取消' : '取消组合研究',
+                      )}
+                    </button>
+                  )}
                   <button
                     className="button button-secondary"
-                    disabled={!canOperate || revise.isPending}
-                    onClick={() => revise.mutate()}
+                    disabled={!canOperate || (revise.isPending && currentTask(revise.variables))}
+                    onClick={() => revise.mutate(beginRequest('revise'))}
                   >
                     {t('Revise & research')}
                   </button>
@@ -1097,14 +1481,33 @@ export default function PortfolioResearch({
                     </span>
                   ) : null}
                 </div>
-                {revise.isError && <ErrorBox error={revise.error} />}
-                {replay.isError && <ErrorBox error={replay.error} />}
+                {revise.isError && currentTask(revise.variables) && (
+                  <ErrorBox error={revise.error} />
+                )}
+                {cancel.isError && cancel.variables === id && <ErrorBox error={cancel.error} />}
+                <ResearchCancellationStatus
+                  requested={cancellationRequested}
+                  recovery={(run.data?.manifest?.cancellation as RecordData | undefined)?.recovery}
+                  disabled={!canOperate || (cancel.isPending && cancel.variables === id)}
+                  onRetry={() => id && cancel.mutate(id)}
+                />
+                {run.data?.status === 'cancelled' && (
+                  <div className="action-note" role="status">
+                    {text(
+                      'The worker has stopped this run. Its configuration and trial record remain saved; revise and research again to create a new trial.',
+                      'Worker 已停止此任务，配置和试验记录仍保留。修改并重新研究会创建新的试验。',
+                    )}
+                  </div>
+                )}
+                {replay.isError && currentTask(replay.variables) && (
+                  <ErrorBox error={replay.error} />
+                )}
                 {run.data?.status === 'completed' && !!run.data.manifest.input_artifact && (
                   <div className="toolbar">
                     <button
                       className="text-button"
-                      disabled={!canOperate || replay.isPending}
-                      onClick={() => replay.mutate()}
+                      disabled={!canOperate || (replay.isPending && currentTask(replay.variables))}
+                      onClick={() => replay.mutate(beginRequest('replay'))}
                     >
                       {t('Replay frozen inputs')}
                     </button>

@@ -11,9 +11,11 @@ An open-source crypto research and paper trading workbench for OKX spot and line
 
 English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Research model](docs/pro-research.md) · [Operations](docs/operations.md)
 
-![Tidebench trading overview, using explicitly synthetic prices](docs/assets/overview.png)
+![Tidebench trading overview, using explicitly synthetic prices](docs/assets/journey-overview-v0.12-desktop.png)
 
-Instrument evidence preserves full forward REST data-array observations, including unavailable preopen rows. Compare responses, inspect missing rules, review information known by a UTC time and export exact hashes; older listing timestamps do not manufacture historical coverage. [Observation and recovery guide](docs/instrument-evidence.md).
+## Continue the same work after an interruption
+
+Prepare data without losing the strategy version or edited costs. Restore strategy and portfolio drafts, return to the exact result or controller after refresh, and distinguish a saved activation from a controller that is running now. Overview money, positions and exposure share one captured account; incomplete economics remain unknown. The task desk suggests concrete next steps from observed state; whole-portfolio stops explain their full effect, and a research cancellation waits for actual cleanup. [Trader journeys](docs/trader-journeys.md) · [Before/after audit](docs/audit/user-journey-0.12.0.zh-CN.md).
 
 ## A trading desk with evidence you can inspect
 
@@ -23,6 +25,8 @@ Account capital promises, settlement-time funding obligations, shared group fail
 New portfolio studies can explicitly choose bounded smaller continuations after shared-account allowance drift, with immutable original orders and unchanged hard guards. Existing frozen-order versions keep their recorded behavior. [Execution policy choices](docs/portfolio-execution-contracts.md).
 
 Protect an actual position from the desk: stop its controllers, cancel working entries, review an exact native-unit reduce-only exit and inspect the receipt. Pending protection follows the remaining original inventory, with requested/filled/canceled amounts preserved. Portfolio review shows actual account capital owners and economic research evidence before approval. UTC-selected forward windows persist and can be independently recomputed; post-test fold selection and recovery-retained trials stay explicit. [v0.11 before/after audit](docs/audit/red-team-0.11.0.zh-CN.md).
+
+Instrument evidence preserves full forward REST data-array observations, including unavailable preopen rows. Compare responses, inspect missing rules, review information known by a UTC time and export exact hashes; older listing timestamps do not manufacture historical coverage. [Observation and recovery guide](docs/instrument-evidence.md).
 
 ## Strategies with evidence, including failed hypotheses
 

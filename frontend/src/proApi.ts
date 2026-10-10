@@ -267,6 +267,7 @@ export type PriceShock = {
   market_pct?: Record<string, string>;
 };
 export type PortfolioAnalytics = {
+  source?: Source;
   status: 'available' | 'partial' | 'unavailable';
   as_of?: number;
   as_of_ms?: number;
@@ -277,6 +278,11 @@ export type PortfolioAnalytics = {
   scenarios: RecordData[];
   issues: (string | RecordData)[];
   assumptions?: RecordData;
+  input_snapshot?: {
+    account?: ProAccount | null;
+    as_of_ms?: number;
+    [key: string]: unknown;
+  } | null;
   [key: string]: unknown;
 };
 export type ProRunConfig = {
@@ -357,7 +363,7 @@ export type ProAccount = {
   available_cash?: string;
   equity?: string | null;
   used_margin?: string;
-  maintenance_margin?: string;
+  maintenance_margin?: string | null;
   gross_exposure?: string;
   realized_pnl?: string;
   unrealized_pnl?: string | null;
@@ -794,6 +800,9 @@ export const proApi = {
     request<Contributions>(`/pro/execution/contributions?${q({ source })}`),
   portfolioRuns: (source: Source) =>
     request<{ items: PortfolioResearchRun[] }>('/pro/research/portfolios?source=' + source),
+  cancelPortfolioRun: (id: string) =>
+    post<PortfolioResearchRun>(`/pro/research/portfolios/${encodeURIComponent(id)}/cancel`),
+  cancelRun: (id: string) => post<ProRun>(`/pro/research/runs/${encodeURIComponent(id)}/cancel`),
   portfolioRun: (id: string) => request<PortfolioResearchRun>('/pro/research/portfolios/' + id),
   createPortfolioRun: (body: RecordData) =>
     post<PortfolioResearchRun>('/pro/research/portfolios', body),

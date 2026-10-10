@@ -1101,6 +1101,81 @@ class BackupService:
                 counts[table] = count
         return counts
 
+    def _retain_research_cancellations(self, prepared):
+        """Restore cannot turn a later cancellation back into executable queued work."""
+        counts = {}
+        with closing(self.store.connect()) as current:
+            current.execute("BEGIN")
+            for kind, table in (("single", "pro_runs"), ("portfolio", "portfolio_runs")):
+                count = 0
+                columns = [row[1] for row in prepared.execute(f"PRAGMA table_info({table})")]
+                for raw in current.execute(f"SELECT * FROM {table} WHERE status IN ('running','cancelled')"):
+                    row = dict(raw)
+                    latest = json.loads(row["manifest"]) if row["manifest"] else {}
+                    cancellation = latest.get("cancellation") or {}
+                    if cancellation.get("state") not in {"requested", "confirmed"}:
+                        continue
+                    previous = prepared.execute(
+                        f"SELECT source,config,created_at,manifest FROM {table} WHERE id=?", (row["id"],)
+                    ).fetchone()
+                    if previous is not None:
+                        if (
+                            previous[0] != row["source"]
+                            or previous[2] != row["created_at"]
+                            or dumps(json.loads(previous[1])) != dumps(json.loads(row["config"]))
+                        ):
+                            raise PlatformError(
+                                "governance_conflict",
+                                "Cancelled research run identity conflicts with the restore target; preserve the safety backup.",
+                                409,
+                            )
+                        manifest = json.loads(previous[3]) if previous[3] else {}
+                    else:
+                        # Non-financial cancellation responsibility can survive even
+                        # an earlier backup with no run. This row remains cancelled/
+                        # requested and gives no authority to compute or deploy.
+                        manifest = latest.copy()
+                        prepared.execute(
+                            f"INSERT INTO {table}({','.join(columns)}) VALUES({','.join('?' for _ in columns)})",
+                            tuple(row[column] for column in columns),
+                        )
+                    for key in ("cancellation", "execution_owner", "owned_worker"):
+                        if key in latest:
+                            manifest[key] = latest[key]
+                    status = "cancelled" if cancellation["state"] == "confirmed" else "running"
+                    prepared.execute(
+                        f"UPDATE {table} SET status=?,manifest=?,result=NULL,error=?,progress=?,updated_at=? WHERE id=?",
+                        (
+                            status,
+                            dumps(manifest),
+                            row["error"],
+                            row["progress"],
+                            row["updated_at"],
+                            row["id"],
+                        ),
+                    )
+                    if "summary" in columns:
+                        prepared.execute(f"UPDATE {table} SET summary=NULL WHERE id=?", (row["id"],))
+                    self.store.audit(
+                        prepared,
+                        row["source"],
+                        "pro.research_cancel_retained",
+                        "Later research cancellation retained across workspace restore",
+                        {
+                            "run_id": row["id"],
+                            "kind": kind,
+                            "actor": cancellation.get("actor"),
+                            "state": cancellation["state"],
+                            "requested_at": cancellation.get("requested_at"),
+                            "config_hash": hashlib.sha256(
+                                dumps(json.loads(row["config"])).encode()
+                            ).hexdigest(),
+                        },
+                    )
+                    count += 1
+                counts[kind] = count
+        return counts
+
     @staticmethod
     def _readonly(path):
         return sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
@@ -1242,6 +1317,11 @@ class BackupService:
                         retained_research = (
                             self._retain_research_facts(prepared) if manifest["database_schema"] >= 6 else {}
                         )
+                        retained_cancellations = (
+                            self._retain_research_cancellations(prepared)
+                            if manifest["database_schema"] >= 6
+                            else {}
+                        )
                         retained_observations = (
                             self._retain_instrument_observations(prepared)
                             if manifest["database_schema"] >= 7
@@ -1301,6 +1381,7 @@ class BackupService:
                                 "backup_id": identifier,
                                 "safety_backup_id": safety["id"],
                                 "retained_research_facts": retained_research,
+                                "retained_research_cancellations": retained_cancellations,
                                 "retained_instrument_observations": retained_observations,
                                 "retained_temporal_evidence": retained_temporal,
                             },
@@ -1330,6 +1411,7 @@ class BackupService:
                 "execution_halted": True,
                 "pending_orders_canceled": True,
                 "retained_research_facts": retained_research,
+                "retained_research_cancellations": retained_cancellations,
                 "retained_temporal_evidence": retained_temporal,
                 "manifest": manifest,
             }

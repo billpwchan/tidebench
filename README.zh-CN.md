@@ -9,20 +9,24 @@
 
 简体中文 · [English](README.md) · [研究模型](docs/pro-research.md) · [部署与运维](docs/operations.md)
 
-![交易总览实际截图，使用明确标注的合成数据](docs/assets/overview.png)
+![交易总览实际截图，使用明确标注的合成数据](docs/assets/journey-overview-v0.12-desktop.png)
+
+## 中断之后，继续同一件工作
+
+选好策略再准备数据，版本与编辑成本继续保留；策略／组合草稿可在当前浏览器会话恢复。刷新返回同一任务，审批记录与控制器当前状态分开显示。首页金额、持仓与敞口使用同一捕获，未知权益保持不可用；任务总览按实际状态给出下一步，全组停止明确影响范围，取消研究等待实际进程清理完成。[用户路径指南](docs/trader-journeys.md) · [断点与修复审查](docs/audit/user-journey-0.12.0.zh-CN.md)。
+
+## 交易员工作流与可复核证据
+
+当前版本补齐账户资本承诺、按原持仓结算迟到资金费、组合执行补偿一致性、当前风险处置、完整窗口收益冻结、历史品种事件和真实盘口成本报告。费用和成交价差计入准入后的净值，持仓不会因停止控制器就被当成平仓；未知数据明确显示不可用。参见 [v0.11 专业工作流](docs/professional-workflows-v0.11.md)、[历史生命周期](docs/historical-lifecycle.md)、[前向证据](docs/forward-evidence.md) 与 [独立审计](docs/audit/README.md)。
+
+
+新组合研究可明确选择资本余量变化后的有界缩小续单：保留原目标与订单证据，不放宽硬风险限制；已有冻结订单版本保持原政策。[执行政策与证据](docs/portfolio-execution-contracts.md)。
 
 不可变策略／组合版本、可重放研究、全组审批、持久目标及命令构成连接的工作流。多市场执行中断后先核对已成交命令；失败腿和补偿受阻保留真实库存；实际货币贡献与共同账户核对。参见[策略工作流](docs/strategy-workflows.md)、[托管组合与归因指南](docs/managed-portfolios.md)及[当前自审](docs/audit/README.md)。
 
 品种证据保留完整前向 REST data 数组，包括规则尚未补全的新上市条目；支持响应比较、缺失规则审阅、指定 UTC 时间的已知信息查询和精确哈希导出。较早的上市时间戳不会被包装成完整历史覆盖。[观察与恢复指南](docs/instrument-evidence.md)。
 
 从实际账户持仓直接进入保护流程：先停止控制器、取消待执行入场单，再审阅原生数量的只减仓退出和实际回执。待触发保护绑定原始持仓身份，分别保留请求、成交和取消数量。组合审批展示真实资本所有者及研究淘汰结论；UTC 前向窗口可保存、重新打开并重算核验。测试结果暴露后的折段选择和恢复后保留的研究尝试均明确标注。[v0.11 工作流](docs/professional-workflows-v0.11.md) · [反例与修复审计](docs/audit/red-team-0.11.0.zh-CN.md)。
-
-## 交易员工作流与可复核证据
-
-当前版本补齐账户资本承诺、按原持仓结算迟到资金费、组合执行补偿一致性、当前风险处置、完整窗口收益冻结、历史品种事件和真实盘口成本报告。费用和成交价差计入准入后的净值，持仓不会因停止控制器就被当成平仓；未知数据明确显示不可用。参见 [v0.10 专业工作流](docs/professional-workflows-v0.11.md)、[历史生命周期](docs/historical-lifecycle.md)、[前向证据](docs/forward-evidence.md) 与 [独立审计](docs/audit/README.md)。
-
-
-新组合研究可明确选择资本余量变化后的有界缩小续单：保留原目标与订单证据，不放宽硬风险限制；已有冻结订单版本保持原政策。[执行政策与证据](docs/portfolio-execution-contracts.md)。
 
 ## 策略机制、可执行模型与真实反证
 

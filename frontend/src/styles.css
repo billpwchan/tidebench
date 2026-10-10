@@ -6965,3 +6965,328 @@ tbody tr:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Task-oriented context uses whitespace and quiet rules instead of nested cards. */
+.workspace-journey {
+  margin: 22px 0 28px;
+  padding: 24px 0 18px;
+  border-block: 1px solid var(--line, #e6ece8);
+}
+.journey-heading,
+.journey-return,
+.workspace-activity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.journey-heading h2 {
+  font-size: 21px;
+  margin: 7px 0 0;
+  letter-spacing: -0.4px;
+}
+.journey-status,
+.journey-note {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #73847b;
+}
+.journey-note {
+  margin: 12px 0;
+}
+.journey-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0;
+}
+.journey-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 17px 0;
+}
+.journey-item + .journey-item {
+  border-top: 1px solid #edf1ef;
+}
+.journey-detail {
+  min-width: 0;
+}
+.journey-detail > strong {
+  font-size: 14px;
+  margin-right: 10px;
+}
+.journey-detail p {
+  margin: 7px 0 4px;
+  color: #6b7d73;
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 780px;
+}
+.journey-detail code {
+  font-size: 10px;
+  color: #819088;
+  overflow-wrap: anywhere;
+}
+.journey-action {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.journey-progress {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #73847b;
+}
+.journey-progress progress {
+  width: 150px;
+  height: 4px;
+  accent-color: #345f4b;
+}
+.journey-return {
+  padding: 15px 0;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #345f4b;
+  border-bottom: 1px solid #e6ece8;
+}
+.workspace-activity {
+  padding: 11px 0;
+  font-size: 12px;
+  color: #345f4b;
+}
+.workspace-activity > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.market-search-result {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 14px;
+}
+.market-search-result:hover {
+  background: #f5f8f6;
+}
+.market-search-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: none;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  padding: 13px 0;
+  cursor: pointer;
+  color: inherit;
+}
+.market-search-identity > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.market-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.market-search-status {
+  padding: 12px 22px;
+  font-size: 12px;
+  color: #73847b;
+}
+.market-search-actions .text-button {
+  white-space: nowrap;
+}
+.selected-release {
+  margin-bottom: 20px;
+  padding: 12px 0 22px;
+  border-bottom: 1px solid #e6ece8;
+}
+.research-draft-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 12px 0 20px;
+  font-size: 12px;
+  color: #73847b;
+}
+@media (max-width: 650px) {
+  .journey-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .journey-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 0;
+  }
+  .journey-action {
+    align-self: flex-start;
+  }
+  .journey-return,
+  .research-draft-note {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .workspace-activity {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .market-search-result {
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .market-search-identity {
+    gap: 9px;
+  }
+}
+
+.journey-history {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #73847b;
+}
+.journey-history > summary {
+  cursor: pointer;
+  padding: 12px 0;
+}
+.journey-expand {
+  margin: 12px 0;
+}
+.overview-market-context {
+  scroll-margin-top: 90px;
+}
+
+.market-search-inspect {
+  font-size: 11px;
+  color: #73847b;
+  margin-left: auto;
+}
+
+.scope-note {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 560px;
+  line-height: 1.55;
+}
+
+.strategy-draft-status {
+  padding: 14px 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.strategy-draft-status .toolbar {
+  margin-top: 10px;
+}
+.strategy-draft-replacement {
+  margin: 16px 0 22px;
+  padding: 18px 0;
+  border-block: 1px solid var(--line);
+}
+.strategy-draft-replacement .record-grid {
+  margin: 14px 0;
+}
+
+.strategy-draft-status,
+.strategy-draft-replacement {
+  overflow-wrap: anywhere;
+}
+
+.research-cancellation-recovery {
+  margin: 18px 0;
+  padding: 14px 0;
+  border-block: 1px solid var(--line);
+}
+.research-cancellation-recovery p {
+  max-width: 78ch;
+  line-height: 1.6;
+}
+
+/* The primary column follows the task: configure first, inspect a selected run first. */
+.research-config-first .pro-research-form {
+  position: static;
+}
+.research-config-first .compact-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+}
+.research-config-first .compact-form > .field:first-of-type,
+.research-config-first .compact-form > .form-grid,
+.research-config-first .compact-form > .strategy-bound-fields,
+.research-config-first .compact-form > .selected-dataset,
+.research-config-first .compact-form > .research-date-range,
+.research-config-first .compact-form > .error-box,
+.research-config-first .compact-form > p,
+.research-config-first .compact-form > button {
+  grid-column: 1 / -1;
+}
+.research-config-first .compact-form > .text-button {
+  justify-self: start;
+  margin: 0 0 16px;
+}
+.research-config-first .compact-form > button[type='submit'] {
+  justify-self: start;
+  min-width: 220px;
+  margin: 8px 0 16px;
+}
+.research-run-list {
+  display: grid;
+  max-height: 680px;
+  overflow: auto;
+}
+.research-run-card {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.research-run-card:first-child {
+  border-top: 0;
+}
+.research-run-card-heading,
+.research-run-card-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.research-run-card-meta {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.research-run-empty {
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 12px 0 4px;
+}
+.research-result-heading:focus,
+.research-configuration-heading:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 5px;
+}
+@media (max-width: 1000px) {
+  .pro-research-layout .pro-research-form {
+    grid-row: auto;
+  }
+}
+@media (max-width: 600px) {
+  .pro-research-layout .compact-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .research-config-first .compact-form > button[type='submit'] {
+    justify-self: stretch;
+    min-width: 0;
+  }
+}

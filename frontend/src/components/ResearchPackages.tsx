@@ -25,10 +25,12 @@ export default function ResearchPackages({
   source,
   onResearch,
   onOpenRaw,
+  initialPackageId,
 }: {
   source: Source;
   onResearch: (inputs: ResearchInputs) => void;
   onOpenRaw: () => void;
+  initialPackageId?: string;
 }) {
   const { t } = useI18n();
   const canOperate = canResearch(useSession()?.user?.role);
@@ -77,7 +79,11 @@ export default function ResearchPackages({
       refresh();
     },
   });
-  const items = packages.data?.items.filter((p) => p.source === source) ?? [];
+  const available = packages.data?.items.filter((p) => p.source === source) ?? [];
+  const selectedPackage = available.find((p) => p.id === initialPackageId);
+  const items = selectedPackage
+    ? [selectedPackage, ...available.filter((p) => p.id !== initialPackageId)]
+    : available;
   const submit = () => {
     const startTs = Date.parse(`${start}Z`),
       endTs = Date.parse(`${end}Z`);
@@ -107,6 +113,17 @@ export default function ResearchPackages({
   return (
     <>
       <ActionNote text={notice} />
+      {initialPackageId && packages.isSuccess && !selectedPackage && (
+        <ErrorBox
+          error={new Error(t('The selected research package is unavailable for this source.'))}
+        />
+      )}
+      {selectedPackage && (
+        <p className="journey-return">
+          {t('Selected research package')} <code>{selectedPackage.id}</code> ·{' '}
+          {selectedPackage.inst_id}
+        </p>
+      )}
       <div className="research-package-layout">
         <section className="pro-panel package-library">
           <div className="section-heading">

@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, CircleAlert, Clock3, RefreshCw } from 'lucide-react';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
+import type { ProAccount, RecordData } from '../proApi';
 import DeskAttention from '../components/DeskAttention';
 import { deskIssues } from '../lib/deskAttention';
 import type { Page } from '../lib/config';
@@ -29,13 +31,40 @@ type Alert = {
   view?: string;
   severity: 'warning' | 'neutral' | 'bad';
 };
+const isRecord = (value: unknown): value is RecordData =>
+  !!value && typeof value === 'object' && !Array.isArray(value);
+function accountForSource(value: unknown, source: Source): ProAccount | undefined {
+  if (!isRecord(value) || value.source !== source) return undefined;
+  const moneyFields = [
+    'cash',
+    'available_cash',
+    'equity',
+    'used_margin',
+    'maintenance_margin',
+    'unrealized_pnl',
+  ];
+  if (
+    !moneyFields.every(
+      (key) =>
+        value[key] == null ||
+        typeof value[key] === 'string' ||
+        (typeof value[key] === 'number' && Number.isFinite(value[key])),
+    )
+  )
+    return undefined;
+  return value as ProAccount;
+}
 export default function Overview({
   source,
+  journey,
+  marketRequested = false,
   navigate,
   symbol,
   setSymbol,
 }: {
   source: Source;
+  journey?: ReactNode;
+  marketRequested?: boolean;
   symbol: string;
   setSymbol: (symbol: string) => void;
   navigate: (page: Page, view?: string) => void;
@@ -48,11 +77,13 @@ export default function Overview({
   const account = useQuery({
     queryKey: ['pro-account', source],
     queryFn: () => proApi.account(source),
+    refetchOnMount: 'always',
     refetchInterval: 5000,
   });
   const analytics = useQuery({
     queryKey: ['portfolio-analytics', source],
     queryFn: () => proApi.analytics(source),
+    refetchOnMount: 'always',
     refetchInterval: 10000,
   });
   const orders = useQuery({
@@ -101,9 +132,26 @@ export default function Overview({
       void qc.invalidateQueries({ queryKey: [key] });
   };
   const cancel = useMutation({ mutationFn: proApi.cancelOrder, onSuccess: refresh });
-  const a = account.data;
-  const summary = analytics.data?.summary;
-  const positions = a?.positions ?? [];
+  const report = analytics.data;
+  const capturedCandidate = accountForSource(report?.input_snapshot?.account, source);
+  const capturedAccount =
+    report?.source === source &&
+    ['available', 'partial', 'unavailable'].includes(report.status) &&
+    isRecord(report.summary) &&
+    Array.isArray(report.assets) &&
+    report.assets.every(isRecord) &&
+    capturedCandidate &&
+    Array.isArray(capturedCandidate.positions) &&
+    capturedCandidate.positions.every(isRecord)
+      ? capturedCandidate
+      : undefined;
+  // Money and positions belong to the same capture as its exposure summary.
+  // Null/missing economic equity stays unknown, even if model equity is valued.
+  const matchedReport = capturedAccount ? report : undefined;
+  const a = capturedAccount ?? accountForSource(account.data, source);
+  const summary = matchedReport?.summary;
+  const positions =
+    Array.isArray(a?.positions) && a.positions.every(isRecord) ? a.positions : undefined;
   const pending = orders.data?.items.filter((o) => o.status === 'pending') ?? [];
   const strategies = deployments.data?.items ?? [];
   const currentPackages = packages.data?.items.filter((p) => p.source === source) ?? [];
@@ -193,7 +241,15 @@ export default function Overview({
       view: 'orders',
       severity: 'neutral',
     });
-  if (analytics.data && analytics.data.status !== 'available')
+  if (analytics.isSuccess && !matchedReport)
+    alerts.push({
+      key: 'analytics-capture',
+      title: t('Exposure unavailable'),
+      detail: t('A matching account capture was not returned. Refresh the exposure snapshot.'),
+      page: 'risk',
+      severity: 'warning',
+    });
+  if (matchedReport && matchedReport.status !== 'available')
     alerts.push({
       key: 'analytics',
       title: t('Exposure is not fully valued'),
@@ -207,7 +263,7 @@ export default function Overview({
     strategyErrors.length ||
     (a && a.economic_status !== 'complete') ||
     (a && !['fresh', 'example'].includes(a.valuation_status ?? '')) ||
-    (analytics.data && analytics.data.status !== 'available')
+    (matchedReport && matchedReport.status !== 'available')
   );
   const errors = [
     account,
@@ -220,9 +276,11 @@ export default function Overview({
     packages,
     runs,
   ].filter((q) => q.isError);
-  const ready = [account, analytics, orders, deployments, groups, risk, ops, packages, runs].every(
-    (q) => q.isSuccess,
-  );
+  const ready =
+    !!matchedReport &&
+    [account, analytics, orders, deployments, groups, risk, ops, packages, runs].every(
+      (q) => q.isSuccess,
+    );
   return (
     <>
       <PageHeading
@@ -239,6 +297,7 @@ export default function Overview({
           <ArrowRight size={14} />
         </button>
       </PageHeading>
+      {journey}
       <div className="overview-state-line">
         <span>
           <Clock3 size={12} />
@@ -258,6 +317,21 @@ export default function Overview({
           </Status>
         )}
       </div>
+      {matchedReport ? (
+        <p className="snapshot-footnote">
+          {t('Account and exposure values share one captured snapshot.')}
+        </p>
+      ) : (
+        !analytics.isPending && (
+          <p role="status" className="inline-warning">
+            {t('Exposure unavailable')}.{' '}
+            {t('A matching account capture was not returned. Refresh the exposure snapshot.')}{' '}
+            <button className="text-button" onClick={() => void analytics.refetch()}>
+              {t('Refresh snapshot')}
+            </button>
+          </p>
+        )
+      )}
       <div className="overview-economic-state">
         <span>{t('Trading conditions')}</span>
         <Status type={economicAttention ? 'bad' : ready ? 'neutral' : 'warning'}>
@@ -307,7 +381,7 @@ export default function Overview({
           unit="USDT"
         />
       </div>
-      {account.isPending && <Loading label="Loading account state…" />}
+      {!a && account.isPending && <Loading label="Loading account state…" />}
       {!!errors.length && (
         <div className="overview-errors">
           <p className="inline-warning">
@@ -346,10 +420,12 @@ export default function Overview({
               ]}
             />
             {bookTab === 'positions' ? (
-              account.isPending ? (
+              !a && account.isPending ? (
                 <Loading />
-              ) : account.isError ? (
+              ) : !a && account.isError ? (
                 <ErrorBox error={account.error} />
+              ) : !positions ? (
+                <p className="quiet-copy">{t('Position snapshot unavailable')}</p>
               ) : (
                 <DataTable
                   rows={positions}
@@ -483,14 +559,16 @@ export default function Overview({
                 <ArrowRight size={13} />
               </button>
             </div>
-            {analytics.isPending ? (
+            {analytics.isPending && !matchedReport ? (
               <Loading />
-            ) : analytics.isError ? (
+            ) : analytics.isError && !matchedReport ? (
               <ErrorBox error={analytics.error} />
+            ) : !matchedReport ? (
+              <p className="quiet-copy">{t('Exposure unavailable')}</p>
             ) : (
               <>
                 <DataTable
-                  rows={analytics.data?.assets ?? []}
+                  rows={matchedReport.assets}
                   empty="No asset exposure"
                   columns={[
                     {
@@ -744,7 +822,13 @@ export default function Overview({
           </section>
         </aside>
       </div>
-      <MarketContext source={source} initialSymbol={symbol} onSymbol={setSymbol} now={now} />
+      <MarketContext
+        initiallyOpen={marketRequested}
+        source={source}
+        initialSymbol={symbol}
+        onSymbol={setSymbol}
+        now={now}
+      />
     </>
   );
 }
@@ -753,14 +837,27 @@ function MarketContext({
   initialSymbol,
   onSymbol,
   now,
+  initiallyOpen = false,
 }: {
   source: Source;
   initialSymbol: string;
   onSymbol: (symbol: string) => void;
   now: number;
+  initiallyOpen?: boolean;
 }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
+  const marketSection = useRef<HTMLElement>(null);
+  const [open, setOpen] = useState(initiallyOpen);
+  useEffect(() => {
+    if (initiallyOpen) {
+      setOpen(true);
+      const frame = requestAnimationFrame(() => {
+        marketSection.current?.scrollIntoView({ block: 'start' });
+        marketSection.current?.querySelector('button')?.focus({ preventScroll: true });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [initiallyOpen, initialSymbol]);
   const [product, setProduct] = useState<'SPOT' | 'SWAP'>('SPOT');
   const [symbol, setSymbol] = useState(initialSymbol);
   useEffect(() => {
@@ -776,7 +873,7 @@ function MarketContext({
   const m = market.data;
   const stale = source === 'okx' && m && now - Number(m.ts) >= 15000;
   return (
-    <section className="pro-panel overview-market-context">
+    <section ref={marketSection} className="pro-panel overview-market-context">
       <button
         type="button"
         className="market-context-toggle"
@@ -801,7 +898,7 @@ function MarketContext({
             onProductChange={setProduct}
             onChange={(s) => {
               setSymbol(s);
-              if (!s.endsWith('-SWAP')) onSymbol(s);
+              onSymbol(s);
             }}
           />
           {market.isPending ? (

@@ -514,6 +514,10 @@ def professional_router(app, access, runtime, supervisor, settings):
     def replay(identifier: str):
         return runtime.replay(identifier)
 
+    @router.post("/pro/research/runs/{identifier}/cancel", status_code=202)
+    def cancel_run(identifier: str, request: Request):
+        return runtime.cancel_research(identifier, actor(request))
+
     @router.get("/pro/research/runs/{identifier}/export")
     def export(identifier: str):
         result = runtime.run(identifier, include_snapshot=True)
@@ -727,6 +731,10 @@ def professional_router(app, access, runtime, supervisor, settings):
     @router.get("/pro/research/portfolios/{identifier}")
     def portfolio_run(identifier: str):
         return runtime.portfolios.get(identifier)
+
+    @router.post("/pro/research/portfolios/{identifier}/cancel", status_code=202)
+    def cancel_portfolio(identifier: str, request: Request):
+        return runtime.cancel_research(identifier, actor(request), "portfolio")
 
     @router.post("/pro/research/portfolios", status_code=202)
     async def create_portfolio(body: PortfolioInput, request: Request):
