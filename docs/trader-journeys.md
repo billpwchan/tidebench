@@ -1,6 +1,6 @@
 # Resume the same trading work
 
-The workspace connects tasks by their saved identity and source. Its starting view is the account and current book. Equity, cash, gross exposure and current conditions appear before research continuation; the adjacent next actions identify active preparation/research, approvals needing activation, results needing review and running paper controllers. Failed historical research remains a separate expandable history. An incomplete task snapshot displays a retry action rather than claiming there is nothing to do.
+The workspace connects tasks by their saved identity and source. Its starting view is the account and current book. Equity, cash, gross exposure and current conditions appear before research continuation; the secondary next actions below the book identify active preparation/research, approvals needing activation, results needing review and running paper controllers. Failed historical research remains a separate expandable history. An incomplete task snapshot displays a retry action rather than claiming there is nothing to do.
 
 The monetary overview uses the account captured inside its exposure report, including that capture's timestamp and unknown economics. Returning from execution requests a fresh capture. If a matching report is unavailable, the source-matched account remains inspectable while exposure stays unavailable; cached cash and a different report are not presented as one account.
 
@@ -9,7 +9,9 @@ The monetary overview uses the account captured inside its exposure report, incl
 
 **Execution → Account & orders** opens positions and working orders first. **New order** opens the ticket. Market search's **Trade** action opens the same ticket for that exact source/market. Closing it or pressing Escape returns to monitoring, retains the unfinished values and returns focus to its trigger. A new ticket does not submit an order.
 
-Search positions/orders by market and identity fields. Sort numeric columns by their numeric values, including small prices; unknown values stay last. Dense desktop tables keep market identity and actions fixed when horizontally scrolled. Mobile records show the core book quantities and actions, with secondary fields in **More details**. Large mobile books use a bounded scroll area; pagination returns to its first record rather than leaving the user at the previous page’s bottom. Pending orders are separate from **All orders & outcomes**.
+Search positions/orders by market and identity fields. Sort numeric columns by their numeric values, including small prices; unknown values stay last. Dense desktop tables keep market identity and actions fixed when horizontally scrolled. Mobile records show the core book quantities and actions, with secondary fields in **More details**. Large mobile books use a bounded scroll area; pagination returns to its first record rather than leaving the user at the previous page’s bottom. Pending orders are separate from **All orders & outcomes**. Desktop position summaries preserve P&L/actions, with entry and other financial fields in row details; perpetual summaries include liquidation. At 1200px the ticket follows the book. The phone summary keeps equity and account unrealized P&L visible.
+
+A submission keeps a receipt in the ticket. **Inspect this order** opens the server's exact source/ID, including a filled order outside Working, related audit events and journal references. Reload retains the selected ID. The loaded view contains all pending orders and the latest 200 terminal orders, 100 audit events and 500 journal entries. An older matching record may still exist; missing/history-window evidence is not proof of absence. Server rejections and unconfirmed network outcomes do not invent a fill. Late replies cannot erase another draft, including one edited away and back to identical values, or enter another source/authenticated session. Cancellation retains its server receipt after the pending row disappears. If its response is unavailable, the target ID/source and an unconfirmed result stay inspectable; the UI does not assert success or failure. Manual deployment and strategy-stop replies also belong to their originating session/source.
 
 The optional **Size by USDT notional** uses the current ask for a buy and bid for a sell. It floors native quantity to the lot, respects minimum size, and displays the unallocated remainder. USDT perpetual sizing requires verified linear base-valued contract rules. It refuses stale or mismatched OKX quotes. The tool currently applies to market orders; limit/stop tickets require explicit native quantity because future fill prices and margin reservations differ. Fees and slippage are excluded from the estimate. **Use calculated quantity** only edits the ticket; **Preview order** performs the server's account/risk check before the separate simulated submission.
 
@@ -53,13 +55,17 @@ Stopping an independent strategy also retains positions. Use the existing positi
 
 ## Find a market and return to work
 
-**Command/Ctrl K** searches the current source's eligible USDT spot and linear perpetual catalog. **Inspect** opens and expands the selected market; **Trade** locks that market into the paper ticket without submitting an order. Filter Spot or USDT perpetuals, move between matches with Arrow Down/Up, press Enter to inspect, and Tab to the Trade action. Loading, failed catalog and no matching instrument are distinct states.
+**Command/Ctrl K** searches the current source's eligible USDT spot and linear perpetual catalog. **Inspect** opens a read-only market inspector without leaving the current page or changing the order draft/filter; closing or Escape returns focus to its entry. It validates source/market identity and shows ticker, mark and funding clocks separately. **Trade** locks that market into the paper ticket without submitting an order. Filter Spot or USDT perpetuals, move between matches with Arrow Down/Up, press Enter to inspect, and Tab to the Trade action. Loading, failed catalog and no matching instrument are distinct states.
+
+Earlier overview market links retain their dedicated expanded snapshot. The inspector is an independent read-only context.
 
 Links have the form `#research?source=example&view=advanced&run=RUN_ID` or `#execution?source=okx&view=managed:GROUP_ID`. They carry identifiers and selection, never authorization. Selecting an already-active tab keeps the selected task. Changing source clears incompatible task selections. Operations is explicitly global; its liquidity observations use public OKX data.
 
 Keyboard navigation restores dialog focus to its trigger and focuses the content region after page changes. Desktop and narrow-screen acceptance covers back/forward/reload, explicit missing tasks, drafts, stop cancellation and late responses.
 
 ## Actual journey views
+
+[Desktop book](assets/desk-overview-v0.14-desktop.png) · [Phone first fold](assets/desk-overview-v0.14-mobile.png) · [Execution](assets/desk-execution-v0.14-desktop.png) · [Market inspector](assets/desk-inspector-v0.14-desktop.png). These v0.14 views are synthetic acceptance fixtures. The [fresh review](audit/trader-experience-0.14.0.zh-CN.md) identifies remaining research and other workspace redesigns.
 
 [Desktop current book](assets/desk-overview-v0.13-desktop.png) · [Mobile current book](assets/desk-overview-v0.13-mobile.png) · [Parallel research desk](assets/desk-research-v0.13-desktop.png). These v0.13 views use synthetic acceptance fixtures and do not represent investment returns.
 

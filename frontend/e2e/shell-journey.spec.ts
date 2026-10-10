@@ -452,6 +452,7 @@ test('catalog search finds an asset beyond the old five symbols and locks the se
   await directory.getByRole('button', { name: 'Inspect ADA-USDT-SWAP', exact: true }).click();
   await expect(page.getByLabel('Market', { exact: true })).toHaveValue('ADA-USDT-SWAP');
   await expect(page.getByLabel('Market', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close market inspector', exact: true }).click();
   const second = await search(page, 'ADA-USDT-SWAP');
   await second.getByRole('button', { name: 'Trade ADA-USDT-SWAP', exact: true }).click();
   await expect(

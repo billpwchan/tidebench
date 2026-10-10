@@ -8,10 +8,11 @@ import {
   Play,
   Plus,
   ShieldOff,
+  SlidersHorizontal,
   Square,
   X,
 } from 'lucide-react';
-import { defaultStrategy, downloadCsv } from '../api';
+import { ApiError, defaultStrategy, downloadCsv } from '../api';
 import type { Source, Strategy } from '../api';
 import { useSession } from '../components/AuthGate';
 const ForwardPerformance = lazy(() => import('../components/ForwardPerformance'));
@@ -19,6 +20,7 @@ const ProtectiveExit = lazy(() => import('../components/ProtectiveExit'));
 import ManagedPortfolios, { StopPortfolioDialog } from '../components/ManagedPortfolios';
 const Contributions = lazy(() => import('../components/Contributions'));
 import SimulationClock from '../components/SimulationClock';
+import OrderReceipt, { type OrderSubmissionReceipt } from '../components/OrderReceipt';
 import BudgetSizing from '../components/BudgetSizing';
 const ReleaseHistory = lazy(() => import('../components/ReleaseHistory'));
 import PortfolioAnalytics from '../components/PortfolioAnalytics';
@@ -57,6 +59,7 @@ export default function Portfolio({
   marketRequested = false,
   onViewChange,
   onSymbolChange,
+  onInspectMarket,
 }: {
   source: Source;
   initialView?: string;
@@ -64,6 +67,7 @@ export default function Portfolio({
   marketRequested?: boolean;
   onViewChange?: (view: string) => void;
   onSymbolChange?: (symbol: string) => void;
+  onInspectMarket?: (symbol: string) => void;
 }) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
@@ -73,7 +77,10 @@ export default function Portfolio({
   const ticketRef = useRef<HTMLElement>(null);
   const ticketReturnFocus = useRef<HTMLElement | null>(null);
   const ticketRequest = useRef('');
-  const canOperate = canTrade(useSession()?.user?.role);
+  const session = useSession();
+  const canOperate = canTrade(session?.user?.role);
+  const inspectionRef = useRef<HTMLElement>(null);
+  const initialOrderId = initialView.startsWith('orders:') ? initialView.slice(7) : undefined;
   const qc = useQueryClient();
   const now = useNow();
   const protectiveLink = useRef('');
@@ -183,6 +190,8 @@ export default function Portfolio({
   const deployReceipt = useReceiptOwnership(
     JSON.stringify([
       source,
+      session?.user?.id ?? session?.user?.username,
+      session?.csrf_token ?? session?.authenticated,
       initialView,
       table,
       symbol,
@@ -199,6 +208,53 @@ export default function Portfolio({
     setDeployOpen(false);
   };
   const idempotency = useRef<{ payload: string; key: string } | null>(null);
+  const orderOwnerContext = JSON.stringify([
+    source,
+    session?.user?.id ?? session?.user?.username,
+    session?.csrf_token ?? session?.authenticated,
+  ]);
+  // An order receipt belongs to its source/session/request, and remains useful
+  // across book navigation. Draft ownership is tracked separately below.
+  const orderOwner = useRef({
+    context: orderOwnerContext,
+    generation: 0,
+    serials: new Map<string, number>(),
+    mounted: false,
+  });
+  if (orderOwner.current.context !== orderOwnerContext) {
+    orderOwner.current.context = orderOwnerContext;
+    orderOwner.current.generation += 1;
+  }
+  useEffect(() => {
+    orderOwner.current.mounted = true;
+    return () => {
+      orderOwner.current.mounted = false;
+      orderOwner.current.generation += 1;
+    };
+  }, []);
+  const captureOrderTask = (lane: string): ReceiptTask => {
+    const owner = orderOwner.current;
+    const serial = (owner.serials.get(lane) ?? 0) + 1;
+    owner.serials.set(lane, serial);
+    return { context: owner.context, generation: owner.generation, serial, lane };
+  };
+  const ownsOrderTask = (task: ReceiptTask) => {
+    const owner = orderOwner.current;
+    return (
+      owner.mounted &&
+      task.context === owner.context &&
+      task.generation === owner.generation &&
+      task.serial === owner.serials.get(task.lane)
+    );
+  };
+  const [submission, setSubmission] = useState<{
+    context: string;
+    receipt: OrderSubmissionReceipt;
+  }>();
+  const [cancellation, setCancellation] = useState<{
+    context: string;
+    receipt: OrderSubmissionReceipt;
+  }>();
   const account = useQuery({
     queryKey: ['pro-account', source],
     queryFn: () => proApi.account(source),
@@ -209,6 +265,23 @@ export default function Portfolio({
     queryFn: () => proApi.orders(source),
     refetchInterval: 5000,
   });
+  const orderAudit = useQuery({
+    queryKey: ['pro-audit'],
+    queryFn: proApi.audit,
+    enabled: table === 'orders' && !!initialOrderId,
+    refetchInterval: 5000,
+  });
+  const selectedOrder = orders.data?.items.find(
+    (item) => item.id === initialOrderId && item.source === source,
+  );
+  useEffect(() => {
+    if (table !== 'orders' || !initialOrderId) return;
+    const frame = requestAnimationFrame(() => {
+      inspectionRef.current?.scrollIntoView({ block: 'nearest' });
+      inspectionRef.current?.querySelector<HTMLElement>('h3')?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [initialOrderId, orders.isSuccess, table]);
   const ledger = useQuery({
     queryKey: ['pro-ledger', source],
     queryFn: () => proApi.ledger(source),
@@ -249,9 +322,11 @@ export default function Portfolio({
   };
   const riskBlocksOrder = !!risk.data?.halted && !body.reduce_only;
   const payload = JSON.stringify(body);
-  const currentDraft = useRef(payload);
-  currentDraft.current = payload;
-  const refresh = () => {
+  const currentDraft = useRef({ payload, revision: 0 });
+  if (currentDraft.current.payload !== payload) {
+    currentDraft.current = { payload, revision: currentDraft.current.revision + 1 };
+  }
+  const refresh = (targetSource: Source = source) => {
     for (const key of [
       'pro-account',
       'pro-orders',
@@ -263,31 +338,140 @@ export default function Portfolio({
       'contributions',
       'portfolio-releases',
     ])
-      void qc.invalidateQueries({ queryKey: [key, source] });
+      void qc.invalidateQueries({ queryKey: [key, targetSource] });
     void qc.invalidateQueries({ queryKey: ['pro-ops'] });
+    void qc.invalidateQueries({ queryKey: ['pro-audit'] });
   };
   const preview = useMutation({ mutationFn: proApi.previewOrder });
+  useEffect(() => {
+    // A command key and any visible receipt belong to the authenticated session
+    // that submitted them, including when this component is reused by a parent.
+    idempotency.current = null;
+    setSubmission(undefined);
+    setCancellation(undefined);
+    setNotice(null);
+    preview.reset();
+  }, [orderOwnerContext]);
   const previewMatches = !!preview.data && JSON.stringify(preview.variables) === payload;
   const order = useMutation({
-    mutationFn: ({ data, key }: { data: OrderRequest; key: string }) => proApi.order(data, key),
-    onSuccess: (r, submitted) => {
-      setNotice(`${t('Order submitted')} · ${r.id} · ${r.status}`);
+    mutationFn: ({
+      data,
+      key,
+    }: {
+      data: OrderRequest;
+      key: string;
+      task: ReceiptTask;
+      draftRevision: number;
+    }) => proApi.order(data, key),
+    onSuccess: (response, submitted) => {
+      refresh(submitted.data.source);
+      if (!ownsOrderTask(submitted.task)) return;
+      if (
+        response.source !== submitted.data.source ||
+        response.inst_id !== submitted.data.inst_id
+      ) {
+        setSubmission(
+          (current) =>
+            current && {
+              ...current,
+              receipt: {
+                ...current.receipt,
+                phase: 'unconfirmed',
+                message: text(
+                  'Server response does not match the submitted market and source.',
+                  '服务器回执与提交的市场及数据源不匹配。',
+                ),
+              },
+            },
+        );
+        return;
+      }
+      setSubmission(
+        (current) =>
+          current && {
+            ...current,
+            receipt: { ...current.receipt, response, phase: 'received', message: undefined },
+          },
+      );
+      setNotice(`${t('Order submitted')} · ${response.id} · ${response.status}`);
       const submittedPayload = JSON.stringify(submitted.data);
-      if (idempotency.current?.payload === submittedPayload) idempotency.current = null;
-      // A response for a previous order must not erase the trader's next draft.
-      if (currentDraft.current === submittedPayload) {
+      if (
+        idempotency.current?.payload === submittedPayload &&
+        idempotency.current.key === submitted.key
+      )
+        idempotency.current = null;
+      // Only this request may clear its unchanged draft. Late responses can still
+      // acknowledge that submitted order without erasing the trader's next draft.
+      if (
+        currentDraft.current.payload === submittedPayload &&
+        currentDraft.current.revision === submitted.draftRevision
+      ) {
         setQuantity('');
         preview.reset();
       }
-      refresh();
+    },
+    onError: (error, submitted) => {
+      if (!ownsOrderTask(submitted.task)) return;
+      const rejected =
+        error instanceof ApiError &&
+        error.status >= 400 &&
+        error.status < 500 &&
+        error.status !== 408;
+      setSubmission(
+        (current) =>
+          current && {
+            ...current,
+            receipt: {
+              ...current.receipt,
+              phase: rejected ? 'rejected' : 'unconfirmed',
+              message: error.message,
+            },
+          },
+      );
     },
   });
-  const cancel = useMutation({ mutationFn: proApi.cancelOrder, onSuccess: refresh });
+  const cancel = useMutation({
+    mutationFn: ({ id }: { id: string; source: Source; market: string; task: ReceiptTask }) =>
+      proApi.cancelOrder(id),
+    onSuccess: (response, submitted) => {
+      refresh(submitted.source);
+      if (
+        !ownsOrderTask(submitted.task) ||
+        response.id !== submitted.id ||
+        response.source !== submitted.source
+      )
+        return;
+      setCancellation({
+        context: orderOwnerContext,
+        receipt: { response, phase: 'received', intent: 'cancel' },
+      });
+    },
+    onError: (error, submitted) => {
+      refresh(submitted.source);
+      if (!ownsOrderTask(submitted.task)) return;
+      setCancellation({
+        context: orderOwnerContext,
+        receipt: {
+          phase: 'unconfirmed',
+          intent: 'cancel',
+          targetId: submitted.id,
+          targetSource: submitted.source,
+          targetMarket: submitted.market,
+          message: error.message,
+        },
+      });
+    },
+  });
   const stop = useMutation({
-    mutationFn: proApi.stop,
-    onSuccess: () => {
-      setNotice(t('Strategy stopped; positions retained'));
-      refresh();
+    mutationFn: ({ id }: { id: string; source: Source; task: ReceiptTask }) => proApi.stop(id),
+    onSuccess: (response, submitted) => {
+      refresh(submitted.source);
+      if (
+        ownsOrderTask(submitted.task) &&
+        response.id === submitted.id &&
+        response.source === submitted.source
+      )
+        setNotice(t('Strategy stopped; positions retained'));
     },
   });
   const deploy = useMutation({
@@ -307,10 +491,25 @@ export default function Portfolio({
     },
   });
   const submit = () => {
-    if (!previewMatches) return;
+    if (!previewMatches || order.isPending) return;
     if (idempotency.current?.payload !== payload)
       idempotency.current = { payload, key: crypto.randomUUID() };
-    order.mutate({ data: body, key: idempotency.current.key });
+    const task = captureOrderTask('submit');
+    setSubmission({
+      context: orderOwnerContext,
+      receipt: {
+        request: { ...body },
+        phase: 'submitting',
+        executionMode: account.data?.execution_mode,
+        instrument: market.data?.instrument as RecordData | undefined,
+      },
+    });
+    order.mutate({
+      data: body,
+      key: idempotency.current.key,
+      task,
+      draftRevision: currentDraft.current.revision,
+    });
   };
   useDialogFocus(deployOpen, '.deployment-dialog', closeDeployment);
   const a = account.data;
@@ -329,6 +528,23 @@ export default function Portfolio({
     }
   }, [initialView, source, account.data]);
   const instrument = (market.data?.instrument ?? {}) as RecordData;
+  const receipt = submission?.context === orderOwnerContext ? submission.receipt : undefined;
+  const polledReceipt =
+    receipt?.response &&
+    orders.data?.items.find((item) => item.id === receipt.response?.id && item.source === source);
+  const currentReceipt = receipt && {
+    ...receipt,
+    response:
+      polledReceipt &&
+      Number(polledReceipt.updated_at ?? 0) >= Number(receipt.response?.updated_at ?? 0)
+        ? polledReceipt
+        : receipt.response,
+  };
+  const inspectOrder = (id: string) => {
+    setOrderScope('all');
+    changeView(`orders:${id}`);
+  };
+  const hasSwapPositions = a?.positions?.some((position) => position.inst_type === 'SWAP');
   return (
     <div className="desk-execution">
       {stopGroup && (
@@ -424,17 +640,26 @@ export default function Portfolio({
             unit="USDT"
           />
           <Metric label="Funding paid" value={number(a?.funding_paid)} unit="USDT" />
+          <button
+            className="text-button desk-metrics-toggle"
+            aria-label={
+              allMetrics
+                ? text('Fewer account values', '收起账户数值')
+                : text('Cash, P&L & funding', '现金、盈亏与资金费')
+            }
+            title={
+              allMetrics
+                ? text('Fewer account values', '收起账户数值')
+                : text('Cash, P&L & funding', '现金、盈亏与资金费')
+            }
+            aria-expanded={allMetrics}
+            onClick={() => setAllMetrics((value) => !value)}
+          >
+            <SlidersHorizontal size={17} />
+          </button>
         </div>
       )}
-      <button
-        className="text-button desk-metrics-toggle"
-        aria-expanded={allMetrics}
-        onClick={() => setAllMetrics((value) => !value)}
-      >
-        {allMetrics
-          ? text('Fewer account values', '收起账户数值')
-          : text('Cash, P&L & funding', '现金、盈亏与资金费')}
-      </button>
+
       <div className="desk-execution-state">
         <span>
           <Clock3 size={12} /> {t('Account snapshot')}: {date(a?.as_of, true)}
@@ -638,10 +863,18 @@ export default function Portfolio({
                   rowKey={(position) => String(position.inst_id)}
                   searchLabel="Search positions"
                   searchKeys={['inst_id', 'side', 'inst_type']}
+                  desktopColumns={[
+                    'inst_id',
+                    'quantity',
+                    'mark',
+                    ...(hasSwapPositions ? ['liquidation_price'] : []),
+                    'unrealized_pnl',
+                    'protect',
+                  ]}
                   compactColumns={[
                     'inst_id',
                     'quantity',
-                    'liquidation_price',
+                    ...(hasSwapPositions ? ['liquidation_price'] : []),
                     'unrealized_pnl',
                     'protect',
                   ]}
@@ -655,10 +888,25 @@ export default function Portfolio({
                       label: 'Market',
                       render: (p) => (
                         <div className="table-stacked">
-                          <strong>{valueText(p.inst_id)}</strong>
-                          <small>
-                            {valueText(p.inst_type)} · {valueText(p.side)}
-                          </small>
+                          {onInspectMarket ? (
+                            <button
+                              className="text-button portfolio-market-inspect"
+                              aria-label={`Inspect ${valueText(p.inst_id)}`}
+                              onClick={() => onInspectMarket(String(p.inst_id))}
+                            >
+                              <strong>{valueText(p.inst_id)}</strong>
+                              <small>
+                                {valueText(p.inst_type)} · {valueText(p.side)}
+                              </small>
+                            </button>
+                          ) : (
+                            <strong>{valueText(p.inst_id)}</strong>
+                          )}
+                          {!onInspectMarket && (
+                            <small>
+                              {valueText(p.inst_type)} · {valueText(p.side)}
+                            </small>
+                          )}
                         </div>
                       ),
                     },
@@ -740,14 +988,63 @@ export default function Portfolio({
                           className="text-button"
                           disabled={!canOperate}
                           onClick={() => protectPosition(p)}
+                          aria-label={t('Reduce account position')}
+                          title={`${t('Reduce account position')} · ${valueText(p.inst_id)}`}
                         >
-                          {t('Reduce account position')}
+                          {text('Reduce', '减仓')}
                         </button>
                       ),
                     },
                   ]}
                 />
               ))}{' '}
+            {table === 'orders' && cancellation?.context === orderOwnerContext && (
+              <OrderReceipt receipt={cancellation.receipt} onInspect={inspectOrder} />
+            )}
+            {table === 'orders' && initialOrderId && (
+              <section
+                className="order-inspection"
+                aria-label={text('Selected order', '已选订单')}
+                ref={inspectionRef}
+              >
+                {orders.isPending ? (
+                  <Loading />
+                ) : orders.isError ? (
+                  <ErrorBox error={orders.error} />
+                ) : selectedOrder ? (
+                  <OrderReceipt
+                    inspection
+                    receipt={{ response: selectedOrder, phase: 'received' }}
+                    events={(orderAudit.data?.items ?? []).filter(
+                      (event) =>
+                        event.source === source &&
+                        (event.details as RecordData | undefined)?.order_id === initialOrderId,
+                    )}
+                    eventsPending={orderAudit.isPending}
+                    eventsError={orderAudit.isError ? orderAudit.error : undefined}
+                    journal={(ledger.data?.items ?? []).filter(
+                      (entry) => entry.source === source && entry.reference === initialOrderId,
+                    )}
+                    journalPending={ledger.isPending}
+                    journalError={ledger.isError ? ledger.error : undefined}
+                  />
+                ) : (
+                  <ErrorBox
+                    error={
+                      new Error(
+                        text(
+                          'Selected order is outside the loaded history or unavailable. This view includes all working orders and the latest 200 terminal orders.',
+                          '所选订单超出当前加载的历史或不可用；当前包含全部工作订单与最近 200 条终态订单。',
+                        ),
+                      )
+                    }
+                  />
+                )}
+                <button className="text-button" onClick={() => changeView('orders')}>
+                  {text('Close order inspection', '关闭订单查看')}
+                </button>
+              </section>
+            )}
             {table === 'orders' && (
               <div className="desk-order-scope" aria-label={t('Orders')}>
                 <button
@@ -778,7 +1075,7 @@ export default function Portfolio({
                   )}
                   rowKey={(order) => String(order.id)}
                   searchLabel="Search orders"
-                  searchKeys={['inst_id', 'side', 'order_type', 'status']}
+                  searchKeys={['id', 'inst_id', 'side', 'order_type', 'status']}
                   compactColumns={[
                     'inst_id',
                     'side',
@@ -815,7 +1112,7 @@ export default function Portfolio({
                           <span>
                             {quantityText(o.requested_quantity ?? o.quantity)} /{' '}
                             {quantityText(
-                              o.filled_quantity ?? (o.status === 'filled' ? o.quantity : '0'),
+                              o.filled_quantity ?? (o.status === 'filled' ? o.quantity : undefined),
                             )}
                           </span>
                           {o.canceled_quantity != null && (
@@ -885,7 +1182,14 @@ export default function Portfolio({
                             <button
                               className="text-button"
                               disabled={!canOperate || cancel.isPending}
-                              onClick={() => cancel.mutate(String(o.id))}
+                              onClick={() =>
+                                cancel.mutate({
+                                  id: String(o.id),
+                                  source,
+                                  market: valueText(o.inst_id),
+                                  task: captureOrderTask('cancel'),
+                                })
+                              }
                             >
                               {t('Cancel')}
                             </button>
@@ -1010,7 +1314,11 @@ export default function Portfolio({
                                         id: String(d.group_id),
                                         group: groups.data?.items.find((g) => g.id === d.group_id),
                                       })
-                                    : stop.mutate(d.id)
+                                    : stop.mutate({
+                                        id: d.id,
+                                        source,
+                                        task: captureOrderTask('stop'),
+                                      })
                                 }
                               >
                                 <Square size={11} />
@@ -1024,8 +1332,10 @@ export default function Portfolio({
                   />
                 </>
               ))}
-            {cancel.isError && <ErrorBox error={cancel.error} />}
-            {stop.isError && <ErrorBox error={stop.error} />}
+            {cancel.isError && ownsOrderTask(cancel.variables?.task) && !cancellation && (
+              <ErrorBox error={cancel.error} />
+            )}
+            {stop.isError && ownsOrderTask(stop.variables?.task) && <ErrorBox error={stop.error} />}
           </section>
           {source === 'example' && (
             <details className="desk-account-details">
@@ -1089,6 +1399,7 @@ export default function Portfolio({
               {symbol} · {a?.execution_mode ?? '—'} ·{' '}
               {source === 'example' ? t('Example · synthetic') : t('OKX public')}
             </p>
+            {currentReceipt && <OrderReceipt receipt={currentReceipt} onInspect={inspectOrder} />}
             {market.data && (
               <div className="ticket-quotes">
                 <div>
@@ -1292,7 +1603,6 @@ export default function Portfolio({
                 </button>
               </div>
             )}
-            {order.isError && <ErrorBox error={order.error} />}
             <p className="form-footnote pro-form-note">
               {t('Account and execution mode are reported by the server.')}{' '}
               {a?.execution_mode === 'local-paper' &&

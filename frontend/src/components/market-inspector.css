@@ -1,0 +1,109 @@
+.market-inspector-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  justify-content: flex-end;
+  background: #10261a38;
+}
+.market-inspector {
+  width: min(480px, 100%);
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fbfcfa;
+  padding: 28px;
+  box-shadow: -12px 0 40px #12251a14;
+}
+.market-inspector-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.market-inspector-heading h2 {
+  font-size: 22px;
+  letter-spacing: -0.6px;
+  margin: 7px 0 0;
+}
+.market-inspector-heading span,
+.market-inspector-purpose {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.market-inspector-purpose {
+  margin: 14px 0 24px;
+}
+.market-inspector-identity {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 16px;
+}
+.market-inspector-identity input {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.market-inspector-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 14px 0;
+}
+.market-inspector-quotes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 18px;
+  margin: 26px 0 20px;
+}
+.market-inspector-quotes dt {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.market-inspector-quotes dd {
+  margin: 0;
+  font-size: 23px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.market-inspector-rules {
+  margin: 24px 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.market-inspector-rules h3 {
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.market-inspector footer {
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .market-inspector {
+    padding: 20px;
+  }
+  .market-inspector .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .market-inspector .text-button {
+    min-height: 44px;
+  }
+}
+
+.market-field-clock {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}

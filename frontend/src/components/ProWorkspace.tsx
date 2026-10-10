@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
@@ -117,6 +117,7 @@ export function DataTable<T extends RecordData>({
   searchLabel = 'Search table',
   compactColumns,
   compactLabel = 'Table records',
+  desktopColumns,
 }: {
   rows: T[];
   columns: DataTableColumn<T>[];
@@ -128,11 +129,25 @@ export function DataTable<T extends RecordData>({
   // Column keys that remain visible on narrow screens. Other fields expand in place.
   compactColumns?: string[];
   compactLabel?: string;
+  // A decision table can keep its essential columns visible; all others expand per row.
+  desktopColumns?: string[];
 }) {
   const { t } = useI18n();
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<TableSort>();
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set());
+  const primary = desktopColumns?.length
+    ? columns.filter((column) => desktopColumns.includes(column.key) || column.sticky === 'action')
+    : columns;
+  const desktopDetails = columns.filter((column) => !primary.includes(column));
+  const toggleRow = (key: string) =>
+    setExpandedRows((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const scroll = useRef<HTMLDivElement>(null);
   const compactScroll = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState(false);
@@ -220,7 +235,7 @@ export function DataTable<T extends RecordData>({
     column.render ? column.render(row) : valueText(tableValue(row, column.key));
   return (
     <div
-      className={`data-table-region${desk ? ' desk-table-region' : ''}${compact.length ? ' has-compact-records' : ''}`}
+      className={`data-table-region${desk ? ' desk-table-region' : ''}${compact.length ? ' has-compact-records' : ''}${desktopColumns?.length ? ' has-decision-columns' : ''}`}
     >
       {rows.length > 0 && (searchable || (compact.length > 0 && sortable.length > 0)) && (
         <div className={`desk-table-tools${searchable ? '' : ' compact-sort-only'}`}>
@@ -298,7 +313,7 @@ export function DataTable<T extends RecordData>({
             <table>
               <thead>
                 <tr>
-                  {columns.map((column) => (
+                  {primary.map((column) => (
                     <th
                       className={cellClass(column)}
                       key={column.key}
@@ -341,17 +356,55 @@ export function DataTable<T extends RecordData>({
                       )}
                     </th>
                   ))}
+                  {desktopDetails.length > 0 && (
+                    <th scope="col">
+                      <span className="visually-hidden">{t('More details')}</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {visible.map(({ row, key }) => (
-                  <tr key={key} data-row-key={key}>
-                    {columns.map((column) => (
-                      <td className={cellClass(column)} key={column.key}>
-                        {cellValue(column, row)}
-                      </td>
-                    ))}
-                  </tr>
+                  <Fragment key={key}>
+                    <tr data-row-key={key}>
+                      {primary.map((column) => (
+                        <td className={cellClass(column)} key={column.key}>
+                          {cellValue(column, row)}
+                        </td>
+                      ))}
+                      {desktopDetails.length > 0 && (
+                        <td className="desk-row-detail-toggle">
+                          <button
+                            type="button"
+                            className="text-button"
+                            aria-expanded={expandedRows.has(key)}
+                            aria-label={`${t('More details')} ${key}`}
+                            onClick={() => toggleRow(key)}
+                          >
+                            {expandedRows.has(key) ? (
+                              <ChevronDown size={14} />
+                            ) : (
+                              <ChevronRight size={14} />
+                            )}
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                    {desktopDetails.length > 0 && expandedRows.has(key) && (
+                      <tr className="desk-row-details" data-details-for={key}>
+                        <td colSpan={primary.length + 1}>
+                          <dl>
+                            {desktopDetails.map((column) => (
+                              <div key={column.key}>
+                                <dt>{t(column.label)}</dt>
+                                <dd>{cellValue(column, row)}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

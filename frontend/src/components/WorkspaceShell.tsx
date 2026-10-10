@@ -41,11 +41,13 @@ export function Sidebar({
   page,
   navigate,
   system,
+  blocked = false,
 }: {
   mobileNav: boolean;
   page: Page;
   navigate: (p: Page) => void;
   system: UseQueryResult<System, Error>;
+  blocked?: boolean;
 }) {
   const { t } = useI18n();
   const session = useSession();
@@ -54,7 +56,7 @@ export function Sidebar({
   return (
     <aside
       className={`sidebar ${mobileNav ? 'is-open' : ''}`}
-      inert={compact && !mobileNav}
+      inert={blocked || (compact && !mobileNav)}
       role={compact && mobileNav ? 'dialog' : undefined}
       aria-modal={compact && mobileNav ? true : undefined}
       aria-label={compact ? t('Main navigation') : undefined}

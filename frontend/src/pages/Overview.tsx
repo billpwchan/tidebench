@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, CircleAlert, Clock3, RefreshCw } from 'lucide-react';
+import { ArrowRight, CircleAlert, Clock3, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
 import type { ProAccount, RecordData } from '../proApi';
@@ -10,6 +10,7 @@ import { deskIssues } from '../lib/deskAttention';
 import type { Page } from '../lib/config';
 import { date, number, percent, price, quantityText, tone } from '../lib/format';
 import { useNow } from '../lib/hooks';
+import { useReceiptOwnership, type ReceiptTask } from '../lib/receiptOwnership';
 import { useI18n } from '../lib/i18n';
 import { canTrade } from '../lib/permissions';
 import { researchReturn, resultScope } from '../lib/research';
@@ -55,22 +56,40 @@ export default function Overview({
   navigate,
   symbol,
   setSymbol,
+  onInspectMarket,
 }: {
   source: Source;
   journey?: ReactNode;
   marketRequested?: boolean;
   symbol: string;
   setSymbol: (symbol: string) => void;
+  onInspectMarket?: (symbol: string) => void;
   navigate: (page: Page, view?: string) => void;
 }) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const [allMetrics, setAllMetrics] = useState(false);
+  const [cancelResultState, setCancelResultState] = useState<{
+    context: string;
+    result: RecordData;
+  }>();
   const [conditionsOpen, setConditionsOpen] = useState(false);
   const conditionsRef = useRef<HTMLDetailsElement>(null);
   const qc = useQueryClient();
   const now = useNow();
-  const canOperate = canTrade(useSession()?.user?.role);
+  const session = useSession();
+  const canOperate = canTrade(session?.user?.role);
+  const cancelContext = JSON.stringify([
+    source,
+    session?.user?.id ?? session?.user?.username,
+    session?.csrf_token ?? session?.authenticated,
+  ]);
+  const cancelResult =
+    cancelResultState?.context === cancelContext ? cancelResultState.result : undefined;
+  const setCancelResult = (result?: RecordData) =>
+    setCancelResultState(result ? { context: cancelContext, result } : undefined);
+  const cancelReceipt = useReceiptOwnership(cancelContext);
+  useEffect(() => setCancelResult(undefined), [cancelContext]);
   const [bookTab, setBookTab] = useState('positions');
   const bookChosen = useRef(false);
   const chooseBook = (next: string) => {
@@ -134,7 +153,30 @@ export default function Overview({
     ])
       void qc.invalidateQueries({ queryKey: [key] });
   };
-  const cancel = useMutation({ mutationFn: proApi.cancelOrder, onSuccess: refresh });
+  const cancel = useMutation({
+    mutationFn: ({ id }: { id: string; source: Source; market: string; task: ReceiptTask }) =>
+      proApi.cancelOrder(id),
+    onSuccess: (result, submitted) => {
+      refresh();
+      if (
+        cancelReceipt.owns(submitted.task) &&
+        result.id === submitted.id &&
+        result.source === submitted.source
+      )
+        setCancelResult(result);
+    },
+    onError: (error, submitted) => {
+      refresh();
+      if (cancelReceipt.owns(submitted.task))
+        setCancelResult({
+          id: submitted.id,
+          source: submitted.source,
+          inst_id: submitted.market,
+          _confirmation: 'unconfirmed',
+          request_error: error.message,
+        });
+    },
+  });
   const report = analytics.data;
   const capturedCandidate = accountForSource(report?.input_snapshot?.account, source);
   const capturedAccount =
@@ -413,16 +455,25 @@ export default function Overview({
           className={tone(a?.unrealized_pnl)}
           unit="USDT"
         />
+        <button
+          className="text-button desk-metrics-toggle"
+          aria-label={
+            allMetrics
+              ? text('Fewer account values', '收起账户数值')
+              : text('Cash, margin & P&L', '现金、保证金与盈亏')
+          }
+          title={
+            allMetrics
+              ? text('Fewer account values', '收起账户数值')
+              : text('Cash, margin & P&L', '现金、保证金与盈亏')
+          }
+          aria-expanded={allMetrics}
+          onClick={() => setAllMetrics((value) => !value)}
+        >
+          <SlidersHorizontal size={17} />
+        </button>
       </div>
-      <button
-        className="text-button desk-metrics-toggle"
-        aria-expanded={allMetrics}
-        onClick={() => setAllMetrics((value) => !value)}
-      >
-        {allMetrics
-          ? text('Fewer account values', '收起账户数值')
-          : text('Cash, margin & P&L', '现金、保证金与盈亏')}
-      </button>
+
       {!a && account.isPending && <Loading label="Loading account state…" />}
       <div className="trader-overview-layout">
         <div className="trader-primary">
@@ -441,6 +492,56 @@ export default function Overview({
                 <ArrowRight size={13} />
               </button>
             </div>
+            {cancelResult && (
+              <div
+                className="desk-cancel-receipt"
+                role="status"
+                aria-label={text('Cancellation result', '撤单结果')}
+              >
+                <div>
+                  <strong>
+                    {cancelResult._confirmation === 'unconfirmed' ? (
+                      text('Cancellation unconfirmed', '撤单结果未确认')
+                    ) : (
+                      <>
+                        {text('Cancellation result', '撤单结果')} ·{' '}
+                        {t(valueText(cancelResult.status))}
+                      </>
+                    )}
+                  </strong>
+                  <span>
+                    {valueText(cancelResult.inst_id)} · {valueText(cancelResult.id)}
+                  </span>
+                  {cancelResult.request_error != null && (
+                    <span>{valueText(cancelResult.request_error)}</span>
+                  )}
+                  <span>
+                    {text('Filled quantity', '成交数量')}:{' '}
+                    {cancelResult.filled_quantity == null
+                      ? '—'
+                      : quantityText(cancelResult.filled_quantity)}{' '}
+                    · {text('Canceled remainder', '取消余量')}:{' '}
+                    {cancelResult.canceled_quantity == null
+                      ? '—'
+                      : quantityText(cancelResult.canceled_quantity)}
+                  </span>
+                </div>
+                <button
+                  className="text-button"
+                  type="button"
+                  onClick={() => navigate('execution', `orders:${cancelResult.id}`)}
+                >
+                  {text('Inspect this order', '查看此订单')}
+                </button>
+                <button
+                  className="text-button"
+                  type="button"
+                  onClick={() => setCancelResult(undefined)}
+                >
+                  {text('Dismiss', '收起')}
+                </button>
+              </div>
+            )}
             <div
               className="desk-book-tabs"
               role="tablist"
@@ -483,7 +584,7 @@ export default function Overview({
             </div>
             <p className="desk-money-unit">
               {text(
-                'Monetary values in USDT. Instrument units are shown per position.',
+                'Values in USDT · Quantities in instrument units.',
                 '金额单位为 USDT；持仓数量单位按品种标明。',
               )}
             </p>
@@ -500,13 +601,14 @@ export default function Overview({
                   rowKey={(position) => String(position.inst_id)}
                   searchLabel="Search positions"
                   searchKeys={['inst_id', 'side', 'inst_type']}
-                  compactColumns={[
+                  desktopColumns={[
                     'inst_id',
                     'quantity',
                     'market_value',
                     'unrealized_pnl',
                     'protect',
                   ]}
+                  compactColumns={['inst_id', 'quantity', 'unrealized_pnl', 'protect']}
                   compactLabel={t('Positions')}
                   empty="No open positions"
                   columns={[
@@ -517,10 +619,26 @@ export default function Overview({
                       label: 'Market',
                       render: (p) => (
                         <div className="table-stacked">
-                          <strong>{valueText(p.inst_id)}</strong>
-                          <small>
-                            {valueText(p.inst_type)} · {t(valueText(p.side))}
-                          </small>
+                          {onInspectMarket ? (
+                            <button
+                              className="desk-market-link"
+                              type="button"
+                              aria-label={`${text('Inspect', '查看')} ${valueText(p.inst_id)}`}
+                              onClick={() => onInspectMarket(valueText(p.inst_id))}
+                            >
+                              <strong>{valueText(p.inst_id)}</strong>
+                              <small>
+                                {valueText(p.inst_type)} · {t(valueText(p.side))}
+                              </small>
+                            </button>
+                          ) : (
+                            <strong>{valueText(p.inst_id)}</strong>
+                          )}
+                          {!onInspectMarket && (
+                            <small>
+                              {valueText(p.inst_type)} · {t(valueText(p.side))}
+                            </small>
+                          )}
                         </div>
                       ),
                     },
@@ -572,10 +690,12 @@ export default function Overview({
                       render: (p) => (
                         <button
                           className="text-button"
+                          aria-label={t('Reduce account position')}
+                          title={valueText(p.inst_id)}
                           disabled={!canOperate}
                           onClick={() => navigate('execution', 'protect:' + String(p.inst_id))}
                         >
-                          {t('Reduce account position')}
+                          {text('Reduce', '减仓')}
                         </button>
                       ),
                     },
@@ -591,7 +711,7 @@ export default function Overview({
                 rows={pending}
                 rowKey={(order) => String(order.id)}
                 searchLabel="Search orders"
-                searchKeys={['inst_id', 'side', 'order_type']}
+                searchKeys={['id', 'inst_id', 'side', 'order_type']}
                 compactColumns={['inst_id', 'side', 'quantity', 'trigger', 'actions']}
                 compactLabel={t('Pending orders')}
                 empty="No working orders"
@@ -633,7 +753,14 @@ export default function Overview({
                       <button
                         className="text-button"
                         disabled={!canOperate || cancel.isPending}
-                        onClick={() => cancel.mutate(String(o.id))}
+                        onClick={() =>
+                          cancel.mutate({
+                            id: String(o.id),
+                            source,
+                            market: valueText(o.inst_id),
+                            task: cancelReceipt.capture('cancel'),
+                          })
+                        }
                       >
                         {t('Cancel order')}
                       </button>
@@ -642,7 +769,9 @@ export default function Overview({
                 ]}
               />
             )}{' '}
-            {cancel.isError && <ErrorBox error={cancel.error} />}
+            {cancel.isError && cancelReceipt.owns(cancel.variables?.task) && !cancelResult && (
+              <ErrorBox error={cancel.error} />
+            )}
           </section>
           {showJourneyInBook && <section className="desk-onboarding-next">{journey}</section>}
           <section className="pro-panel overview-exposures">

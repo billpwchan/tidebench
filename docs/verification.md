@@ -1,5 +1,16 @@
 # Verification record
 
+## v0.14.0 · 2026-10-11 · independent trader-experience review
+
+Two agents without inherited history independently assessed trader paths and visual layout against v0.13. Their [original trader review](audit/fresh-trader-experience-v0.13-baseline.zh-CN.md), [visual review](audit/fresh-visual-review-v0.13-baseline.zh-CN.md) and [finding-by-finding implementation record](audit/trader-experience-0.14.0.zh-CN.md) distinguish observations, inference, untested paths and the remaining research/strategy/data/operations work. These are internal reviews, not institutional certification or whole-platform commercial acceptance.
+
+Final frozen-source validation passed **997 backend/core/property/API tests in 281.22 seconds** and **255 desktop/mobile Chromium paths in 11.0 minutes**, with **3 desktop-only paths skipped in the mobile project**. The separate final guard suite passed **47 paths with 3 skips in 1.2 minutes**. Isolated stores and labelled synthetic fixtures cover precise order results, network-unconfirmed cancellation after a row disappears, late source/session replies, revised order drafts, native quantities, read-only market inspection, focus recovery, first-position visibility at 390×664 and spot/perpetual book visibility at 1440/1200px. The actual isolated backend was also used for an in-app browser walkthrough. No primary account was initialized for testing.
+
+Ruff lint/format (105 Python files), frozen offline Python synchronization, Prettier, TypeScript and Vite passed. Main JavaScript is **420.84 kB / 136.34 kB gzip**; CSS is **148.43 kB / 27.02 kB gzip**. The chunk threshold was not increased. The existing Starlette/HTTPX warning remains visible. Mobile Chromium emulation is not physical-device/Safari acceptance. The [acceptance history](audit/acceptance-history-0.14.0.md) retains real intermediate defects and test-entry corrections, not just the final passing counts.
+
+The financial engine, prior strategy counterevidence and execution scope remain unchanged. Exact inspection still has bounded history: all pending plus the latest 200 terminal orders, 100 audit events and 500 ledger rows; the interface discloses those bounds. All **131 historical report/image files** retain their bytes. No runtime database, credential, snapshot or private trace is published. Primary-workspace preservation and exact-revision CI are recorded after their actual completion.
+
+
 ## v0.13.0 · 2026-10-11 · account and research decision desk
 
 Final frozen-source local validation passed **997 backend/core/property/API tests** in **271.38 seconds** and **208 desktop/mobile Chromium paths** in **8.7 minutes**. Two specifically targeted mobile release-review paths separately passed in **6.7 seconds**, using normal clicks. All stores are disposable synthetic acceptance environments. The real saved-strategy and portfolio workflows retain actual API/SQLite version saving, input preparation, research, review, activation, controller selection/stop, protective reduction, contributions and frozen evidence checks.

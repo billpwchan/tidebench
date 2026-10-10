@@ -9,22 +9,22 @@
 
 简体中文 · [English](README.md) · [研究模型](docs/pro-research.md) · [部署与运维](docs/operations.md)
 
-![交易总览实际截图，使用明确标注的合成数据](docs/assets/desk-overview-v0.13-desktop.png)
+![交易总览实际截图，使用明确标注的合成数据](docs/assets/desk-overview-v0.14-desktop.png)
 
 ## 从账户出发，带着上下文完成下一步
 
-进入工作台先看权益、可用资金、敞口、持仓和工作订单。真实账本可以搜索与排序，手机记录保留市场身份、数量和操作。明确打开订单票据后，可输入原生数量或按 USDT 名义金额换算市价单数量，再审查风险预览；关闭票据后继续监控，草稿仍在。微小价格按品种 tick 精度显示。
+进入工作台先看权益、可用资金、敞口、持仓和工作订单。真实账本可以搜索与排序，手机记录保留市场身份、数量和操作。明确打开订单票据后，可输入原生数量或按 USDT 名义金额换算市价单数量，再审查风险预览；关闭票据后继续监控，草稿仍在。微小价格按品种 tick 精度显示。查看市场打开独立只读层，保留票据与账簿筛选；提交及撤单回执可定位同一订单、对应事件和账本。已成交订单不会因 Working 过滤而失去入口。桌面账簿常显盈亏与处置入口，完整字段在行详情中。
 
 宽屏研究配置并列展示市场数据、策略资金与评估方式。选中结果显示它自己保存的市场、区间、成本和方法，下一次研究的草稿与它区分。准备数据时携带品种、周期与 UTC 区间，返回精确版本的数据包；延迟回执不能把已经离开的用户拉回旧任务。
 
-[用户操作路径](docs/trader-journeys.md) · [本轮多维审查与修复](docs/audit/trader-desk-0.13.0.zh-CN.md) · [验证记录](docs/verification.md)。
+[用户操作路径](docs/trader-journeys.md) · [本轮独立审计、修复范围与剩余差距](docs/audit/trader-experience-0.14.0.zh-CN.md) · [验证记录](docs/verification.md)。
 
 <details>
 <summary>研究布局与手机账本截图（明确标注的合成验收数据）</summary>
 
 ![宽屏研究配置](docs/assets/desk-research-v0.13-desktop.png)
 
-![手机当前持仓账本](docs/assets/desk-book-v0.13-mobile.png)
+![手机首屏权益、浮动盈亏与完整首条持仓（合成验收数据）](docs/assets/desk-overview-v0.14-mobile.png)
 
 </details>
 

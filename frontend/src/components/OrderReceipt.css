@@ -1,0 +1,127 @@
+.order-receipt {
+  margin: 16px 0;
+  padding: 16px;
+  border-left: 2px solid var(--line);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--surface-muted, #fafbf9);
+  min-width: 0;
+}
+.order-receipt-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.order-receipt-heading h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.order-receipt-outcome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 8px;
+  font-size: 13px;
+}
+.order-receipt-context,
+.order-receipt-note {
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.order-receipt-context {
+  margin: 0 0 12px;
+}
+.order-receipt-note {
+  color: var(--muted);
+  margin: 10px 0;
+}
+.order-receipt-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 14px;
+}
+.order-receipt-values dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.order-receipt-values dd {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.order-receipt-id {
+  grid-column: 1 / -1;
+}
+.order-receipt-id dd {
+  font-family: var(--mono, monospace);
+}
+.order-receipt-evidence {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.order-receipt-evidence h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.order-receipt-events {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.order-receipt-events li {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.order-receipt-events time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.order-receipt-journal {
+  font-size: 12px;
+  margin: 12px 0;
+}
+.order-receipt-journal summary {
+  cursor: pointer;
+}
+.order-receipt-journal ul {
+  padding-left: 16px;
+}
+.order-receipt-journal li {
+  margin: 10px 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.order-receipt-journal small {
+  display: block;
+  color: var(--muted);
+}
+.order-inspection {
+  min-width: 0;
+  margin-bottom: 20px;
+}
+.order-inspection .order-receipt {
+  margin-bottom: 8px;
+}
+.order-inspection .order-receipt-values {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.portfolio-market-inspect {
+  text-align: left;
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .order-inspection .order-receipt-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

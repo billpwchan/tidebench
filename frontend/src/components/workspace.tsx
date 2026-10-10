@@ -56,7 +56,7 @@ export function Metric({
 }) {
   const { t } = useI18n();
   return (
-    <div className="metric">
+    <div className="metric" data-metric={label}>
       <span className="metric-label">{t(label)}</span>
       <div className={`metric-value ${className}`}>
         {value}

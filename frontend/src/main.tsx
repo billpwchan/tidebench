@@ -7,6 +7,7 @@ import './shell-desk.css';
 import './desk.css';
 import './research-desk.css';
 import './table-desk.css';
+import './desk-review.css';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 15000 } },
 });

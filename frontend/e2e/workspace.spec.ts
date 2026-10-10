@@ -818,10 +818,7 @@ test('data download, operations, source failure and responsive layout', async ({
     .getByRole('dialog', { name: 'Find a market' })
     .getByRole('button', { name: 'Inspect ETH-USDT', exact: true })
     .click();
-  await expect(page.getByRole('button', { name: /Market context/ })).toHaveAttribute(
-    'aria-expanded',
-    'true',
-  );
+  await expect(page.getByRole('dialog', { name: 'Market inspector', exact: true })).toBeVisible();
   await expect(page.getByLabel('Market', { exact: true })).toHaveValue('ETH-USDT');
 });
 

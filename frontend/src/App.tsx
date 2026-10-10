@@ -30,6 +30,7 @@ const ProResearch = lazy(() => import('./pages/ProResearch'));
 const PortfolioResearch = lazy(() => import('./pages/PortfolioResearch'));
 const ResearchGovernance = lazy(() => import('./pages/ResearchGovernance'));
 const Strategies = lazy(() => import('./pages/Strategies'));
+import MarketInspector from './components/MarketInspector';
 
 export default function App() {
   return (
@@ -41,7 +42,7 @@ export default function App() {
   );
 }
 function Workspace() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [location, setLocation] = useWorkspaceLocation();
   const { page, source } = location;
   const currentLocation = useRef(location);
@@ -120,6 +121,26 @@ function Workspace() {
     }
   }, [page]);
   const [mobileNav, setMobileNav] = useState(false);
+  const [inspectedMarket, setInspectedMarket] = useState<{ source: Source; symbol: string }>();
+  const inspectionReturnFocus = useRef<HTMLElement | null>(null);
+  const inspectMarket = (symbol: string) => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    inspectionReturnFocus.current = opener?.closest('.search-dialog')
+      ? document.querySelector<HTMLElement>('.search-trigger')
+      : opener;
+    setInspectedMarket({ source, symbol });
+  };
+  const closeInspector = () => {
+    setInspectedMarket(undefined);
+    const opener = inspectionReturnFocus.current;
+    requestAnimationFrame(() => {
+      (opener?.isConnected
+        ? opener
+        : document.querySelector<HTMLElement>('.search-trigger')
+      )?.focus({ preventScroll: true });
+    });
+  };
+  useEffect(() => setInspectedMarket(undefined), [source, page]);
   const compactNavigation = useMediaQuery('(max-width: 850px)');
   useEffect(() => {
     if (!compactNavigation) setMobileNav(false);
@@ -138,6 +159,7 @@ function Workspace() {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setMobileNav(false);
+        setInspectedMarket(undefined);
         setSearchOpen((v) => !v);
       }
       if (e.key === 'Escape') {
@@ -164,8 +186,14 @@ function Workspace() {
           onClick={() => setMobileNav(false)}
         />
       )}
-      <Sidebar mobileNav={mobileNav} page={page} navigate={navigate} system={system} />
-      <div className="workspace-main" inert={mobileNav && compactNavigation}>
+      <Sidebar
+        blocked={!!inspectedMarket}
+        mobileNav={mobileNav}
+        page={page}
+        navigate={navigate}
+        system={system}
+      />
+      <div className="workspace-main" inert={(mobileNav && compactNavigation) || !!inspectedMarket}>
         <Topbar
           page={page}
           setMobileNav={setMobileNav}
@@ -202,9 +230,9 @@ function Workspace() {
             <div className="example-notice">
               <FlaskConical size={14} />
               <span>
-                {t(
-                  'Synthetic example data. Prices and results are illustrative; this paper account is separate from OKX.',
-                )}
+                {language === 'zh-CN'
+                  ? '合成示例数据 · 独立模拟账户。'
+                  : 'Synthetic example data. Separate paper account.'}
               </span>
             </div>
           )}
@@ -250,6 +278,7 @@ function Workspace() {
                     journey={<WorkspaceJourney source={source} navigate={navigate} />}
                     symbol={symbol}
                     setSymbol={setSymbol}
+                    onInspectMarket={inspectMarket}
                     navigate={navigate}
                   />
                 )}
@@ -366,6 +395,7 @@ function Workspace() {
                     />
                     {page === 'execution' && (
                       <Portfolio
+                        onInspectMarket={inspectMarket}
                         key={source}
                         source={source}
                         initialView={location.view}
@@ -448,9 +478,23 @@ function Workspace() {
           </footer>
         </main>
       </div>
+      {inspectedMarket && (
+        <MarketInspector
+          key={`${inspectedMarket.source}:${inspectedMarket.symbol}`}
+          source={inspectedMarket.source}
+          symbol={inspectedMarket.symbol}
+          onClose={closeInspector}
+        />
+      )}
       <MarketSearch
         source={source}
         onSelect={(symbol, target) => {
+          if (target === 'overview') {
+            inspectMarket(symbol);
+            setSearchOpen(false);
+            setSearch('');
+            return;
+          }
           setLocation({
             page: target,
             source,

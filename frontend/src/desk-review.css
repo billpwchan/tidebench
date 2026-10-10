@@ -1,0 +1,677 @@
+/* First visual-review batch: account books, their actions, and shared desk chrome.
+   Research, the data catalog, and operations keep their existing page layouts. */
+:root {
+  --desk-row-surface: #fff;
+  --desk-row-hover: #f1f5f3;
+  --desk-row-detail: #f6f8f7;
+  --desk-rule: #dce4df;
+}
+
+.sidebar .nav-item.active {
+  background: #2b4638;
+  color: #f3f8f4;
+  box-shadow: inset 3px 0 0 #c5df82;
+}
+.sidebar .nav-item.active:hover {
+  background: #345140;
+}
+.sidebar .nav-item {
+  font-size: 14px;
+}
+.topbar .breadcrumbs,
+.topbar .search-trigger,
+.topbar .execution-badge {
+  font-size: 13px;
+}
+
+.page-overview,
+.page-execution {
+  padding-inline: 24px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+:is(.page-overview, .page-execution) .source-bar {
+  margin-bottom: 8px;
+}
+:is(.page-overview, .page-execution) .example-notice {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+:is(.desk-overview, .desk-execution) .page-heading {
+  margin-bottom: 12px;
+}
+:is(.desk-overview, .desk-execution) .page-heading h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+:is(.desk-overview, .desk-execution) .page-heading p {
+  font-size: 13px;
+  line-height: 18px;
+}
+:is(.desk-overview, .desk-execution) .section-heading h2 {
+  font-size: 16px;
+  line-height: 22px;
+}
+:is(.desk-overview, .desk-execution) .section-description,
+:is(.desk-overview, .desk-execution) .desk-money-unit,
+:is(.desk-overview, .desk-execution) .desk-ticket-context,
+:is(.desk-overview, .desk-execution) .desk-snapshot-basis,
+:is(.desk-overview, .desk-execution) .snapshot-footnote,
+:is(.desk-overview, .desk-execution) .field > small,
+:is(.desk-overview, .desk-execution) .form-footnote {
+  font-size: 12px;
+  line-height: 18px;
+}
+.desk-overview .overview-state-line,
+.desk-execution-state,
+:is(.desk-overview, .desk-execution) .status {
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+.desk-overview .overview-state-line .status,
+.desk-execution-state .status {
+  text-transform: none;
+  white-space: normal;
+}
+:is(.desk-overview, .desk-execution) .button,
+:is(.desk-overview, .desk-execution) .text-button {
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.desk-account-strip {
+  padding-block: 12px;
+  gap: 12px;
+  border-bottom-color: var(--desk-rule);
+}
+.desk-account-strip .metric-label {
+  font-size: 12px;
+  line-height: 18px;
+  margin-bottom: 4px;
+}
+.desk-account-strip .metric-value {
+  font-size: 24px;
+  line-height: 30px;
+  letter-spacing: -0.3px;
+}
+.desk-account-strip .metric-value small,
+.desk-account-strip .metric-note {
+  font-size: 12px;
+  line-height: 18px;
+}
+.desk-account-strip .metric-value small {
+  color: var(--muted);
+}
+
+/* Current inventory owns the full desk. Secondary work follows the book. */
+.desk-overview .trader-overview-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 16px;
+}
+.desk-overview .trader-secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  border-left: 0;
+  padding-left: 0;
+}
+.desk-overview .trader-secondary .desk-snapshot-basis,
+.desk-overview .trader-secondary .desk-conditions {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.desk-overview .trader-secondary .pro-panel + .pro-panel {
+  margin-top: 0;
+}
+.desk-overview .trader-secondary .desk-continue-work {
+  margin-top: 0;
+}
+.desk-book-tabs {
+  margin-bottom: 10px;
+  gap: 20px;
+}
+.desk-book-tabs > button {
+  font-size: 14px;
+}
+.desk-book-tabs > button > span {
+  font-size: 12px;
+}
+
+/* A financial record has one surface, including its sticky ends. */
+:is(.desk-overview, .desk-execution) .desk-table-region .dense-table table {
+  background: var(--desk-row-surface);
+  font-size: 13px;
+  line-height: 18px;
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .dense-table th {
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: 0;
+  background: var(--desk-row-surface);
+  border-bottom-color: var(--desk-rule);
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .dense-table tbody tr {
+  height: 44px;
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .dense-table td {
+  padding: 5px 12px;
+  font-size: 13px;
+  line-height: 18px;
+  background: var(--desk-row-surface);
+  border-bottom: 1px solid #e6ece8;
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .dense-table tr:hover > td {
+  background: var(--desk-row-hover);
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .dense-table .table-stacked {
+  gap: 0;
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .table-stacked strong {
+  font-size: 13px;
+  line-height: 18px;
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .table-stacked small {
+  font-size: 12px;
+  line-height: 16px;
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .desk-sticky-identity,
+:is(.desk-overview, .desk-execution) .desk-table-region .desk-sticky-action {
+  box-shadow: none;
+}
+:is(.desk-overview, .desk-execution) .desk-table-region .desk-sticky-action .text-button {
+  min-height: 32px;
+  white-space: normal;
+  text-align: left;
+}
+:is(.desk-overview, .desk-execution) .desk-sort-button {
+  font-size: 12px;
+  line-height: 18px;
+}
+.desk-table-region .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Reserve the trailing disclosure column beside the sticky financial action. */
+.has-decision-columns .dense-table table:has(.desk-row-detail-toggle) .desk-sticky-action {
+  right: 40px;
+}
+.has-decision-columns .dense-table table:has(.desk-row-detail-toggle) thead th:last-child,
+:is(.desk-overview, .desk-execution) .has-decision-columns .dense-table .desk-row-detail-toggle {
+  position: sticky;
+  right: 0;
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  padding-inline: 4px;
+  background: var(--desk-row-surface);
+}
+.has-decision-columns .dense-table table:has(.desk-row-detail-toggle) thead th:last-child {
+  z-index: 4;
+}
+.has-decision-columns .dense-table .desk-row-detail-toggle {
+  z-index: 2;
+}
+.has-decision-columns .desk-row-detail-toggle .text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 3px;
+}
+.has-decision-columns .desk-row-detail-toggle .text-button:hover {
+  background: #e3ebe6;
+}
+:is(.desk-overview, .desk-execution) .has-decision-columns .dense-table .desk-row-details {
+  height: auto;
+}
+:is(.desk-overview, .desk-execution) .has-decision-columns .dense-table .desk-row-details > td {
+  padding: 14px 16px;
+  background: var(--desk-row-detail);
+  white-space: normal;
+  max-width: none;
+}
+.desk-row-details dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px 20px;
+  margin: 0;
+}
+.desk-row-details dl > div {
+  min-width: 0;
+}
+.desk-row-details dt {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.desk-row-details dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.desk-table-tools {
+  gap: 12px;
+  margin-block: 12px;
+}
+.desk-table-search,
+.desk-compact-sort,
+.desk-table-count {
+  font-size: 12px;
+  line-height: 18px;
+}
+.desk-table-search input,
+.desk-compact-sort select {
+  font-size: 14px;
+  line-height: 20px;
+  border-color: #bfcfc4;
+}
+.desk-order-ticket {
+  border-left-color: var(--desk-rule);
+}
+.desk-order-ticket .field {
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.desk-order-ticket .field > span {
+  margin-bottom: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+.desk-order-ticket .field input,
+.desk-order-ticket .field select {
+  font-size: 14px;
+  border-color: #cad8cd;
+}
+.desk-order-ticket .side-switch button {
+  min-height: 36px;
+  color: #52665b;
+  font-size: 14px;
+}
+.desk-order-ticket .side-switch > button.active.buy {
+  background: #e5efe8;
+  color: #225b42;
+}
+.desk-order-ticket .side-switch > button.active.sell {
+  background: #f4e7e4;
+  color: #8c3e36;
+}
+.desk-order-ticket .budget-estimate,
+.desk-order-ticket .ticket-quotes,
+.desk-order-ticket .quote-age,
+.desk-order-ticket .record-grid dt {
+  font-size: 12px;
+  line-height: 18px;
+}
+.desk-order-ticket .budget-estimate strong,
+.desk-order-ticket .order-preview .record-grid dd {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.desk-cancel-receipt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-block: 12px;
+  padding-block: 12px;
+  border-block: 1px solid var(--desk-rule);
+  font-size: 13px;
+  line-height: 20px;
+}
+.desk-cancel-receipt > div {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.desk-cancel-receipt > div > strong {
+  display: block;
+  color: var(--ink);
+}
+.desk-cancel-receipt > div > span {
+  display: inline;
+  margin-right: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.desk-cancel-receipt > button {
+  min-height: 36px;
+}
+
+@media (max-width: 1320px) and (min-width: 721px) {
+  .desk-execution-layout.has-ticket {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .desk-execution-layout .desk-order-ticket {
+    grid-row: auto;
+    position: static;
+    border-left: 0;
+    border-top: 1px solid var(--desk-rule);
+    padding: 18px 0;
+    max-width: 560px;
+    scroll-margin-top: 24px;
+  }
+}
+
+@media (max-width: 720px) {
+  .page-overview,
+  .page-execution {
+    padding: 6px 14px 0;
+  }
+  :is(.page-overview, .page-execution) > .source-bar {
+    min-height: 44px;
+    margin-bottom: 4px;
+    justify-content: flex-start;
+  }
+  :is(.page-overview, .page-execution) > .source-bar > .source-badge {
+    display: none;
+  }
+  :is(.page-overview, .page-execution) .source-control select {
+    min-height: 44px;
+    font-size: 14px;
+    max-width: none;
+  }
+  :is(.page-overview, .page-execution) .example-notice {
+    padding: 4px 8px;
+    margin-bottom: 8px;
+    align-items: flex-start;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  :is(.page-overview, .page-execution) .example-notice > svg {
+    margin-top: 1px;
+  }
+  :is(.desk-overview, .desk-execution) .page-heading {
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  :is(.desk-overview, .desk-execution) .page-heading > div:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  :is(.desk-overview, .desk-execution) .page-heading h1 {
+    font-size: 20px;
+    line-height: 26px;
+    letter-spacing: 0;
+  }
+  :is(.desk-overview, .desk-execution) .page-heading .heading-actions {
+    width: auto;
+    max-width: 52%;
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+  :is(.desk-overview, .desk-execution) .page-heading .button,
+  :is(.desk-overview, .desk-execution) .desk-metrics-toggle,
+  :is(.desk-overview, .desk-execution) .desk-risk-summary .text-button,
+  .desk-execution .desk-order-ticket :is(.button, .text-button, .side-switch button),
+  .desk-execution .desk-order-ticket .field :is(input, select) {
+    min-height: 44px;
+  }
+  .desk-overview .heading-actions .button-secondary {
+    min-width: 44px;
+  }
+  .desk-cancel-receipt > button {
+    min-height: 44px;
+  }
+  .desk-overview .overview-state-line,
+  .desk-execution-state {
+    gap: 3px 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .desk-account-strip {
+    padding-block: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 44px;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .desk-account-strip > .desk-metrics-toggle {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+  }
+  .desk-account-strip .metric-value {
+    font-size: 24px;
+    line-height: 28px;
+  }
+  .desk-account-strip:not(.is-expanded) > .metric {
+    display: none;
+  }
+  .desk-account-strip:not(.is-expanded) > .metric[data-metric='Account equity'],
+  .desk-account-strip:not(.is-expanded) > .metric[data-metric='Unrealized P&L'] {
+    display: block;
+  }
+  .desk-overview .trader-overview-layout {
+    margin-top: 8px;
+    gap: 16px;
+  }
+  .desk-overview .trader-secondary {
+    display: block;
+  }
+  .desk-overview .trader-secondary > * + * {
+    margin-top: 12px;
+  }
+  .desk-overview .overview-book > .section-heading {
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .desk-overview .overview-book > .section-heading > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .desk-overview .overview-book > .section-heading .section-description {
+    display: none;
+  }
+  .desk-overview .overview-book > .section-heading > .text-button {
+    min-height: 44px;
+    max-width: 96px;
+    font-size: 12px;
+    line-height: 16px;
+    white-space: normal;
+  }
+  .desk-book-tabs {
+    margin-bottom: 6px;
+    gap: 16px;
+  }
+  .desk-book-tabs > button {
+    min-height: 44px;
+    padding-block: 8px;
+    font-size: 14px;
+  }
+  .desk-money-unit {
+    margin-bottom: 6px;
+  }
+  .has-compact-records .desk-table-tools {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 12px;
+    margin-block: 8px;
+  }
+  .has-compact-records .desk-table-search,
+  .has-compact-records .desk-compact-sort {
+    display: block;
+    width: 100%;
+  }
+  .has-compact-records .desk-table-search > span,
+  .has-compact-records .desk-compact-sort > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .has-compact-records .desk-table-search input,
+  .has-compact-records .desk-compact-sort select {
+    min-height: 44px;
+    font-size: 16px;
+    line-height: 20px;
+    padding: 8px;
+  }
+  .has-compact-records .desk-table-count {
+    grid-column: 1 / -1;
+    padding-bottom: 0;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .desk-compact-row {
+    padding: 10px 0;
+    border-bottom-color: var(--desk-rule);
+  }
+  .desk-compact-summary {
+    gap: 6px 12px;
+  }
+  .desk-compact-label,
+  .desk-compact-details dt {
+    margin-bottom: 2px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .desk-compact-value,
+  .desk-compact-details dd {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .desk-compact-row .table-stacked {
+    gap: 0;
+  }
+  .desk-compact-row .table-stacked small {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .desk-compact-row .text-button {
+    min-height: 44px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .desk-compact-details {
+    margin-top: 0;
+  }
+  .desk-compact-details > summary {
+    min-height: 44px;
+    padding: 12px 0;
+    font-size: 12px;
+    line-height: 20px;
+  }
+  /* Only position records use this summary. Order and ledger schemas stay intact. */
+  .desk-compact-summary:has([data-column='protect']) .is-identity {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .desk-compact-summary:has([data-column='protect']) .is-identity .desk-compact-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .desk-compact-summary:has([data-column='protect']) [data-column='unrealized_pnl'] {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: right;
+  }
+  .desk-compact-summary:has([data-column='protect']) [data-column='quantity'] {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+  }
+  .desk-compact-summary:has([data-column='protect']) [data-column='quantity'] .table-stacked {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .desk-compact-summary:has([data-column='protect']) .is-action {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+  }
+  .desk-compact-summary:has([data-column='protect']) .is-action .desk-compact-value {
+    justify-content: flex-end;
+  }
+  .desk-compact-summary:has([data-column='protect']) .is-action .text-button {
+    justify-content: flex-end;
+    text-align: right;
+  }
+}
+
+/* Market identity is a single aligned control, including its product and side. */
+:is(.desk-market-link, .portfolio-market-inspect) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  text-align: left;
+  min-height: 36px;
+  color: var(--ink);
+}
+:is(.desk-market-link, .portfolio-market-inspect) strong {
+  font-weight: 600;
+}
+:is(.desk-market-link, .portfolio-market-inspect) small {
+  color: var(--muted);
+  font-weight: 400;
+}
+@media (max-width: 720px) {
+  :is(.desk-market-link, .portfolio-market-inspect) {
+    min-height: 44px;
+  }
+  .topbar {
+    padding-inline: 8px;
+    gap: 8px;
+  }
+  .topbar .breadcrumbs {
+    min-width: 0;
+    gap: 6px;
+  }
+  .topbar .breadcrumbs strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar .topbar-actions {
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .topbar :is(.mobile-menu, .search-trigger) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+}

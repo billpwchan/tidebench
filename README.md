@@ -11,22 +11,22 @@ An open-source crypto research and paper trading workbench for OKX spot and line
 
 English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Research model](docs/pro-research.md) · [Operations](docs/operations.md)
 
-![Tidebench trading overview, using explicitly synthetic prices](docs/assets/desk-overview-v0.13-desktop.png)
+![Tidebench trading overview, using explicitly synthetic prices](docs/assets/desk-overview-v0.14-desktop.png)
 
 ## Work from the account, through the evidence, to the next decision
 
-Open the desk to see equity, available cash, exposure, positions and working orders first. Search and sort the actual book; mobile records keep market identity, quantities and actions together. Open a ticket deliberately, size a market order in native units or USDT notional, inspect its risk preview, and return to monitoring without losing the draft. Micro prices retain the instrument's tick precision.
+Open the desk to see equity, available cash, exposure, positions and working orders first. The full-width book keeps P&L and actions visible, with secondary financial fields in row details. Search and sort the actual book; mobile records keep market identity, quantities and actions together. Open a ticket deliberately, size a market order in native units or USDT notional, inspect its risk preview, and return to monitoring without losing the draft. Micro prices retain the instrument's tick precision. Inspect a market without leaving the draft. Submission and cancellation receipts link to the exact order, its events and journal; filled orders stay inspectable outside the Working filter.
 
 Research has its own working context. Market inputs, strategy and evaluation sit side by side on a wide screen. A selected result states its **saved** market, window, costs and method; editing the next trial cannot rewrite the result. Preparing data carries the chosen product, interval and UTC window, then returns the exact versioned package to the same draft. Late receipts cannot take over a task you have already left.
 
-[See the trader paths](docs/trader-journeys.md) · [Read the before/after review](docs/audit/trader-desk-0.13.0.zh-CN.md) · [Inspect the verification record](docs/verification.md).
+[See the trader paths](docs/trader-journeys.md) · [Read the independent review and remaining work](docs/audit/trader-experience-0.14.0.zh-CN.md) · [Inspect the verification record](docs/verification.md).
 
 <details>
 <summary>Research desk and mobile book — synthetic acceptance fixtures</summary>
 
 ![Parallel research configuration, on a synthetic dataset](docs/assets/desk-research-v0.13-desktop.png)
 
-![Mobile current book, with market identity and account quantities preserved](docs/assets/desk-book-v0.13-mobile.png)
+![Mobile first fold with equity, unrealized P&L and a complete position; synthetic fixture](docs/assets/desk-overview-v0.14-mobile.png)
 
 </details>
 

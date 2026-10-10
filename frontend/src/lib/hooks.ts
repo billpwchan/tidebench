@@ -23,7 +23,10 @@ export function useDialogFocus(active: boolean, selector: string, onClose: () =>
         const items = focusable();
         const first = items[0],
           last = items.at(-1);
-        if (e.shiftKey && document.activeElement === first) {
+        if (!dialog.contains(document.activeElement)) {
+          e.preventDefault();
+          (e.shiftKey ? last : first)?.focus();
+        } else if (e.shiftKey && document.activeElement === first) {
           e.preventDefault();
           last?.focus();
         } else if (!e.shiftKey && document.activeElement === last) {

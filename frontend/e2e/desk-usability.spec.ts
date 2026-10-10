@@ -266,7 +266,12 @@ test('market search filters and keyboard inspection preserve market identity', a
     dialog.getByRole('button', { name: 'Inspect ETH-USDT-SWAP', exact: true }),
   ).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/symbol=ETH-USDT-SWAP/);
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Market inspector', exact: true })
+      .getByLabel('Market', { exact: true }),
+  ).toHaveValue('ETH-USDT-SWAP');
+  await expect(page).not.toHaveURL(/symbol=ETH-USDT-SWAP/);
   expect(state.mutations).toEqual([]);
 });
 
