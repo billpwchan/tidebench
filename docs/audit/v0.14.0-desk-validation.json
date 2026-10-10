@@ -1,0 +1,62 @@
+{
+  "schema": "tidebench-local-desk-validation-v1",
+  "date": "2026-10-11",
+  "implementation_commit": "c2039012d8d47455e7f3390fabd25a6fab491446",
+  "baseline_commit": "2b66f9c0e43fb901888424b8922293624a17b077",
+  "later_changes": "Documentation of primary-upgrade validation only; product and test code frozen.",
+  "scope": "Public market-data research and local paper execution. No private OKX API or venue orders.",
+  "backend": {
+    "passed": 997,
+    "seconds": 281.22,
+    "existing_warnings": 1
+  },
+  "browser_full": {
+    "passed": 255,
+    "skipped_desktop_only_in_mobile": 3,
+    "minutes": 11.0,
+    "environment": "Desktop and emulated mobile Chromium; isolated synthetic stores"
+  },
+  "browser_final_focused": {
+    "passed": 47,
+    "skipped_desktop_only_in_mobile": 3,
+    "minutes": 1.2
+  },
+  "build": {
+    "main_javascript_kb": 420.84,
+    "main_javascript_gzip_kb": 136.34,
+    "css_kb": 148.43,
+    "css_gzip_kb": 27.02,
+    "chunk_threshold_increased": false
+  },
+  "primary_upgrade": {
+    "health_http_status": 200,
+    "readiness_http_status": 200,
+    "version": "0.14.0",
+    "schema": 8,
+    "integrity_check": "ok",
+    "foreign_key_errors": 0,
+    "operational_table_hashes_checked": 24,
+    "operational_hashes_unchanged": true,
+    "installed_frontend_files_byte_identical": 39,
+    "first_user_setup_unchanged": true,
+    "administrator_created_or_reset": false,
+    "private_snapshot_mode": "0600"
+  },
+  "publication": {
+    "tracked_and_new_files_scanned": 466,
+    "credential_or_private_runtime_hits": 0,
+    "historical_report_and_image_files_byte_preserved": 131
+  },
+  "history_limits": {
+    "terminal_orders": 200,
+    "pending_orders": "all",
+    "audit_events": 100,
+    "ledger_rows": 500
+  },
+  "limits": [
+    "Internal independent review, not institutional certification.",
+    "No physical-device or Safari acceptance.",
+    "Not profitability, venue capacity or availability evidence.",
+    "The baseline review still contains partial and pending research, strategy, data and operations findings."
+  ]
+}
