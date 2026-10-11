@@ -1,0 +1,56 @@
+{
+  "version": "0.15.0",
+  "date": "2026-10-11",
+  "scope": "Single-strategy captured backtest diagnostics and research desk; core financial engine unchanged.",
+  "backend": {
+    "passed": 1039,
+    "duration_seconds": 298.82,
+    "warning": "Existing Starlette/httpx TestClient deprecation"
+  },
+  "browser": {
+    "existing_passed": 255,
+    "new_analysis_passed": 8,
+    "existing_mobile_skipped": 3,
+    "execution": "Full existing-suite regression plus final targeted analysis rerun; exact-revision hosted CI is recorded separately."
+  },
+  "checks": [
+    "Ruff lint/format",
+    "Prettier",
+    "TypeScript",
+    "Vite production build",
+    "Exact variant selection",
+    "Verified shared contract units and interval",
+    "Original financial artifact unchanged",
+    "Authenticated viewer read",
+    "Bounded concurrent derivation",
+    "Unknown implementation comparison",
+    "Calendar/recovery/negative-equity arithmetic",
+    "Keyboard Home/End after zoom",
+    "3D candidate preservation",
+    "1100-day displayed/exported subset"
+  ],
+  "independent_reviewers": 3,
+  "diagnostic_tests": 33,
+  "diagnostics_version": "backtest-diagnostics-1",
+  "large_report_probe": {
+    "observations": 100000,
+    "duration_seconds": 5.72,
+    "serialized_bytes": 385883,
+    "synthetic": true
+  },
+  "source_sha256": {
+    "backend/tidebench/backtest_diagnostics.py": "f9b23f7ba34742bb4716fb17521a9c9d70f5a5acedd4b505763ea3c146c3974f",
+    "backend/tidebench/backtest_reports.py": "113274a868ff8e45489d1445dc29c50d54a643cf60fb265573be86ea04123985",
+    "backend/tidebench/pro_service.py": "2f6d62c2141df0f846d46b0468356f35cae404ed78c4480bbd09be5ed6181c96",
+    "backend/tidebench/pro_api.py": "06bc4e572a2d2f854a2da66bdb4870affbd02fdc51833937298441ccaddfe690",
+    "frontend/src/components/ResearchChart.tsx": "9d12d584e79f1a9fee9bc20a9568e12af51b0de491d67a00331cdd86a1d2de05",
+    "frontend/src/components/BacktestReport.tsx": "9d5301158d32f5fcaee96df1f3e062ba6649943cf4260ec0cef7a5203e8eba8e",
+    "frontend/src/pages/ProResearch.tsx": "996f75e999446c6b4e33a7555d3827c4ce65fb670ff9f24d49e2d6eef94278bd",
+    "frontend/src/backtest-workbench.css": "de55dc3717fdf53d3d6ca3300c2249d9296fcc116bc899d0820f374ac3da1f56"
+  },
+  "limitations": [
+    "Chromium phone emulation, not physical Safari/device acceptance",
+    "Historical bar simulation, not exchange execution acceptance",
+    "No selection-adjusted statistical significance or institutional certification"
+  ]
+}

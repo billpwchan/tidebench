@@ -17,7 +17,7 @@ English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Re
 
 Open the desk to see equity, available cash, exposure, positions and working orders first. The full-width book keeps P&L and actions visible, with secondary financial fields in row details. Search and sort the actual book; mobile records keep market identity, quantities and actions together. Open a ticket deliberately, size a market order in native units or USDT notional, inspect its risk preview, and return to monitoring without losing the draft. Micro prices retain the instrument's tick precision. Inspect a market without leaving the draft. Submission and cancellation receipts link to the exact order, its events and journal; filled orders stay inspectable outside the Working filter.
 
-Research has its own working context. Market inputs, strategy and evaluation sit side by side on a wide screen. A selected result states its **saved** market, window, costs and method; editing the next trial cannot rewrite the result. Preparing data carries the chosen product, interval and UTC window, then returns the exact versioned package to the same draft. Late receipts cannot take over a task you have already left.
+Research has its own working context. The next trial uses parallel configuration; selected results open in a full-width analytical desk. A selected result states its **saved** market, window, costs and method; editing the next trial cannot rewrite the result. Preparing data carries the chosen product, interval and UTC window, then returns the exact versioned package to the same draft. Late receipts cannot take over a task you have already left.
 
 [See the trader paths](docs/trader-journeys.md) · [Read the independent review and remaining work](docs/audit/trader-experience-0.14.0.zh-CN.md) · [Inspect the verification record](docs/verification.md).
 
@@ -29,6 +29,14 @@ Research has its own working context. Market inputs, strategy and evaluation sit
 ![Mobile first fold with equity, unrealized P&L and a complete position; synthetic fixture](docs/assets/desk-overview-v0.14-mobile.png)
 
 </details>
+
+## Read the backtest as evidence
+
+Six linked analysis views connect capital growth to calendar consistency, recovery time, trade concentration, parameter/cost sensitivity and economic reconciliation. Inspect chronological test windows individually; retain every candidate in multidimensional grids. Use actual starting capital for normalized charts, preserve the selected time range, and inspect observations with the keyboard.
+
+![Backtest analysis with captured, explicitly synthetic input; displayed returns are not investment evidence](docs/assets/backtest-analysis-desktop.png)
+
+Historical runs gain derived diagnostics without changing their captured financial results or replay hashes. Missing statistics, partial periods, sampled rows and nonpositive equity remain explicit. [Analysis methods and primary references](docs/backtest-analysis.md) explain what each view measures and where its interpretation stops.
 
 ## Follow the money after a simulated fill
 

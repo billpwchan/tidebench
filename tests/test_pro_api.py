@@ -65,6 +65,138 @@ def dataset(client, kind="trade", symbol="BTC-USDT"):
     pytest.fail("Dataset job timed out")
 
 
+@pytest.mark.parametrize("mode", ["single", "grid", "cost_stress", "train_test", "walk_forward"])
+def test_captured_backtest_diagnostics_all_modes_preserve_financial_artifact(client, mode):
+    from tidebench.backtest_reports import report_candidate
+
+    config = {
+        "dataset_id": dataset(client, symbol="BTC-USDT-SWAP"),
+        "mark_dataset_id": dataset(client, "mark", "BTC-USDT-SWAP"),
+        "funding_dataset_id": dataset(client, "funding", "BTC-USDT-SWAP"),
+        "mode": mode,
+        "strategy": {"kind": "sma_cross", "fast": 5, "slow": 12},
+    }
+    if mode == "cost_stress":
+        config["options"] = {"fee_bps": [0, 10], "slippage_bps": [0, 20]}
+    elif mode != "single":
+        config["options"] = {
+            "train_bars": 100,
+            "test_bars": 40,
+            "step_bars": 40,
+            "purge_bars": 2,
+            "grid": {"fast": [5, 8], "slow": [12]},
+        }
+    created = client.post("/api/v1/pro/research/runs", json=config)
+    assert created.status_code == 202, created.text
+    run = wait(client, f"/api/v1/pro/research/runs/{created.json()['id']}")
+    path = f"/api/v1/pro/research/runs/{run['id']}"
+    before = client.get(path + "/export").json()
+    key, scope, _ = report_candidate(before["result"])
+    response = client.get(path + "/diagnostics", params={"variant": key})
+    assert response.status_code == 200, response.text
+    report = response.json()
+    assert report["variant"] == key and report["scope"] == scope
+    assert report["result_hash"] == run["manifest"]["result_hash"]
+    assert len(report["report_implementation_hash"]) == 64
+    assert report["diagnostics"]["sample"]["interval_ms"] == 3600000
+    assert report["diagnostics"]["contribution"]["execution_price_impact"] is not None
+    assert client.get(path + "/export").json() == before
+    assert client.get(path + "/diagnostics", params={"variant": "missing-candidate"}).status_code == 404
+    if mode in {"train_test", "walk_forward"}:
+        assert report["validation"]["test_fold_count"] >= 1
+        assert report["validation"]["candidate_evaluations"] >= 2
+        assert report["diagnostics"]["sample"]["initial_cash"] == "10000"
+        training_id = before["result"]["folds"][0]["training_experiments"][0]["id"]
+        training = client.get(path + "/diagnostics", params={"variant": "fold-1:" + training_id})
+        assert training.status_code == 200, training.text
+        assert training.json()["scope"] == "training"
+
+
+def test_backtest_diagnostics_use_verified_candidate_interval_not_outer_snapshot(client):
+    import json
+
+    from tidebench.store import dumps
+
+    created = client.post("/api/v1/pro/research/runs", json={"dataset_id": dataset(client)})
+    run = wait(client, f"/api/v1/pro/research/runs/{created.json()['id']}")
+    path = f"/api/v1/pro/research/runs/{run['id']}/diagnostics"
+    before = client.get(path).json()
+    runtime = client.app.state.professional
+    with runtime.store.write() as conn:
+        snapshot = json.loads(
+            conn.execute("SELECT snapshot FROM pro_runs WHERE id=?", (run["id"],)).fetchone()[0]
+        )
+        snapshot["trade"]["bar"] = "4H"
+        conn.execute("UPDATE pro_runs SET snapshot=? WHERE id=?", (dumps(snapshot), run["id"]))
+    assert client.get(path).json() == before
+    with runtime.store.write() as conn:
+        manifest = dict(run["manifest"], result_hash="0" * 64)
+        conn.execute("UPDATE pro_runs SET manifest=? WHERE id=?", (dumps(manifest), run["id"]))
+    rejected = client.get(path)
+    assert rejected.status_code == 409
+    assert rejected.json()["error"]["code"] == "research_integrity"
+
+
+def test_backtest_report_is_authenticated_read_only_evidence_available_to_viewer(client):
+    created = client.post("/api/v1/pro/research/runs", json={"dataset_id": dataset(client)})
+    run = wait(client, f"/api/v1/pro/research/runs/{created.json()['id']}")
+    path = f"/api/v1/pro/research/runs/{run['id']}/diagnostics"
+    assert (
+        client.post(
+            "/api/v1/auth/users",
+            json={"username": "reportviewer", "password": "viewer-report-password", "role": "viewer"},
+        ).status_code
+        == 201
+    )
+    assert client.post("/api/v1/auth/logout").status_code == 200
+    assert client.get(path).status_code == 401
+    login = client.post(
+        "/api/v1/auth/login", json={"username": "reportviewer", "password": "viewer-report-password"}
+    )
+    client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
+    assert client.get(path).status_code == 200
+    assert client.post(f"/api/v1/pro/research/runs/{run['id']}/replay").status_code == 403
+
+
+def test_backtest_reports_bound_concurrent_derivation_and_release_on_errors(client):
+    created = client.post("/api/v1/pro/research/runs", json={"dataset_id": dataset(client)})
+    run = wait(client, f"/api/v1/pro/research/runs/{created.json()['id']}")
+    path = f"/api/v1/pro/research/runs/{run['id']}/diagnostics"
+    runtime = client.app.state.professional
+    with runtime.backtest_report_lock:
+        response = client.get(path)
+        assert response.status_code == 429
+        assert response.json()["error"]["code"] == "research_report_busy"
+    assert client.get(path, params={"variant": "absent"}).status_code == 404
+    assert client.get(path).status_code == 200
+
+
+def test_comparison_cannot_match_two_unavailable_implementation_identities(client, monkeypatch):
+    from copy import deepcopy
+
+    created = client.post("/api/v1/pro/research/runs", json={"dataset_id": dataset(client)})
+    run = wait(client, f"/api/v1/pro/research/runs/{created.json()['id']}")
+    runtime = client.app.state.professional
+
+    def legacy_run(identifier):
+        legacy = deepcopy(run)
+        legacy["id"] = identifier
+        legacy["manifest"].pop("research_implementation", None)
+        legacy["manifest"].pop("model_version", None)
+        return legacy
+
+    monkeypatch.setattr(runtime, "run", legacy_run)
+    response = client.get(f"/api/v1/pro/research/compare?ids={run['id']},{'f' * 32}")
+    assert response.status_code == 200, response.text
+    comparison = response.json()
+    assert comparison["comparison_status"] == "unknown"
+    assert not comparison["comparable_inputs"]
+    assert set(comparison["different_assumptions"]) >= {
+        "implementation_unavailable",
+        "model_version_unavailable",
+    }
+
+
 def test_auth_csrf_roles_and_password_storage(client):
     assert client.get("/api/v1/auth/status").json()["user"]["role"] == "admin"
     csrf = client.headers.pop("X-CSRF-Token")

@@ -118,6 +118,7 @@ export function DataTable<T extends RecordData>({
   compactColumns,
   compactLabel = 'Table records',
   desktopColumns,
+  pageSize: requestedPageSize = 100,
 }: {
   rows: T[];
   columns: DataTableColumn<T>[];
@@ -131,6 +132,7 @@ export function DataTable<T extends RecordData>({
   compactLabel?: string;
   // A decision table can keep its essential columns visible; all others expand per row.
   desktopColumns?: string[];
+  pageSize?: number;
 }) {
   const { t } = useI18n();
   const [page, setPage] = useState(0);
@@ -205,7 +207,7 @@ export function DataTable<T extends RecordData>({
     if (element.firstElementChild) observer.observe(element.firstElementChild);
     return () => observer.disconnect();
   }, [rows.length, filtered.length, columns.length]);
-  const pageSize = 100;
+  const pageSize = Math.min(100, Math.max(1, Math.floor(requestedPageSize) || 100));
   const pageCount = Math.ceil(filtered.length / pageSize);
   const currentPage = Math.min(page, Math.max(0, pageCount - 1));
   const offset = currentPage * pageSize;

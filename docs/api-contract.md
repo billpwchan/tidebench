@@ -50,7 +50,8 @@ Modes: `single`, `grid`, `cost_stress`, `train_test`, `walk_forward`. Options in
 - `GET /pro/research/runs/{id}` → status/progress/config/manifest/result/error.
 - `POST /pro/research/runs/{id}/replay` → new run from captured evidence; `manifest.replay_verified` is true only when the full result SHA-256 equals the original. Divergence fails the replay.
 - `GET /pro/research/runs/{id}/export` → actual JSON attachment with captured inputs and results.
-- `GET /pro/research/compare?ids=id1,id2` → 2–8 completed runs plus differing-assumption warnings.
+- `GET /pro/research/runs/{id}/diagnostics?variant=single` → authenticated read-only calendar, drawdown/recovery, rolling risk, trade concentration and economic reconciliation derived from a hash-verified captured candidate. Exact variants only; identity, version and capped-series omission counts are returned. See [backtest analysis](backtest-analysis.md).
+- `GET /pro/research/compare?ids=id1,id2` → 2–8 completed runs plus differing-assumption warnings and `comparison_status: matching|different|unknown`; absent implementation/model identity is unknown, never matching.
 
 Plans deliberately have different shapes: single has `result`; grid/stress have `experiments`/`comparison`; OOS modes have `folds`/`oos_summary`. No fabricated common equity path. See [research](pro-research.md).
 

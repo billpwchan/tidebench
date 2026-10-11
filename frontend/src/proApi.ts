@@ -964,6 +964,10 @@ export const proApi = {
       `/pro/research/runs/${encodeURIComponent(id)}${variant === undefined ? '' : '?variant=' + encodeURIComponent(variant)}`,
     ),
   createRun: (body: ProRunConfig) => post<ProRun>('/pro/research/runs', body),
+  backtestReport: (id: string, variant: string) =>
+    request<RecordData>(
+      `/pro/research/runs/${encodeURIComponent(id)}/diagnostics?${q({ variant })}`,
+    ),
   replay: (id: string) => post<ProRun>(`/pro/research/runs/${encodeURIComponent(id)}/replay`),
   compare: (ids: string[]) =>
     request<RecordData>(`/pro/research/compare?${q({ ids: ids.join(',') })}`),
