@@ -736,6 +736,68 @@ test('daily journey gives current controller risk and monitoring priority over h
   expect(state.mutations).toEqual([]);
 });
 
+for (const editLeg of [false, true]) {
+  test(`delayed prepared inputs ${editLeg ? 'cannot overwrite an edited leg' : 'complete the unchanged hypothesis without overwriting costs'}`, async ({
+    page,
+  }) => {
+    const state = await openFixture(page);
+    const ready = ['BTC-USDT', 'ETH-USDT', 'SOL-USDT'].map((inst_id, index) => ({
+      id: `delayed-package-${index}`,
+      source: 'example',
+      inst_id,
+      bar: '4H',
+      start: Date.UTC(2025, 0, 1),
+      end: Date.UTC(2025, 1, 1),
+      status: 'ready',
+      ready: true,
+      research_inputs: { dataset_id: `dataset-${index}`, source: 'example' },
+    }));
+    let release!: () => void;
+    const arrival = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/api/v1/pro/catalog/packages?*', async (route) => {
+      await arrival;
+      await route.fulfill({ json: { items: ready } });
+    });
+    await navigateFixture(page, 'Strategies');
+    await page.getByRole('button', { name: /^06 Risk-budgeted momentum/ }).click();
+    await page
+      .getByRole('button', { name: 'Research this portfolio hypothesis', exact: true })
+      .click();
+    await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(
+      'Risk-budgeted positive momentum rotation',
+    );
+    await page.getByLabel('Fee (bps)', { exact: true }).fill('23');
+    if (editLeg) await page.getByLabel('Notional weight %', { exact: true }).nth(0).fill('33');
+    release();
+    await expect(
+      page.getByLabel('Package 1', { exact: true }).locator('option[value="delayed-package-0"]'),
+    ).toHaveCount(1);
+    if (editLeg) {
+      await expect(page.getByLabel('Notional weight %', { exact: true }).nth(0)).toHaveValue('33');
+      await expect(page.getByLabel('Package 1', { exact: true })).toHaveValue('');
+      await expect(
+        page.getByRole('button', { name: 'Run portfolio research', exact: true }),
+      ).toBeDisabled();
+    } else {
+      for (const [index, item] of ready.entries()) {
+        await expect(page.getByLabel(`Package ${index + 1}`, { exact: true })).toHaveValue(item.id);
+      }
+      await expect(
+        page.getByRole('button', { name: 'Run portfolio research', exact: true }),
+      ).toBeEnabled();
+    }
+    await expect(page.getByLabel('Fee (bps)', { exact: true })).toHaveValue('23');
+    await page.reload();
+    await expect(page.getByLabel('Fee (bps)', { exact: true })).toHaveValue('23');
+    await expect(page.getByLabel('Package 1', { exact: true })).toHaveValue(
+      editLeg ? '' : ready[0].id,
+    );
+    expect(state.mutations).toEqual([]);
+  });
+}
+
 for (const target of [
   {
     family: /^03 Cost-aware funding carry/,

@@ -703,6 +703,32 @@ export default function PortfolioResearch({
         .map((item) => `${date(item!.start, true)} → ${date(item!.end, true)}`),
     ),
   ];
+  const recipeLegs = (recipe: (typeof recipes)[number], available: DataPackage[]): Leg[] => {
+    const matching = available.filter((p) => p.bar === recipe.definition.bar);
+    const anchor = matching.find((p) => p.inst_id === recipe.definition.legs[0].inst_id);
+    return recipe.definition.legs.map((leg) => ({
+      ...newLeg(),
+      inst_id: leg.inst_id,
+      programDraft: undefined,
+      weight: leg.weight,
+      leverage: leg.leverage,
+      direction: leg.direction,
+      strategy: { ...leg.strategy },
+      package_id:
+        matching.find(
+          (p) => p.inst_id === leg.inst_id && p.start === anchor?.start && p.end === anchor?.end,
+        )?.id ?? '',
+    }));
+  };
+  const pendingRecipePackages = useRef<
+    | {
+        source: Source;
+        userId: string;
+        recipeId: string;
+        legsFingerprint: string;
+      }
+    | undefined
+  >(undefined);
   const applyRecipe = (identifier: string) => {
     setRecipeId(identifier);
     const recipe = recipes.find((r) => r.id === identifier);
@@ -722,23 +748,12 @@ export default function PortfolioResearch({
     setLookback(d.lookback);
     setTopK(d.top_k);
     setEvaluation('train_test');
-    const matching = ready.filter((p) => p.bar === d.bar);
-    const anchor = matching.find((p) => p.inst_id === d.legs[0].inst_id);
-    setLegs(
-      d.legs.map((leg) => ({
-        ...newLeg(),
-        inst_id: leg.inst_id,
-        programDraft: undefined,
-        weight: leg.weight,
-        leverage: leg.leverage,
-        direction: leg.direction,
-        strategy: { ...leg.strategy },
-        package_id:
-          matching.find(
-            (p) => p.inst_id === leg.inst_id && p.start === anchor?.start && p.end === anchor?.end,
-          )?.id ?? '',
-      })),
-    );
+    const proposedLegs = recipeLegs(recipe, ready);
+    pendingRecipePackages.current =
+      proposedLegs.some((leg) => !leg.package_id) && (packages.isPending || packages.isFetching)
+        ? { source, userId, recipeId: identifier, legsFingerprint: JSON.stringify(proposedLegs) }
+        : undefined;
+    setLegs(proposedLegs);
   };
   const requestedRecipe = recipes.find((item) => item.id === initialRecipeId);
   const appliedProposal = useRef('');
@@ -765,6 +780,24 @@ export default function PortfolioResearch({
     appliedProposal.current = identity;
     acceptRecipe();
   }, [initialRecipeId, source, userId, canOperate]);
+  useEffect(() => {
+    const pending = pendingRecipePackages.current;
+    if (!pending || packages.isPending || packages.isFetching) return;
+    pendingRecipePackages.current = undefined;
+    if (
+      pending.source !== source ||
+      pending.userId !== userId ||
+      pending.recipeId !== recipeId ||
+      JSON.stringify(legs) !== pending.legsFingerprint
+    )
+      return;
+    const recipe = recipes.find((item) => item.id === pending.recipeId);
+    if (!recipe) return;
+    const matched = recipeLegs(recipe, ready);
+    if (matched.every((leg) => !leg.package_id)) return;
+    revisionGeneration.current += 1;
+    setLegs((current) => (JSON.stringify(current) === pending.legsFingerprint ? matched : current));
+  }, [packages.data, packages.isPending, packages.isFetching, source, userId, recipeId, legs]);
   const evaluationName = (value: unknown) =>
     value === 'train_test'
       ? text('Independent chronological test', '独立时间序列测试')
@@ -965,7 +998,15 @@ export default function PortfolioResearch({
                         .find((r) => r.id === recipeId)
                         ?.definition.legs.map((l) => l.inst_id)
                         .join(' · ')}{' '}
-                      · 1H
+                      · {recipes.find((r) => r.id === recipeId)?.definition.bar}
+                    </p>
+                  )}
+                  {pendingRecipePackages.current && (packages.isPending || packages.isFetching) && (
+                    <p className="quiet-copy" role="status">
+                      {text(
+                        'Matching prepared data for this hypothesis…',
+                        '正在为此假设匹配已准备的数据…',
+                      )}
                     </p>
                   )}
                 </Field>

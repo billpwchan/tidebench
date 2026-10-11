@@ -1228,6 +1228,7 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   const csrf = (await (await request.get('/api/v1/auth/status')).json()).csrf_token;
   const headers = { 'X-CSRF-Token': csrf };
   const end = 1767225600000;
+  const preparedPackages: string[] = [];
   for (const symbol of ['BTC-USDT', 'ETH-USDT', 'SOL-USDT']) {
     const response = await request.post('/api/v1/pro/catalog/packages', {
       headers,
@@ -1235,6 +1236,7 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
     });
     expect(response.ok()).toBeTruthy();
     const created = await response.json();
+    preparedPackages.push(created.id);
     await expect
       .poll(
         async () =>
@@ -1249,6 +1251,9 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
     'reduce_group_v2_allowance',
   );
   await page.getByLabel('Portfolio starting point', { exact: true }).selectOption('risk-rotation');
+  for (const [index, id] of preparedPackages.entries()) {
+    await expect(page.getByLabel(`Package ${index + 1}`, { exact: true })).toHaveValue(id);
+  }
   await expect(page.getByLabel('Risk estimation bars', { exact: true })).toHaveValue('84');
   await expandResearchPolicy(page);
   await page.getByLabel('Maximum execution residual %', { exact: true }).fill('3');
@@ -1267,6 +1272,9 @@ test('risk-budgeted portfolio recipe persists controls and explains causal posit
   const response = await queued;
   expect(response.ok()).toBeTruthy();
   const run = await response.json();
+  expect(run.config.legs.map((leg: { package_id: string }) => leg.package_id)).toEqual(
+    preparedPackages,
+  );
   expect(run.config.mode).toBe('risk_momentum');
   expect(run.config.vol_target_pct).toBe('15');
   expect(run.config.failure_policy).toBe('reduce_group');
