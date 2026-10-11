@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDownToLine, ArrowUpRight, Info } from 'lucide-react';
 import { downloadBlob, downloadCsv } from '../api';
@@ -42,6 +42,7 @@ export default function BacktestReport({
   const [calendarYear, setCalendarYear] = useState('all');
   const [tradeFilter, setTradeFilter] = useState('all');
   const [matrixMetric, setMatrixMetric] = useState('total_return_pct');
+  const equityRows = useMemo(() => rows(result.equity), [result.equity]);
   const metrics = result.metrics ?? {};
   const reasons = record(metrics.metric_reasons);
   const report = useQuery({
@@ -271,7 +272,7 @@ export default function BacktestReport({
         role="tabpanel"
         aria-label={text('Selected analysis', '当前分析')}
       >
-        {section === 'overview' && (
+        {section === 'overview' && report.isSuccess && (
           <>
             <ResearchChart
               title={text('Growth of capital', '资金走势')}
@@ -293,7 +294,7 @@ export default function BacktestReport({
                   </button>
                 </div>
               }
-              rows={rows(result.equity)}
+              rows={equityRows}
               metric={chartMetric}
               initialCash={metrics.initial_cash}
               startTs={numeric(sample.start_ts) ?? undefined}
@@ -335,7 +336,7 @@ export default function BacktestReport({
             </dl>
           </>
         )}
-        {section !== 'overview' && report.isPending && (
+        {report.isPending && (
           <Loading
             label={text(
               'Calculating diagnostics from the captured result…',
@@ -582,7 +583,7 @@ export default function BacktestReport({
                 </dd>
               </div>
             </dl>
-            <ResearchChart rows={rows(result.equity)} metric="drawdown" height={220} />
+            <ResearchChart rows={equityRows} metric="drawdown" height={220} />
             <h3 className="backtest-subheading">
               {text('Deepest drawdown episodes', '最深回撤时段')}
             </h3>

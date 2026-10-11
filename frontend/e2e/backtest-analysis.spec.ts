@@ -171,6 +171,31 @@ test('captured evidence drives all six analysis views, normalized chart and trad
   await inspector.press('Home');
   await expect(inspector).toHaveValue('0');
   await expect(report.locator('.research-chart-point')).toContainText('0.00%');
+  const chart = report.getByRole('img', { name: 'Research performance chart', exact: true });
+  await chart.hover({ position: { x: 100, y: 100 } });
+  await expect(inspector).toBeFocused();
+  await chart.dispatchEvent('pointerleave', { pointerType: 'mouse' });
+  await chart.locator('canvas').evaluateAll((canvases) => {
+    for (const canvas of canvases) canvas.dispatchEvent(new MouseEvent('mouseleave'));
+  });
+  await expect(inspector).toHaveValue('0');
+  await expect(report.locator('.research-chart-point')).toContainText('Initial capital');
+  await expect(report.locator('.research-chart-point-strategy strong')).toHaveText('0.00%');
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({ ...viewport, width: viewport.width - 24 });
+  await chart.hover({ position: { x: 100, y: 100 } });
+  await expect(inspector).toBeFocused();
+  await expect(inspector).toHaveValue('0');
+  await expect(report.locator('.research-chart-point-strategy strong')).toHaveText('0.00%');
+  await page.setViewportSize(viewport);
+  await expect(inspector).toHaveValue('0');
+  await inspector.evaluate((node) => node.blur());
+  await page.mouse.move(0, 0);
+  await chart.hover({ position: { x: 100, y: 100 } });
+  const lastIndex = Number(await inspector.getAttribute('max'));
+  await expect.poll(async () => Number(await inspector.inputValue())).toBeGreaterThan(0);
+  await expect.poll(async () => Number(await inspector.inputValue())).toBeLessThan(lastIndex);
+  await inspector.focus();
   await inspector.press('End');
   const endingReturn = Number(run.result.result.metrics.total_return_pct);
   const endingLabel = `${endingReturn > 0 ? '+' : ''}${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(endingReturn)}%`;
@@ -219,6 +244,70 @@ test('captured evidence drives all six analysis views, normalized chart and trad
   }
   const bounds = await report.boundingBox();
   expect(bounds!.width).toBeLessThanOrEqual(info.project.use.viewport!.width);
+});
+
+test('performance controls wait for verified diagnostics and preserve their initial-capital basis', async ({
+  page,
+  request,
+}) => {
+  const id = await prepare(request);
+  let releaseDiagnostics!: () => void;
+  const diagnosticsGate = new Promise<void>((resolve) => {
+    releaseDiagnostics = resolve;
+  });
+  let replyFetched = false;
+  let startTs: number | undefined;
+  await page.route(
+    `**/api/v1/pro/research/runs/${id}/diagnostics?variant=single`,
+    async (route) => {
+      const response = await route.fetch();
+      const diagnostic = await response.json();
+      startTs = Number(diagnostic.diagnostics.sample.start_ts);
+      replyFetched = true;
+      await diagnosticsGate;
+      await route.fulfill({ response });
+    },
+  );
+  try {
+    await page.goto(`/#research?source=example&view=advanced&run=${id}`);
+    const report = page.getByRole('region', { name: 'Backtest analysis', exact: true });
+    await expect(report.getByText('Net return', { exact: true })).toBeVisible();
+    await expect(report.getByText('Completed trades', { exact: true })).toBeVisible();
+    await expect.poll(() => replyFetched).toBe(true);
+    const loading = report
+      .getByRole('status')
+      .filter({ hasText: 'Calculating diagnostics from the captured result…' });
+    await expect(loading).toBeVisible();
+    await expect(report.getByRole('button', { name: '1M', exact: true })).toHaveCount(0);
+    await expect(report.getByRole('slider')).toHaveCount(0);
+    await expect(
+      report.getByRole('img', { name: 'Research performance chart', exact: true }),
+    ).toHaveCount(0);
+    releaseDiagnostics();
+    await expect(loading).toHaveCount(0);
+    const month = report.getByRole('button', { name: '1M', exact: true });
+    await expect(month).toBeVisible();
+    await month.click();
+    await expect(month).toHaveAttribute('aria-pressed', 'true');
+    for (const name of ['Equity · USDT', 'Return · %']) {
+      await report.getByRole('button', { name, exact: true }).click();
+      await expect(month).toHaveAttribute('aria-pressed', 'true');
+    }
+    const inspector = report.getByRole('slider');
+    await inspector.focus();
+    await inspector.press('Home');
+    await expect(inspector).toHaveValue('0');
+    const point = report.locator('.research-chart-point');
+    await expect(point.getByText('Initial capital', { exact: true })).toBeVisible();
+    await expect(point.locator('.research-chart-point-strategy strong')).toHaveText('0.00%');
+    expect(Number.isFinite(startTs)).toBe(true);
+    await expect(point.locator('time')).toHaveAttribute(
+      'datetime',
+      new Date(startTs!).toISOString(),
+    );
+  } finally {
+    releaseDiagnostics();
+  }
 });
 
 test('multi-dimensional candidates remain individually inspectable', async ({ page, request }) => {
