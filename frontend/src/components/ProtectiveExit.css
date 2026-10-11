@@ -9,7 +9,7 @@
 .protection-market span {
   display: block;
   margin-top: 5px;
-  color: #73847b;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 400;
 }
@@ -18,12 +18,12 @@
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   padding: 22px 0;
-  border-bottom: 1px solid #edf1ef;
+  border-bottom: 1px solid var(--surface-muted);
 }
 .protection-position span {
   display: block;
   font-size: 11px;
-  color: #73847b;
+  color: var(--muted);
   margin-bottom: 8px;
 }
 .protection-position strong {
@@ -34,11 +34,11 @@
 .protection-position small {
   font-size: 10px;
   font-weight: 400;
-  color: #73847b;
+  color: var(--muted);
 }
 .protection-step {
   padding: 4px 0 18px;
-  border-bottom: 1px solid #edf1ef;
+  border-bottom: 1px solid var(--surface-muted);
 }
 .protection-step .section-heading {
   align-items: baseline;
@@ -74,7 +74,7 @@
   align-items: flex-start;
   gap: 10px;
   padding: 18px 0;
-  color: #345f4b;
+  color: var(--accent-strong);
 }
 .protection-receipt p {
   font-size: 11px;
@@ -87,7 +87,7 @@
 }
 .protection-owners summary {
   cursor: pointer;
-  color: #73847b;
+  color: var(--muted);
 }
 @media (max-width: 500px) {
   .protection-dialog {

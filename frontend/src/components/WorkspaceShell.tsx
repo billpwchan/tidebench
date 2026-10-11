@@ -139,11 +139,15 @@ export function Topbar({
   setMobileNav,
   setSearchOpen,
   executionMode,
+  source,
+  setSource,
 }: {
   page: Page;
   setMobileNav: (v: boolean) => void;
   setSearchOpen: (v: boolean) => void;
   executionMode?: string;
+  source: Source;
+  setSource: (source: Source) => void;
 }) {
   const { t } = useI18n();
   const session = useSession();
@@ -162,6 +166,24 @@ export function Topbar({
         <ChevronRight size={12} />
         <strong>{t(pages.find((p) => p.id === currentPage)?.label ?? 'Workspace')}</strong>
       </div>
+      <div className="workspace-market-context">
+        <label className="source-control">
+          <Database size={14} aria-hidden="true" />
+          <span>{t('Market data')}</span>
+          <select
+            aria-label="Market source"
+            value={source}
+            onChange={(event) => setSource(event.target.value as Source)}
+          >
+            <option value="okx">{t('OKX public')}</option>
+            <option value="example">{t('Example · synthetic')}</option>
+          </select>
+        </label>
+        <span className="execution-badge" aria-label={t('Execution mode')}>
+          <span aria-hidden="true" />
+          {executionMode === 'local-paper' ? t('Local paper') : (executionMode ?? '—')}
+        </span>
+      </div>
       <div className="topbar-actions">
         <button
           className="search-trigger"
@@ -172,11 +194,6 @@ export function Topbar({
           <span>{t('Find a market')}</span>
           <kbd>⌘ K</kbd>
         </button>
-        <span className="topbar-divider" />
-        <span className="execution-badge">
-          <span />
-          {executionMode === 'local-paper' ? t('Local paper') : (executionMode ?? '—')}
-        </span>
         <LanguageSelect />
         <span
           className="user-avatar"

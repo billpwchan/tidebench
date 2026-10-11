@@ -4,6 +4,7 @@ import { professionalZh } from './professionalI18n';
 import { deskZh } from './deskI18n';
 export type Language = 'en' | 'zh-CN';
 const zh: Record<string, string> = {
+  'Execution mode': '执行模式',
   'Single strategy': '单策略研究',
   'Legacy research': '经典研究',
   'Account & orders': '账户与委托',

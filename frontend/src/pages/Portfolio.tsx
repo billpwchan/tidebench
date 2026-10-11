@@ -30,7 +30,7 @@ import { useI18n } from '../lib/i18n';
 import { canTrade, canManageRisk } from '../lib/permissions';
 import { bars } from '../lib/config';
 import { date, number, price, quantityText, tone } from '../lib/format';
-import { useDialogFocus, useNow } from '../lib/hooks';
+import { useDialogFocus, useMediaQuery, useNow } from '../lib/hooks';
 import { useReceiptOwnership, type ReceiptTask } from '../lib/receiptOwnership';
 import {
   ActionNote,
@@ -72,6 +72,7 @@ export default function Portfolio({
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const [ticketOpen, setTicketOpen] = useState(marketRequested || initialView === 'order');
+  const narrowTicketBook = useMediaQuery('(min-width: 1180px) and (max-width: 1320px)');
   const [allMetrics, setAllMetrics] = useState(false);
   const [orderScope, setOrderScope] = useState<'working' | 'all'>('working');
   const ticketRef = useRef<HTMLElement>(null);
@@ -866,7 +867,8 @@ export default function Portfolio({
                   desktopColumns={[
                     'inst_id',
                     'quantity',
-                    'mark',
+                    // Keep liquidation and exact P&L beside a laptop ticket. Mark remains in row details.
+                    ...(!ticketOpen || !narrowTicketBook || !hasSwapPositions ? ['mark'] : []),
                     ...(hasSwapPositions ? ['liquidation_price'] : []),
                     'unrealized_pnl',
                     'protect',
@@ -951,6 +953,7 @@ export default function Portfolio({
                     },
                     {
                       key: 'liquidation_price',
+                      className: 'desk-position-liquidation',
                       sortable: true,
                       sortType: 'number',
                       label: 'Liquidation price',

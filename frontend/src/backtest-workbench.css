@@ -1,37 +1,59 @@
 /* One analytical surface. Color communicates outcomes; rules establish hierarchy. */
-:root {
-  --research-ink: #21323b;
-  --research-muted: #5b6c76;
-  --research-teal: #126d68;
-  --research-benchmark: #627183;
-  --research-line: #e3e8ea;
-  --research-paper: #f5f6f4;
-}
+
 .backtest-workspace.has-selected-result > .page-heading {
-  margin-bottom: 12px;
+  margin-bottom: 4px;
   padding-bottom: 0;
+}
+.backtest-mobile-basis {
+  display: none;
+}
+.backtest-workspace.has-selected-result > .page-heading p {
+  display: none;
 }
 .backtest-workspace.has-selected-result > .page-heading h1 {
   font-size: 23px;
 }
 .backtest-workspace.has-selected-result .backtest-workspace-nav {
-  margin-bottom: 16px;
-  padding-bottom: 8px;
+  margin: 0;
+  padding: 0;
+}
+.page-research > .workspace-tabs {
+  margin-bottom: 8px;
+}
+.backtest-workspace.has-selected-result > .page-heading .button {
+  padding-block: 7px;
+}
+.backtest-workspace.has-selected-result .backtest-workspace-nav button {
+  min-height: 30px;
+}
+.pro-research-layout .pro-result-panel > .section-heading > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  min-width: 0;
+}
+.pro-research-layout .pro-result-panel > .section-heading .section-description {
+  margin: 0;
+}
+.pro-research-layout .pro-result-panel .research-run-identity {
+  flex-basis: 100%;
 }
 .backtest-workspace.has-selected-result .pro-result-panel > .section-heading {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .backtest-workspace.has-selected-result .research-run-context {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .backtest-workspace-nav {
   display: flex;
   align-items: center;
-  gap: 10px 24px;
+  gap: 6px 16px;
   flex-wrap: wrap;
-  margin: 0 0 20px;
-  padding: 0 0 14px;
-  border-bottom: 1px solid var(--research-line);
+  margin: 0 8px 0 0;
+  padding: 0 16px 0 0;
+  border-right: 1px solid var(--research-line);
+  border-bottom: 0;
 }
 .backtest-workspace-nav button {
   font-size: 13px;
@@ -61,13 +83,13 @@
   min-width: 0;
 }
 .pro-research-layout .pro-result-panel {
-  padding: 26px 28px;
+  padding: 12px 20px;
   border: 0;
   border-radius: 4px;
   box-shadow: none;
 }
 .pro-research-layout .pro-result-panel > .section-heading h2 {
-  font-size: 22px;
+  font-size: 20px;
   letter-spacing: -0.5px;
   color: var(--research-ink);
 }
@@ -79,7 +101,7 @@
   border: 0;
   border-bottom: 1px solid var(--research-line);
   border-radius: 0;
-  padding: 0 0 14px;
+  padding: 0 0 6px;
   margin-bottom: 20px;
 }
 .research-run-context > summary {
@@ -108,6 +130,21 @@
 .research-run-context > summary span {
   font-size: 13px;
   color: var(--research-ink);
+}
+.research-run-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 6px;
+}
+.research-run-identity .research-result-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.research-run-identity code {
+  font-size: 11px;
 }
 .research-context-grid dt {
   font-size: 12px;
@@ -142,29 +179,29 @@
 .backtest-outcomes {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr;
-  gap: 24px;
-  padding: 4px 0 18px;
+  gap: 20px;
+  padding: 2px 0 12px;
 }
 .backtest-outcome {
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 7px;
+  gap: 5px;
 }
 .backtest-outcome > span {
   font-size: 12px;
   color: var(--research-muted);
 }
 .backtest-outcome strong {
-  font-size: clamp(23px, 2.1vw, 31px);
+  font-size: clamp(23px, 2vw, 28px);
   font-weight: 500;
   line-height: 1.15;
   letter-spacing: -1px;
   font-variant-numeric: tabular-nums;
 }
 .backtest-outcome.main strong {
-  font-size: clamp(28px, 2.5vw, 36px);
+  font-size: clamp(26px, 2.1vw, 30px);
 }
 .backtest-outcome small {
   font-size: 12px;
@@ -173,10 +210,10 @@
   max-width: 27ch;
 }
 .backtest-report .positive {
-  color: #126d68;
+  color: var(--positive);
 }
 .backtest-report .negative {
-  color: #b34e40;
+  color: var(--negative);
 }
 .backtest-scope-note {
   display: flex;
@@ -184,9 +221,9 @@
   gap: 10px;
   color: #5e6870;
   font-size: 12px;
-  line-height: 1.65;
-  padding: 11px 0;
-  margin-bottom: 8px;
+  line-height: 1.5;
+  padding: 8px 0;
+  margin-bottom: 4px;
   border-top: 1px solid var(--research-line);
 }
 .backtest-scope-note svg {
@@ -204,7 +241,8 @@
   gap: 25px;
   overflow-x: auto;
   flex-wrap: nowrap;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+  margin-top: 4px;
   border-bottom-color: var(--research-line);
 }
 .backtest-report .workspace-tabs > button {
@@ -235,6 +273,9 @@
   color: var(--research-muted);
   line-height: 1.65;
   margin-top: 6px;
+}
+.backtest-report-body > .backtest-section-heading:first-child p {
+  display: none;
 }
 .backtest-section-heading .segmented {
   background: #f2f4f4;
@@ -612,37 +653,133 @@
     gap: 22px;
   }
   .pro-research-layout .pro-result-panel {
-    padding: 22px;
+    padding: 16px;
   }
 }
 @media (max-width: 540px) {
+  .page-research > .workspace-tabs {
+    scrollbar-width: none;
+  }
+  .page-research > .workspace-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .page-research > .example-notice {
+    padding-block: 2px;
+    margin-bottom: 6px;
+  }
+  .backtest-workspace.has-selected-result > .page-heading > div:first-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .backtest-workspace > .page-heading .heading-actions {
+    gap: 4px 6px;
+  }
+  .backtest-workspace > .page-heading .heading-actions .button {
+    padding-inline: 6px;
+    gap: 5px;
+    font-size: 12px;
+  }
+  .pro-research-layout
+    .pro-result-panel
+    > .section-heading
+    .section-description:not(.research-result-context) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .research-run-context > summary strong {
+    display: none;
+  }
+  .backtest-workspace.has-selected-result .research-run-context {
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+  }
+  .backtest-mobile-basis {
+    display: block;
+    margin-top: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .backtest-mobile-basis > summary {
+    min-height: 44px;
+    padding-block: 12px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .backtest-mobile-basis .record-grid {
+    padding-block: 8px;
+  }
   .backtest-trade-breakdowns {
     grid-template-columns: minmax(0, 1fr);
   }
   .pro-research-layout .pro-result-panel {
-    padding: 18px 14px;
+    padding: 12px;
   }
   .backtest-workspace-nav {
     gap: 16px;
-    margin-bottom: 14px;
+    width: 100%;
+    padding-right: 0;
+    border-right: 0;
+    justify-content: space-between;
+  }
+  .backtest-workspace > .page-heading .heading-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .backtest-workspace.has-selected-result > .page-heading {
+    gap: 4px;
+  }
+  .backtest-workspace.has-selected-result > .page-heading h1 {
+    font-size: 20px;
   }
   .backtest-workspace-nav button {
     font-size: 12px;
-    min-height: 42px;
+    min-height: 44px;
+  }
+  .backtest-workspace.has-selected-result > .page-heading .button,
+  .backtest-workspace.has-selected-result .backtest-workspace-nav button {
+    min-height: 44px;
   }
   .backtest-outcomes {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 22px 16px;
-    padding-bottom: 16px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px 10px;
+    padding-bottom: 8px;
   }
   .backtest-outcome.main {
     grid-column: span 2;
   }
+  .backtest-outcome {
+    grid-column: span 2;
+  }
+  .backtest-outcome > span {
+    min-height: 30px;
+    line-height: 15px;
+  }
+  .backtest-outcome small {
+    display: none;
+  }
+  .backtest-outcome:nth-child(n + 4) {
+    grid-column: span 3;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .backtest-outcome:nth-child(n + 4) > span {
+    min-height: 0;
+  }
+  .backtest-outcome:nth-child(n + 4) strong {
+    font-size: 18px;
+    letter-spacing: -0.3px;
+  }
   .backtest-outcome strong {
-    font-size: 24px;
+    font-size: 23px;
   }
   .backtest-outcome.main strong {
-    font-size: 36px;
+    font-size: 26px;
   }
   .backtest-outcome small {
     font-size: 12px;
@@ -650,6 +787,10 @@
   }
   .backtest-report .workspace-tabs {
     gap: 22px;
+    scrollbar-width: thin;
+  }
+  .backtest-report .workspace-tabs::-webkit-scrollbar {
+    height: 3px;
   }
   .backtest-report .workspace-tabs > button {
     min-height: 44px;
@@ -663,10 +804,14 @@
     font-size: 20px;
   }
   .backtest-section-heading {
-    gap: 12px;
+    gap: 8px;
   }
   .backtest-section-heading h3 {
     font-size: 15px;
+  }
+  .backtest-section-heading .segmented button {
+    min-height: 44px;
+    padding-inline: 8px;
   }
   .backtest-actions {
     width: 100%;

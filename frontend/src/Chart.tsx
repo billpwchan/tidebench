@@ -9,6 +9,7 @@ import {
 } from 'lightweight-charts';
 import { useEffect, useRef } from 'react';
 import type { Candle, Result } from './api';
+import { chartPalette } from './lib/chartPalette';
 
 type Props = {
   candles?: Candle[];
@@ -21,22 +22,23 @@ export default function Chart({ candles, result, mode = 'price', height = 380 }:
   useEffect(() => {
     if (!ref.current) return;
     const node = ref.current;
+    const palette = chartPalette(node);
     const chart = createChart(node, {
       height,
       layout: {
-        background: { type: ColorType.Solid, color: '#ffffff' },
-        textColor: '#8b9693',
+        background: { type: ColorType.Solid, color: palette.surface },
+        textColor: palette.text,
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
         fontSize: 11,
         attributionLogo: true,
       },
-      grid: { vertLines: { visible: false }, horzLines: { color: '#edf0ef' } },
+      grid: { vertLines: { visible: false }, horzLines: { color: palette.grid } },
       rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.12, bottom: 0.18 } },
       timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: '#a3ada7', labelBackgroundColor: '#293e36' },
-        horzLine: { color: '#a3ada7', labelBackgroundColor: '#293e36' },
+        vertLine: { color: '#a3ada7', labelBackgroundColor: palette.ink },
+        horzLine: { color: '#a3ada7', labelBackgroundColor: palette.ink },
       },
       handleScroll: true,
       handleScale: true,
@@ -45,11 +47,11 @@ export default function Chart({ candles, result, mode = 'price', height = 380 }:
     if (mode === 'price' && candles?.length) {
       const bars = candles.filter((c) => c.confirmed).sort((a, b) => a.ts - b.ts);
       const series = chart.addSeries(CandlestickSeries, {
-        upColor: '#5f8c78',
-        downColor: '#be756b',
+        upColor: palette.positive,
+        downColor: palette.drawdown,
         borderVisible: false,
-        wickUpColor: '#5f8c78',
-        wickDownColor: '#be756b',
+        wickUpColor: palette.positive,
+        wickDownColor: palette.drawdown,
         priceLineVisible: true,
         lastValueVisible: true,
       });
@@ -118,7 +120,7 @@ export default function Chart({ candles, result, mode = 'price', height = 380 }:
         );
       }
       const line = chart.addSeries(LineSeries, {
-        color: mode === 'drawdown' ? '#b8756a' : '#315e4c',
+        color: mode === 'drawdown' ? palette.drawdown : palette.strategy,
         lineWidth: 2,
         priceLineVisible: false,
         crosshairMarkerRadius: 4,

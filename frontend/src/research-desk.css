@@ -30,7 +30,7 @@
   gap: 20px;
   padding: 14px 16px;
   margin: 0 0 20px;
-  background: #f0f5e8;
+  background: var(--accent-soft);
   border: 0;
   border-radius: 5px;
 }
@@ -46,7 +46,7 @@
 .research-submit-bar span {
   font-size: 12px;
   line-height: 1.5;
-  color: #435b4a;
+  color: var(--muted);
 }
 .research-desk .research-submit-bar > button {
   width: auto;
@@ -115,7 +115,7 @@
 .research-evaluation-scope {
   margin: 4px 0;
   padding: 10px 12px;
-  background: #f4f6f2;
+  background: var(--paper);
   color: #3f5847;
   font-size: 12px;
   line-height: 1.65;
@@ -141,7 +141,7 @@
 .research-bound-strategy {
   padding: 12px 14px;
   margin: 0 0 16px;
-  background: #f4f6f2;
+  background: var(--paper);
   border-left: 3px solid #7f976b;
 }
 .research-bound-strategy > strong {
@@ -156,7 +156,7 @@
 .research-run-context {
   padding: 14px 16px;
   margin: 6px 0 20px;
-  background: #f4f6f2;
+  background: var(--paper);
   border: 1px solid #e2e8dd;
   border-radius: 4px;
 }
@@ -280,7 +280,7 @@
   font-weight: 500;
 }
 .research-config-comparison thead th {
-  background: #f4f6f2;
+  background: var(--paper);
   font-weight: 600;
 }
 .research-config-comparison th small {
@@ -375,7 +375,7 @@
 }
 .strategy-parameter-summary {
   padding: 14px 16px;
-  background: #f4f6f2;
+  background: var(--paper);
   color: #2e4735;
   font-size: 13px;
   line-height: 1.8;
@@ -411,7 +411,7 @@
   flex: 1;
   min-width: 0;
   padding: 10px 12px;
-  border: 1px solid #dce4de;
+  border: 1px solid var(--line);
   border-radius: 4px;
   font: inherit;
   font-size: 12px;

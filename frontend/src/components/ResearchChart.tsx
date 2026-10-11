@@ -19,6 +19,8 @@ import { date, number, percent } from '../lib/format';
 import { Empty } from './workspace';
 import { useI18n } from '../lib/i18n';
 import './ResearchChart.css';
+import { chartPalette } from '../lib/chartPalette';
+import type { ReactNode } from 'react';
 
 type ChartMetric = 'equity' | 'drawdown' | 'returns';
 type RangePreset = 'all' | '1m' | '3m' | '1y';
@@ -42,13 +44,6 @@ const finite = (raw: unknown): number | null => {
 };
 const sameRange = (a: LogicalRange | null, b: LogicalRange | null) =>
   !!a && !!b && Math.abs(a.from - b.from) < 0.000001 && Math.abs(a.to - b.to) < 0.000001;
-const palette = {
-  strategy: '#126d68',
-  benchmark: '#627183',
-  drawdown: '#ae4843',
-  text: '#4d5b66',
-  grid: '#e6ebee',
-};
 
 export default function ResearchChart({
   rows,
@@ -57,6 +52,8 @@ export default function ResearchChart({
   startTs,
   height = 300,
   linkedDrawdown = false,
+  title,
+  metricControls,
 }: {
   rows: RecordData[];
   metric?: ChartMetric;
@@ -64,6 +61,8 @@ export default function ResearchChart({
   startTs?: number;
   height?: number;
   linkedDrawdown?: boolean;
+  title?: string;
+  metricControls?: ReactNode;
 }) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
@@ -150,6 +149,7 @@ export default function ResearchChart({
 
   useEffect(() => {
     if (!mainRef.current || !hasData) return;
+    const palette = chartPalette(mainRef.current);
     const domain = `${data[0].time}:${data[data.length - 1].time}:${data.length}`;
     if (savedDomain.current !== domain) {
       savedDomain.current = domain;
@@ -161,7 +161,7 @@ export default function ResearchChart({
     const chartOptions = (chartHeight: number) => ({
       height: chartHeight,
       layout: {
-        background: { type: ColorType.Solid, color: '#ffffff' },
+        background: { type: ColorType.Solid, color: palette.surface },
         textColor: palette.text,
         fontSize: 12,
         attributionLogo: true,
@@ -441,6 +441,8 @@ export default function ResearchChart({
   return (
     <div className="research-chart-wrap research-chart-desk">
       <div className="research-chart-toolbar">
+        {title && <h3 className="research-chart-title">{title}</h3>}
+        {metricControls && <div className="research-chart-metric-controls">{metricControls}</div>}
         <div className="research-chart-legend">
           <span>
             <i className={displayMetric === 'drawdown' ? 'legend-drawdown' : 'legend-strategy'} />
@@ -494,6 +496,14 @@ export default function ResearchChart({
           )}
         </p>
       )}
+
+      <div
+        ref={mainRef}
+        className="financial-chart pro-equity-chart research-chart-canvas"
+        role="img"
+        aria-label={text('Research performance chart', '研究表现图表')}
+        aria-describedby={summaryId}
+      />
       <output id={summaryId} className="research-chart-point" aria-live="off">
         <time dateTime={new Date(point.time * 1000).toISOString()}>{pointDate}</time>
         {point.initial && <span>{text('Initial capital', '初始资金')}</span>}
@@ -519,13 +529,6 @@ export default function ResearchChart({
           </span>
         )}
       </output>
-      <div
-        ref={mainRef}
-        className="financial-chart pro-equity-chart research-chart-canvas"
-        role="img"
-        aria-label={text('Research performance chart', '研究表现图表')}
-        aria-describedby={summaryId}
-      />
       {showUnderwater && (
         <div className="research-chart-underwater">
           <div className="research-chart-underwater-heading">

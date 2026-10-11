@@ -6,7 +6,7 @@ import { api } from './api';
 import AuthGate from './components/AuthGate';
 import WorkspaceViewBoundary from './components/WorkspaceViewBoundary';
 import { WorkspaceTabs } from './components/ProWorkspace';
-import { ErrorBox, Loading, PageHeading, SourceBadge } from './components/workspace';
+import { ErrorBox, Loading, PageHeading } from './components/workspace';
 import { MarketSearch, Sidebar, Topbar } from './components/WorkspaceShell';
 import type { Page } from './lib/config';
 import { useWorkspaceLocation, validView, type ResearchDataIntent } from './lib/workspaceLocation';
@@ -199,32 +199,15 @@ function Workspace() {
           setMobileNav={setMobileNav}
           setSearchOpen={setSearchOpen}
           executionMode={system.data?.execution}
+          source={source}
+          setSource={setSource}
         />
         <main id="main-content" tabIndex={-1} className={`page-content page-${page}`}>
-          <div className="source-bar">
-            {page === 'operations' ? (
-              <span className="scope-note">
-                {t(
-                  'Operations covers all data sources. Liquidity observations use public OKX data.',
-                )}
-              </span>
-            ) : (
-              <SourceBadge source={source} />
-            )}
-            <div className="source-control">
-              <span>
-                {t(page === 'operations' ? 'Source for research and execution' : 'Data source')}
-              </span>
-              <select
-                aria-label="Market source"
-                value={source}
-                onChange={(e) => setSource(e.target.value as Source)}
-              >
-                <option value="okx">{t('OKX public')}</option>
-                <option value="example">{t('Example · synthetic')}</option>
-              </select>
-            </div>
-          </div>
+          {page === 'operations' && (
+            <p className="scope-note workspace-scope-note">
+              {t('Operations covers all data sources. Liquidity observations use public OKX data.')}
+            </p>
+          )}
           <WorkspaceActivity source={source} navigate={navigate} />
           {source === 'example' && page !== 'operations' && (
             <div className="example-notice">

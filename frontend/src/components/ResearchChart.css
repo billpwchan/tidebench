@@ -1,16 +1,54 @@
 .research-chart-desk {
   min-width: 0;
-  --research-chart-strategy: #126d68;
-  --research-chart-benchmark: #627183;
-  --research-chart-drawdown: #ae4843;
-  --research-chart-text: #4d5b66;
+  --research-chart-strategy: var(--accent);
+  --research-chart-benchmark: var(--research-benchmark);
+  --research-chart-drawdown: var(--negative);
+  --research-chart-text: var(--muted);
 }
 .research-chart-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
+  gap: 4px 12px;
+  padding: 4px 0 8px;
+}
+.research-chart-title {
+  font-size: 16px;
+  letter-spacing: -0.25px;
+}
+.research-chart-metric-controls {
+  justify-self: end;
+}
+.research-chart-metric-controls .segmented button {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.research-chart-metric-controls .segmented button.selected {
+  color: var(--accent-strong);
+}
+@media (min-width: 1100px) {
+  .research-chart-toolbar:has(.research-chart-title) {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    gap: 12px;
+  }
+  .research-chart-toolbar:has(.research-chart-title) > * {
+    grid-row: 1;
+  }
+  .research-chart-title {
+    grid-column: 1;
+  }
+  .research-chart-toolbar:has(.research-chart-title) .research-chart-legend {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .research-chart-metric-controls {
+    grid-column: 3;
+  }
+  .research-chart-toolbar:has(.research-chart-title) .research-chart-ranges {
+    grid-column: 4;
+  }
 }
 .research-chart-desk .research-chart-legend {
   display: flex;
@@ -131,18 +169,39 @@
 @media (max-width: 720px) {
   .research-chart-toolbar {
     align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px 8px;
+    align-items: center;
+  }
+  .research-chart-toolbar .research-chart-legend {
+    grid-column: 1;
+    grid-row: 2;
+    gap: 2px;
+    padding: 0;
+    font-size: 11px;
+  }
+  .research-chart-title {
+    font-size: 14px;
+  }
+  .research-chart-metric-controls .segmented button {
+    min-height: 44px;
+    padding-inline: 7px;
+  }
+  .research-chart-ranges {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
   }
   .research-chart-ranges button {
-    min-height: 40px;
+    min-height: 44px;
     min-width: 44px;
   }
   .research-chart-point {
-    gap: 3px 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 12px;
   }
   .research-chart-point time {
-    flex-basis: 100%;
+    grid-column: 1 / -1;
   }
   .research-chart-inspector {
     flex-wrap: wrap;

@@ -73,6 +73,77 @@ async function prepare(
   return id as string;
 }
 
+test('selected report shows decision context and a meaningful performance plot on its initial fold', async ({
+  page,
+  request,
+}, info) => {
+  test.setTimeout(90000);
+  const mobile = info.project.name === 'mobile';
+  const viewport = mobile ? { width: 390, height: 844 } : { width: 1280, height: 720 };
+  await page.setViewportSize(viewport);
+  const id = await prepare(request);
+  await page.goto(`/#research?source=example&view=advanced&run=${id}`);
+  const chart = page.getByRole('img', { name: 'Research performance chart', exact: true });
+  await expect(chart).toBeVisible();
+  await expect(page.getByText('Development evidence.', { exact: false }).first()).toBeVisible();
+  await expect(
+    page.getByText('Synthetic example data. Separate paper account.', { exact: true }),
+  ).toBeVisible();
+  const bounds = (await chart.boundingBox())!;
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(viewport.height - bounds.y).toBeGreaterThanOrEqual(mobile ? 120 : 200);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    viewport.width,
+  );
+  const tabs = page.locator('.backtest-report [role="tablist"]');
+  await tabs.getByRole('tab', { name: 'Performance', exact: true }).focus();
+  await page.keyboard.press('End');
+  await expect(tabs.getByRole('tab', { name: 'Economics', exact: true })).toBeFocused();
+  const selected = (await tabs.getByRole('tab', { name: 'Economics', exact: true }).boundingBox())!;
+  const strip = (await tabs.boundingBox())!;
+  expect(selected.x).toBeGreaterThanOrEqual(strip.x - 1);
+  expect(selected.x + selected.width).toBeLessThanOrEqual(strip.x + strip.width + 1);
+  await page.keyboard.press('Home');
+  await expect(tabs.getByRole('tab', { name: 'Performance', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  if (mobile) {
+    for (const name of [
+      'Performance',
+      'Return calendar',
+      'Risk & recovery',
+      'Trade analysis',
+      'Robustness',
+      'Economics',
+    ]) {
+      await tabs.getByRole('tab', { name, exact: true }).click();
+      const basis = page.locator('.backtest-mobile-basis');
+      const summary = basis.locator('summary');
+      await expect(summary).toBeVisible();
+      if (!(await basis.evaluate((node) => node.hasAttribute('open')))) await summary.click();
+      await expect(basis.getByText('Final equity', { exact: true })).toBeVisible();
+      await expect(basis.getByText('Return difference', { exact: true })).toBeVisible();
+      await expect(basis.getByText('Observed at bar close', { exact: true })).toBeVisible();
+      await expect(
+        basis.getByText('Daily · √365 · zero risk-free rate', { exact: true }),
+      ).toBeVisible();
+      await expect(basis.getByText('120 complete UTC days', { exact: true })).toBeVisible();
+    }
+    await tabs.getByRole('tab', { name: 'Performance', exact: true }).click();
+  }
+  if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1') {
+    await tabs
+      .getByRole('tab', { name: 'Performance', exact: true })
+      .evaluate((node) => (node as HTMLElement).blur());
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: `../docs/assets/trader-ui-v016-research-${info.project.name}.png`,
+      fullPage: false,
+    });
+  }
+});
+
 test('captured evidence drives all six analysis views, normalized chart and trade exports', async ({
   page,
   request,
