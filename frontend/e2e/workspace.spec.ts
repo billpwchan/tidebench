@@ -1653,6 +1653,8 @@ test('pending funding marks account economics provisional even when service heal
       },
     }),
   );
+  // Install incident responses before initial queries; an already in-flight capture belongs to its original snapshot.
+  await page.reload();
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
   await showConditions(page);
   await expect(page.locator('.overview-funding-notice')).toContainText(
