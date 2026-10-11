@@ -22,6 +22,7 @@ const Contributions = lazy(() => import('../components/Contributions'));
 import SimulationClock from '../components/SimulationClock';
 import OrderReceipt, { type OrderSubmissionReceipt } from '../components/OrderReceipt';
 import BudgetSizing from '../components/BudgetSizing';
+import TicketMarketFinder from '../components/TicketMarketFinder';
 const ReleaseHistory = lazy(() => import('../components/ReleaseHistory'));
 import PortfolioAnalytics from '../components/PortfolioAnalytics';
 import { proApi } from '../proApi';
@@ -147,7 +148,8 @@ export default function Portfolio({
   useEffect(() => {
     if (!ticketOpen) return;
     const frame = requestAnimationFrame(() => {
-      ticketRef.current?.scrollIntoView({ block: 'nearest' });
+      if (window.matchMedia('(max-width: 1179px)').matches)
+        ticketRef.current?.scrollIntoView({ block: 'nearest' });
       ticketRef.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
     });
     const onKey = (event: KeyboardEvent) => {
@@ -546,6 +548,17 @@ export default function Portfolio({
     changeView(`orders:${id}`);
   };
   const hasSwapPositions = a?.positions?.some((position) => position.inst_type === 'SWAP');
+  const economicNotice =
+    typeof a?.economic_status === 'string' && a.economic_status !== 'complete'
+      ? t(
+          (
+            {
+              funding_pending: 'Funding settlement remains pending',
+              funding_schedule_unavailable: 'Funding schedule needs attention',
+            } as Record<string, string>
+          )[a.economic_status] ?? 'Monitoring incomplete',
+        )
+      : undefined;
   return (
     <div className="desk-execution">
       {stopGroup && (
@@ -581,7 +594,7 @@ export default function Portfolio({
       )}
       <PageHeading
         eyebrow="PORTFOLIO & EXECUTION"
-        title="Portfolio"
+        title="Execution"
         description="Spot balances, isolated perpetual margin, order lifecycle, and strategy health."
       >
         <span className="subtle-tag">
@@ -670,24 +683,13 @@ export default function Portfolio({
             ? t(risk.data.halted ? 'New risk halted' : 'New risk enabled')
             : t('Risk status unavailable')}
         </Status>
-        {typeof a?.economic_status === 'string' && a.economic_status !== 'complete' && (
-          <span className="inline-warning">
-            {t(
-              (
-                {
-                  funding_pending: 'Funding settlement remains pending',
-                  funding_schedule_unavailable: 'Funding schedule needs attention',
-                } as Record<string, string>
-              )[a.economic_status] ?? 'Monitoring incomplete',
-            )}
-          </span>
-        )}
+        {economicNotice && <span className="inline-warning">{economicNotice}</span>}
       </div>
       <div className={`execution-layout desk-execution-layout${ticketOpen ? ' has-ticket' : ''}`}>
         <div className="execution-main">
           <section className="pro-panel account-book-panel">
             <div className="section-heading">
-              <h2>{t('Portfolio')}</h2>
+              <h2>{text('Account book', '账户账簿')}</h2>
               <button
                 className="text-button"
                 disabled={!a?.positions?.length}
@@ -861,6 +863,14 @@ export default function Portfolio({
               ) : (
                 <DataTable
                   rows={a?.positions ?? []}
+                  preferenceKey="execution-positions"
+                  requiredColumns={[
+                    'inst_id',
+                    'quantity',
+                    ...(hasSwapPositions ? ['liquidation_price'] : []),
+                    'unrealized_pnl',
+                    'protect',
+                  ]}
                   rowKey={(position) => String(position.inst_id)}
                   searchLabel="Search positions"
                   searchKeys={['inst_id', 'side', 'inst_type']}
@@ -1078,6 +1088,15 @@ export default function Portfolio({
                   )}
                   rowKey={(order) => String(order.id)}
                   searchLabel="Search orders"
+                  preferenceKey="execution-orders"
+                  requiredColumns={[
+                    'inst_id',
+                    'side',
+                    'quantity',
+                    'limit_price',
+                    'status',
+                    'actions',
+                  ]}
                   searchKeys={['id', 'inst_id', 'side', 'order_type', 'status']}
                   compactColumns={[
                     'inst_id',
@@ -1402,6 +1421,48 @@ export default function Portfolio({
               {symbol} · {a?.execution_mode ?? '—'} ·{' '}
               {source === 'example' ? t('Example · synthetic') : t('OKX public')}
             </p>
+            <div
+              className="ticket-account-context"
+              aria-label={text('Order account context', '订单账户上下文')}
+            >
+              <div>
+                <span>{t('Available cash')}</span>
+                <strong>{number(a?.available_cash)} USDT</strong>
+              </div>
+              <div>
+                <span>{t('Account equity')}</span>
+                <strong>{number(a?.equity)} USDT</strong>
+              </div>
+              <div>
+                <span>{t('Used margin')}</span>
+                <strong>{number(a?.used_margin)} USDT</strong>
+              </div>
+              <small>
+                {t('Account snapshot')}: {date(a?.as_of, true)}
+              </small>
+              <Status
+                type={risk.isError || risk.data?.halted ? 'bad' : risk.data ? 'neutral' : 'warning'}
+              >
+                {t(
+                  risk.isError
+                    ? 'Risk status unavailable'
+                    : risk.data?.halted
+                      ? 'New risk halted'
+                      : risk.data
+                        ? 'New risk enabled'
+                        : 'Risk status unavailable',
+                )}
+              </Status>
+              {economicNotice && <p className="inline-warning">{economicNotice}</p>}
+              {account.isError && (
+                <p className="inline-warning">
+                  {text(
+                    'Account capture could not be refreshed. Inspect its timestamp before previewing an order.',
+                    '账户快照未能刷新；预览订单前请检查快照时间。',
+                  )}
+                </p>
+              )}
+            </div>
             {currentReceipt && <OrderReceipt receipt={currentReceipt} onInspect={inspectOrder} />}
             {market.data && (
               <div className="ticket-quotes">
@@ -1460,6 +1521,12 @@ export default function Portfolio({
                 preview.mutate(body);
               }}
             >
+              <TicketMarketFinder
+                source={source}
+                product={product}
+                value={symbol}
+                onSelect={selectSymbol}
+              />
               <ProductSymbol
                 source={source}
                 value={symbol}

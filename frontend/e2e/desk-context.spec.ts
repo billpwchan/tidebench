@@ -7,7 +7,10 @@ test('market inspection retains execution draft, market, book filter and focus w
   const state = await desk(page, 'execution');
   await page.getByRole('button', { name: 'New order', exact: true }).click();
   await page.getByLabel('Order type', { exact: true }).selectOption('limit');
-  await page.getByLabel('Quantity', { exact: false }).fill('0.0123');
+  await page
+    .locator('.execution-ticket')
+    .getByRole('spinbutton', { name: 'Quantity', exact: true })
+    .fill('0.0123');
   await page.getByLabel('Limit price', { exact: true }).fill('87');
   await page.getByLabel('Search positions', { exact: true }).fill('BTC');
   const previousUrl = page.url();
@@ -26,7 +29,9 @@ test('market inspection retains execution draft, market, book filter and focus w
     });
   await page.getByRole('button', { name: 'Close market inspector', exact: true }).click();
   await expect(page.getByLabel('Market', { exact: true })).toHaveValue('BTC-USDT');
-  await expect(page.getByLabel('Quantity', { exact: false })).toHaveValue('0.0123');
+  await expect(
+    page.locator('.execution-ticket').getByRole('spinbutton', { name: 'Quantity', exact: true }),
+  ).toHaveValue('0.0123');
   await expect(page.getByLabel('Limit price', { exact: true })).toHaveValue('87');
   await expect(page.getByLabel('Search positions', { exact: true })).toHaveValue('BTC');
   expect(state.mutations).toEqual([]);

@@ -52,7 +52,9 @@ export default function BacktestPlanPreview({
     mode === 'walk_forward' && stepBars > 0
       ? Math.max(0, Math.floor((size - training - purgeBars - testing) / stepBars) + 1)
       : mode === 'train_test'
-        ? 1
+        ? training > 0 && testing > 0
+          ? 1
+          : 0
         : 0;
   const oos = mode === 'train_test' || mode === 'walk_forward';
   const overlap = mode === 'walk_forward' && stepBars < testBars;
@@ -64,6 +66,12 @@ export default function BacktestPlanPreview({
       aria-label={text('Evaluation plan preview', '评估计划预览')}
     >
       <strong>{text('Evaluation contract', '评估契约')}</strong>
+      <span className="research-plan-estimate">
+        {text(
+          'Draft estimate · verified by the server on submission',
+          '草稿估算 · 提交时由服务器校验',
+        )}
+      </span>
       <dl>
         <div>
           <dt>{text('Captured window', '数据时段')}</dt>
@@ -134,6 +142,31 @@ export default function BacktestPlanPreview({
                   '服务器将检查时段边界与候选有效性；结果不代表未经使用的最终保留样本。',
                 )}
       </p>
+      <ol className="research-plan-checks">
+        <li>
+          {text(
+            'Check the captured data range and the recorded fee/slippage assumptions.',
+            '检查已保存数据时段以及记录的费用、滑点假设。',
+          )}
+        </li>
+        <li>
+          {oos
+            ? text(
+                'Use training to choose parameters; inspect the separate test windows and record prior holdout use.',
+                '用训练时段选择参数；检查独立测试时段并记录保留样本的既有使用。',
+              )
+            : text(
+                'Treat this run as development evidence. Plan a separate test before claiming independent validation.',
+                '将本次运行视为开发证据；规划独立测试后再讨论独立验证。',
+              )}
+        </li>
+        <li>
+          {text(
+            'Review costs, risk and sample limitations after calculation; paper admission still requires server review.',
+            '计算完成后复核成本、风险与样本限制；模拟准入仍需服务器审查。',
+          )}
+        </li>
+      </ol>
     </div>
   );
 }

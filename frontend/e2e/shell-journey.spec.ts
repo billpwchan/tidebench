@@ -180,7 +180,7 @@ async function openFixture(
     await expect(page.getByRole('region', { name: 'Next actions', exact: true })).toBeVisible();
   else
     await expect(
-      page.getByRole('heading', { name: 'Portfolio', exact: true, level: 1 }),
+      page.getByRole('heading', { name: 'Execution', exact: true, level: 1 }),
     ).toBeVisible();
   return state;
 }
@@ -456,7 +456,7 @@ test('catalog search finds an asset beyond the old five symbols and locks the se
   const second = await search(page, 'ADA-USDT-SWAP');
   await second.getByRole('button', { name: 'Trade ADA-USDT-SWAP', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Portfolio', exact: true, level: 1 }),
+    page.getByRole('heading', { name: 'Execution', exact: true, level: 1 }),
   ).toBeVisible();
   await expect(page.getByLabel('Market', { exact: true })).toHaveValue('ADA-USDT-SWAP');
   expect(state.mutations).toEqual([]);

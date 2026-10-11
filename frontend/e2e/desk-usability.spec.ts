@@ -240,7 +240,9 @@ test('execution opens its book first and an explicit ticket sizes by budget with
     page.getByRole('button', { name: 'Use calculated quantity', exact: true }),
   ).toBeEnabled();
   await page.getByRole('button', { name: 'Use calculated quantity', exact: true }).click();
-  await expect(page.getByLabel('Quantity', { exact: false })).not.toHaveValue('');
+  await expect(
+    page.locator('.execution-ticket').getByRole('spinbutton', { name: 'Quantity', exact: true }),
+  ).not.toHaveValue('');
   await expect(page.locator('.ticket-quotes')).toContainText('100.0 / 100.1');
   expect(state.mutations).toEqual([]);
   await page.locator('.execution-ticket').scrollIntoViewIfNeeded();
@@ -251,7 +253,9 @@ test('execution opens its book first and an explicit ticket sizes by budget with
   await page.getByRole('button', { name: 'Close order ticket', exact: true }).click();
   await expect(page.locator('.execution-ticket')).toHaveCount(0);
   await page.getByRole('button', { name: 'New order', exact: true }).click();
-  await expect(page.getByLabel('Quantity', { exact: false })).not.toHaveValue('');
+  await expect(
+    page.locator('.execution-ticket').getByRole('spinbutton', { name: 'Quantity', exact: true }),
+  ).not.toHaveValue('');
 });
 
 test('market search filters and keyboard inspection preserve market identity', async ({ page }) => {
@@ -416,7 +420,10 @@ test('an invalid optional budget cannot block a valid native limit order preview
     '0.000000000001',
   );
   await page.getByLabel('Limit price', { exact: true }).fill('0.000000000003');
-  await page.getByLabel('Quantity', { exact: false }).fill('100');
+  await page
+    .locator('.execution-ticket')
+    .getByRole('spinbutton', { name: 'Quantity', exact: true })
+    .fill('100');
   expect(
     await page
       .locator('.execution-ticket form')
@@ -477,7 +484,9 @@ test('a micro-price ticket preserves the bid-ask tick and native budget quantity
   await page.getByText('Size by USDT notional', { exact: true }).click();
   await page.getByLabel('Notional budget (USDT)', { exact: true }).fill('1');
   await page.getByRole('button', { name: 'Use calculated quantity', exact: true }).click();
-  await expect(page.getByLabel('Quantity', { exact: false })).toHaveValue('292397.6608');
+  await expect(
+    page.locator('.execution-ticket').getByRole('spinbutton', { name: 'Quantity', exact: true }),
+  ).toHaveValue('292397.6608');
   expect(state.mutations).toEqual([]);
 });
 

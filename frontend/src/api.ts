@@ -193,7 +193,13 @@ export const defaultStrategy: Strategy = {
   allocation: '0.25',
 };
 const TOKEN_KEY = 'tidebench:session-token';
-export const readToken = () => sessionStorage.getItem(TOKEN_KEY) ?? '';
+export const readToken = () => {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) ?? '';
+  } catch {
+    return '';
+  } // Cookie authentication remains available when browser storage is blocked.
+};
 export function saveToken(value: string) {
   if (value.trim()) sessionStorage.setItem(TOKEN_KEY, value.trim());
   else sessionStorage.removeItem(TOKEN_KEY);

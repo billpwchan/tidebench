@@ -8,6 +8,7 @@ import { ActionNote, Field, PageHeading, Status } from '../components/workspace'
 import { date } from '../lib/format';
 import { SessionPanel, UserManagement } from '../components/AuthGate';
 import { useI18n } from '../lib/i18n';
+import { DisplayPreferenceFields } from '../components/WorkspaceControls';
 
 export default function Settings({
   system,
@@ -42,6 +43,13 @@ export default function Settings({
       />
       <ActionNote text={notice} />
       <div className="settings-layout">
+        <section className="settings-section display-preference-settings">
+          <h2>{t('Display preferences')}</h2>
+          <p className="section-description">
+            {t('Layout and table preferences are separate for each user and market data source.')}
+          </p>
+          <DisplayPreferenceFields />
+        </section>
         <SessionPanel />
         <UserManagement />
         <section className="settings-section">
