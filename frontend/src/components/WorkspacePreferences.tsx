@@ -79,6 +79,7 @@ function safeLocation(location: WorkspaceLocation, source: Source): WorkspaceLoc
     parsed.versionId = undefined;
   }
   parsed.dataIntent = undefined;
+  parsed.portfolioRecipe = undefined;
   parsed.returnTo = undefined;
   return parsed;
 }

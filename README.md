@@ -25,6 +25,8 @@ Research has its own working context. The next trial has its own configuration t
 
 [See the trader paths](docs/trader-journeys.md) · [Read the fresh workspace review](docs/audit/professional-workspace-0.17.0.zh-CN.md) · [Inspect the verification record](docs/verification.md).
 
+Start a new study from its economic hypothesis or go directly to known data inputs. Carry and rotation hypotheses open the matching portfolio draft; existing work requires an explicit keep/replace choice. Daily next actions put controller attention and running strategies before historical study reviews, with named records to resume. [User journey decisions](docs/audit/user-journey-0.18.0.zh-CN.md).
+
 <details>
 <summary>Research desk and mobile book — synthetic acceptance fixtures</summary>
 

@@ -17,6 +17,7 @@ export type WorkspaceLocation = {
   runId?: string;
   versionId?: string;
   packageId?: string;
+  portfolioRecipe?: string;
   returnTo?: 'advanced' | 'portfolio';
   symbol?: string;
   dataIntent?: ResearchDataIntent;
@@ -70,6 +71,10 @@ const defaults: Partial<Record<Page, string>> = {
 };
 const identifier = (value: string | null) =>
   value && /^[a-zA-Z0-9._-]{1,160}$/.test(value) ? value : undefined;
+export const validPortfolioRecipe = (value?: string | null) =>
+  value && ['basket', 'ensemble', 'rotation', 'carry', 'risk-rotation'].includes(value)
+    ? value
+    : undefined;
 export function validView(page: Page, value?: string) {
   if (!value || value.length > 220 || !/^[a-zA-Z0-9:._-]+$/.test(value)) return defaults[page];
   return views[page]?.includes(value.split(':')[0]) ? value : defaults[page];
@@ -110,6 +115,7 @@ export function readWorkspaceLocation(
     runId: identifier(params.get('run')),
     versionId: identifier(params.get('version')),
     packageId: identifier(params.get('package')),
+    portfolioRecipe: validPortfolioRecipe(params.get('hypothesis')),
     returnTo:
       params.get('return') === 'portfolio'
         ? 'portfolio'
@@ -127,6 +133,12 @@ export function workspaceHash(location: WorkspaceLocation) {
   if (location.runId) params.set('run', location.runId);
   if (location.versionId) params.set('version', location.versionId);
   if (location.packageId) params.set('package', location.packageId);
+  if (
+    location.page === 'research' &&
+    location.view === 'portfolio' &&
+    validPortfolioRecipe(location.portfolioRecipe)
+  )
+    params.set('hypothesis', location.portfolioRecipe!);
   if (location.returnTo) params.set('return', location.returnTo);
   if (location.symbol) params.set('symbol', location.symbol);
   if (location.dataIntent?.source === location.source) {

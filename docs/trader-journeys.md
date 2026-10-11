@@ -1,5 +1,9 @@
 # Resume the same trading work
 
+For new work, **Define a hypothesis** opens the mechanism and rejection criteria before data and evaluation settings; **Prepare research data** remains available when the inputs are already known. Portfolio hypotheses open their matching study draft directly. If a portfolio draft already exists, keep it or explicitly replace it with a fresh configuration; replacement resets capital, costs and input selections while saved evidence stays intact. A bound strategy draft keeps its saved economic question visible.
+
+For daily work, next actions prioritize conditions needing attention, running controllers, active research, approved releases and then completed studies. Study names and short immutable IDs distinguish otherwise similar records. Review the same object rather than reconstructing it from another page. [Journey decisions and delivery boundaries](audit/user-journey-0.18.0.zh-CN.md).
+
 The workspace connects tasks by their saved identity and source. Its starting view is the account and current book. Equity, cash, gross exposure and current conditions appear before research continuation; the secondary next actions below the book identify active preparation/research, approvals needing activation, results needing review and running paper controllers. Failed historical research remains a separate expandable history. An incomplete task snapshot displays a retry action rather than claiming there is nothing to do.
 
 The monetary overview uses the account captured inside its exposure report, including that capture's timestamp and unknown economics. Returning from execution requests a fresh capture. If a matching report is unavailable, the source-matched account remains inspectable while exposure stays unavailable; cached cash and a different report are not presented as one account.

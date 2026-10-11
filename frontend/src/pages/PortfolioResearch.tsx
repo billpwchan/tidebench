@@ -157,6 +157,8 @@ export default function PortfolioResearch({
   onData,
   onExecution,
   initialRunId,
+  initialRecipeId,
+  onRecipeHandled,
   initialInputs,
   onRunSelect,
   onClearDraft,
@@ -165,6 +167,8 @@ export default function PortfolioResearch({
   onData: (intent?: ResearchDataIntent) => void;
   onExecution: (id?: string) => void;
   initialRunId?: string;
+  initialRecipeId?: string;
+  onRecipeHandled?: (startNew?: boolean) => void;
   initialInputs?: ResearchInputs;
   onRunSelect?: (id: string) => void;
   onClearDraft?: () => void;
@@ -699,6 +703,68 @@ export default function PortfolioResearch({
         .map((item) => `${date(item!.start, true)} → ${date(item!.end, true)}`),
     ),
   ];
+  const applyRecipe = (identifier: string) => {
+    setRecipeId(identifier);
+    const recipe = recipes.find((r) => r.id === identifier);
+    if (!recipe) return;
+    const d = recipe.definition;
+    setName(recipe.name);
+    setHypothesis(recipe.hypothesis);
+    setMode(d.mode);
+    setUniverseMode('static');
+    setLifecycleWarmup(2);
+    setCapitalPct(d.capital_pct);
+    loadExecution(d, false);
+    setCarryThreshold(d.carry_threshold);
+    loadCarry(d);
+    loadRisk(d);
+    setRebalance(d.rebalance_bars);
+    setLookback(d.lookback);
+    setTopK(d.top_k);
+    setEvaluation('train_test');
+    const matching = ready.filter((p) => p.bar === d.bar);
+    const anchor = matching.find((p) => p.inst_id === d.legs[0].inst_id);
+    setLegs(
+      d.legs.map((leg) => ({
+        ...newLeg(),
+        inst_id: leg.inst_id,
+        programDraft: undefined,
+        weight: leg.weight,
+        leverage: leg.leverage,
+        direction: leg.direction,
+        strategy: { ...leg.strategy },
+        package_id:
+          matching.find(
+            (p) => p.inst_id === leg.inst_id && p.start === anchor?.start && p.end === anchor?.end,
+          )?.id ?? '',
+      })),
+    );
+  };
+  const requestedRecipe = recipes.find((item) => item.id === initialRecipeId);
+  const appliedProposal = useRef('');
+  const acceptRecipe = () => {
+    if (!requestedRecipe || !canOperate) return;
+    revisionGeneration.current += 1;
+    draft.clear();
+    applyRecipe(requestedRecipe.id);
+    setEditing(true);
+    setActive('');
+    selectedContext.current = { source, id: '' };
+    onRecipeHandled?.(true);
+  };
+  useEffect(() => {
+    const identity = `${userId}:${source}:${initialRecipeId}`;
+    if (
+      !requestedRecipe ||
+      !canOperate ||
+      draft.hasDraft ||
+      id ||
+      appliedProposal.current === identity
+    )
+      return;
+    appliedProposal.current = identity;
+    acceptRecipe();
+  }, [initialRecipeId, source, userId, canOperate]);
   const evaluationName = (value: unknown) =>
     value === 'train_test'
       ? text('Independent chronological test', '独立时间序列测试')
@@ -731,6 +797,39 @@ export default function PortfolioResearch({
           {t('New portfolio study')}
         </button>
       </PageHeading>
+      {requestedRecipe && draft.hasDraft && (
+        <section
+          className="hypothesis-handoff"
+          aria-label={text('Continue the selected hypothesis', '继续所选假设')}
+        >
+          <div>
+            <h2>{t(requestedRecipe.name)}</h2>
+            <p>
+              {text(
+                'You already have a portfolio draft. Keep it, or start this hypothesis with a fresh configuration. Replacing resets the draft, including capital, costs and data selections; saved versions and studies stay intact.',
+                '你已有组合草稿。可以继续原工作，或以全新配置开始此假设。替换会重置草稿中的资金、成本及数据选择；已保存版本与研究记录会保留。',
+              )}
+            </p>
+          </div>
+          <div className="toolbar">
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => onRecipeHandled?.()}
+            >
+              {text('Keep current portfolio draft', '保留当前组合草稿')}
+            </button>
+            <button
+              type="button"
+              className="button button-citrus"
+              disabled={!canOperate || create.isPending}
+              onClick={acceptRecipe}
+            >
+              {text('Replace draft with this hypothesis', '用此假设替换草稿')}
+            </button>
+          </div>
+        </section>
+      )}
       <div className="prepared-input-note" role="status">
         <span>
           {draft.restoredAt
@@ -852,48 +951,7 @@ export default function PortfolioResearch({
                   label="Portfolio starting point"
                   hint="Reference hypotheses with failure criteria; no investment edge is claimed."
                 >
-                  <select
-                    value={recipeId}
-                    onChange={(e) => {
-                      setRecipeId(e.target.value);
-                      const recipe = recipes.find((r) => r.id === e.target.value);
-                      if (!recipe) return;
-                      const d = recipe.definition;
-                      setName(recipe.name);
-                      setHypothesis(recipe.hypothesis);
-                      setMode(d.mode);
-                      setUniverseMode('static');
-                      setLifecycleWarmup(2);
-                      setCapitalPct(d.capital_pct);
-                      loadExecution(d, false);
-                      setCarryThreshold(d.carry_threshold);
-                      loadCarry(d);
-                      loadRisk(d);
-                      setRebalance(d.rebalance_bars);
-                      setLookback(d.lookback);
-                      setTopK(d.top_k);
-                      setEvaluation('train_test');
-                      const matching = ready.filter((p) => p.bar === d.bar);
-                      const anchor = matching.find((p) => p.inst_id === d.legs[0].inst_id);
-                      setLegs(
-                        d.legs.map((leg) => ({
-                          inst_id: leg.inst_id,
-                          programDraft: undefined,
-                          weight: leg.weight,
-                          leverage: leg.leverage,
-                          direction: leg.direction,
-                          strategy: { ...leg.strategy },
-                          package_id:
-                            matching.find(
-                              (p) =>
-                                p.inst_id === leg.inst_id &&
-                                p.start === anchor?.start &&
-                                p.end === anchor?.end,
-                            )?.id ?? '',
-                        })),
-                      );
-                    }}
-                  >
+                  <select value={recipeId} onChange={(e) => applyRecipe(e.target.value)}>
                     <option value="">{t('Custom hypothesis')}</option>
                     {recipes.map((r) => (
                       <option key={r.id} value={r.id}>

@@ -341,3 +341,60 @@
     line-height: 1.5;
   }
 }
+
+/* Task continuations keep the object and the user's choice beside the action. */
+.journey-object {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.journey-task-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.hypothesis-handoff {
+  margin-block: 20px;
+  padding: 20px 0;
+  border-block: 1px solid var(--line);
+}
+.hypothesis-handoff h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.hypothesis-handoff p {
+  color: var(--muted);
+  max-width: 80ch;
+  line-height: 1.6;
+}
+.hypothesis-handoff .toolbar {
+  flex-wrap: wrap;
+}
+@media (max-width: 720px) {
+  .hypothesis-handoff .button {
+    white-space: normal;
+    min-height: 44px;
+    max-width: 100%;
+  }
+  .journey-task-actions .journey-action {
+    min-height: 44px;
+  }
+}
+.research-hypothesis-brief {
+  margin-block: 20px;
+  color: var(--muted);
+}
+.research-hypothesis-brief h3,
+.research-hypothesis-brief summary {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.research-hypothesis-brief p {
+  line-height: 1.6;
+  max-width: 85ch;
+}
+.research-hypothesis-brief span {
+  font-size: 12px;
+}
