@@ -885,6 +885,22 @@ test('advanced research exposes one task at a time while history, analysis and t
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('37');
   await expect(page.getByLabel('Ordered signal rules', { exact: true })).toHaveValue(invalid);
   await expect(page.getByRole('button', { name: 'Run research', exact: true })).toBeDisabled();
+  for (const language of ['en', 'zh-CN']) {
+    await page.getByLabel(/^(Interface language|界面语言)$/).selectOption(language);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      page.viewportSize()!.width,
+    );
+    const draftActions = draft.locator(':scope > .section-heading > button');
+    await expect(draftActions).toHaveCount(2);
+    for (const action of await draftActions.all()) {
+      await expect(action).toBeVisible();
+      const bounds = (await action.boundingBox())!;
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+      if (page.viewportSize()!.width <= 720) expect(bounds.height).toBeGreaterThanOrEqual(44);
+    }
+  }
+  await page.getByLabel(/^(Interface language|界面语言)$/).selectOption('en');
   await researchTask(page, 'analysis');
   await expect(draft).toBeHidden();
   await expect(page.getByText('Captured research failure', { exact: true })).toBeVisible();

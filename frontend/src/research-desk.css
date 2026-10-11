@@ -704,3 +704,23 @@
     flex-wrap: wrap;
   }
 }
+
+@media (max-width: 720px) {
+  .pro-research-form > .section-heading {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 12px;
+  }
+  .pro-research-form > .section-heading h2 {
+    grid-column: 1 / -1;
+  }
+  .pro-research-form > .section-heading > .text-button {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+    white-space: normal;
+    text-align: left;
+    justify-content: flex-start;
+    line-height: 1.5;
+  }
+}
