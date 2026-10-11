@@ -9,13 +9,22 @@
 
 简体中文 · [English](README.md) · [研究模型](docs/pro-research.md) · [部署与运维](docs/operations.md)
 
-![交易总览实际截图，使用明确标注的合成数据](docs/assets/desk-overview-v0.14-desktop.png)
+![1280×720 研究工作台，明确标注的合成验收数据；不构成投资证据](docs/assets/trader-ui-v016-research-desktop.png)
+
+## 围绕下一步决策组织界面
+
+纸白与冷灰工作面、深灰蓝导航和青色操作形成共享视觉系统；红绿保留盈亏和状态含义。行情来源与执行模式分别标注。研究把所选结果、封存配置与资金曲线放在共同上下文中；手机在六个分析视图都可展开完整指标口径。1180px 及以上，打开的订单票据与账簿并排。参见[独立审查、设计依据与可重复视口验收](docs/audit/trader-interface-0.16.0.zh-CN.md)。
 
 ## 从回测结果走向研究决策
 
 新版研究台用满宽分析界面连接六类证据：资金走势、收益日历、回撤恢复、完整交易、跨时段／参数／成本稳健性，以及经济核对。结果、已保存配置与下一轮草稿保持独立；收益图使用真实初始资金归一化，支持范围切换、键盘观察和联动回撤。
 
-![回测分析工作台，使用明确标注的合成输入；图中收益不构成投资证据](docs/assets/backtest-analysis-desktop.png)
+<details>
+<summary>同一份合成研究的手机首屏</summary>
+
+![手机研究首屏，保留所选结果、摘要和主曲线](docs/assets/trader-ui-v016-research-mobile.png)
+
+</details>
 
 历史结果无需重跑即可查看新诊断，原始金融记录和重放摘要保持不变。缺失指标、不完整时段和抽样显示都有明确口径；多维参数候选不会被悄悄合并。[完整分析方法与调研来源](docs/backtest-analysis.md)。
 
@@ -25,7 +34,7 @@
 
 宽屏研究配置并列展示市场数据、策略资金与评估方式。选中结果显示它自己保存的市场、区间、成本和方法，下一次研究的草稿与它区分。准备数据时携带品种、周期与 UTC 区间，返回精确版本的数据包；延迟回执不能把已经离开的用户拉回旧任务。
 
-[用户操作路径](docs/trader-journeys.md) · [本轮独立审计、修复范围与剩余差距](docs/audit/trader-experience-0.14.0.zh-CN.md) · [验证记录](docs/verification.md)。
+[用户操作路径](docs/trader-journeys.md) · [本轮界面审查与修复范围](docs/audit/trader-interface-0.16.0.zh-CN.md) · [验证记录](docs/verification.md)。
 
 <details>
 <summary>研究布局与手机账本截图（明确标注的合成验收数据）</summary>

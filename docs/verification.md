@@ -1,5 +1,14 @@
 # Verification record
 
+## v0.16.0 · 2026-10-11 · trader interface and responsive workspace
+
+The [interface review](audit/trader-interface-0.16.0.zh-CN.md) records the actual production baseline, primary design references, two fresh-mind reviews, implemented scope and viewport boundaries. The final review caught mobile metric definitions disappearing outside Performance; the shared disclosure now remains available in all six analysis views.
+
+New browser acceptance checks the initial research fold at 1280×720 and 390×844, source/execution-mode separation in both languages, keyboard tab visibility, selected navigation text contrast, mobile touch targets and 1180/1280px spot/perpetual books beside an open ticket. Exact P&L, liquidation values and secondary mark details remain inspectable. The tests use explicitly synthetic inputs and perform no venue execution. Existing financial, governance, account, session and delayed-response workflows remain in the full suite.
+
+The first local full run passed 273 cases, skipped 8 intentional desktop-only mobile cases and hit one lazy-view load failure while a rebuild replaced active assets. A simultaneous targeted run also interrupted its trace collection. The next fixed-build run also passed 273 cases with one existing incident test racing its initial query: the unmodified initial analytics response arrived after mock installation, so the UI correctly retained the older paired account/exposure capture until the next poll. The test now reloads after installing incident responses, ensuring its initial capture belongs to the declared scenario. Final acceptance uses a fixed build and sequential browser runs; [versioned release evidence](https://github.com/billpwchan/tidebench/releases/tag/v0.16.0) records the final counts, exact source CI and deployment checks. The visual upgrade changes no financial engine or schema. Historical results are checked before and after activation rather than recalculated to match the new design.
+
+
 ## v0.15.0 · 2026-10-11 · captured backtest analysis
 
 The [new research desk](backtest-analysis.md) derives UTC calendars, recovery episodes, rolling risk, trade concentration and accounting diagnostics from verified immutable results. Three fresh reviewers challenged financial integration and the user journey. Reproduced defects were fixed: terminal drawdown confused with episode depth; multidimensional candidate loss; undisclosed calendar/rolling caps; and keyboard inspection overwritten by crosshair events after zoom.

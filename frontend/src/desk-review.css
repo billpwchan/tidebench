@@ -1,29 +1,5 @@
 /* First visual-review batch: account books, their actions, and shared desk chrome.
    Research, the data catalog, and operations keep their existing page layouts. */
-:root {
-  --desk-row-surface: #fff;
-  --desk-row-hover: #f1f5f3;
-  --desk-row-detail: #f6f8f7;
-  --desk-rule: #dce4df;
-}
-
-.sidebar .nav-item.active {
-  background: #2b4638;
-  color: #f3f8f4;
-  box-shadow: inset 3px 0 0 #c5df82;
-}
-.sidebar .nav-item.active:hover {
-  background: #345140;
-}
-.sidebar .nav-item {
-  font-size: 14px;
-}
-.topbar .breadcrumbs,
-.topbar .search-trigger,
-.topbar .execution-badge {
-  font-size: 13px;
-}
-
 .page-overview,
 .page-execution {
   padding-inline: 24px;
@@ -360,7 +336,40 @@
   min-height: 36px;
 }
 
-@media (max-width: 1320px) and (min-width: 721px) {
+@media (min-width: 1180px) {
+  .desk-execution-layout.has-ticket {
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 16px;
+  }
+  .desk-execution-layout .desk-order-ticket {
+    grid-row: auto;
+    position: sticky;
+    top: 16px;
+    border-left: 1px solid var(--desk-rule);
+    border-top: 0;
+    padding: 0 0 0 16px;
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (min-width: 1180px) and (max-width: 1320px) {
+  .desk-execution-layout.has-ticket .desk-position-liquidation .desk-sort-button {
+    max-width: 110px;
+    white-space: normal;
+    text-align: right;
+  }
+  .desk-execution-layout.has-ticket .desk-position-liquidation .table-stacked small {
+    max-width: 14ch;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 1179px) and (min-width: 721px) {
   .desk-execution-layout.has-ticket {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -647,31 +656,5 @@
 @media (max-width: 720px) {
   :is(.desk-market-link, .portfolio-market-inspect) {
     min-height: 44px;
-  }
-  .topbar {
-    padding-inline: 8px;
-    gap: 8px;
-  }
-  .topbar .breadcrumbs {
-    min-width: 0;
-    gap: 6px;
-  }
-  .topbar .breadcrumbs strong {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .topbar .topbar-actions {
-    gap: 4px;
-    flex-shrink: 0;
-  }
-  .topbar :is(.mobile-menu, .search-trigger) {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    padding: 0;
-    justify-content: center;
-    flex-shrink: 0;
   }
 }

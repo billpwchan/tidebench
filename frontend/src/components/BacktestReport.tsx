@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDownToLine, ArrowUpRight, Info } from 'lucide-react';
 import { downloadBlob, downloadCsv } from '../api';
@@ -42,6 +42,7 @@ export default function BacktestReport({
   const [calendarYear, setCalendarYear] = useState('all');
   const [tradeFilter, setTradeFilter] = useState('all');
   const [matrixMetric, setMatrixMetric] = useState('total_return_pct');
+  const equityRows = useMemo(() => rows(result.equity), [result.equity]);
   const metrics = result.metrics ?? {};
   const reasons = record(metrics.metric_reasons);
   const report = useQuery({
@@ -205,9 +206,7 @@ export default function BacktestReport({
           <span>{text('Sharpe ratio', '夏普比率')}</span>
           <strong>{number(metrics.sharpe)}</strong>
           <small>
-            {metrics.sharpe == null
-              ? reason('sharpe')
-              : text('Daily · √365 · zero risk-free rate', '日收益 · √365 · 无风险利率 0')}
+            {metrics.sharpe == null ? reason('sharpe') : text('Daily · √365', '日收益 · √365')}
           </small>
         </div>
         <div className="backtest-outcome">
@@ -273,37 +272,29 @@ export default function BacktestReport({
         role="tabpanel"
         aria-label={text('Selected analysis', '当前分析')}
       >
-        {section === 'overview' && (
+        {section === 'overview' && report.isSuccess && (
           <>
-            <div className="backtest-section-heading">
-              <div>
-                <h3>{text('Growth of capital', '资金走势')}</h3>
-                <p>
-                  {text(
-                    'Strategy and passive reference over the exact evaluated window.',
-                    '策略与被动基准使用本次评估的准确时段。',
-                  )}
-                </p>
-              </div>
-              <div className="segmented">
-                <button
-                  aria-pressed={chartMetric === 'returns'}
-                  className={chartMetric === 'returns' ? 'selected' : ''}
-                  onClick={() => setChartMetric('returns')}
-                >
-                  {text('Return · %', '收益 · %')}
-                </button>
-                <button
-                  aria-pressed={chartMetric === 'equity'}
-                  className={chartMetric === 'equity' ? 'selected' : ''}
-                  onClick={() => setChartMetric('equity')}
-                >
-                  {text('Equity · USDT', '权益 · USDT')}
-                </button>
-              </div>
-            </div>
             <ResearchChart
-              rows={rows(result.equity)}
+              title={text('Growth of capital', '资金走势')}
+              metricControls={
+                <div className="segmented">
+                  <button
+                    aria-pressed={chartMetric === 'returns'}
+                    className={chartMetric === 'returns' ? 'selected' : ''}
+                    onClick={() => setChartMetric('returns')}
+                  >
+                    {text('Return · %', '收益 · %')}
+                  </button>
+                  <button
+                    aria-pressed={chartMetric === 'equity'}
+                    className={chartMetric === 'equity' ? 'selected' : ''}
+                    onClick={() => setChartMetric('equity')}
+                  >
+                    {text('Equity · USDT', '权益 · USDT')}
+                  </button>
+                </div>
+              }
+              rows={equityRows}
               metric={chartMetric}
               initialCash={metrics.initial_cash}
               startTs={numeric(sample.start_ts) ?? undefined}
@@ -314,6 +305,10 @@ export default function BacktestReport({
               {text(
                 'The return difference is descriptive, not risk-adjusted alpha.',
                 '收益差额是描述性比较，不是经过风险调整的超额收益。',
+              )}{' '}
+              {text(
+                'Sharpe uses daily returns, √365 and a zero risk-free rate.',
+                '夏普比率使用日收益、√365 年化和零无风险利率。',
               )}
             </p>
             <dl className="backtest-stat-grid">
@@ -341,7 +336,7 @@ export default function BacktestReport({
             </dl>
           </>
         )}
-        {section !== 'overview' && report.isPending && (
+        {report.isPending && (
           <Loading
             label={text(
               'Calculating diagnostics from the captured result…',
@@ -588,7 +583,7 @@ export default function BacktestReport({
                 </dd>
               </div>
             </dl>
-            <ResearchChart rows={rows(result.equity)} metric="drawdown" height={220} />
+            <ResearchChart rows={equityRows} metric="drawdown" height={220} />
             <h3 className="backtest-subheading">
               {text('Deepest drawdown episodes', '最深回撤时段')}
             </h3>
@@ -1192,6 +1187,39 @@ export default function BacktestReport({
           </>
         )}
       </div>
+      <details className="backtest-mobile-basis">
+        <summary>{text('Summary measurement basis', '摘要指标口径')}</summary>
+        <dl className="record-grid">
+          <div>
+            <dt>{text('Final equity', '期末权益')}</dt>
+            <dd>{number(metrics.final_equity)} USDT</dd>
+          </div>
+          <div>
+            <dt>{text('Return difference', '收益差额')}</dt>
+            <dd>
+              {comparison === null ? '—' : `${comparison > 0 ? '+' : ''}${number(comparison)} pp`}
+            </dd>
+          </div>
+          <div>
+            <dt>{text('Drawdown observation', '回撤观察')}</dt>
+            <dd>{text('Observed at bar close', '按 K 线收盘观察')}</dd>
+          </div>
+          <div>
+            <dt>{text('Sharpe basis', '夏普口径')}</dt>
+            <dd>
+              {metrics.sharpe == null
+                ? reason('sharpe')
+                : text('Daily · √365 · zero risk-free rate', '日收益 · √365 · 无风险利率 0')}
+            </dd>
+          </div>
+          <div>
+            <dt>{text('Sample period', '样本时长')}</dt>
+            <dd>
+              {number(metrics.complete_utc_days, 0)} {text('complete UTC days', '个完整 UTC 日')}
+            </dd>
+          </div>
+        </dl>
+      </details>
       {report.data && (
         <details className="backtest-report-evidence">
           <summary>

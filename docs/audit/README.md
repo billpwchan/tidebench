@@ -1,6 +1,8 @@
 # Red-team record
 
-Latest: [v0.14 fresh trader baseline](fresh-trader-experience-v0.13-baseline.zh-CN.md), [independent visual baseline](fresh-visual-review-v0.13-baseline.zh-CN.md), [implemented scope and remaining issues](trader-experience-0.14.0.zh-CN.md) and [acceptance history](acceptance-history-0.14.0.md).
+Latest: [v0.16 interface review and measured layout checks](trader-interface-0.16.0.zh-CN.md), [v0.15 backtest methods](../backtest-analysis.md) and [verification](../verification.md).
+
+Previous: [v0.14 fresh trader baseline](fresh-trader-experience-v0.13-baseline.zh-CN.md), [independent visual baseline](fresh-visual-review-v0.13-baseline.zh-CN.md), [implemented scope and remaining issues](trader-experience-0.14.0.zh-CN.md) and [acceptance history](acceptance-history-0.14.0.md).
 
 Previous: [v0.13 trader desk review](trader-desk-0.13.0.zh-CN.md), [acceptance history](acceptance-history-0.13.0.md) and [trader journey guide](../trader-journeys.md).
 

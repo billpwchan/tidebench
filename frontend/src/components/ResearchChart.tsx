@@ -19,6 +19,8 @@ import { date, number, percent } from '../lib/format';
 import { Empty } from './workspace';
 import { useI18n } from '../lib/i18n';
 import './ResearchChart.css';
+import { chartPalette } from '../lib/chartPalette';
+import type { ReactNode } from 'react';
 
 type ChartMetric = 'equity' | 'drawdown' | 'returns';
 type RangePreset = 'all' | '1m' | '3m' | '1y';
@@ -42,13 +44,6 @@ const finite = (raw: unknown): number | null => {
 };
 const sameRange = (a: LogicalRange | null, b: LogicalRange | null) =>
   !!a && !!b && Math.abs(a.from - b.from) < 0.000001 && Math.abs(a.to - b.to) < 0.000001;
-const palette = {
-  strategy: '#126d68',
-  benchmark: '#627183',
-  drawdown: '#ae4843',
-  text: '#4d5b66',
-  grid: '#e6ebee',
-};
 
 export default function ResearchChart({
   rows,
@@ -57,6 +52,8 @@ export default function ResearchChart({
   startTs,
   height = 300,
   linkedDrawdown = false,
+  title,
+  metricControls,
 }: {
   rows: RecordData[];
   metric?: ChartMetric;
@@ -64,12 +61,16 @@ export default function ResearchChart({
   startTs?: number;
   height?: number;
   linkedDrawdown?: boolean;
+  title?: string;
+  metricControls?: ReactNode;
 }) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const mainRef = useRef<HTMLDivElement>(null);
   const drawdownRef = useRef<HTMLDivElement>(null);
   const controls = useRef<ChartControls | null>(null);
+  const inspectorRef = useRef<HTMLInputElement>(null);
+  const inspection = useRef({ keyboard: false, index: null as number | null });
   const savedRange = useRef<LogicalRange | null>(null);
   const savedDomain = useRef('');
   const presetRef = useRef<RangePreset | null>('all');
@@ -150,18 +151,20 @@ export default function ResearchChart({
 
   useEffect(() => {
     if (!mainRef.current || !hasData) return;
+    const palette = chartPalette(mainRef.current);
     const domain = `${data[0].time}:${data[data.length - 1].time}:${data.length}`;
     if (savedDomain.current !== domain) {
       savedDomain.current = domain;
       savedRange.current = null;
       presetRef.current = 'all';
       setPreset('all');
+      inspection.current = { keyboard: false, index: null };
       setPointIndex(null);
     }
     const chartOptions = (chartHeight: number) => ({
       height: chartHeight,
       layout: {
-        background: { type: ColorType.Solid, color: '#ffffff' },
+        background: { type: ColorType.Solid, color: palette.surface },
         textColor: palette.text,
         fontSize: 12,
         attributionLogo: true,
@@ -243,12 +246,11 @@ export default function ResearchChart({
     let applyingRange = false;
     let expectedPresetRange: LogicalRange | null = null;
     let crosshairTime: number | null | undefined;
-    let keyboardInspection = false;
     const indexByTime = new Map(data.map((point, index) => [Number(point.time), index]));
     const inspect = (index: number) => {
       const point = data[index];
       if (!point) return;
-      keyboardInspection = true;
+      inspection.current = { keyboard: true, index };
       const visible = main.timeScale().getVisibleLogicalRange();
       if (visible && (index < Math.ceil(visible.from) || index > Math.floor(visible.to))) {
         clearPreset();
@@ -275,12 +277,13 @@ export default function ResearchChart({
     ) => {
       // A programmatic crosshair outside the previous visible range can emit null
       // before the queued range update. It must not replace the keyboard selection.
-      if (keyboardInspection) return;
+      if (inspection.current.keyboard) return;
       const time = typeof event.time === 'number' && event.point ? Number(event.time) : null;
       // Programmatic crosshair events can fire again; each timestamp is propagated once.
       if (time === crosshairTime) return;
       crosshairTime = time;
       const index = time === null ? undefined : indexByTime.get(time);
+      inspection.current.index = index ?? null;
       setPointIndex(index ?? null);
       const point = index === undefined ? undefined : data[index];
       const price = point ? value(point) : null;
@@ -316,7 +319,7 @@ export default function ResearchChart({
       return { from: first - 0.5, to: data.length - 0.5 } as LogicalRange;
     };
     const applyPreset = (next: RangePreset) => {
-      keyboardInspection = false;
+      inspection.current = { keyboard: false, index: null };
       crosshairTime = null;
       setPointIndex(null);
       main.clearCrosshairPosition();
@@ -347,6 +350,7 @@ export default function ResearchChart({
     };
     let dragOrigin: { x: number; y: number } | null = null;
     const beginDrag = (event: PointerEvent) => {
+      inspection.current.keyboard = false;
       dragOrigin = { x: event.clientX, y: event.clientY };
     };
     const drag = (event: PointerEvent) => {
@@ -361,7 +365,7 @@ export default function ResearchChart({
       dragOrigin = null;
     };
     const resumePointerInspection = () => {
-      keyboardInspection = false;
+      if (document.activeElement !== inspectorRef.current) inspection.current.keyboard = false;
     };
     const surfaces = [mainRef.current, drawdownRef.current].filter(
       (surface): surface is HTMLDivElement => surface !== null,
@@ -370,7 +374,6 @@ export default function ResearchChart({
       surface.addEventListener('pointerdown', beginDrag, true);
       surface.addEventListener('pointermove', drag, true);
       surface.addEventListener('pointermove', resumePointerInspection, true);
-      surface.addEventListener('pointerleave', resumePointerInspection, true);
       surface.addEventListener('pointerup', endDrag, true);
       surface.addEventListener('pointercancel', endDrag, true);
       surface.addEventListener('wheel', clearPreset, { passive: true, capture: true });
@@ -392,6 +395,8 @@ export default function ResearchChart({
       applyingRange = false;
     });
     observer.observe(mainRef.current);
+    if (inspection.current.keyboard && inspection.current.index !== null)
+      inspect(Math.min(inspection.current.index, data.length - 1));
     return () => {
       savedRange.current = main.timeScale().getVisibleLogicalRange();
       controls.current = null;
@@ -400,7 +405,6 @@ export default function ResearchChart({
         surface.removeEventListener('pointerdown', beginDrag, true);
         surface.removeEventListener('pointermove', drag, true);
         surface.removeEventListener('pointermove', resumePointerInspection, true);
-        surface.removeEventListener('pointerleave', resumePointerInspection, true);
         surface.removeEventListener('pointerup', endDrag, true);
         surface.removeEventListener('pointercancel', endDrag, true);
         surface.removeEventListener('wheel', clearPreset, true);
@@ -441,6 +445,8 @@ export default function ResearchChart({
   return (
     <div className="research-chart-wrap research-chart-desk">
       <div className="research-chart-toolbar">
+        {title && <h3 className="research-chart-title">{title}</h3>}
+        {metricControls && <div className="research-chart-metric-controls">{metricControls}</div>}
         <div className="research-chart-legend">
           <span>
             <i className={displayMetric === 'drawdown' ? 'legend-drawdown' : 'legend-strategy'} />
@@ -494,6 +500,14 @@ export default function ResearchChart({
           )}
         </p>
       )}
+
+      <div
+        ref={mainRef}
+        className="financial-chart pro-equity-chart research-chart-canvas"
+        role="img"
+        aria-label={text('Research performance chart', '研究表现图表')}
+        aria-describedby={summaryId}
+      />
       <output id={summaryId} className="research-chart-point" aria-live="off">
         <time dateTime={new Date(point.time * 1000).toISOString()}>{pointDate}</time>
         {point.initial && <span>{text('Initial capital', '初始资金')}</span>}
@@ -519,13 +533,6 @@ export default function ResearchChart({
           </span>
         )}
       </output>
-      <div
-        ref={mainRef}
-        className="financial-chart pro-equity-chart research-chart-canvas"
-        role="img"
-        aria-label={text('Research performance chart', '研究表现图表')}
-        aria-describedby={summaryId}
-      />
       {showUnderwater && (
         <div className="research-chart-underwater">
           <div className="research-chart-underwater-heading">
@@ -544,6 +551,7 @@ export default function ResearchChart({
       <label className="research-chart-inspector" htmlFor={pointId}>
         <span>{text('Inspect observation', '查看观测点')}</span>
         <input
+          ref={inspectorRef}
           id={pointId}
           type="range"
           min={0}
@@ -552,6 +560,9 @@ export default function ResearchChart({
           value={index}
           aria-valuetext={readablePoint}
           aria-describedby={summaryId}
+          onFocus={() => {
+            inspection.current.keyboard = true;
+          }}
           onChange={(event) => controls.current?.inspect(Number(event.target.value))}
         />
         <span>{text('Arrow keys · Home · End', '方向键 · Home · End')}</span>

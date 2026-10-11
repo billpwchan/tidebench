@@ -777,15 +777,7 @@ export default function ProResearch({
               )}
             </div>
             {run.data && (
-              <Status
-                type={
-                  run.data.status === 'completed'
-                    ? 'good'
-                    : run.data.status === 'failed'
-                      ? 'bad'
-                      : 'neutral'
-                }
-              >
+              <Status type={run.data.status === 'failed' ? 'bad' : 'neutral'}>
                 {run.data.status}
               </Status>
             )}
@@ -2097,6 +2089,41 @@ export default function ProResearch({
         title="Research"
         description="Versioned inputs, spot and perpetual strategies, and out-of-sample evaluation."
       >
+        <nav
+          className="backtest-workspace-nav"
+          aria-label={text('Research workspace actions', '研究工作区操作')}
+        >
+          <button
+            disabled={!activeId}
+            onClick={() =>
+              document
+                .getElementById('research-result-heading')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          >
+            {text('Result analysis', '结果分析')}
+          </button>
+          <button
+            onClick={() =>
+              document
+                .getElementById('research-configuration-heading')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          >
+            {activeId
+              ? text('Next trial draft', '下一次试验草稿')
+              : text('Configure a trial', '配置试验')}
+          </button>
+          <button
+            onClick={() =>
+              document
+                .getElementById('research-runs-heading')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          >
+            {text('Study ledger', '研究目录')} <span>{allRuns.length}</span>
+          </button>
+        </nav>
         <button
           className="button button-secondary"
           disabled={!canOperate}
@@ -2166,44 +2193,7 @@ export default function ProResearch({
         disabled={!canOperate || (cancel.isPending && cancel.variables === activeId)}
         onRetry={() => activeId && cancel.mutate(activeId)}
       />
-      <nav
-        className="backtest-workspace-nav"
-        aria-label={text('Research workspace actions', '研究工作区操作')}
-      >
-        <button
-          disabled={!activeId}
-          onClick={() =>
-            document
-              .getElementById('research-result-heading')
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
-        >
-          {text('Result analysis', '结果分析')}
-        </button>
-        <button
-          onClick={() =>
-            document
-              .getElementById('research-configuration-heading')
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
-        >
-          {activeId
-            ? text('Next trial draft', '下一次试验草稿')
-            : text('Configure a trial', '配置试验')}
-        </button>
-        <button
-          onClick={() =>
-            document
-              .getElementById('research-runs-heading')
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
-        >
-          {text('Study ledger', '研究目录')} <span>{allRuns.length}</span>
-        </button>
-        <span>
-          {text('Captured evidence · editable drafts stay separate', '已保存证据 · 草稿独立编辑')}
-        </span>
-      </nav>
+
       <div
         className={`pro-research-layout research-desk-layout${activeId ? '' : ' research-config-first'}${!activeId && !visibleRuns.length ? ' research-empty-history' : ''}`}
       >

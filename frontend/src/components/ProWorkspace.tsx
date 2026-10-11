@@ -498,8 +498,18 @@ export function WorkspaceTabs({
   onChange: (key: string) => void;
 }) {
   const { t } = useI18n();
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    const selected = tabs?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!tabs || !selected) return;
+    const item = selected.getBoundingClientRect();
+    const container = tabs.getBoundingClientRect();
+    if (item.left < container.left) tabs.scrollLeft -= container.left - item.left;
+    else if (item.right > container.right) tabs.scrollLeft += item.right - container.right;
+  }, [value]);
   return (
-    <div className="workspace-tabs" role="tablist">
+    <div className="workspace-tabs" role="tablist" ref={tabsRef}>
       {items.map((item) => (
         <button
           key={item.key}

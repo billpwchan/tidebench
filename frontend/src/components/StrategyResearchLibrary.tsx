@@ -25,8 +25,7 @@ export default function StrategyResearchLibrary({
       aria-label={label('Strategy research library', '策略研究库')}
     >
       <header className="strategy-research-intro">
-        <span className="eyebrow">{label('RESEARCH NOTES / 01–06', '研究笔记 / 01–06')}</span>
-        <h2>{label('A mechanism before a signal.', '先理解收益机制，再构建信号。')}</h2>
+        <h2>{label('Research hypotheses', '策略研究假设')}</h2>
         <p>
           {label(
             'Executable hypotheses, source evidence and reasons to reject them. Literature motivates the test; it does not validate an OKX strategy.',
@@ -57,7 +56,20 @@ export default function StrategyResearchLibrary({
             <span>{copy(d.scope)}</span>
             <span>{label('Research hypothesis · unvalidated', '研究假设 · 尚未验证优势')}</span>
           </div>
-          <h3>{copy(d.title)}</h3>
+          <div className="strategy-dossier-heading">
+            <h3>{copy(d.title)}</h3>
+            {d.recipe && (
+              <button
+                type="button"
+                className="button button-dark"
+                disabled={!canCreate}
+                onClick={() => onUse(d.recipe)}
+              >
+                {label('Use this hypothesis', '使用此假设')}
+                <ArrowRight size={14} />
+              </button>
+            )}
+          </div>
           <p className="strategy-dossier-thesis">{copy(d.mechanism)}</p>
           <div className="strategy-dossier-formula">
             <span>{label('IMPLEMENTED RULE', '已实现规则')}</span>
@@ -301,17 +313,7 @@ export default function StrategyResearchLibrary({
               </a>
             ))}
           </div>
-          {d.recipe ? (
-            <button
-              type="button"
-              className="button button-citrus"
-              disabled={!canCreate}
-              onClick={() => onUse(d.recipe)}
-            >
-              {label('Use this hypothesis', '使用此假设')}
-              <ArrowRight size={14} />
-            </button>
-          ) : (
+          {!d.recipe && (
             <p className="quiet-copy">
               {label(
                 'Open Research → Portfolio research and load the matching portfolio starting point. All legs use one book and one capital balance.',

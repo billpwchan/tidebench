@@ -26,7 +26,7 @@
 }
 .desk-table-search input:focus-visible,
 .desk-compact-sort select:focus-visible {
-  outline: 2px solid #345f4b;
+  outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
 .desk-table-count {
@@ -57,7 +57,7 @@
   font-size: 12px;
 }
 .desk-sort-button:focus-visible {
-  outline: 2px solid #345f4b;
+  outline: 2px solid var(--accent-strong);
   outline-offset: 3px;
 }
 .desk-sort-button span {
@@ -101,7 +101,7 @@
 }
 .desk-table-region .dense-table tr:hover .desk-sticky-identity,
 .desk-table-region .dense-table tr:hover .desk-sticky-action {
-  background: #f5f8f6;
+  background: var(--paper);
 }
 .desk-compact-records,
 .desk-compact-sort,
@@ -139,7 +139,7 @@
     scrollbar-gutter: stable;
   }
   .desk-compact-records:focus-visible {
-    outline: 2px solid #345f4b;
+    outline: 2px solid var(--accent-strong);
     outline-offset: 3px;
   }
   .desk-compact-row {
@@ -206,7 +206,7 @@
   .desk-compact-details summary {
     display: list-item;
     padding: 7px 0;
-    color: #345f4b;
+    color: var(--accent-strong);
     cursor: pointer;
     font-size: 12px;
   }
