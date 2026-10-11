@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Source } from '../api';
 import { proApi } from '../proApi';
 import type { Page } from '../lib/config';
-import { date } from '../lib/format';
+import { date, nameOf } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSession } from './AuthGate';
 import { ErrorBox, Loading, Status } from './workspace';
@@ -21,6 +21,7 @@ type JourneyItem = {
   progress?: number;
   attention?: boolean;
   updated?: number;
+  context?: string;
 };
 
 const active = (status: string) =>
@@ -29,6 +30,13 @@ const measuredProgress = (progress: unknown) =>
   typeof progress === 'number' && Number.isFinite(progress) && progress >= 0 && progress <= 1
     ? progress
     : undefined;
+const taskPriority = (item: JourneyItem) => {
+  if (item.attention) return 0;
+  if (item.status === 'running' && /^(group|deployment):/.test(item.key)) return 1;
+  if (item.status && active(item.status)) return 2;
+  if (/^(release|portfolio-release):/.test(item.key)) return 3;
+  return 4;
+};
 
 export default function WorkspaceJourney({
   source,
@@ -42,6 +50,20 @@ export default function WorkspaceJourney({
   const { language, t } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
   const session = useSession();
+  const strategyLabel = (kind?: string) =>
+    kind
+      ? t(
+          (
+            {
+              ts_momentum: 'Multi-horizon momentum',
+              regime_reversion: 'Range-gated reversion',
+              close_breakout: 'Closing-channel breakout',
+              zscore_reversion: 'Z-score reversion',
+              program: 'Rule program',
+            } as Record<string, string>
+          )[kind] ?? nameOf(kind),
+        )
+      : text('Saved study', '已保存研究');
   const [showAll, setShowAll] = useState(false);
   const [showFailures, setShowFailures] = useState(false);
   const identity = session?.user?.id ?? session?.user?.username ?? 'anonymous';
@@ -215,6 +237,8 @@ export default function WorkspaceJourney({
         view: `run:${item.id}`,
         status: item.status,
         progress: measuredProgress(item.progress),
+        context: `${strategyLabel(item.config?.strategy?.kind)} · ${item.id.slice(0, 10)}`,
+        updated: item.updated_at ?? item.created_at,
       });
     }
     for (const item of portfolioRuns.filter((item) => active(item.status))) {
@@ -231,6 +255,8 @@ export default function WorkspaceJourney({
         view: `portfolio:${item.id}`,
         status: item.status,
         progress: measuredProgress(item.progress),
+        context: `${String(item.config?.name ?? text('Portfolio study', '组合研究'))} · ${item.id.slice(0, 10)}`,
+        updated: item.updated_at ?? item.created_at,
       });
     }
     for (const item of data.releases.items.filter((item) => item.status === 'approved')) {
@@ -280,6 +306,8 @@ export default function WorkspaceJourney({
         page: 'research',
         view: `portfolio:${item.id}`,
         status: item.status,
+        context: `${String(item.config?.name ?? text('Portfolio study', '组合研究'))} · ${item.id.slice(0, 10)}`,
+        updated: item.updated_at ?? item.created_at,
       });
     }
     for (const item of runs.filter(
@@ -297,6 +325,8 @@ export default function WorkspaceJourney({
         page: 'research',
         view: `run:${item.id}`,
         status: item.status,
+        context: `${strategyLabel(item.config?.strategy?.kind)} · ${item.id.slice(0, 10)}`,
+        updated: item.updated_at ?? item.created_at,
       });
     }
     for (const group of groups.filter(
@@ -366,24 +396,25 @@ export default function WorkspaceJourney({
       items.push({
         key: 'prepare',
         title: empty
-          ? text('Prepare your first research package', '准备第一个研究数据包')
-          : text('Start a new research study', '开始新的研究'),
+          ? text('Start with a trading hypothesis', '从交易假设开始')
+          : text('Define the next research hypothesis', '明确下一项研究假设'),
         detail: text(
-          'Choose a market and UTC window. A versioned package is the input to research, not a trading signal.',
-          '选择市场与 UTC 区间。版本化数据包是研究输入，并非交易信号。',
+          'State the market mechanism and what would reject it, then choose the data and evaluation window. If your inputs are already known, start with data preparation.',
+          '先明确市场机制及淘汰条件，再选择数据与评估区间。若你已确定研究输入，也可以从数据准备开始。',
         ),
-        action: text('Prepare research data', '准备研究数据'),
-        page: 'data',
-        view: 'packages',
+        action: text('Define a hypothesis', '定义研究假设'),
+        page: 'strategies',
       });
     }
   }
 
+  items.sort((a, b) => taskPriority(a) - taskPriority(b) || (b.updated ?? 0) - (a.updated ?? 0));
   failures.sort((a, b) => (b.updated ?? 0) - (a.updated ?? 0));
   const renderItem = (item: JourneyItem) => (
     <li className="journey-item" key={item.key} data-task={item.key}>
       <div className="journey-detail">
         <strong>{item.title}</strong>
+        {item.context && <p className="journey-object">{item.context}</p>}
         {item.status && (
           <Status type={item.attention ? 'warning' : 'neutral'}>{t(item.status)}</Status>
         )}
@@ -410,10 +441,24 @@ export default function WorkspaceJourney({
           </div>
         )}
       </div>
-      <button className="text-button journey-action" onClick={() => navigate(item.page, item.view)}>
-        {item.action}
-        <ArrowRight size={14} />
-      </button>
+      <div className="journey-task-actions">
+        <button
+          className="text-button journey-action"
+          onClick={() => navigate(item.page, item.view)}
+        >
+          {item.action}
+          <ArrowRight size={14} />
+        </button>
+        {item.key === 'prepare' && (
+          <button
+            className="text-button journey-action"
+            onClick={() => navigate('data', 'packages')}
+          >
+            {text('Prepare research data', '准备研究数据')}
+            <ArrowRight size={14} />
+          </button>
+        )}
+      </div>
     </li>
   );
 

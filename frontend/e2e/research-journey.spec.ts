@@ -317,6 +317,9 @@ test('strategy identity and edited costs survive choosing a prepared package bef
   await researchTask(page, 'draft');
   await expect(page.getByText('Bound strategy version', { exact: true })).toBeVisible();
   await expect(page.locator('[aria-label="Bound strategy definition"]')).toContainText('17');
+  await expect(
+    page.getByRole('region', { name: 'Question being tested', exact: true }),
+  ).toContainText(version.hypothesis);
   await expect(page.getByLabel('Fast window', { exact: true })).toHaveCount(0);
   await page.getByLabel('Fee', { exact: true }).fill('23');
   await page.getByLabel('Slippage', { exact: true }).fill('7');
@@ -335,6 +338,9 @@ test('strategy identity and edited costs survive choosing a prepared package bef
   // Exercise restoration of the complete backend DTO, including its source.
   await page.reload();
   await researchTask(page, 'draft');
+  await expect(
+    page.getByRole('region', { name: 'Question being tested', exact: true }),
+  ).toContainText(version.hypothesis);
   await expect(page.getByText(/Research draft restored/)).toBeVisible();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('23');
   await expect(page.getByLabel('Slippage', { exact: true })).toHaveValue('7');

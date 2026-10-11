@@ -164,6 +164,7 @@ export default function ProResearch({
   initialStrategyVersion,
   onClearStrategyVersion,
   onOpenData,
+  onOpenHypothesis,
   onOpenExecution,
   onRunSelect,
   onClearDraft,
@@ -174,6 +175,7 @@ export default function ProResearch({
   initialStrategyVersion?: StrategyVersion;
   onClearStrategyVersion: () => void;
   onOpenData: (intent?: ResearchDataIntent) => void;
+  onOpenHypothesis?: () => void;
   onOpenExecution: (id?: string) => void;
   onRunSelect?: (id: string) => void;
   onClearDraft?: () => void;
@@ -1772,6 +1774,35 @@ export default function ProResearch({
           </p>
         )}
       </div>
+      {boundVersion.data?.id === versionId && boundVersion.data && (
+        <section
+          className="research-hypothesis-brief"
+          aria-label={text('Question being tested', '正在检验的问题')}
+        >
+          <h3>{text('Question being tested', '正在检验的问题')}</h3>
+          <p>{boundVersion.data.hypothesis}</p>
+          <span>
+            {text(
+              'Choose the data window and evaluation below for this saved hypothesis. The next trial and any selected historical result remain separate.',
+              '在下方为此已保存假设选择数据区间及检验方式。下一次试验与所选历史结果分别保留。',
+            )}
+          </span>
+        </section>
+      )}
+      {!versionId && onOpenHypothesis && (
+        <details className="research-hypothesis-brief">
+          <summary>{text('Start from a research question', '从研究问题开始')}</summary>
+          <p>
+            {text(
+              'This is an exploratory draft. You can define a market mechanism and rejection criteria before choosing data, or continue configuring this trial directly.',
+              '当前为探索性草稿。你可以先明确市场机制与淘汰条件，再选择数据；也可直接继续配置此试验。',
+            )}
+          </p>
+          <button type="button" className="text-button" onClick={onOpenHypothesis}>
+            {text('Define a hypothesis', '定义研究假设')}
+          </button>
+        </details>
+      )}
       <form
         id="advanced-research-form"
         className="compact-form research-desk-form"

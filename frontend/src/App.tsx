@@ -320,6 +320,18 @@ function Workspace() {
                           key={source}
                           source={source}
                           initialRunId={location.runId}
+                          initialRecipeId={location.portfolioRecipe}
+                          onRecipeHandled={(startNew = false) => {
+                            if (currentLocation.current !== location) return;
+                            setLocation(
+                              {
+                                ...location,
+                                portfolioRecipe: undefined,
+                                runId: startNew ? undefined : location.runId,
+                              },
+                              true,
+                            );
+                          }}
                           initialInputs={selectedInputs}
                           onRunSelect={(id) => setLocation({ ...location, runId: id || undefined })}
                           onClearDraft={() => {
@@ -328,6 +340,7 @@ function Workspace() {
                               {
                                 ...location,
                                 runId: undefined,
+                                portfolioRecipe: undefined,
                                 versionId: undefined,
                                 packageId: undefined,
                               },
@@ -363,6 +376,7 @@ function Workspace() {
                             setLocation({ ...location, versionId: undefined }, true)
                           }
                           onOpenData={openResearchData}
+                          onOpenHypothesis={() => navigate('strategies')}
                           onOpenExecution={(id) =>
                             navigate('execution', id ? 'strategies:' + id : 'strategies')
                           }
@@ -383,6 +397,16 @@ function Workspace() {
                   {page === 'strategies' && (
                     <Strategies
                       source={source}
+                      onPortfolioResearch={(id) => {
+                        setLocation({
+                          page: 'research',
+                          source,
+                          view: 'portfolio',
+                          portfolioRecipe: id,
+                          symbol,
+                        });
+                        window.scrollTo(0, 0);
+                      }}
                       onResearch={(version) => {
                         setLocation({
                           page: 'research',

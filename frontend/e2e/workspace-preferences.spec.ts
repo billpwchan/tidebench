@@ -9,6 +9,35 @@ async function layout(page: Page) {
   return dialog;
 }
 
+test('saved research views preserve the study but never replay a proposed portfolio hypothesis', async ({
+  page,
+}) => {
+  const state = await desk(page, 'overview', false);
+  await page.goto('/#research?source=example&view=portfolio&run=study-0&hypothesis=carry');
+  const dialog = await layout(page);
+  await dialog.getByLabel('Workspace name', { exact: true }).fill('Study review');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), displayKey);
+  expect(saved.workspaces[0].location).toMatchObject({
+    page: 'research',
+    view: 'portfolio',
+    runId: 'study-0',
+  });
+  expect(saved.workspaces[0].location).not.toHaveProperty('portfolioRecipe');
+  // Sanitize imported/older browser preferences as well as newly saved views.
+  await page.evaluate((key) => {
+    const value = JSON.parse(localStorage.getItem(key)!);
+    value.workspaces[0].location.portfolioRecipe = 'rotation';
+    localStorage.setItem(key, JSON.stringify(value));
+  }, displayKey);
+  await page.goto('/#overview?source=example');
+  await page.reload();
+  await (await layout(page)).getByRole('button', { name: /^Study review/ }).click();
+  await expect(page).toHaveURL(/view=portfolio.*run=study-0/);
+  await expect(page).not.toHaveURL(/hypothesis=/);
+  expect(state.mutations).toEqual([]);
+});
+
 test('display layout and saved views restore across navigation without restoring an order instruction', async ({
   page,
 }) => {

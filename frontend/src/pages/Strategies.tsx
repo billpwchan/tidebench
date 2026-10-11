@@ -39,9 +39,11 @@ const recipes = recipeData as unknown as {
 export default function Strategies({
   source,
   onResearch,
+  onPortfolioResearch,
 }: {
   source: Source;
   onResearch: (version: StrategyVersion) => void;
+  onPortfolioResearch: (id: string) => void;
 }) {
   const { t, language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
@@ -400,7 +402,11 @@ export default function Strategies({
         </button>
       </div>
       {libraryOpen ? (
-        <StrategyResearchLibrary canCreate={canOperate} onUse={useRecipe} />
+        <StrategyResearchLibrary
+          canCreate={canOperate}
+          onUse={useRecipe}
+          onPortfolio={onPortfolioResearch}
+        />
       ) : (
         <div className="strategy-workspace">
           <aside className="strategy-library" aria-label={t('Strategy projects')}>

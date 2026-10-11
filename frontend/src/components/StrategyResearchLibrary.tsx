@@ -9,9 +9,11 @@ type Copy = { en: string; zh: string };
 export default function StrategyResearchLibrary({
   canCreate,
   onUse,
+  onPortfolio,
 }: {
   canCreate: boolean;
   onUse: (id: string) => void;
+  onPortfolio: (id: string) => void;
 }) {
   const { language } = useI18n();
   const [selected, setSelected] = useState(dossiers[0].id);
@@ -58,7 +60,7 @@ export default function StrategyResearchLibrary({
           </div>
           <div className="strategy-dossier-heading">
             <h3>{copy(d.title)}</h3>
-            {d.recipe && (
+            {d.recipe ? (
               <button
                 type="button"
                 className="button button-dark"
@@ -66,6 +68,16 @@ export default function StrategyResearchLibrary({
                 onClick={() => onUse(d.recipe)}
               >
                 {label('Use this hypothesis', '使用此假设')}
+                <ArrowRight size={14} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="button button-dark"
+                disabled={!canCreate}
+                onClick={() => onPortfolio(d.id)}
+              >
+                {label('Research this portfolio hypothesis', '研究此组合假设')}
                 <ArrowRight size={14} />
               </button>
             )}
@@ -314,12 +326,14 @@ export default function StrategyResearchLibrary({
             ))}
           </div>
           {!d.recipe && (
-            <p className="quiet-copy">
-              {label(
-                'Open Research → Portfolio research and load the matching portfolio starting point. All legs use one book and one capital balance.',
-                '在策略研究 → 组合研究中加载对应组合配方。所有组合腿使用同一账本与资金余额。',
-              )}
-            </p>
+            <div className="strategy-dossier-test">
+              <p>
+                {label(
+                  'Continue with this hypothesis under one shared capital budget. An existing draft stays intact until you choose to replace it.',
+                  '以同一资金预算继续研究此假设。已有草稿会保留，直到你明确选择替换。',
+                )}
+              </p>
+            </div>
           )}
         </article>
       </div>

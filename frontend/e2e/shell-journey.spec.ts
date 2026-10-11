@@ -416,12 +416,12 @@ for (const equityShape of ['null', 'missing']) {
   });
 }
 
-test('fresh workspace offers a concrete data-first action without suggesting eligibility', async ({
+test('fresh workspace keeps a concrete data alternative without suggesting eligibility', async ({
   page,
 }) => {
   const state = await openFixture(page);
   const next = page.getByRole('region', { name: 'Next actions', exact: true });
-  await expect(next).toContainText('Prepare your first research package');
+  await expect(next).toContainText('Start with a trading hypothesis');
   await expect(next).toContainText('Completed research does not establish paper eligibility');
   await next.getByRole('button', { name: 'Prepare research data', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Data library', exact: true })).toBeVisible();
@@ -547,7 +547,7 @@ test('an incomplete task snapshot blocks next-step claims and recovers on explic
   ).toHaveCount(0);
   state.taskFailure = false;
   await next.getByRole('button', { name: 'Retry', exact: true }).click();
-  await expect(next).toContainText('Prepare your first research package');
+  await expect(next).toContainText('Start with a trading hypothesis');
   expect(state.mutations).toEqual([]);
 });
 
@@ -684,5 +684,243 @@ test('source and subtab navigation survives browser back, forward and reload', a
     page.getByRole('tab', { name: 'Raw datasets & imports', exact: true }),
   ).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByLabel('Market source', { exact: true })).toHaveValue('example');
+  expect(state.mutations).toEqual([]);
+});
+
+test('hypothesis-first journey enters economic research without a mutation', async ({ page }) => {
+  const state = await openFixture(page);
+  const next = page.getByRole('region', { name: 'Next actions', exact: true });
+  await next.getByRole('button', { name: 'Define a hypothesis', exact: true }).click();
+  await expect(
+    page.getByRole('region', { name: 'Strategy research library', exact: true }),
+  ).toBeVisible();
+  expect(state.mutations).toEqual([]);
+});
+
+test('daily journey gives current controller risk and monitoring priority over historical reviews', async ({
+  page,
+}) => {
+  const state = await openFixture(page, {
+    deployments: [
+      {
+        id: 'running-controller',
+        source: 'example',
+        inst_id: 'ETH-USDT',
+        status: 'running',
+        last_error: null,
+      },
+      {
+        id: 'blocked-controller',
+        source: 'example',
+        inst_id: 'BTC-USDT',
+        status: 'blocked',
+        last_error: 'Risk limit exceeded',
+      },
+    ],
+    runs: Array.from({ length: 8 }, (_, i) => ({
+      id: `completed-study-${i}`,
+      source: 'example',
+      status: 'completed',
+      config: researchConfig,
+      created_at: i,
+    })),
+  });
+  const next = page.getByRole('region', { name: 'Next actions', exact: true });
+  const rows = next.locator('ol.journey-list').first().locator(':scope > li');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toHaveAttribute('data-task', 'deployment:blocked-controller');
+  await expect(rows.nth(1)).toHaveAttribute('data-task', 'deployment:running-controller');
+  await next.getByRole('button', { name: 'Show all 10 tasks', exact: true }).click();
+  await expect(rows.nth(2)).toContainText('Moving average crossover');
+  await expect(rows.nth(2)).toHaveAttribute('data-task', 'run:completed-study-7');
+  expect(state.mutations).toEqual([]);
+});
+
+for (const editLeg of [false, true]) {
+  test(`delayed prepared inputs ${editLeg ? 'cannot overwrite an edited leg' : 'complete the unchanged hypothesis without overwriting costs'}`, async ({
+    page,
+  }) => {
+    const state = await openFixture(page);
+    const ready = ['BTC-USDT', 'ETH-USDT', 'SOL-USDT'].map((inst_id, index) => ({
+      id: `delayed-package-${index}`,
+      source: 'example',
+      inst_id,
+      bar: '4H',
+      start: Date.UTC(2025, 0, 1),
+      end: Date.UTC(2025, 1, 1),
+      status: 'ready',
+      ready: true,
+      research_inputs: { dataset_id: `dataset-${index}`, source: 'example' },
+    }));
+    let release!: () => void;
+    const arrival = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/api/v1/pro/catalog/packages?*', async (route) => {
+      await arrival;
+      await route.fulfill({ json: { items: ready } });
+    });
+    await navigateFixture(page, 'Strategies');
+    await page.getByRole('button', { name: /^06 Risk-budgeted momentum/ }).click();
+    await page
+      .getByRole('button', { name: 'Research this portfolio hypothesis', exact: true })
+      .click();
+    await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(
+      'Risk-budgeted positive momentum rotation',
+    );
+    await page.getByLabel('Fee (bps)', { exact: true }).fill('23');
+    if (editLeg) await page.getByLabel('Notional weight %', { exact: true }).nth(0).fill('33');
+    release();
+    await expect(
+      page.getByLabel('Package 1', { exact: true }).locator('option[value="delayed-package-0"]'),
+    ).toHaveCount(1);
+    if (editLeg) {
+      await expect(page.getByLabel('Notional weight %', { exact: true }).nth(0)).toHaveValue('33');
+      await expect(page.getByLabel('Package 1', { exact: true })).toHaveValue('');
+      await expect(
+        page.getByRole('button', { name: 'Run portfolio research', exact: true }),
+      ).toBeDisabled();
+    } else {
+      for (const [index, item] of ready.entries()) {
+        await expect(page.getByLabel(`Package ${index + 1}`, { exact: true })).toHaveValue(item.id);
+      }
+      await expect(
+        page.getByRole('button', { name: 'Run portfolio research', exact: true }),
+      ).toBeEnabled();
+    }
+    await expect(page.getByLabel('Fee (bps)', { exact: true })).toHaveValue('23');
+    await page.reload();
+    await expect(page.getByLabel('Fee (bps)', { exact: true })).toHaveValue('23');
+    await expect(page.getByLabel('Package 1', { exact: true })).toHaveValue(
+      editLeg ? '' : ready[0].id,
+    );
+    expect(state.mutations).toEqual([]);
+  });
+}
+
+for (const target of [
+  {
+    family: /^03 Cost-aware funding carry/,
+    id: 'carry',
+    name: 'Cost-aware lagged funding carry',
+    construction: 'funding_carry',
+  },
+  {
+    family: /^04 Cross-sectional rotation/,
+    id: 'rotation',
+    name: 'Seven-day positive momentum rotation',
+    construction: 'momentum',
+  },
+  {
+    family: /^06 Risk-budgeted momentum/,
+    id: 'risk-rotation',
+    name: 'Risk-budgeted positive momentum rotation',
+    construction: 'risk_momentum',
+  },
+]) {
+  test(`portfolio hypothesis journey carries ${target.id} directly into an independent draft`, async ({
+    page,
+  }, info) => {
+    const state = await openFixture(page);
+    await navigateFixture(page, 'Strategies');
+    await page.getByRole('button', { name: target.family }).click();
+    await page
+      .getByRole('button', { name: 'Research this portfolio hypothesis', exact: true })
+      .click();
+    await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(target.name);
+    await expect(page.getByLabel('Construction', { exact: true })).toHaveValue(target.construction);
+    await expect(page).not.toHaveURL(/hypothesis=/);
+    if (target.id === 'carry') {
+      await page
+        .getByRole('heading', { name: 'Portfolio research', exact: true })
+        .scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: `../docs/assets/journey-hypothesis-v018-${info.project.name}.png`,
+      });
+    }
+    await page.getByLabel('Study name', { exact: true }).fill('Continue my edited hypothesis');
+    await page.reload();
+    await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(
+      'Continue my edited hypothesis',
+    );
+    await expect(page.getByLabel('Construction', { exact: true })).toHaveValue(target.construction);
+    expect(state.mutations).toEqual([]);
+  });
+}
+
+test('a new portfolio hypothesis cannot erase existing work without the explicit replacement choice', async ({
+  page,
+}, info) => {
+  const state = await openFixture(page);
+  await navigateFixture(page, 'Strategies');
+  await page.getByRole('button', { name: /^03 Cost-aware funding carry/ }).click();
+  await page
+    .getByRole('button', { name: 'Research this portfolio hypothesis', exact: true })
+    .click();
+  await page.getByLabel('Study name', { exact: true }).fill('Work already in progress');
+  await page.getByLabel('Initial capital', { exact: true }).fill('4200');
+  await page.getByLabel('Fee (bps)', { exact: true }).fill('23');
+  await navigateFixture(page, 'Strategies');
+  await page.getByRole('button', { name: /^04 Cross-sectional rotation/ }).click();
+  await page
+    .getByRole('button', { name: 'Research this portfolio hypothesis', exact: true })
+    .click();
+  const choice = page.getByRole('region', {
+    name: 'Continue the selected hypothesis',
+    exact: true,
+  });
+  await expect(choice).toBeVisible();
+  await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(
+    'Work already in progress',
+  );
+  await expect(page.getByLabel('Initial capital', { exact: true })).toHaveValue('4200');
+  await expect(page.getByLabel('Fee (bps)', { exact: true })).toHaveValue('23');
+  await choice.scrollIntoViewIfNeeded();
+  const geometry = await page.evaluate(() => ({
+    scrollX: window.scrollX,
+    viewport: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    overflowing: Array.from(document.querySelectorAll('main *'))
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.right > window.innerWidth + 2;
+      })
+      .slice(0, 12)
+      .map((el) => ({
+        tag: el.tagName,
+        className: el.className,
+        width: el.getBoundingClientRect().width,
+      })),
+  }));
+  await info.attach('handoff-geometry', {
+    body: JSON.stringify(geometry),
+    contentType: 'application/json',
+  });
+  expect(geometry.scrollX).toBe(0);
+  expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewport + 1);
+  await page.screenshot({
+    path: `../docs/assets/journey-preserve-v018-${info.project.name}.png`,
+    animations: 'disabled',
+  });
+  await choice.getByRole('button', { name: 'Keep current portfolio draft', exact: true }).click();
+  await expect(choice).toHaveCount(0);
+  await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(
+    'Work already in progress',
+  );
+  await navigateFixture(page, 'Strategies');
+  await page.getByRole('button', { name: /^04 Cross-sectional rotation/ }).click();
+  await page
+    .getByRole('button', { name: 'Research this portfolio hypothesis', exact: true })
+    .click();
+  await choice
+    .getByRole('button', { name: 'Replace draft with this hypothesis', exact: true })
+    .click();
+  await expect(page.getByLabel('Study name', { exact: true })).toHaveValue(
+    'Seven-day positive momentum rotation',
+  );
+  await expect(page.getByLabel('Construction', { exact: true })).toHaveValue('momentum');
+  await expect(page.getByLabel('Initial capital', { exact: true })).toHaveValue('10000');
+  await expect(page.getByLabel('Fee (bps)', { exact: true })).toHaveValue('10');
+  await expect(page).not.toHaveURL(/hypothesis=/);
   expect(state.mutations).toEqual([]);
 });
