@@ -271,17 +271,28 @@ test('a perpetual ticket keeps P&L and liquidation visible at both desktop width
   );
   await page.reload();
   await page.getByRole('button', { name: 'New order', exact: true }).click();
-  for (const width of [1440, 1200]) {
+  for (const width of [1440, 1200, 1440, 1200]) {
     await page.setViewportSize({ width, height: 1000 });
     const table = page.locator('.account-book-panel .desk-table-scroll');
-    const bounds = await table.boundingBox();
     const row = table.locator('tr[data-row-key="BTC-USDT-SWAP"]');
+    // matchMedia updates the React column set after the viewport changes.
+    // Wait for that set before enumerating locators, including expansion back to wide.
+    await expect(table.getByRole('columnheader', { name: 'Mark', exact: true })).toHaveCount(
+      width > 1320 ? 1 : 0,
+    );
+    await expect(row.locator('.desk-numeric')).toHaveCount(width > 1320 ? 4 : 3);
     await expect(row).toContainText('70.5');
     await expect(row).toContainText('-4.00');
-    for (const cell of await row.locator('.desk-numeric').all()) {
-      const box = await cell.boundingBox();
-      expect(box!.x).toBeGreaterThanOrEqual(bounds!.x);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 1);
+    const bounds = await table.boundingBox();
+    const boxes = await row.locator('.desk-numeric').evaluateAll((cells) =>
+      cells.map((cell) => {
+        const box = cell.getBoundingClientRect();
+        return { x: box.x, width: box.width };
+      }),
+    );
+    for (const box of boxes) {
+      expect(box.x).toBeGreaterThanOrEqual(bounds!.x);
+      expect(box.x + box.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 1);
     }
   }
 });
