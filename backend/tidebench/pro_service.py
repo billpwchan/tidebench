@@ -63,6 +63,7 @@ class ProfessionalRuntime:
         self.research_cancelled = threading.Event()
         self.research_cancel_requests = {}
         self.research_cancel_lock = threading.Lock()
+        self.backtest_report_lock = threading.Lock()
         self.research_owner_token = new_id()
         self.artifacts = ResearchArtifacts(store)
         self.engine_identity = research_identity()
@@ -434,6 +435,56 @@ class ProfessionalRuntime:
                 "oos_summary", {"mode": config["mode"], "experiments": len(plan.get("experiments", []))}
             )
         )
+
+    def backtest_report(self, identifier, variant=""):
+        # A disconnected HTTP caller must not release the slot while its thread still calculates.
+        if not self.backtest_report_lock.acquire(blocking=False):
+            raise PlatformError(
+                "research_report_busy", "Another diagnostic report is being calculated. Retry shortly.", 429
+            )
+        try:
+            return self._backtest_report(identifier, variant)
+        finally:
+            self.backtest_report_lock.release()
+
+    def _backtest_report(self, identifier, variant):
+        from pathlib import Path
+
+        from . import backtest_diagnostics, backtest_reports
+
+        run = self.run(identifier)
+        if run["status"] != "completed" or not run.get("result"):
+            raise PlatformError("run_not_complete", "Diagnostics require a completed captured run.", 409)
+        key, scope, candidate = backtest_reports.report_candidate(run["result"], variant)
+        snapshot = candidate.get("input_snapshot") or {}
+        shared_hash = snapshot.get("shared_input_hash")
+        if shared_hash:
+            shared = run["result"].get("shared_inputs", {}).get(shared_hash)
+            if not isinstance(shared, dict):
+                raise PlatformError("research_report_input", "The captured shared input is unavailable.", 409)
+            snapshot = {**shared, "config": snapshot.get("config", {})}
+            candidate = {**candidate, "input_snapshot": snapshot}
+        interval = snapshot.get("interval_ms")
+        if type(interval) is not int or interval not in CATALOG_BARS.values():
+            raise PlatformError("research_report_interval", "The captured data interval is unavailable.", 409)
+        _, result_hash = serialized_result(run["result"])
+        modules = {
+            module.__name__.rsplit(".", 1)[-1]: hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest()
+            for module in (backtest_diagnostics, backtest_reports)
+        }
+        modules["pro_service"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+        return {
+            "run_id": run["id"],
+            "source": run["source"],
+            "variant": key,
+            "scope": scope,
+            "result_hash": result_hash,
+            "diagnostics_version": backtest_diagnostics.DIAGNOSTICS_VERSION,
+            "report_implementation_hash": hashlib.sha256(dumps(modules).encode()).hexdigest(),
+            "derivation": "Read-only diagnostics derived from a verified captured artifact; financial results and replay hashes are unchanged.",
+            "diagnostics": backtest_diagnostics.compute_backtest_diagnostics(candidate, interval),
+            "validation": backtest_reports.validation_view(run["result"]),
+        }
 
     def runs(self, source=None, *, limit=100, before=None):
         if not 1 <= limit <= 100:

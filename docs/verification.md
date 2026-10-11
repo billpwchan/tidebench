@@ -1,5 +1,13 @@
 # Verification record
 
+## v0.15.0 · 2026-10-11 · captured backtest analysis
+
+The [new research desk](backtest-analysis.md) derives UTC calendars, recovery episodes, rolling risk, trade concentration and accounting diagnostics from verified immutable results. Three fresh reviewers challenged financial integration and the user journey. Reproduced defects were fixed: terminal drawdown confused with episode depth; multidimensional candidate loss; undisclosed calendar/rolling caps; and keyboard inspection overwritten by crosshair events after zoom.
+
+Local isolated validation passed **1,039 backend/core/property/API tests** (298.82 seconds), **all 255 preexisting desktop/mobile workflows**, and **8 final new analysis workflows**; 3 existing mobile cases are intentionally skipped. The final eight-case rerun covers all views, real derived API data, normalized chart range/keyboard behavior, exact candidate/fold selection, 1,100-day truncation disclosure and actual 400-row CSV output. The full browser run exposed the crosshair defect before its final targeted rerun; counts are combined across those runs, not presented as one flawless first pass. Ruff, Prettier, TypeScript and Vite passed. Existing TestClient deprecation and lack of physical Safari/device acceptance remain explicit. [Machine-readable local evidence](audit/v0.15.0-backtest-validation.json).
+
+Financial engine code and stored result/replay hashes are unchanged; diagnostic extraction hydrates contract metadata and interval from the hash-verified candidate inputs. Concurrent calculation is bounded until the actual worker finishes. Missing model identities cannot be declared matching. QA used separate stores, and all previously published assets retain their original bytes. New screenshots show **explicitly synthetic** inputs and do not represent investment results. Hosted exact-revision CI and live deployment acceptance are separate from these local checks.
+
 ## v0.14.0 · 2026-10-11 · independent trader-experience review
 
 Two agents without inherited history independently assessed trader paths and visual layout against v0.13. Their [original trader review](audit/fresh-trader-experience-v0.13-baseline.zh-CN.md), [visual review](audit/fresh-visual-review-v0.13-baseline.zh-CN.md) and [finding-by-finding implementation record](audit/trader-experience-0.14.0.zh-CN.md) distinguish observations, inference, untested paths and the remaining research/strategy/data/operations work. These are internal reviews, not institutional certification or whole-platform commercial acceptance.

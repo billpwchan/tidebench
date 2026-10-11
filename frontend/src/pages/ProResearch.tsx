@@ -41,7 +41,6 @@ import {
   ErrorBox,
   Field,
   Loading,
-  Metric,
   PageHeading,
   Status,
   StrategyFields,
@@ -53,7 +52,8 @@ import {
   WorkspaceTabs,
   valueText,
 } from '../components/ProWorkspace';
-import ResearchChart from '../components/ResearchChart';
+import BacktestReport from '../components/BacktestReport';
+import BacktestPlanPreview from '../components/BacktestPlanPreview';
 import ResearchRelease from '../components/ResearchRelease';
 import ResearchCancellationStatus from '../components/ResearchCancellationStatus';
 
@@ -272,7 +272,8 @@ export default function ProResearch({
   const selectedContext = useRef(initialRunId ?? '');
   const [detailTab, setDetailTab] = useState('fills');
   const [variantKey, setVariantKey] = useState('');
-  const [chartMetric, setChartMetric] = useState<'equity' | 'drawdown'>('equity');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyStatus, setHistoryStatus] = useState('all');
   const [checked, setChecked] = useState<string[]>([]);
   const [comparison, setComparison] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
@@ -309,13 +310,22 @@ export default function ProResearch({
       setWindowEnd((v) => v || utcInput(dataset.end));
     }
   }, [dataset?.id, dataset?.start, dataset?.end]);
-  const visibleRuns =
+  const allRuns =
     runs.data?.pages
       .flatMap((p) => p.items)
       .filter(
         (r) =>
           r.source === source || (!r.source && catalog.some((d) => d.id === r.config.dataset_id)),
       ) ?? [];
+  const visibleRuns = allRuns.filter((item) => {
+    const market = catalog.find((input) => input.id === item.config.dataset_id)?.inst_id ?? '';
+    const haystack =
+      `${item.id} ${market} ${strategyName(item.config.strategy.kind)} ${item.config.mode} ${item.config.strategy_version_id ?? ''}`.toLocaleLowerCase();
+    return (
+      (historyStatus === 'all' || item.status === historyStatus) &&
+      haystack.includes(historySearch.trim().toLocaleLowerCase())
+    );
+  });
   useEffect(() => {
     if (initialInputs && inputHandoffKey(initialInputs) !== lastInputsKey) {
       const inputs = normalizeResearchInputs(initialInputs, source);
@@ -671,7 +681,7 @@ export default function ProResearch({
   };
   const scopeLabel = (item: ProRun) =>
     ['train_test', 'walk_forward'].includes(item.config.mode)
-      ? text('Independent test', '独立测试')
+      ? text('Out-of-sample window', '样本外时段')
       : text('Development', '开发评估');
   const openData = () => {
     draft.flush();
@@ -715,7 +725,6 @@ export default function ProResearch({
     ...f,
     ...(f.test_result as ProResult)?.metrics,
   }));
-  const equity = arrayRecords(result?.equity);
   const exportRun = async () => {
     if (!activeId) return;
     try {
@@ -782,20 +791,21 @@ export default function ProResearch({
             )}
           </div>
           {inspectedConfig && (
-            <section
+            <details
               className="research-run-context"
               aria-label={text('Selected run configuration', '所选运行配置')}
             >
-              <div className="research-context-heading">
+              <summary className="research-context-heading">
                 <strong>{text('Evaluated configuration', '本次评估配置')}</strong>
                 <span>
+                  {inspectedDataset?.inst_id ?? '—'} · {inspectedDataset?.bar ?? '—'} ·{' '}
                   {variant?.scope === 'out_of_sample'
-                    ? text('Independent test', '独立测试')
+                    ? text('Out-of-sample window', '样本外时段')
                     : variant?.scope === 'training'
                       ? text('Training candidate', '训练候选')
                       : scopeLabel(run.data!)}
                 </span>
-              </div>
+              </summary>
               <dl className="research-context-grid">
                 <div>
                   <dt>{text('Market & data', '市场与数据')}</dt>
@@ -841,7 +851,7 @@ export default function ProResearch({
                 value={run.data!.config}
                 label={text('Saved run configuration', '已保存运行配置')}
               />
-            </section>
+            </details>
           )}
           {run.isError ? (
             <ErrorBox error={run.error} onRetry={() => void run.refetch()} />
@@ -860,9 +870,13 @@ export default function ProResearch({
           ) : plan ? (
             <>
               {plan.oos_summary && (
-                <div className="oos-summary">
+                <div className="backtest-fold-note">
                   <h3>{t('Out-of-sample summary')}</h3>
-                  <RecordGrid value={plan.oos_summary as RecordData} />
+                  <span>
+                    {arrayRecords(plan.folds).length} {text('test windows', '个测试时段')} ·{' '}
+                    {text('Median return', '收益中位数')}{' '}
+                    {percent((plan.oos_summary as RecordData).median_return_pct)}
+                  </span>
                   <p>
                     {t(
                       'Each fold starts with an independent account. Returns are not compounded into one equity curve.',
@@ -881,71 +895,39 @@ export default function ProResearch({
                       {variants.map((v) => (
                         <option key={v.key} value={v.key}>
                           {v.label}
+                          {v.parameters?.strategy
+                            ? ` · ${readableParameters(v.parameters.strategy as RecordData, language)}`
+                            : v.parameters?.fee_bps !== undefined
+                              ? ` · ${text('Fee', '费用')} ${v.parameters.fee_bps} / ${text('Slippage', '滑点')} ${v.parameters.slippage_bps} bps`
+                              : ''}
                         </option>
                       ))}
                     </select>
                   </Field>
-                  <Status type={variant?.scope === 'out_of_sample' ? 'good' : 'warning'}>
-                    {variant?.scope ?? 'single'}
+                  <Status type={variant?.scope === 'out_of_sample' ? 'neutral' : 'warning'}>
+                    {variant?.scope === 'out_of_sample'
+                      ? text('Out-of-sample window', '样本外时段')
+                      : variant?.scope === 'training'
+                        ? text('Training', '训练')
+                        : variant?.scope === 'cost_sensitivity'
+                          ? text('Cost sensitivity', '成本敏感性')
+                          : text('Development', '开发评估')}
                   </Status>
                 </div>
               )}
-              <div className="pro-metric-strip">
-                <Metric
-                  label="Net return"
-                  value={percent(metrics.total_return_pct ?? metrics.net_return_pct)}
+              {result && variant && (
+                <BacktestReport
+                  key={`${run.data!.id}:${variant.key}`}
+                  run={run.data!}
+                  result={result}
+                  variant={variant.key}
+                  scope={variant.scope}
+                  onInspect={selectVariant}
                 />
-                <Metric
-                  label="Max drawdown"
-                  value={
-                    metrics.max_drawdown_pct == null
-                      ? '—'
-                      : percent(-Math.abs(Number(metrics.max_drawdown_pct)))
-                  }
-                  className="negative"
-                />
-                <Metric
-                  label="Sharpe ratio"
-                  value={number(metrics.sharpe)}
-                  note={
-                    metrics.sharpe != null
-                      ? 'UTC daily returns · sqrt(365) annualization'
-                      : (metrics.metric_reasons as RecordData | undefined)?.sharpe ===
-                          'insufficient_complete_utc_days'
-                        ? `${number(metrics.complete_utc_days, 0)} ${t('complete UTC days; 30 required')}`
-                        : t('Unavailable: return variation is insufficient.')
-                  }
-                />
-                <Metric label="Final equity" value={number(metrics.final_equity)} />
-                <Metric
-                  label="Fills"
-                  value={valueText(metrics.fills ?? metrics.trades ?? metrics.fill_count)}
-                />
-                <Metric
-                  label="Funding"
-                  value={number(metrics.funding_paid ?? metrics.funding_pnl)}
-                />
-              </div>
-              <div className="chart-heading">
-                <div className="segmented">
-                  <button
-                    className={chartMetric === 'equity' ? 'selected' : ''}
-                    aria-pressed={chartMetric === 'equity'}
-                    onClick={() => setChartMetric('equity')}
-                  >
-                    {t('Equity curve')} · USDT
-                  </button>
-                  <button
-                    className={chartMetric === 'drawdown' ? 'selected' : ''}
-                    aria-pressed={chartMetric === 'drawdown'}
-                    onClick={() => setChartMetric('drawdown')}
-                  >
-                    {t('Drawdown')} · %
-                  </button>
-                </div>
-                <span className="quiet-copy">{t(modeNames[run.data!.config.mode])}</span>
-              </div>
-              <ResearchChart rows={equity} metric={chartMetric} />
+              )}
+              <h3 className="backtest-subheading">
+                {text('Execution records & source evidence', '成交记录与来源证据')}
+              </h3>
               <WorkspaceTabs
                 value={detailTab}
                 onChange={setDetailTab}
@@ -1198,6 +1180,35 @@ export default function ProResearch({
             {t('Compare selected')} ({checked.length})
           </button>
         </div>
+        {!!allRuns.length && (
+          <div className="backtest-history-controls">
+            <input
+              type="search"
+              aria-label={text('Search research runs', '搜索研究运行')}
+              placeholder={text(
+                'Search market, strategy, version or run…',
+                '搜索市场、策略、版本或运行…',
+              )}
+              value={historySearch}
+              onChange={(event) => setHistorySearch(event.target.value)}
+            />
+            <select
+              aria-label={text('Research run status', '研究运行状态')}
+              value={historyStatus}
+              onChange={(event) => setHistoryStatus(event.target.value)}
+            >
+              <option value="all">{text('All statuses', '全部状态')}</option>
+              {['completed', 'running', 'queued', 'failed', 'cancelled'].map((status) => (
+                <option key={status} value={status}>
+                  {t(status)}
+                </option>
+              ))}
+            </select>
+            <span>
+              {visibleRuns.length} / {allRuns.length}
+            </span>
+          </div>
+        )}
         {runs.isPending ? (
           <Loading />
         ) : runs.isError ? (
@@ -1689,7 +1700,8 @@ export default function ProResearch({
               <option value="">{t('Select a dataset')}</option>
               {tradeDatasets.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.inst_id} · {d.bar} ·{' '}
+                  {d.inst_id} · {d.bar} · {new Date(Number(d.start)).toISOString().slice(0, 10)} →{' '}
+                  {new Date(Number(d.end)).toISOString().slice(0, 10)} ·{' '}
                   {String(d.content_hash ?? d.dataset_hash ?? d.hash ?? d.id).slice(0, 7)}
                 </option>
               ))}
@@ -2028,6 +2040,30 @@ export default function ProResearch({
               </Field>
             </>
           )}
+          <BacktestPlanPreview
+            bar={dataset?.bar}
+            start={windowStart}
+            end={windowEnd}
+            mode={mode}
+            trainFraction={trainFraction}
+            trainBars={trainBars}
+            testBars={testBars}
+            stepBars={stepBars}
+            purgeBars={purgeBars}
+            cases={
+              mode === 'cost_stress'
+                ? candidates(feeGrid).length * candidates(slipGrid).length
+                : showGrid
+                  ? strategy.kind === 'sma_cross'
+                    ? candidates(fastGrid).length * candidates(slowGrid).length
+                    : strategy.kind === 'rsi_reversion'
+                      ? candidates(rsiGrid).length *
+                        candidates(entryGrid).length *
+                        candidates(exitGrid).length
+                      : candidates(allocationGrid).length
+                  : 1
+            }
+          />
           <p className="research-evaluation-scope">
             {oosMode
               ? text(
@@ -2055,7 +2091,7 @@ export default function ProResearch({
     </section>
   );
   return (
-    <>
+    <div className={`backtest-workspace${activeId ? ' has-selected-result' : ''}`}>
       <PageHeading
         eyebrow="RESEARCH"
         title="Research"
@@ -2130,12 +2166,50 @@ export default function ProResearch({
         disabled={!canOperate || (cancel.isPending && cancel.variables === activeId)}
         onRetry={() => activeId && cancel.mutate(activeId)}
       />
+      <nav
+        className="backtest-workspace-nav"
+        aria-label={text('Research workspace actions', '研究工作区操作')}
+      >
+        <button
+          disabled={!activeId}
+          onClick={() =>
+            document
+              .getElementById('research-result-heading')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        >
+          {text('Result analysis', '结果分析')}
+        </button>
+        <button
+          onClick={() =>
+            document
+              .getElementById('research-configuration-heading')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        >
+          {activeId
+            ? text('Next trial draft', '下一次试验草稿')
+            : text('Configure a trial', '配置试验')}
+        </button>
+        <button
+          onClick={() =>
+            document
+              .getElementById('research-runs-heading')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        >
+          {text('Study ledger', '研究目录')} <span>{allRuns.length}</span>
+        </button>
+        <span>
+          {text('Captured evidence · editable drafts stay separate', '已保存证据 · 草稿独立编辑')}
+        </span>
+      </nav>
       <div
         className={`pro-research-layout research-desk-layout${activeId ? '' : ' research-config-first'}${!activeId && !visibleRuns.length ? ' research-empty-history' : ''}`}
       >
         {activeId ? [results, configuration] : [configuration, results]}
       </div>
-    </>
+    </div>
   );
 }
 export { arrayRecords };

@@ -514,6 +514,10 @@ def professional_router(app, access, runtime, supervisor, settings):
     def replay(identifier: str):
         return runtime.replay(identifier)
 
+    @router.get("/pro/research/runs/{identifier}/diagnostics")
+    async def backtest_report(identifier: str, variant: str = Query(default="", max_length=100)):
+        return await runtime.offload(runtime.backtest_report, identifier, variant)
+
     @router.post("/pro/research/runs/{identifier}/cancel", status_code=202)
     def cancel_run(identifier: str, request: Request):
         return runtime.cancel_research(identifier, actor(request))
@@ -569,6 +573,8 @@ def professional_router(app, access, runtime, supervisor, settings):
                 values = [value.get("code_fingerprint") if value else None for value in values]
             if len({json.dumps(value, sort_keys=True) for value in values}) > 1:
                 differences.append(label)
+            elif label in {"implementation", "model_version"} and any(value is None for value in values):
+                differences.append(f"{label}_unavailable")
             elif (
                 label in {"maintenance_tiers", "funding_observations"}
                 and any(value is None for value in values)
@@ -578,6 +584,11 @@ def professional_router(app, access, runtime, supervisor, settings):
         return {
             "items": items,
             "comparable_inputs": not differences,
+            "comparison_status": "unknown"
+            if any(label.endswith("_unavailable") for label in differences)
+            else "different"
+            if differences
+            else "matching",
             "different_assumptions": differences,
             "warning": "Different or unverified data, windows, costs, maintenance, funding or implementation assumptions require separate interpretation."
             if differences
