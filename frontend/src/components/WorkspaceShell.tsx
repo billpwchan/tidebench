@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   Activity,
@@ -28,9 +28,9 @@ import { ErrorBox, Loading } from './workspace';
 
 export const pages: { id: Page; label: string; icon: typeof Activity; group: string }[] = [
   { id: 'overview', label: 'Overview', icon: Layers3, group: 'Trading' },
-  { id: 'strategies', label: 'Strategies', icon: GitBranch, group: 'Research' },
-  { id: 'research', label: 'Research', icon: FlaskConical, group: 'Research' },
+  { id: 'research', label: 'Research', icon: FlaskConical, group: 'Trading' },
   { id: 'execution', label: 'Execution', icon: Wallet, group: 'Trading' },
+  { id: 'strategies', label: 'Strategies', icon: GitBranch, group: 'Workspace' },
   { id: 'data', label: 'Data library', icon: Database, group: 'Workspace' },
   { id: 'operations', label: 'Operations', icon: Gauge, group: 'Workspace' },
   { id: 'settings', label: 'Settings', icon: Settings2, group: 'Workspace' },
@@ -88,7 +88,7 @@ export function Sidebar({
         </div>
       </div>
       <nav aria-label="Main navigation">
-        {['Trading', 'Research', 'Workspace'].map((group) => (
+        {['Trading', 'Workspace'].map((group) => (
           <div className="nav-group" key={group}>
             <span className="nav-label">{t(group)}</span>
             {pages
@@ -141,6 +141,7 @@ export function Topbar({
   executionMode,
   source,
   setSource,
+  actions,
 }: {
   page: Page;
   setMobileNav: (v: boolean) => void;
@@ -148,6 +149,7 @@ export function Topbar({
   executionMode?: string;
   source: Source;
   setSource: (source: Source) => void;
+  actions?: ReactNode;
 }) {
   const { t } = useI18n();
   const session = useSession();
@@ -185,6 +187,7 @@ export function Topbar({
         </span>
       </div>
       <div className="topbar-actions">
+        {actions}
         <button
           className="search-trigger"
           onClick={() => setSearchOpen(true)}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDownToLine, ArrowUpRight, Info } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpRight } from 'lucide-react';
 import { downloadBlob, downloadCsv } from '../api';
 import { proApi, type ProResult, type ProRun, type RecordData } from '../proApi';
 import { useI18n } from '../lib/i18n';
@@ -8,6 +8,7 @@ import { date, number, percent, tone } from '../lib/format';
 import { DataTable, JsonDetails, WorkspaceTabs } from './ProWorkspace';
 import { ErrorBox, Loading } from './workspace';
 import ResearchChart from './ResearchChart';
+import ResearchDecisionSummary from './ResearchDecisionSummary';
 
 const record = (value: unknown): RecordData =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as RecordData) : {};
@@ -28,12 +29,16 @@ export default function BacktestReport({
   variant,
   scope,
   onInspect,
+  evaluatedConfig,
+  onDraft,
 }: {
   run: ProRun;
   result: ProResult;
   variant: string;
   scope: string;
   onInspect: (variant: string) => void;
+  evaluatedConfig?: RecordData;
+  onDraft?: () => void;
 }) {
   const { language } = useI18n();
   const text = (en: string, zh: string) => (language === 'zh-CN' ? zh : en);
@@ -217,31 +222,15 @@ export default function BacktestReport({
           </small>
         </div>
       </div>
-      <div className="backtest-scope-note">
-        <Info size={14} />
-        <span>
-          {scope === 'out_of_sample'
-            ? text(
-                'Out-of-sample window. Review recorded holdout usage before claiming untouched independence.',
-                '样本外时段。需复核保留样本使用记录，才能确认未受研究过程影响。',
-              )
-            : scope === 'training'
-              ? text(
-                  'Training candidate. These results are development evidence.',
-                  '训练候选。这些结果仅是开发阶段证据。',
-                )
-              : text(
-                  'Development evidence. A full-window result is not an independent validation.',
-                  '开发阶段证据。全时段结果不构成独立验证。',
-                )}{' '}
-          {Number(metrics.round_trips) < 30
-            ? text(
-                'Fewer than 30 completed trades; trade estimates are based on a small sample.',
-                '完整交易少于 30 笔，交易统计基于小样本。',
-              )
-            : ''}
-        </span>
-      </div>
+      <ResearchDecisionSummary
+        scope={scope}
+        config={evaluatedConfig ?? run.config}
+        metrics={metrics}
+        sample={sample}
+        verified={report.isSuccess}
+        onAnalysis={setSection}
+        onDraft={onDraft}
+      />
       {(Number(metrics.liquidations) > 0 ||
         Number(metrics.insurance_shortfall) > 0 ||
         Number(metrics.final_equity) <= 0) && (
@@ -1217,6 +1206,14 @@ export default function BacktestReport({
             <dd>
               {number(metrics.complete_utc_days, 0)} {text('complete UTC days', '个完整 UTC 日')}
             </dd>
+          </div>
+          <div>
+            <dt>{text('Sharpe ratio', '夏普比率')}</dt>
+            <dd>{number(metrics.sharpe)}</dd>
+          </div>
+          <div>
+            <dt>{text('Completed trades', '完整交易')}</dt>
+            <dd>{number(metrics.round_trips, 0)}</dd>
           </div>
         </dl>
       </details>

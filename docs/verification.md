@@ -1,5 +1,13 @@
 # Verification record
 
+## v0.17.0 · 2026-10-11 · task-oriented professional workspace
+
+The [design checklist](design/professional-workspace-0.17.0.zh-CN.md) and [independent review/fix record](audit/professional-workspace-0.17.0.zh-CN.md) track result analysis, the separate next-trial draft, the study ledger, account-context tickets, protected table preferences and named read-only workspaces. Commands navigate or prepare drafts; order previews, confirmation and server permission checks retain their existing contracts. The financial engine and schema 8 are unchanged.
+
+Local backend validation passed **1,039 tests in 267.30 seconds**, with the existing TestClient warning. The first targeted browser attempt passed 47 / failed 12 / intentionally skipped 5; fixes produced 61 passes and 5 skips. Full regression then passed 307 / failed 9 / intentionally skipped 8 in 12.3 minutes, exposing an actual mobile book fold regression and narrow-desktop research overflow as well as old ambiguous quantity locators. Fourteen follow-up geometry/workflow checks passed; two account-summary locator errors were corrected before the final frozen-build full run. No geometric gate was relaxed and no existing financial workflow assertion was removed. Raw failed reports and traces remain in private local evidence. The fixed `964b9abc` build passed all 316 cases with 8 skips (12.7 minutes); a subsequent private historical-study walkthrough found a missing selected-draft mobile overflow case. Configuration actions were changed to wrap within a two-column mobile layout, and the existing task-path test now asserts both languages and 44px targets before the final source validation.
+
+[Versioned release evidence and the completed delivery checklist](https://github.com/billpwchan/tidebench/releases/tag/v0.17.0) record final frozen-source browser counts, exact-head hosted CI, guarded activation, historical artifact/session/table preservation, HTTPS asset verification, retained old-client assets and actual authenticated desktop/mobile walkthroughs. Public screenshots use explicit synthetic fixtures; production account evidence and database backups remain private. Internal reviews and automated workflow checks are not institutional trader certification or profitability evidence.
+
 ## v0.16.0 · 2026-10-11 · trader interface and responsive workspace
 
 The [interface review](audit/trader-interface-0.16.0.zh-CN.md) records the actual production baseline, primary design references, two fresh-mind reviews, implemented scope and viewport boundaries. The final review caught mobile metric definitions disappearing outside Performance; the shared disclosure now remains available in all six analysis views.

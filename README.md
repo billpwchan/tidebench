@@ -11,19 +11,19 @@ An open-source crypto research and paper trading workbench for OKX spot and line
 
 English · [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Research model](docs/pro-research.md) · [Operations](docs/operations.md)
 
-![Tidebench research desk at 1280×720; explicitly synthetic acceptance data, not investment evidence](docs/assets/trader-ui-v016-research-desktop.png)
+![Tidebench research desk at 1280×720; explicitly synthetic acceptance data, not investment evidence](docs/assets/trader-ui-v017-research-desktop.png)
 
 ## A desk built around the next decision
 
-The shared slate, paper and teal palette keeps navigation quiet and reserves red/green for outcomes and status. Market data source and execution mode are separate controls. Research places the selected result, captured configuration and capital chart together; mobile retains the full measurement basis in every analysis view. [Design decisions and measured viewport checks](docs/audit/trader-interface-0.16.0.zh-CN.md).
+The shared slate, paper and teal palette keeps navigation quiet and reserves red/green for outcomes and status. Market data source and execution mode are separate controls. Research separates result analysis, the next trial draft and the study ledger. Captured evidence states sample limits and costs before the next decision; mobile retains complete measurement definitions. Save a workspace layout, protect essential table columns, and find tasks with Command/Ctrl Shift K. [Design decisions and acceptance boundaries](docs/audit/professional-workspace-0.17.0.zh-CN.md).
 
 ## Work from the account, through the evidence, to the next decision
 
 Open the desk to see equity, available cash, exposure, positions and working orders first. The account book keeps P&L and actions visible, with secondary financial fields in row details. On screens of 1180px or wider, an open ticket stays beside the book. Search and sort the actual book; mobile records keep market identity, quantities and actions together. Open a ticket deliberately, size a market order in native units or USDT notional, inspect its risk preview, and return to monitoring without losing the draft. Micro prices retain the instrument's tick precision. Inspect a market without leaving the draft. Submission and cancellation receipts link to the exact order, its events and journal; filled orders stay inspectable outside the Working filter.
 
-Research has its own working context. The next trial uses parallel configuration; selected results open in a full-width analytical desk. A selected result states its **saved** market, window, costs and method; editing the next trial cannot rewrite the result. Preparing data carries the chosen product, interval and UTC window, then returns the exact versioned package to the same draft. Late receipts cannot take over a task you have already left.
+Research has its own working context. The next trial has its own configuration task; selected results open in a full-width analytical desk. A selected result states its **saved** market, window, costs and method; editing the next trial cannot rewrite the result. Preparing data carries the chosen product, interval and UTC window, then returns the exact versioned package to the same draft. Late receipts cannot take over a task you have already left.
 
-[See the trader paths](docs/trader-journeys.md) · [Read the fresh interface review](docs/audit/trader-interface-0.16.0.zh-CN.md) · [Inspect the verification record](docs/verification.md).
+[See the trader paths](docs/trader-journeys.md) · [Read the fresh workspace review](docs/audit/professional-workspace-0.17.0.zh-CN.md) · [Inspect the verification record](docs/verification.md).
 
 <details>
 <summary>Research desk and mobile book — synthetic acceptance fixtures</summary>
@@ -41,7 +41,7 @@ Six linked analysis views connect capital growth to calendar consistency, recove
 <details>
 <summary>The same captured research on mobile — explicitly synthetic data</summary>
 
-![Mobile research first fold with captured context and capital chart](docs/assets/trader-ui-v016-research-mobile.png)
+![Mobile research first fold with captured context and capital chart](docs/assets/trader-ui-v017-research-mobile.png)
 
 </details>
 

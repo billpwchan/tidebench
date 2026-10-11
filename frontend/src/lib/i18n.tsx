@@ -4,6 +4,9 @@ import { professionalZh } from './professionalI18n';
 import { deskZh } from './deskI18n';
 export type Language = 'en' | 'zh-CN';
 const zh: Record<string, string> = {
+  'Display preferences': '显示偏好',
+  'Layout and table preferences are separate for each user and market data source.':
+    '布局与表格偏好按用户和市场数据来源分别保存。',
   'Execution mode': '执行模式',
   'Single strategy': '单策略研究',
   'Legacy research': '经典研究',
@@ -811,15 +814,23 @@ const zhLower = Object.fromEntries(
 type I18n = { language: Language; setLanguage: (l: Language) => void; t: (key: string) => string };
 const Context = createContext<I18n>({ language: 'en', setLanguage: () => {}, t: (k) => k });
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setState] = useState<Language>(() =>
-    localStorage.getItem('tidebench:language') === 'zh-CN' ? 'zh-CN' : 'en',
-  );
+  const [language, setState] = useState<Language>(() => {
+    try {
+      return localStorage.getItem('tidebench:language') === 'zh-CN' ? 'zh-CN' : 'en';
+    } catch {
+      return 'en';
+    }
+  });
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
   const setLanguage = (l: Language) => {
     setState(l);
-    localStorage.setItem('tidebench:language', l);
+    try {
+      localStorage.setItem('tidebench:language', l);
+    } catch {
+      /* The language remains usable for this session. */
+    }
     document.documentElement.lang = l;
   };
   return (

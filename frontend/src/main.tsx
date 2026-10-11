@@ -10,6 +10,7 @@ import './research-desk.css';
 import './table-desk.css';
 import './desk-review.css';
 import './backtest-workbench.css';
+import './professional-workspace.css';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 15000 } },
 });

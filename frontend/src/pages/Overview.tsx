@@ -8,7 +8,7 @@ import type { ProAccount, RecordData } from '../proApi';
 import DeskAttention from '../components/DeskAttention';
 import { deskIssues } from '../lib/deskAttention';
 import type { Page } from '../lib/config';
-import { date, number, percent, price, quantityText, tone } from '../lib/format';
+import { date, nameOf, number, percent, price, quantityText, tone } from '../lib/format';
 import { useNow } from '../lib/hooks';
 import { useReceiptOwnership, type ReceiptTask } from '../lib/receiptOwnership';
 import { useI18n } from '../lib/i18n';
@@ -206,6 +206,16 @@ export default function Overview({
   const strategies = deployments.data?.items ?? [];
   const currentPackages = packages.data?.items.filter((p) => p.source === source) ?? [];
   const currentRuns = runs.data?.items.filter((r) => r.source === source) ?? [];
+  const researchName = (kind: string) =>
+    (
+      ({
+        ts_momentum: text('Multi-horizon momentum', '多窗口动量'),
+        regime_reversion: text('Range-gated reversion', '区间过滤回归'),
+        zscore_reversion: text('Z-score reversion', 'Z 值回归'),
+        close_breakout: text('Closing-channel breakout', '收盘通道突破'),
+        program: text('Rule program', '规则程序'),
+      }) as Record<string, string>
+    )[kind] ?? t(nameOf(kind));
   const jobs = (ops.data?.jobs ?? []).filter((j) => !j.source || j.source === source);
   const activeJobs = jobs.filter((j) => ['queued', 'running', 'preparing'].includes(j.status));
   const health = ops.data?.health;
@@ -354,7 +364,7 @@ export default function Overview({
     });
   };
   return (
-    <div className="desk-overview">
+    <div className={`desk-overview ${showJourneyInBook ? 'is-empty-account' : ''}`}>
       <PageHeading
         eyebrow="TRADING WORKSPACE"
         title="Trading overview"
@@ -477,6 +487,7 @@ export default function Overview({
       {!a && account.isPending && <Loading label="Loading account state…" />}
       <div className="trader-overview-layout">
         <div className="trader-primary">
+          {showJourneyInBook && <section className="desk-onboarding-next">{journey}</section>}
           <section className="pro-panel overview-book">
             <div className="section-heading">
               <div>
@@ -600,6 +611,14 @@ export default function Overview({
                   rows={positions}
                   rowKey={(position) => String(position.inst_id)}
                   searchLabel="Search positions"
+                  preferenceKey="monitor-positions"
+                  requiredColumns={[
+                    'inst_id',
+                    'quantity',
+                    'market_value',
+                    'unrealized_pnl',
+                    'protect',
+                  ]}
                   searchKeys={['inst_id', 'side', 'inst_type']}
                   desktopColumns={[
                     'inst_id',
@@ -711,6 +730,8 @@ export default function Overview({
                 rows={pending}
                 rowKey={(order) => String(order.id)}
                 searchLabel="Search orders"
+                preferenceKey="monitor-orders"
+                requiredColumns={['inst_id', 'side', 'quantity', 'trigger', 'actions']}
                 searchKeys={['id', 'inst_id', 'side', 'order_type']}
                 compactColumns={['inst_id', 'side', 'quantity', 'trigger', 'actions']}
                 compactLabel={t('Pending orders')}
@@ -773,7 +794,6 @@ export default function Overview({
               <ErrorBox error={cancel.error} />
             )}
           </section>
-          {showJourneyInBook && <section className="desk-onboarding-next">{journey}</section>}
           <section className="pro-panel overview-exposures">
             <div className="section-heading">
               <div>
@@ -855,9 +875,24 @@ export default function Overview({
             ) : (
               <DataTable
                 rows={currentRuns.slice(0, 6)}
+                preferenceKey="monitor-research"
+                requiredColumns={['id', 'mode', 'status']}
                 empty="No research runs"
                 columns={[
-                  { key: 'id', label: 'Run', render: (r) => <code>{r.id.slice(0, 10)}</code> },
+                  {
+                    key: 'id',
+                    label: 'Run',
+                    sticky: 'identity',
+                    render: (r) => (
+                      <button
+                        className="text-button desk-research-object"
+                        onClick={() => navigate('research', `run:${r.id}`)}
+                      >
+                        <strong>{researchName(r.config.strategy.kind)}</strong>
+                        <small>{r.id.slice(0, 10)}</small>
+                      </button>
+                    ),
+                  },
                   { key: 'mode', label: 'Evaluation scope', render: (r) => t(resultScope(r)) },
                   {
                     key: 'status',

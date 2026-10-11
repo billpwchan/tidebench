@@ -9,11 +9,11 @@
 
 简体中文 · [English](README.md) · [研究模型](docs/pro-research.md) · [部署与运维](docs/operations.md)
 
-![1280×720 研究工作台，明确标注的合成验收数据；不构成投资证据](docs/assets/trader-ui-v016-research-desktop.png)
+![1280×720 研究工作台，明确标注的合成验收数据；不构成投资证据](docs/assets/trader-ui-v017-research-desktop.png)
 
 ## 围绕下一步决策组织界面
 
-纸白与冷灰工作面、深灰蓝导航和青色操作形成共享视觉系统；红绿保留盈亏和状态含义。行情来源与执行模式分别标注。研究把所选结果、封存配置与资金曲线放在共同上下文中；手机在六个分析视图都可展开完整指标口径。1180px 及以上，打开的订单票据与账簿并排。参见[独立审查、设计依据与可重复视口验收](docs/audit/trader-interface-0.16.0.zh-CN.md)。
+纸白与冷灰工作面、深灰蓝导航和青色操作形成共享视觉系统；红绿保留盈亏和状态含义。行情来源与执行模式分别标注。研究按结果分析、下一次试验草稿与研究目录组织任务，展示样本限制、成本和下一步；手机在六个分析视图都可展开完整指标口径。工作台布局、表格列、搜索与排序可以保存；Command/Ctrl Shift K 可查找任务。1180px 及以上，打开的订单票据与账簿并排。参见[独立审查、设计依据与可重复视口验收](docs/audit/professional-workspace-0.17.0.zh-CN.md)。
 
 ## 从回测结果走向研究决策
 
@@ -22,7 +22,7 @@
 <details>
 <summary>同一份合成研究的手机首屏</summary>
 
-![手机研究首屏，保留所选结果、摘要和主曲线](docs/assets/trader-ui-v016-research-mobile.png)
+![手机研究首屏，保留所选结果、摘要和主曲线](docs/assets/trader-ui-v017-research-mobile.png)
 
 </details>
 
@@ -34,7 +34,7 @@
 
 宽屏研究配置并列展示市场数据、策略资金与评估方式。选中结果显示它自己保存的市场、区间、成本和方法，下一次研究的草稿与它区分。准备数据时携带品种、周期与 UTC 区间，返回精确版本的数据包；延迟回执不能把已经离开的用户拉回旧任务。
 
-[用户操作路径](docs/trader-journeys.md) · [本轮界面审查与修复范围](docs/audit/trader-interface-0.16.0.zh-CN.md) · [验证记录](docs/verification.md)。
+[用户操作路径](docs/trader-journeys.md) · [本轮界面审查与修复范围](docs/audit/professional-workspace-0.17.0.zh-CN.md) · [验证记录](docs/verification.md)。
 
 <details>
 <summary>研究布局与手机账本截图（明确标注的合成验收数据）</summary>

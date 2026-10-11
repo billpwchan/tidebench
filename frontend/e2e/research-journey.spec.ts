@@ -1,5 +1,5 @@
 import { expandResearchPolicy } from './desk-helpers';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const HOUR = 3600000;
 const end = Date.UTC(2025, 1, 1);
@@ -128,6 +128,53 @@ async function navigate(page: Page, name: string) {
   if (await opener.isVisible()) await opener.click();
   await destination.click();
 }
+function researchActions(page: Page) {
+  return page.getByRole('navigation', { name: /^(Research workspace actions|研究工作区操作)$/ });
+}
+async function researchTask(page: Page, task: 'draft' | 'analysis' | 'ledger') {
+  const names = {
+    draft: /^(Next trial draft|Configure a trial|下一次试验草稿|配置试验)$/,
+    analysis: /^(Result analysis|Analysis|结果分析|分析)$/,
+    ledger: /^(Study ledger|研究目录)$/,
+  };
+  const button = researchActions(page).getByRole('button', { name: names[task] });
+  await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.locator(
+      task === 'draft'
+        ? '.pro-research-form'
+        : task === 'analysis'
+          ? '.pro-result-panel'
+          : '.run-catalog-panel',
+    ),
+  ).toBeVisible();
+}
+async function selectHistoricalRun(page: Page, id: string) {
+  await researchTask(page, 'ledger');
+  await page.getByRole('button', { name: id.slice(0, 10), exact: true }).click();
+  // Selecting a historical trial opens Analysis and focuses its result heading.
+  await expect(
+    researchActions(page).getByRole('button', {
+      name: /^(Result analysis|Analysis|结果分析|分析)$/,
+    }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.pro-result-panel')).toBeVisible();
+}
+async function expandNative(disclosure: Locator) {
+  await expect(disclosure).toBeVisible();
+  if (!(await disclosure.evaluate((node) => (node as HTMLDetailsElement).open)))
+    await disclosure.locator(':scope > summary').click();
+  await expect(disclosure).toHaveAttribute('open', '');
+}
+async function sourceEvidence(page: Page) {
+  await researchTask(page, 'analysis');
+  const disclosure = page.locator('.research-source-records').filter({
+    has: page.locator('summary').filter({ hasText: /^Execution records & source evidence$/ }),
+  });
+  await expandNative(disclosure);
+  return disclosure;
+}
 async function mockWorkspace(page: Page, options: { emptyDatasets?: boolean } = {}) {
   const state = {
     user: 'journey-user-a',
@@ -234,6 +281,7 @@ test('advanced draft survives data navigation and refresh, and viewing a result 
 }) => {
   await mockWorkspace(page);
   await page.goto('/#research?source=example&view=advanced');
+  await researchTask(page, 'draft');
   await page.getByLabel('Mode', { exact: true }).selectOption('walk_forward');
   await page.getByLabel('Training bars', { exact: true }).fill('150');
   await page.getByLabel('Test bars', { exact: true }).fill('45');
@@ -243,15 +291,18 @@ test('advanced draft survives data navigation and refresh, and viewing a result 
   await page.getByLabel('Fee', { exact: true }).fill('31');
   await navigate(page, 'Data library');
   await navigate(page, 'Research');
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Training bars', { exact: true })).toHaveValue('150');
   await expect(page.getByLabel('Fast windows', { exact: true })).toHaveValue('9,15');
   await page.reload();
+  await researchTask(page, 'draft');
   await expect(page.getByText(/Research draft restored/)).toBeVisible();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('31');
-  await page.getByRole('button', { name: runId.slice(0, 10), exact: true }).click();
+  await selectHistoricalRun(page, runId);
   await expect(page).toHaveURL(/run=dddd/);
-  await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('31');
   await expect(page.getByText('Captured research failure')).toBeVisible();
+  await researchTask(page, 'draft');
+  await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('31');
   await page.getByRole('button', { name: 'Use selected run configuration', exact: true }).click();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('20');
   await expect(page.getByLabel('Parameter selection', { exact: true })).toHaveValue('training');
@@ -263,6 +314,7 @@ test('strategy identity and edited costs survive choosing a prepared package bef
 }) => {
   const state = await mockWorkspace(page, { emptyDatasets: true });
   await page.goto('/#research?source=example&view=advanced&version=' + versionId);
+  await researchTask(page, 'draft');
   await expect(page.getByText('Bound strategy version', { exact: true })).toBeVisible();
   await expect(page.locator('[aria-label="Bound strategy definition"]')).toContainText('17');
   await expect(page.getByLabel('Fast window', { exact: true })).toHaveCount(0);
@@ -276,11 +328,13 @@ test('strategy identity and edited costs survive choosing a prepared package bef
     .click();
   await expect(page).toHaveURL(/package=bbbb/);
   await expect(page).toHaveURL(/version=cccc/);
+  await researchTask(page, 'draft');
   await expect(page.getByText('Bound strategy version', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('23');
   await expect(page.getByLabel('Slippage', { exact: true })).toHaveValue('7');
   // Exercise restoration of the complete backend DTO, including its source.
   await page.reload();
+  await researchTask(page, 'draft');
   await expect(page.getByText(/Research draft restored/)).toBeVisible();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('23');
   await expect(page.getByLabel('Slippage', { exact: true })).toHaveValue('7');
@@ -345,16 +399,21 @@ test('drafts stay separate by source and user, and explicit clear removes the cu
 }) => {
   const state = await mockWorkspace(page);
   await page.goto('/#research?source=example&view=advanced');
+  await researchTask(page, 'draft');
   await page.getByLabel('Fee', { exact: true }).fill('33');
   await page.getByLabel('Market source', { exact: true }).selectOption('okx');
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('10');
   await page.getByLabel('Market source', { exact: true }).selectOption('example');
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('33');
   state.user = 'journey-user-b';
   await page.reload();
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('10');
   state.user = 'journey-user-a';
   await page.reload();
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('33');
   await page.getByRole('button', { name: 'Clear research draft', exact: true }).click();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('10');
@@ -383,6 +442,7 @@ test('invalid and unavailable draft storage remains recoverable without changing
     );
   });
   await page.goto('/#research?source=example&view=advanced');
+  await researchTask(page, 'draft');
   await expect(
     page.getByText(
       'A damaged research draft was discarded. Saved research evidence is unchanged.',
@@ -406,7 +466,10 @@ test('invalid and unavailable draft storage remains recoverable without changing
     ),
   ).toBeVisible();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('41');
+  await researchTask(page, 'ledger');
   await expect(page.getByRole('button', { name: runId.slice(0, 10), exact: true })).toBeVisible();
+  await researchTask(page, 'draft');
+  await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('41');
 });
 
 test('malformed draft JSON is removed and reported as damaged content', async ({ page }) => {
@@ -418,6 +481,7 @@ test('malformed draft JSON is removed and reported as damaged content', async ({
     );
   });
   await page.goto('/#research?source=example&view=advanced');
+  await researchTask(page, 'draft');
   await expect(
     page.getByText(
       'A damaged research draft was discarded. Saved research evidence is unchanged.',
@@ -437,6 +501,7 @@ test('invalid rule-program text survives navigation and refresh until the resear
 }) => {
   await mockWorkspace(page);
   await page.goto('/#research?source=example&view=advanced');
+  await researchTask(page, 'draft');
   await page.getByLabel('Dataset', { exact: true }).selectOption(datasetId);
   await page.getByLabel('Strategy', { exact: true }).selectOption('program');
   const invalid = '[{"tag": "unfinished",';
@@ -448,8 +513,10 @@ test('invalid rule-program text survives navigation and refresh until the resear
   await expect(page.getByRole('button', { name: 'Run research', exact: true })).toBeDisabled();
   await navigate(page, 'Data library');
   await navigate(page, 'Research');
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Ordered signal rules', { exact: true })).toHaveValue(invalid);
   await page.reload();
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Ordered signal rules', { exact: true })).toHaveValue(invalid);
   await expect(page.getByLabel('Ordered signal rules', { exact: true })).toHaveAttribute(
     'aria-invalid',
@@ -639,8 +706,10 @@ test('single research cancellation distinguishes retryable errors, requested cle
 }) => {
   const { state, workspace } = await mockCancellation(page);
   await page.goto('/#research?source=example&view=advanced&run=' + runId);
+  await researchTask(page, 'draft');
   await page.getByLabel('Dataset', { exact: true }).selectOption(datasetId);
   await page.getByLabel('Fee', { exact: true }).fill('33');
+  await researchTask(page, 'analysis');
   await page.getByRole('button', { name: 'Cancel research', exact: true }).click();
   await expect(
     page.getByText('Retry cancellation after a temporary worker conflict.', { exact: true }),
@@ -663,6 +732,7 @@ test('single research cancellation distinguishes retryable errors, requested cle
   await expect(
     page.getByRole('heading', { name: 'Research cancelled', exact: true }),
   ).toBeVisible();
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('33');
   await page.getByRole('button', { name: 'Run research', exact: true }).click();
   await expect.poll(() => workspace.createdRun?.fee_bps).toBe('33');
@@ -710,8 +780,9 @@ test('a late cancellation response updates its original run without replacing th
   state.rejectNext = false;
   state.hold = true;
   await page.goto('/#research?source=example&view=advanced&run=' + runId);
+  await researchTask(page, 'analysis');
   await page.getByRole('button', { name: 'Cancel research', exact: true }).click();
-  await page.getByRole('button', { name: otherId.slice(0, 10), exact: true }).click();
+  await selectHistoricalRun(page, otherId);
   await expect(page).toHaveURL(/run=6666/);
   await expect(page.getByText('A different selected run failed.', { exact: true })).toBeVisible();
   await expect.poll(() => state.waiting).toBe(true);
@@ -738,6 +809,7 @@ for (const portfolio of [false, true]) {
     await page.goto(
       '/#research?source=example&view=' + (portfolio ? 'portfolio' : 'advanced') + '&run=' + runId,
     );
+    if (!portfolio) await researchTask(page, 'analysis');
     await expect(page.getByText('Cancellation needs exit evidence', { exact: true })).toBeVisible();
     await expect(
       page.getByText(
@@ -772,17 +844,22 @@ for (const portfolio of [false, true]) {
   });
 }
 
-test('advanced research follows the current task in DOM order when preparing a draft or reviewing a selected run', async ({
+test('advanced research exposes one task at a time while history, analysis and the independent draft remain reachable', async ({
   page,
 }) => {
   await mockWorkspace(page);
   await page.goto('/#research?source=example&view=advanced');
+  await researchTask(page, 'draft');
   const layout = page.locator('.pro-research-layout');
-  const regions = layout.locator(':scope > [data-research-region]');
-  await expect(layout).toHaveClass(/research-config-first/);
-  await expect(regions.nth(0)).toHaveAttribute('data-research-region', 'configuration');
-  await expect(regions.nth(1)).toHaveAttribute('data-research-region', 'results');
+  const draft = layout.locator('[data-research-region="configuration"]');
+  const ledger = layout.locator('.run-catalog-panel');
+  const analysis = layout.locator('.pro-result-panel');
+  await expect(draft).toBeVisible();
+  await expect(ledger).toBeHidden();
   await expect(layout.locator('.pro-result-panel')).toHaveCount(0);
+  await expect(
+    researchActions(page).getByRole('button', { name: /^(Result analysis|Analysis)$/ }),
+  ).toBeDisabled();
   await expect(
     page.getByRole('heading', { name: 'Research configuration', exact: true }),
   ).toBeVisible();
@@ -791,19 +868,45 @@ test('advanced research follows the current task in DOM order when preparing a d
   await page.getByLabel('Strategy', { exact: true }).selectOption('program');
   const invalid = '[{"tag":"unfinished-layout-test",';
   await page.getByLabel('Ordered signal rules', { exact: true }).fill(invalid);
-  await page.getByRole('button', { name: runId.slice(0, 10), exact: true }).click();
+  await researchTask(page, 'ledger');
+  await expect(draft).toBeHidden();
+  await expect(ledger).toBeVisible();
+  await expect(page.getByRole('button', { name: runId.slice(0, 10), exact: true })).toBeVisible();
+  await selectHistoricalRun(page, runId);
   await expect(page).toHaveURL(/run=dddd/);
-  await expect(layout).not.toHaveClass(/research-config-first/);
-  await expect(regions.nth(0)).toHaveAttribute('data-research-region', 'results');
-  await expect(regions.nth(1)).toHaveAttribute('data-research-region', 'configuration');
+  await expect(analysis).toBeVisible();
+  await expect(draft).toBeHidden();
+  await expect(ledger).toBeHidden();
   await expect(page.getByText('Captured research failure', { exact: true })).toBeVisible();
   await expect(page.locator('#research-result-heading')).toBeFocused();
+  await researchTask(page, 'draft');
+  await expect(analysis).toBeHidden();
+  await expect(ledger).toBeHidden();
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('37');
   await expect(page.getByLabel('Ordered signal rules', { exact: true })).toHaveValue(invalid);
   await expect(page.getByRole('button', { name: 'Run research', exact: true })).toBeDisabled();
+  for (const language of ['en', 'zh-CN']) {
+    await page.getByLabel(/^(Interface language|界面语言)$/).selectOption(language);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      page.viewportSize()!.width,
+    );
+    const draftActions = draft.locator(':scope > .section-heading > button');
+    await expect(draftActions).toHaveCount(2);
+    for (const action of await draftActions.all()) {
+      await expect(action).toBeVisible();
+      const bounds = (await action.boundingBox())!;
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+      if (page.viewportSize()!.width <= 720) expect(bounds.height).toBeGreaterThanOrEqual(44);
+    }
+  }
+  await page.getByLabel(/^(Interface language|界面语言)$/).selectOption('en');
+  await researchTask(page, 'analysis');
+  await expect(draft).toBeHidden();
+  await expect(page.getByText('Captured research failure', { exact: true })).toBeVisible();
 });
 
-test('an empty research history is a compact sidebar message while configuration comes first', async ({
+test('an empty study ledger is reachable without a sidebar and returns to the trial draft', async ({
   page,
 }) => {
   await mockWorkspace(page);
@@ -811,13 +914,27 @@ test('an empty research history is a compact sidebar message while configuration
     await route.fulfill({ status: 200, json: { items: [], next_cursor: null } });
   });
   await page.goto('/#research?source=example&view=advanced');
+  await researchTask(page, 'draft');
+  await expect(page.locator('.research-run-empty')).toBeHidden();
+  await expect(page.locator('.run-catalog-panel')).toBeHidden();
+  await expect(
+    page.getByRole('heading', { name: 'Research configuration', exact: true }),
+  ).toBeVisible();
+  await researchTask(page, 'ledger');
   await expect(page.locator('.research-run-empty')).toHaveText('No research runs');
+  await expect(page.locator('.research-run-empty')).toBeVisible();
+  await expect(page.locator('.pro-research-form')).toBeHidden();
   await expect(page.locator('.pro-research-main .empty-state')).toHaveCount(0);
   await expect(page.locator('.pro-result-panel')).toHaveCount(0);
-  await expect(page.locator('.pro-research-layout > :first-child')).toHaveAttribute(
-    'data-research-region',
-    'configuration',
-  );
+  await expect(
+    researchActions(page).getByRole('button', { name: /^(Result analysis|Analysis)$/ }),
+  ).toBeDisabled();
+  await researchTask(page, 'draft');
+  await expect(page.locator('.research-run-empty')).toBeHidden();
+  await expect(
+    page.getByRole('heading', { name: 'Research configuration', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Run research', exact: true })).toBeVisible();
 });
 
 test('a selected historical run shows its evaluated version and holdout independently of the current draft binding', async ({
@@ -843,19 +960,23 @@ test('a selected historical run shows its evaluated version and holdout independ
     else await route.fallback();
   });
   await page.goto('/#research?source=example&view=advanced&version=' + versionId);
+  await researchTask(page, 'draft');
   await expect(page.locator('[aria-label="Bound strategy definition"]')).toContainText('17');
   await expect(page.getByLabel('Fast window', { exact: true })).toHaveCount(0);
   await page.getByLabel('Fee', { exact: true }).fill('37');
   await page.getByLabel('Slippage', { exact: true }).fill('11');
   await page.getByLabel('Mode', { exact: true }).selectOption('walk_forward');
-  await page.getByRole('button', { name: runId.slice(0, 10), exact: true }).click();
+  await selectHistoricalRun(page, runId);
   await expect(page).toHaveURL(/run=dddd/);
-  const identity = page.locator('.research-run-identity');
+  const identity = page.locator('.research-run-context');
+  await expect(identity).toHaveAttribute('aria-label', 'Selected run configuration');
+  await expandNative(identity);
   await expect(identity.getByText('Run strategy version', { exact: true })).toBeVisible();
   await expect(identity.getByText(evaluatedVersion, { exact: true })).toBeVisible();
   await expect(identity.getByText('Run holdout', { exact: true })).toBeVisible();
   await expect(identity.getByText(holdout, { exact: true })).toBeVisible();
   await expect(identity).not.toContainText(versionId);
+  await researchTask(page, 'draft');
   await expect(page.getByText('Bound strategy version', { exact: true })).toBeVisible();
   await expect(
     page.locator('.prepared-input-note').filter({ hasText: 'Bound strategy version' }),
@@ -866,6 +987,8 @@ test('a selected historical run shows its evaluated version and holdout independ
   await expect(page.getByLabel('Slippage', { exact: true })).toHaveValue('11');
   await expect(page.getByLabel('Mode', { exact: true })).toHaveValue('walk_forward');
   await page.getByLabel('Interface language', { exact: true }).selectOption('zh-CN');
+  await researchTask(page, 'analysis');
+  await expandNative(identity);
   await expect(identity.getByText('本次运行策略版本', { exact: true })).toBeVisible();
   await expect(identity.getByText('本次运行封存评估', { exact: true })).toBeVisible();
   await expect(identity).toContainText(evaluatedVersion);
@@ -1332,6 +1455,7 @@ for (const change of ['edit', 'clear', 'source'] as const) {
       config: body,
     }));
     await page.goto('/#research?source=example&view=advanced');
+    await researchTask(page, 'draft');
     await page.getByLabel('Dataset', { exact: true }).selectOption(datasetId);
     await page.getByLabel('Fee', { exact: true }).fill('15');
     await page.getByRole('button', { name: 'Run research', exact: true }).click();
@@ -1346,8 +1470,10 @@ for (const change of ['edit', 'clear', 'source'] as const) {
     await expect(page).not.toHaveURL(/run=/);
     if (change === 'source') {
       await expect(page).toHaveURL(/source=okx/);
+      await researchTask(page, 'draft');
       await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('10');
       await page.getByLabel('Market source', { exact: true }).selectOption('example');
+      await researchTask(page, 'draft');
       await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('15');
       await expect(page).not.toHaveURL(/run=/);
     } else {
@@ -1396,7 +1522,9 @@ test('a delayed advanced replay cannot navigate after leaving research and retur
     result: null,
   });
   await page.goto('/#research?source=example&view=advanced&run=' + runId);
+  await researchTask(page, 'draft');
   await page.getByLabel('Fee', { exact: true }).fill('37');
+  await researchTask(page, 'analysis');
   await expect(
     page.locator('.pro-result-panel').getByText('completed', { exact: true }),
   ).toBeVisible();
@@ -1405,12 +1533,14 @@ test('a delayed advanced replay cannot navigate after leaving research and retur
   await expect.poll(() => replay.state.requested).toBe(true);
   await navigate(page, 'Data library');
   await navigate(page, 'Research');
+  await researchTask(page, 'draft');
   await page.getByLabel('Fee', { exact: true }).fill('49');
   await replay.finish();
   await expect(page).not.toHaveURL(/run=/);
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('49');
   await expect(page.locator('.pro-result-panel')).toHaveCount(0);
   await page.reload();
+  await researchTask(page, 'draft');
   await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('49');
 });
 
@@ -1445,6 +1575,7 @@ test('a delayed advanced replay cannot replace candidate inspection after select
     result: null,
   });
   await page.goto('/#research?source=example&view=advanced&run=' + runId);
+  await researchTask(page, 'analysis');
   await expect(
     page.locator('.pro-result-panel').getByText('completed', { exact: true }),
   ).toBeVisible();
@@ -1454,11 +1585,13 @@ test('a delayed advanced replay cannot replace candidate inspection after select
   await expect.poll(() => replay.state.requested).toBe(true);
   await page.getByLabel('Inspect experiment', { exact: true }).selectOption('candidate-b');
   await expect(page.getByRole('button', { name: 'Replay snapshot', exact: true })).toBeEnabled();
-  await page.getByRole('tab', { name: 'Folds', exact: true }).click();
-  await page.getByRole('button', { name: 'fold-1', exact: true }).click();
+  const evidence = await sourceEvidence(page);
+  await evidence.getByRole('tab', { name: 'Folds', exact: true }).click();
+  await evidence.getByRole('button', { name: 'fold-1', exact: true }).click();
   await expect(page.getByLabel('Inspect experiment', { exact: true })).toHaveValue('fold-1:test');
-  await page.getByRole('tab', { name: 'Scenarios', exact: true }).click();
-  await page.getByRole('button', { name: 'candidate-a', exact: true }).click();
+  await sourceEvidence(page);
+  await evidence.getByRole('tab', { name: 'Scenarios', exact: true }).click();
+  await evidence.getByRole('button', { name: 'candidate-a', exact: true }).click();
   await expect(page.getByLabel('Inspect experiment', { exact: true })).toHaveValue('candidate-a');
   await replay.finish();
   await expect(page).toHaveURL(/run=dddd/);
@@ -1481,6 +1614,7 @@ for (const change of ['navigate', 'edit preparation'] as const) {
       packages[0],
     );
     await page.goto('/#research?source=example&view=advanced');
+    await researchTask(page, 'draft');
     await page.getByLabel('Fee', { exact: true }).fill('37');
     await page.getByRole('button', { name: 'Open Data library', exact: true }).click();
     const packageRow = page.locator('.package-row').filter({ hasText: 'BTC-USDT' });
@@ -1513,6 +1647,7 @@ for (const change of ['navigate', 'edit preparation'] as const) {
     await open.click();
     await expect(page).toHaveURL(/#research/);
     await expect(page).toHaveURL(/package=bbbb/);
+    await researchTask(page, 'draft');
     await expect(page.getByLabel('Fee', { exact: true })).toHaveValue('37');
     await expect(page.getByLabel('Dataset', { exact: true })).toHaveValue(datasetId);
   });

@@ -269,6 +269,11 @@ export default function ProResearch({
   const [feeGrid, setFeeGrid] = draft.field('feeGrid');
   const [slipGrid, setSlipGrid] = draft.field('slipGrid');
   const [selected, setSelected] = useState(initialRunId ?? '');
+  const [task, setTask] = useState<'analysis' | 'draft' | 'ledger'>(
+    initialRunId ? 'analysis' : 'draft',
+  );
+  const taskNav = useRef<HTMLElement>(null);
+  const comparisonHeading = useRef<HTMLHeadingElement>(null);
   const selectedContext = useRef(initialRunId ?? '');
   const [detailTab, setDetailTab] = useState('fills');
   const [variantKey, setVariantKey] = useState('');
@@ -286,6 +291,7 @@ export default function ProResearch({
       selectedContext.current = initialRunId ?? '';
       setSelected(initialRunId ?? '');
       setVariantKey('');
+      setTask(initialRunId ? 'analysis' : 'draft');
     }
   }, [initialRunId]);
   const datasets = useQuery({
@@ -445,14 +451,23 @@ export default function ProResearch({
     selectedContext.current = id;
     setSelected(id);
     setVariantKey('');
+    setTask(id ? 'analysis' : 'draft');
     onRunSelect?.(id);
   };
+  const chooseTask = (next: 'analysis' | 'draft' | 'ledger') => {
+    setTask(next);
+    requestAnimationFrame(() => taskNav.current?.scrollIntoView({ block: 'start' }));
+  };
+  useEffect(() => {
+    if (comparison.length >= 2) requestAnimationFrame(() => comparisonHeading.current?.focus());
+  }, [comparison]);
   const selectVariant = (key: string) => {
     editorGeneration.current += 1;
     setVariantKey(key);
   };
   const load = (r: ProRun) => {
     selectRun(r.id);
+    setTask('draft');
     const c = r.config;
     setPreparedInputs(
       c.package_id
@@ -744,12 +759,17 @@ export default function ProResearch({
     <div
       key="results"
       className="pro-research-main"
+      hidden={task === 'draft'}
+      data-research-task={task}
       data-research-region="results"
       role={activeId ? undefined : 'complementary'}
-      aria-labelledby={activeId ? 'research-result-heading' : 'research-runs-heading'}
+      aria-labelledby={task === 'ledger' ? 'research-runs-heading' : 'research-result-heading'}
     >
       {activeId && (
-        <section className="pro-panel pro-result-panel research-desk">
+        <section
+          className="pro-panel pro-result-panel research-desk research-task-panel"
+          hidden={task !== 'analysis'}
+        >
           <div className="section-heading">
             <div>
               <h2 id="research-result-heading" ref={resultHeading} tabIndex={-1}>
@@ -760,21 +780,6 @@ export default function ProResearch({
                   ? `${run.data.id.slice(0, 12)} · ${t(modeNames[run.data.config.mode])} · ${date(run.data.created_at)}`
                   : t('Choose an immutable dataset and submit a research configuration.')}
               </p>
-              {(run.data?.config.strategy_version_id || runHoldoutId) && (
-                <div className="research-run-identity">
-                  {run.data?.config.strategy_version_id && (
-                    <p className="section-description research-result-context">
-                      <span>{t('Run strategy version')}</span>{' '}
-                      <code>{run.data.config.strategy_version_id}</code>
-                    </p>
-                  )}
-                  {runHoldoutId && (
-                    <p className="section-description research-result-context">
-                      <span>{t('Run holdout')}</span> <code>{runHoldoutId}</code>
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
             {run.data && (
               <Status type={run.data.status === 'failed' ? 'bad' : 'neutral'}>
@@ -800,10 +805,38 @@ export default function ProResearch({
               </summary>
               <dl className="research-context-grid">
                 <div>
+                  <dt>{text('Run identity', '运行身份')}</dt>
+                  <dd>
+                    <code>{run.data!.id}</code>
+                  </dd>
+                </div>
+                {run.data!.config.strategy_version_id && (
+                  <div>
+                    <dt>{t('Run strategy version')}</dt>
+                    <dd>
+                      <code>{run.data!.config.strategy_version_id}</code>
+                    </dd>
+                  </div>
+                )}
+                {runHoldoutId && (
+                  <div>
+                    <dt>{t('Run holdout')}</dt>
+                    <dd>
+                      <code>{runHoldoutId}</code>
+                    </dd>
+                  </div>
+                )}
+                <div>
                   <dt>{text('Market & data', '市场与数据')}</dt>
                   <dd>
                     {inspectedDataset?.inst_id ?? run.data!.config.dataset_id} ·{' '}
                     {inspectedDataset?.bar ?? '—'} · {run.data!.source ?? source}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{text('Immutable dataset', '不可变数据集')}</dt>
+                  <dd>
+                    <code>{run.data!.config.dataset_id}</code>
                   </dd>
                 </div>
                 <div>
@@ -915,222 +948,226 @@ export default function ProResearch({
                   variant={variant.key}
                   scope={variant.scope}
                   onInspect={selectVariant}
+                  evaluatedConfig={inspectedConfig}
+                  onDraft={() => chooseTask('draft')}
                 />
               )}
-              <h3 className="backtest-subheading">
-                {text('Execution records & source evidence', '成交记录与来源证据')}
-              </h3>
-              <WorkspaceTabs
-                value={detailTab}
-                onChange={setDetailTab}
-                items={[
-                  { key: 'fills', label: 'Fills' },
-                  { key: 'signals', label: 'Signals & orders' },
-                  { key: 'trips', label: 'Round trips' },
-                  { key: 'folds', label: 'Folds' },
-                  { key: 'scenarios', label: 'Scenarios' },
-                  { key: 'costs', label: 'Cost attribution' },
-                  { key: 'manifest', label: 'Provenance' },
-                ]}
-              />
-              {detailTab === 'fills' && (
-                <>
-                  <div className="detail-action-bar">
-                    <span>
-                      {fills.length} {t('Fills')}
-                    </span>
-                    <button
-                      className="text-button"
-                      disabled={!fills.length}
-                      onClick={() => downloadCsv(fills, `tidebench-${activeId}-fills.csv`)}
-                    >
-                      <ArrowDownToLine size={13} />
-                      {t('Export CSV')}
-                    </button>
-                  </div>
-                  <DataTable
-                    rows={fills}
-                    columns={[
-                      { key: 'ts', label: 'Time', render: (r) => date(Number(r.ts)) },
-                      { key: 'side', label: 'Side' },
-                      {
-                        key: 'quantity',
-                        label: 'Quantity',
-                        render: (r) => quantityText(r.quantity),
-                      },
-                      { key: 'price', label: 'Fill price', render: (r) => price(r.price) },
-                      { key: 'notional', label: 'Notional', render: (r) => number(r.notional) },
-                      { key: 'fee', label: 'Fee', render: (r) => number(r.fee, 4) },
-                      { key: 'reason', label: 'Reason' },
-                      { key: 'signal_id', label: 'Signal' },
-                    ]}
-                  />
-                  <JsonDetails value={fills} label="Details" />
-                </>
-              )}
-              {detailTab === 'signals' && (
-                <>
-                  <AutoTable rows={arrayRecords(result?.signals)} />
-                  <h3 className="result-subheading">{t('Orders')}</h3>
-                  <AutoTable rows={arrayRecords(result?.orders)} />
-                </>
-              )}
-              {detailTab === 'trips' && (
-                <>
-                  <AutoTable rows={arrayRecords(result?.round_trips)} />
-                  <JsonDetails value={result?.round_trips} label="Details" />
-                </>
-              )}
-              {detailTab === 'folds' && (
-                <>
-                  <DataTable
-                    rows={foldRows}
-                    columns={[
-                      {
-                        key: 'id',
-                        label: 'Fold',
-                        render: (r) => (
-                          <button
-                            className="text-button"
-                            onClick={() => selectVariant(`${r.id}:test`)}
-                          >
-                            {String(r.id)}
-                          </button>
-                        ),
-                      },
-                      {
-                        key: 'train_start_ts',
-                        label: 'Training start',
-                        render: (r) => date(Number(r.train_start_ts)),
-                      },
-                      {
-                        key: 'test_start_ts',
-                        label: 'Test start',
-                        render: (r) => date(Number(r.test_start_ts)),
-                      },
-                      {
-                        key: 'test_end_ts',
-                        label: 'Test end',
-                        render: (r) => date(Number(r.test_end_ts)),
-                      },
-                      {
-                        key: 'total_return_pct',
-                        label: 'Net return',
-                        render: (r) => percent(r.total_return_pct),
-                      },
-                      {
-                        key: 'max_drawdown_pct',
-                        label: 'Max drawdown',
-                        render: (r) =>
-                          r.max_drawdown_pct == null
-                            ? '—'
-                            : percent(-Math.abs(Number(r.max_drawdown_pct))),
-                      },
-                      {
-                        key: 'selected_strategy',
-                        label: 'Selected parameters',
-                        render: (r) => (
-                          <JsonDetails
-                            value={{
-                              selected_strategy: r.selected_strategy,
-                              training_comparison: r.training_comparison,
-                            }}
-                          />
-                        ),
-                      },
-                    ]}
-                  />
-                  <JsonDetails value={plan.oos_summary} label="Out-of-sample summary" />
-                </>
-              )}
-              {detailTab === 'scenarios' && (
-                <>
-                  <DataTable
-                    rows={scenarios}
-                    columns={[
-                      {
-                        key: 'id',
-                        label: 'Experiment',
-                        render: (r) => (
-                          <button
-                            className="text-button"
-                            onClick={() => selectVariant(String(r.id))}
-                          >
-                            {String(r.id)}
-                          </button>
-                        ),
-                      },
-                      ...(run.data?.config.mode === 'grid' &&
-                      run.data.config.strategy.kind === 'sma_cross'
-                        ? [
-                            { key: 'fast', label: 'Fast window' },
-                            { key: 'slow', label: 'Slow window' },
-                          ]
-                        : []),
-                      ...(run.data?.config.mode === 'grid' &&
-                      run.data.config.strategy.kind === 'rsi_reversion'
-                        ? [
-                            { key: 'rsi_period', label: 'RSI period' },
-                            { key: 'entry', label: 'Entry below' },
-                            { key: 'exit', label: 'Exit above' },
-                          ]
-                        : []),
-                      ...(run.data?.config.mode === 'grid' &&
-                      run.data.config.strategy.kind === 'buy_hold'
-                        ? [{ key: 'allocation', label: 'Capital allocation' }]
-                        : []),
-                      { key: 'fee_bps', label: 'Fee' },
-                      { key: 'slippage_bps', label: 'Slippage' },
-                      {
-                        key: 'total_return_pct',
-                        label: 'Net return',
-                        render: (r) => percent(r.total_return_pct),
-                      },
-                      {
-                        key: 'max_drawdown_pct',
-                        label: 'Max drawdown',
-                        render: (r) =>
-                          r.max_drawdown_pct == null
-                            ? '—'
-                            : percent(-Math.abs(Number(r.max_drawdown_pct))),
-                      },
-                      { key: 'sharpe', label: 'Sharpe ratio', render: (r) => number(r.sharpe) },
-                    ]}
-                  />
-                  <JsonDetails value={scenarios} label="Details" />
-                </>
-              )}
-              {detailTab === 'costs' && (
-                <>
-                  <RecordGrid
-                    value={
-                      result?.attribution ??
-                      result?.costs ?? {
-                        fees_paid: metrics.fees_paid,
-                        funding_paid: metrics.funding_paid,
-                        realized_pnl: metrics.realized_pnl,
-                        insurance_shortfall: metrics.insurance_shortfall,
-                        turnover: metrics.turnover,
-                        exposure_pct: metrics.exposure_pct,
+              <details className="research-source-records">
+                <summary>
+                  {text('Execution records & source evidence', '成交记录与来源证据')}
+                </summary>
+                <WorkspaceTabs
+                  value={detailTab}
+                  onChange={setDetailTab}
+                  items={[
+                    { key: 'fills', label: 'Fills' },
+                    { key: 'signals', label: 'Signals & orders' },
+                    { key: 'trips', label: 'Round trips' },
+                    { key: 'folds', label: 'Folds' },
+                    { key: 'scenarios', label: 'Scenarios' },
+                    { key: 'costs', label: 'Cost attribution' },
+                    { key: 'manifest', label: 'Provenance' },
+                  ]}
+                />
+                {detailTab === 'fills' && (
+                  <>
+                    <div className="detail-action-bar">
+                      <span>
+                        {fills.length} {t('Fills')}
+                      </span>
+                      <button
+                        className="text-button"
+                        disabled={!fills.length}
+                        onClick={() => downloadCsv(fills, `tidebench-${activeId}-fills.csv`)}
+                      >
+                        <ArrowDownToLine size={13} />
+                        {t('Export CSV')}
+                      </button>
+                    </div>
+                    <DataTable
+                      rows={fills}
+                      columns={[
+                        { key: 'ts', label: 'Time', render: (r) => date(Number(r.ts)) },
+                        { key: 'side', label: 'Side' },
+                        {
+                          key: 'quantity',
+                          label: 'Quantity',
+                          render: (r) => quantityText(r.quantity),
+                        },
+                        { key: 'price', label: 'Fill price', render: (r) => price(r.price) },
+                        { key: 'notional', label: 'Notional', render: (r) => number(r.notional) },
+                        { key: 'fee', label: 'Fee', render: (r) => number(r.fee, 4) },
+                        { key: 'reason', label: 'Reason' },
+                        { key: 'signal_id', label: 'Signal' },
+                      ]}
+                    />
+                    <JsonDetails value={fills} label="Details" />
+                  </>
+                )}
+                {detailTab === 'signals' && (
+                  <>
+                    <AutoTable rows={arrayRecords(result?.signals)} />
+                    <h3 className="result-subheading">{t('Orders')}</h3>
+                    <AutoTable rows={arrayRecords(result?.orders)} />
+                  </>
+                )}
+                {detailTab === 'trips' && (
+                  <>
+                    <AutoTable rows={arrayRecords(result?.round_trips)} />
+                    <JsonDetails value={result?.round_trips} label="Details" />
+                  </>
+                )}
+                {detailTab === 'folds' && (
+                  <>
+                    <DataTable
+                      rows={foldRows}
+                      columns={[
+                        {
+                          key: 'id',
+                          label: 'Fold',
+                          render: (r) => (
+                            <button
+                              className="text-button"
+                              onClick={() => selectVariant(`${r.id}:test`)}
+                            >
+                              {String(r.id)}
+                            </button>
+                          ),
+                        },
+                        {
+                          key: 'train_start_ts',
+                          label: 'Training start',
+                          render: (r) => date(Number(r.train_start_ts)),
+                        },
+                        {
+                          key: 'test_start_ts',
+                          label: 'Test start',
+                          render: (r) => date(Number(r.test_start_ts)),
+                        },
+                        {
+                          key: 'test_end_ts',
+                          label: 'Test end',
+                          render: (r) => date(Number(r.test_end_ts)),
+                        },
+                        {
+                          key: 'total_return_pct',
+                          label: 'Net return',
+                          render: (r) => percent(r.total_return_pct),
+                        },
+                        {
+                          key: 'max_drawdown_pct',
+                          label: 'Max drawdown',
+                          render: (r) =>
+                            r.max_drawdown_pct == null
+                              ? '—'
+                              : percent(-Math.abs(Number(r.max_drawdown_pct))),
+                        },
+                        {
+                          key: 'selected_strategy',
+                          label: 'Selected parameters',
+                          render: (r) => (
+                            <JsonDetails
+                              value={{
+                                selected_strategy: r.selected_strategy,
+                                training_comparison: r.training_comparison,
+                              }}
+                            />
+                          ),
+                        },
+                      ]}
+                    />
+                    <JsonDetails value={plan.oos_summary} label="Out-of-sample summary" />
+                  </>
+                )}
+                {detailTab === 'scenarios' && (
+                  <>
+                    <DataTable
+                      rows={scenarios}
+                      columns={[
+                        {
+                          key: 'id',
+                          label: 'Experiment',
+                          render: (r) => (
+                            <button
+                              className="text-button"
+                              onClick={() => selectVariant(String(r.id))}
+                            >
+                              {String(r.id)}
+                            </button>
+                          ),
+                        },
+                        ...(run.data?.config.mode === 'grid' &&
+                        run.data.config.strategy.kind === 'sma_cross'
+                          ? [
+                              { key: 'fast', label: 'Fast window' },
+                              { key: 'slow', label: 'Slow window' },
+                            ]
+                          : []),
+                        ...(run.data?.config.mode === 'grid' &&
+                        run.data.config.strategy.kind === 'rsi_reversion'
+                          ? [
+                              { key: 'rsi_period', label: 'RSI period' },
+                              { key: 'entry', label: 'Entry below' },
+                              { key: 'exit', label: 'Exit above' },
+                            ]
+                          : []),
+                        ...(run.data?.config.mode === 'grid' &&
+                        run.data.config.strategy.kind === 'buy_hold'
+                          ? [{ key: 'allocation', label: 'Capital allocation' }]
+                          : []),
+                        { key: 'fee_bps', label: 'Fee' },
+                        { key: 'slippage_bps', label: 'Slippage' },
+                        {
+                          key: 'total_return_pct',
+                          label: 'Net return',
+                          render: (r) => percent(r.total_return_pct),
+                        },
+                        {
+                          key: 'max_drawdown_pct',
+                          label: 'Max drawdown',
+                          render: (r) =>
+                            r.max_drawdown_pct == null
+                              ? '—'
+                              : percent(-Math.abs(Number(r.max_drawdown_pct))),
+                        },
+                        { key: 'sharpe', label: 'Sharpe ratio', render: (r) => number(r.sharpe) },
+                      ]}
+                    />
+                    <JsonDetails value={scenarios} label="Details" />
+                  </>
+                )}
+                {detailTab === 'costs' && (
+                  <>
+                    <RecordGrid
+                      value={
+                        result?.attribution ??
+                        result?.costs ?? {
+                          fees_paid: metrics.fees_paid,
+                          funding_paid: metrics.funding_paid,
+                          realized_pnl: metrics.realized_pnl,
+                          insurance_shortfall: metrics.insurance_shortfall,
+                          turnover: metrics.turnover,
+                          exposure_pct: metrics.exposure_pct,
+                        }
                       }
-                    }
-                  />
-                  <h3 className="result-subheading">{t('Funding')}</h3>
-                  <AutoTable rows={arrayRecords(result?.funding)} />
-                  <JsonDetails value={metrics} label="Metrics" />
-                  <JsonDetails value={result} label="Details" />
-                </>
-              )}
-              {detailTab === 'manifest' && (
-                <>
-                  <JsonDetails
-                    value={run.data?.manifest ?? result?.provenance}
-                    label="Manifest"
-                    open
-                  />
-                  <JsonDetails value={result?.assumptions} label="Assumptions" open />
-                </>
-              )}
+                    />
+                    <h3 className="result-subheading">{t('Funding')}</h3>
+                    <AutoTable rows={arrayRecords(result?.funding)} />
+                    <JsonDetails value={metrics} label="Metrics" />
+                    <JsonDetails value={result} label="Details" />
+                  </>
+                )}
+                {detailTab === 'manifest' && (
+                  <>
+                    <JsonDetails
+                      value={run.data?.manifest ?? result?.provenance}
+                      label="Manifest"
+                      open
+                    />
+                    <JsonDetails value={result?.assumptions} label="Assumptions" open />
+                  </>
+                )}
+              </details>
               <div className="research-next-step">
                 <div>
                   <strong>{text('Next research decision', '下一步研究决策')}</strong>
@@ -1160,11 +1197,15 @@ export default function ProResearch({
           )}
         </section>
       )}
-      <section className="pro-panel run-catalog-panel research-desk">
+      <section
+        className="pro-panel run-catalog-panel research-desk research-task-panel"
+        hidden={task !== 'ledger'}
+      >
         <div className="section-heading">
           <h2 id="research-runs-heading">{t('Research runs')}</h2>
           <button
             className="button button-small button-secondary"
+            aria-describedby="research-compare-instructions"
             disabled={checked.length < 2}
             onClick={() => setComparison([...checked])}
           >
@@ -1172,6 +1213,12 @@ export default function ProResearch({
             {t('Compare selected')} ({checked.length})
           </button>
         </div>
+        <p className="research-compare-instructions" id="research-compare-instructions">
+          {text(
+            'Select 2–8 completed trials to inspect configuration differences and comparable evidence.',
+            '选择 2–8 次已完成试验，检查配置差异与证据的可比性。',
+          )}
+        </p>
         {!!allRuns.length && (
           <div className="backtest-history-controls">
             <input
@@ -1370,9 +1417,14 @@ export default function ProResearch({
         )}
       </section>
       {comparison.length >= 2 && (
-        <section className="pro-panel comparison-panel">
+        <section
+          className="pro-panel comparison-panel research-task-panel"
+          hidden={task !== 'ledger'}
+        >
           <div className="section-heading">
-            <h2>{t('Run comparison')}</h2>
+            <h2 ref={comparisonHeading} tabIndex={-1}>
+              {t('Run comparison')}
+            </h2>
             <button className="text-button" onClick={() => setComparison([])}>
               {t('Close')}
             </button>
@@ -1383,6 +1435,12 @@ export default function ProResearch({
             <ErrorBox error={compare.error} />
           ) : (
             <>
+              <p className="research-comparison-basis">
+                {text(
+                  'Compare the data window, costs, exposure and evaluation scope before interpreting differences. A higher return or Sharpe does not establish alpha or paper eligibility.',
+                  '解释差异前，先比较数据时段、成本、敞口和评估范围。更高收益或夏普不代表 alpha 或模拟准入资格。',
+                )}
+              </p>
               {!!compare.data.warning && (
                 <p className="inline-warning">{String(compare.data.warning)}</p>
               )}
@@ -1431,6 +1489,12 @@ export default function ProResearch({
                           .join(' · ')
                       : text('Matching inputs', '输入一致')}
                   </p>
+                  <p className="research-config-difference-note">
+                    {text(
+                      'Shaded rows differ. Matching inputs do not establish independent evidence.',
+                      '底色标识差异行；输入一致不代表证据独立。',
+                    )}
+                  </p>
                   <div
                     className="table-scroll"
                     tabIndex={0}
@@ -1440,9 +1504,9 @@ export default function ProResearch({
                     <table className="research-config-comparison">
                       <thead>
                         <tr>
-                          <th>{text('Configuration', '配置')}</th>
+                          <th scope="col">{text('Configuration', '配置')}</th>
                           {arrayRecords(compare.data.items ?? compare.data.runs).map((item) => (
-                            <th key={String(item.id)}>
+                            <th key={String(item.id)} scope="col">
                               {runTitle(item as ProRun)}
                               <small>{String(item.id).slice(0, 10)}</small>
                             </th>
@@ -1451,20 +1515,32 @@ export default function ProResearch({
                       </thead>
                       <tbody>
                         {[
+                          [text('Run identity', '运行身份'), (item: ProRun) => item.id],
                           [
                             text('Market & data', '市场与数据'),
                             (item: ProRun) =>
                               `${catalog.find((input) => input.id === item.config.dataset_id)?.inst_id ?? item.config.dataset_id} · ${catalog.find((input) => input.id === item.config.dataset_id)?.bar ?? '—'}`,
                           ],
                           [
+                            text('Immutable dataset versions', '不可变数据版本'),
+                            (item: ProRun) =>
+                              [
+                                item.config.dataset_id,
+                                item.config.mark_dataset_id,
+                                item.config.funding_dataset_id,
+                              ]
+                                .filter(Boolean)
+                                .join(' · '),
+                          ],
+                          [
                             text('UTC window', 'UTC 时段'),
                             (item: ProRun) =>
-                              `${date(Number(item.config.start_ts), true)} → ${date(Number(item.config.end_ts), true)}`,
+                              `${date(Number(item.config.start_ts ?? catalog.find((input) => input.id === item.config.dataset_id)?.start), true)} → ${date(Number(item.config.end_ts ?? catalog.find((input) => input.id === item.config.dataset_id)?.end), true)}`,
                           ],
                           [
                             text('Cost assumptions', '成本假设'),
                             (item: ProRun) =>
-                              `${text('Fee', '费用')} ${valueText(item.config.fee_bps)} + ${text('Slippage', '滑点')} ${valueText(item.config.slippage_bps)} bps`,
+                              `${text('Fee', '费用')} ${valueText(item.config.fee_bps)} + ${text('Slippage', '滑点')} ${valueText(item.config.slippage_bps)} bps · ${text('Liquidation fee', '清算费用')} ${valueText(item.config.liquidation_fee_bps)} bps`,
                           ],
                           [
                             text('Capital & exposure', '资金与敞口'),
@@ -1475,6 +1551,14 @@ export default function ProResearch({
                             text('Strategy version', '策略版本'),
                             (item: ProRun) =>
                               item.config.strategy_version_id ?? text('Exploratory', '探索研究'),
+                          ],
+                          [
+                            text('Recorded holdout identity', '已记录保留样本身份'),
+                            (item: ProRun) =>
+                              'holdout_id' in item.config &&
+                              typeof item.config.holdout_id === 'string'
+                                ? item.config.holdout_id
+                                : text('None recorded for this run', '本次运行未记录'),
                           ],
                           [
                             text('Parameters', '参数'),
@@ -1489,16 +1573,29 @@ export default function ProResearch({
                             (item: ProRun) =>
                               `${t(modeNames[item.config.mode])} · ${scopeLabel(item)}`,
                           ],
-                        ].map(([label, read]) => (
-                          <tr key={String(label)}>
-                            <th>{String(label)}</th>
-                            {arrayRecords(compare.data.items ?? compare.data.runs).map((item) => (
-                              <td key={String(item.id)}>
-                                {(read as (item: ProRun) => string)(item as ProRun)}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
+                          [
+                            text('Evaluation parameters', '评估参数'),
+                            (item: ProRun) => valueText(item.config.options),
+                          ],
+                        ].map(([label, read]) => {
+                          const items = arrayRecords(compare.data.items ?? compare.data.runs);
+                          const values = items.map((item) =>
+                            (read as (item: ProRun) => string)(item as ProRun),
+                          );
+                          const differs =
+                            label !== text('Run identity', '运行身份') && new Set(values).size > 1;
+                          return (
+                            <tr
+                              key={String(label)}
+                              className={differs ? 'is-different' : undefined}
+                            >
+                              <th scope="row">{String(label)}</th>
+                              {items.map((item, index) => (
+                                <td key={String(item.id)}>{values[index]}</td>
+                              ))}
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1520,13 +1617,28 @@ export default function ProResearch({
                   { key: 'source', label: 'Source' },
                   {
                     key: 'return',
-                    label: 'Net return',
+                    label: 'Return / scope',
                     render: (r) => {
                       const p = r.result as ProResult;
                       const m = (p?.result as ProResult)?.metrics ?? p?.metrics;
-                      return m
-                        ? percent(m.total_return_pct)
-                        : percent((p?.oos_summary as RecordData | undefined)?.median_return_pct);
+                      const oos = p?.oos_summary as RecordData | undefined;
+                      return (
+                        <div className="table-stacked">
+                          <span>
+                            {m ? percent(m.total_return_pct) : percent(oos?.median_return_pct)}
+                          </span>
+                          <small>
+                            {m
+                              ? text('Whole-window net return', '全时段净收益')
+                              : oos
+                                ? text(
+                                    'Median test return · separate accounts',
+                                    '测试收益中位数 · 独立账户',
+                                  )
+                                : text('Inspect individual scenarios', '检查各个情景')}
+                          </small>
+                        </div>
+                      );
                     },
                   },
                   {
@@ -1552,11 +1664,17 @@ export default function ProResearch({
     <section
       key="configuration"
       className="pro-panel pro-research-form research-desk"
+      hidden={task !== 'draft'}
       data-research-region="configuration"
       aria-labelledby="research-configuration-heading"
     >
       <div className="section-heading">
         <h2 id="research-configuration-heading">{t('Research configuration')}</h2>
+        {activeId && (
+          <button type="button" className="text-button" onClick={() => chooseTask('analysis')}>
+            {text('Back to result analysis', '返回结果分析')}
+          </button>
+        )}
         {run.data && (
           <button type="button" className="text-button" onClick={() => load(run.data!)}>
             {t('Use selected run configuration')}
@@ -1626,7 +1744,7 @@ export default function ProResearch({
         {versionId && (
           <div className="prepared-input-note">
             <span>{t('Bound strategy version')}</span>
-            <code>{versionId.slice(0, 12)}</code>
+            <code>{versionId}</code>
             <button
               className="text-button"
               onClick={() => {
@@ -1643,7 +1761,7 @@ export default function ProResearch({
             <span>
               {t(packageAttached ? 'Prepared research package' : 'Package inputs modified')}
             </span>
-            <code>{preparedInputs.package_id.slice(0, 12)}</code>
+            <code>{preparedInputs.package_id}</code>
             <span>
               {t(
                 packageAttached
@@ -2083,7 +2201,9 @@ export default function ProResearch({
     </section>
   );
   return (
-    <div className={`backtest-workspace${activeId ? ' has-selected-result' : ''}`}>
+    <div
+      className={`backtest-workspace research-task-workspace${activeId ? ' has-selected-result' : ''}`}
+    >
       <PageHeading
         eyebrow="RESEARCH"
         title="Research"
@@ -2092,40 +2212,48 @@ export default function ProResearch({
         <nav
           className="backtest-workspace-nav"
           aria-label={text('Research workspace actions', '研究工作区操作')}
+          ref={taskNav}
         >
           <button
             disabled={!activeId}
-            onClick={() =>
-              document
-                .getElementById('research-result-heading')
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
+            aria-label={text('Result analysis', '结果分析')}
+            aria-pressed={task === 'analysis'}
+            onClick={() => chooseTask('analysis')}
           >
-            {text('Result analysis', '结果分析')}
+            <span className="research-task-long-label">{text('Result analysis', '结果分析')}</span>
+            <span className="research-task-short-label">{text('Analysis', '分析')}</span>
           </button>
           <button
-            onClick={() =>
-              document
-                .getElementById('research-configuration-heading')
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            aria-label={
+              activeId
+                ? text('Next trial draft', '下一次试验草稿')
+                : text('Configure a trial', '配置试验')
             }
+            aria-pressed={task === 'draft'}
+            onClick={() => chooseTask('draft')}
           >
-            {activeId
-              ? text('Next trial draft', '下一次试验草稿')
-              : text('Configure a trial', '配置试验')}
+            <span className="research-task-long-label">
+              {activeId
+                ? text('Next trial draft', '下一次试验草稿')
+                : text('Configure a trial', '配置试验')}
+            </span>
+            <span className="research-task-short-label">{text('Draft', '草稿')}</span>
           </button>
           <button
-            onClick={() =>
-              document
-                .getElementById('research-runs-heading')
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
+            aria-label={text('Study ledger', '研究目录')}
+            aria-pressed={task === 'ledger'}
+            onClick={() => chooseTask('ledger')}
           >
-            {text('Study ledger', '研究目录')} <span>{allRuns.length}</span>
+            <span className="research-task-long-label">
+              {text('Study ledger', '研究目录')} <span>{allRuns.length}</span>
+            </span>
+            <span className="research-task-short-label">{text('Trials', '试验')}</span>
           </button>
         </nav>
         <button
           className="button button-secondary"
+          aria-label={t('New research')}
+          title={t('New research')}
           disabled={!canOperate}
           onClick={() => {
             draft.clear({
@@ -2140,27 +2268,34 @@ export default function ProResearch({
             create.reset();
           }}
         >
-          {t('New research')}
+          <FlaskConical size={14} />
+          <span>{t('New research')}</span>
         </button>
         <button
           className="button button-secondary"
+          aria-label={t('Export JSON')}
+          title={t('Export JSON')}
           disabled={!plan}
           onClick={() => void exportRun()}
         >
           <ArrowDownToLine size={14} />
-          {t('Export JSON')}
+          <span>{t('Export JSON')}</span>
         </button>
         <button
           className="button button-secondary"
+          aria-label={t('Replay snapshot')}
+          title={t('Replay snapshot')}
           disabled={!canOperate || !plan || busy}
           onClick={() => activeId && replay.mutate({ request: beginRequest('replay') })}
         >
           <RefreshCw size={14} />
-          {t('Replay snapshot')}
+          <span>{t('Replay snapshot')}</span>
         </button>
         {run.data && ['queued', 'running'].includes(run.data.status) && (
           <button
-            className="button button-secondary"
+            className="button button-secondary research-cancel-action"
+            aria-label={t(cancellationRequested ? 'Cancellation requested' : 'Cancel research')}
+            title={t(cancellationRequested ? 'Cancellation requested' : 'Cancel research')}
             disabled={
               !canOperate ||
               (cancel.isPending && cancel.variables === activeId) ||
@@ -2169,7 +2304,7 @@ export default function ProResearch({
             onClick={() => activeId && cancel.mutate(activeId)}
           >
             <Square size={14} />
-            {t(cancellationRequested ? 'Cancellation requested' : 'Cancel research')}
+            <span>{t(cancellationRequested ? 'Cancellation requested' : 'Cancel research')}</span>
           </button>
         )}
       </PageHeading>
@@ -2195,7 +2330,7 @@ export default function ProResearch({
       />
 
       <div
-        className={`pro-research-layout research-desk-layout${activeId ? '' : ' research-config-first'}${!activeId && !visibleRuns.length ? ' research-empty-history' : ''}`}
+        className={`pro-research-layout research-desk-layout${task === 'draft' ? ' research-config-first' : ''}${!activeId && !visibleRuns.length ? ' research-empty-history' : ''}`}
       >
         {activeId ? [results, configuration] : [configuration, results]}
       </div>

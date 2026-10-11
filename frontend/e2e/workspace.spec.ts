@@ -283,6 +283,7 @@ test('versioned research, saved results, replay and JSON export', async ({
   const b = await (await request.get(`/api/v1/pro/research/runs/${replayed.id}`)).json();
   expect(b.result).toEqual(a.result);
   // Exercise the rendered OOS configuration, not a hand-crafted engine request.
+  await page.getByRole('button', { name: 'Next trial draft', exact: true }).click();
   await page.getByLabel('Mode', { exact: true }).selectOption('train_test');
   await page.getByLabel('Parameter selection', { exact: true }).selectOption('training');
   await page.getByLabel('Fast windows', { exact: true }).fill('5,8');
@@ -305,6 +306,7 @@ test('versioned research, saved results, replay and JSON export', async ({
     await request.get(`/api/v1/pro/research/runs/${selectedRun.id}`)
   ).json();
   expect(selectedResult.result.folds[0].training_experiments).toHaveLength(2);
+  await page.getByRole('button', { name: 'Next trial draft', exact: true }).click();
   await page.getByLabel('Mode', { exact: true }).selectOption('walk_forward');
   await expect(page.getByLabel('Fast windows', { exact: true })).toHaveValue('5,8');
   await page.getByLabel('Parameter selection', { exact: true }).selectOption('fixed');
@@ -454,8 +456,9 @@ test('shared-capital portfolio study and one-use holdout governance', async ({
   const seal = await (await sealing).json();
   expect(seal.status).toBe('sealed');
   await page.getByRole('button', { name: 'Evaluate once', exact: true }).click();
+  await page.locator('.research-run-context > summary').click();
   await expect(page.getByText('Run strategy version', { exact: true })).toBeVisible();
-  await expect(page.locator('.research-run-identity')).toContainText(project.version.id);
+  await expect(page.locator('.research-run-context')).toContainText(project.version.id);
   await expect
     .poll(async () => {
       const list = (await (await request.get('/api/v1/pro/research/holdouts')).json()).items;
@@ -464,7 +467,7 @@ test('shared-capital portfolio study and one-use holdout governance', async ({
     .toBe('consumed');
   await page.getByLabel('Interface language', { exact: true }).selectOption('zh-CN');
   await expect(page.getByText('本次运行策略版本', { exact: true })).toBeVisible();
-  await expect(page.locator('.research-run-identity')).toContainText(project.version.id);
+  await expect(page.locator('.research-run-context')).toContainText(project.version.id);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBeTruthy();
@@ -698,7 +701,10 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
 }, testInfo) => {
   await navigate(page, 'Execution');
   await page.getByRole('button', { name: 'New order', exact: true }).click();
-  await page.getByLabel('Quantity', { exact: false }).fill('0.001');
+  await page
+    .locator('.execution-ticket')
+    .getByRole('spinbutton', { name: 'Quantity', exact: true })
+    .fill('0.001');
   await page.getByRole('button', { name: 'Preview order', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Order preview', exact: true })).toBeVisible();
   let releaseSubmit!: () => void;
@@ -721,11 +727,16 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
   );
   await page.getByRole('button', { name: 'Submit order', exact: true }).click();
   await submissionStarted;
-  await page.getByLabel('Quantity', { exact: false }).fill('0.002');
+  await page
+    .locator('.execution-ticket')
+    .getByRole('spinbutton', { name: 'Quantity', exact: true })
+    .fill('0.002');
   releaseSubmit();
   expect((await spotSubmission).ok()).toBeTruthy();
   await expect(page.getByRole('status').filter({ hasText: 'Order submitted' })).toBeVisible();
-  await expect(page.getByLabel('Quantity', { exact: false })).toHaveValue('0.002');
+  await expect(
+    page.locator('.execution-ticket').getByRole('spinbutton', { name: 'Quantity', exact: true }),
+  ).toHaveValue('0.002');
   await page.unroute('**/pro/execution/orders');
   await expect
     .poll(async () =>
@@ -737,7 +748,10 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
   if (!(await page.locator('.execution-ticket').count()))
     await page.getByRole('button', { name: 'New order', exact: true }).click();
   await page.getByLabel('Product', { exact: true }).selectOption('SWAP');
-  await page.getByLabel('Quantity', { exact: false }).fill('1');
+  await page
+    .locator('.execution-ticket')
+    .getByRole('spinbutton', { name: 'Quantity', exact: true })
+    .fill('1');
   await page.getByLabel('Leverage', { exact: true }).fill('3');
   await page.getByRole('button', { name: 'Preview order', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Order preview', exact: true })).toBeVisible();
@@ -745,7 +759,9 @@ test('unified portfolio order preview, fill and persistent risk halt', async ({
   await expect(
     visibleBookRecord(page, 'BTC-USDT-SWAP').getByText('BTC-USDT-SWAP', { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText('Account equity', { exact: true })).toBeVisible();
+  await expect(
+    page.locator('.desk-account-strip').getByText('Account equity', { exact: true }),
+  ).toBeVisible();
   if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1' && testInfo.project.name === 'desktop') {
     await expect(page.getByText('Loading workspace data…', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Loading market snapshot…', { exact: true })).toHaveCount(0);

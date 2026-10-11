@@ -1,0 +1,186 @@
+.desk-table-tools.has-table-preferences {
+  display: flex;
+  flex-wrap: wrap;
+}
+.table-preferences {
+  min-width: 0;
+  margin-left: auto;
+  color: var(--ink, #172c35);
+  font-size: 12px;
+}
+.table-preferences > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--line, #cbd6cf);
+  border-radius: 3px;
+  background: var(--canvas, #fff);
+  cursor: pointer;
+  list-style: none;
+}
+.table-preferences > summary::-webkit-details-marker {
+  display: none;
+}
+.table-preferences > summary::after {
+  content: '⌄';
+}
+.table-preferences[open] > summary::after {
+  content: '⌃';
+}
+.table-preference-count {
+  color: var(--muted, #53656c);
+  font-variant-numeric: tabular-nums;
+}
+.table-preferences[open] {
+  flex: 1 0 100%;
+  margin-left: 0;
+}
+.table-preference-panel {
+  margin-top: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line, #cbd6cf);
+  border-bottom: 1px solid var(--line, #cbd6cf);
+}
+.table-preference-panel > p {
+  margin: 0 0 12px;
+  color: var(--muted, #53656c);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.table-preference-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 0 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.table-preference-columns > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line, #cbd6cf);
+}
+.table-preference-columns label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 36px;
+  cursor: pointer;
+}
+.table-preference-columns label > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.table-preference-columns input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-strong, #126d68);
+}
+.table-preference-columns input:disabled {
+  cursor: not-allowed;
+}
+.table-preference-columns small {
+  display: block;
+  color: var(--muted, #53656c);
+  font-size: 10px;
+}
+.table-preference-move {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+.table-preference-move button {
+  width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--line, #cbd6cf);
+  border-radius: 3px;
+  background: var(--canvas, #fff);
+  color: var(--ink, #172c35);
+  cursor: pointer;
+  font: inherit;
+}
+.table-preference-move button:disabled {
+  color: var(--muted, #53656c);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.table-preference-reset {
+  min-height: 36px;
+  margin-top: 12px;
+}
+.table-preference-error {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-left: 3px solid #946619;
+  background: #fcf7e9;
+  color: #684511;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.table-preferences summary:focus-visible,
+.table-preference-columns input:focus-visible,
+.table-preference-move button:focus-visible,
+.table-preference-reset:focus-visible {
+  outline: 2px solid var(--accent-strong, #126d68);
+  outline-offset: 3px;
+}
+@media (max-width: 720px) {
+  .table-preference-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .table-preferences > summary,
+  .table-preference-move button,
+  .table-preference-reset {
+    min-height: 44px;
+  }
+  .table-preference-move button {
+    width: 44px;
+  }
+  .table-preference-columns label {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 720px) {
+  .has-compact-records .desk-table-tools.has-table-preferences {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+    gap: 4px 8px;
+  }
+  .has-compact-records .table-preferences {
+    margin-left: 0;
+  }
+  .has-compact-records .table-preferences > summary {
+    width: 44px;
+    justify-content: center;
+    padding: 8px;
+  }
+  .has-compact-records .table-preferences > summary > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .has-compact-records .table-preferences > summary::after {
+    display: none;
+  }
+  .has-compact-records .table-preferences:not([open]) {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .has-compact-records .table-preferences[open] {
+    grid-column: 1 / -1;
+  }
+}

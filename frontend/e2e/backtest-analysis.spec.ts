@@ -14,6 +14,8 @@ async function prepare(
   options = {},
   days = 120,
   bar = '4H',
+  versioned = false,
+  configOverrides: Record<string, unknown> = {},
 ) {
   const status = await (await request.get('/api/v1/auth/status')).json();
   const login = await request.post(
@@ -26,6 +28,29 @@ async function prepare(
   );
   expect(login.ok()).toBeTruthy();
   const headers = { 'X-CSRF-Token': (await login.json()).csrf_token };
+  const strategy = { kind: 'sma_cross', fast: 8, slow: 26 };
+  let strategyVersionId: string | undefined;
+  if (versioned) {
+    const project = await request.post('/api/v1/pro/strategies', {
+      headers,
+      data: {
+        name: `Captured research identity ${Date.now()}`,
+        hypothesis:
+          'Inspect cost and independent-test evidence before considering paper admission.',
+        definition: {
+          schema_version: 1,
+          product: 'SPOT',
+          bar,
+          strategy,
+          direction: 'long_only',
+          leverage: '1',
+        },
+      },
+    });
+    expect(project.ok()).toBeTruthy();
+    strategyVersionId = (await project.json()).version.id;
+    expect(strategyVersionId).toBeTruthy();
+  }
   const end = 1767225600000;
   const queued = await request.post('/api/v1/pro/catalog/jobs', {
     headers,
@@ -57,9 +82,11 @@ async function prepare(
     headers,
     data: {
       dataset_id: datasetId,
-      strategy: { kind: 'sma_cross', fast: 8, slow: 26 },
+      strategy,
       mode,
       options,
+      ...(strategyVersionId ? { strategy_version_id: strategyVersionId } : {}),
+      ...configOverrides,
     },
   });
   expect(created.status()).toBe(202);
@@ -81,7 +108,8 @@ test('selected report shows decision context and a meaningful performance plot o
   const mobile = info.project.name === 'mobile';
   const viewport = mobile ? { width: 390, height: 844 } : { width: 1280, height: 720 };
   await page.setViewportSize(viewport);
-  const id = await prepare(request);
+  const id = await prepare(request, 'single', {}, 120, '4H', true);
+  const saved = await (await request.get(`/api/v1/pro/research/runs/${id}`)).json();
   await page.goto(`/#research?source=example&view=advanced&run=${id}`);
   const chart = page.getByRole('img', { name: 'Research performance chart', exact: true });
   await expect(chart).toBeVisible();
@@ -95,6 +123,28 @@ test('selected report shows decision context and a meaningful performance plot o
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     viewport.width,
   );
+  const configuration = page.getByLabel('Selected run configuration', { exact: true });
+  await configuration.locator('summary').click();
+  for (const identity of [id, saved.config.strategy_version_id, saved.config.dataset_id]) {
+    await expect(configuration.getByText(identity, { exact: true })).toBeVisible();
+  }
+  await expect(configuration.getByText('Evaluated UTC window', { exact: true })).toBeVisible();
+  await configuration.locator('summary').click();
+  const decision = page.getByRole('region', { name: 'Evidence decision', exact: true });
+  await decision.locator('summary').click();
+  await expect(
+    decision.getByText(
+      'Development evidence. A full-window result is not an independent validation.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    decision.getByText(
+      'Returns and Sharpe describe this captured sample. Paper admission is determined by the server review, not by these metrics.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await decision.locator('summary').click();
   const tabs = page.locator('.backtest-report [role="tablist"]');
   await tabs.getByRole('tab', { name: 'Performance', exact: true }).focus();
   await page.keyboard.press('End');
@@ -129,6 +179,8 @@ test('selected report shows decision context and a meaningful performance plot o
         basis.getByText('Daily · √365 · zero risk-free rate', { exact: true }),
       ).toBeVisible();
       await expect(basis.getByText('120 complete UTC days', { exact: true })).toBeVisible();
+      await expect(basis.getByText('Sharpe ratio', { exact: true })).toBeVisible();
+      await expect(basis.getByText('Completed trades', { exact: true })).toBeVisible();
     }
     await tabs.getByRole('tab', { name: 'Performance', exact: true }).click();
   }
@@ -138,10 +190,79 @@ test('selected report shows decision context and a meaningful performance plot o
       .evaluate((node) => (node as HTMLElement).blur());
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
-      path: `../docs/assets/trader-ui-v016-research-${info.project.name}.png`,
+      path: `../docs/assets/trader-ui-v017-research-${info.project.name}.png`,
       fullPage: false,
     });
   }
+});
+
+test('research tasks preserve a separate draft and bring comparable configuration differences into view', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(90000);
+  const first = await prepare(request, 'single', {}, 120, '4H', false, {
+    fee_bps: '11',
+    slippage_bps: '3',
+  });
+  const second = await prepare(request, 'single', {}, 120, '4H', false, {
+    fee_bps: '27',
+    slippage_bps: '3',
+  });
+  await page.goto(`/#research?source=example&view=advanced&run=${first}`);
+  const analysis = page.getByRole('region', { name: 'Backtest analysis', exact: true });
+  const draft = page.locator('[data-research-region="configuration"]');
+  const ledger = page.locator('.run-catalog-panel');
+  await expect(analysis).toBeVisible();
+  await expect(draft).toBeHidden();
+  await expect(ledger).toBeHidden();
+  await page.getByRole('button', { name: 'Next trial draft', exact: true }).click();
+  await expect(draft).toBeVisible();
+  await expect(analysis).toBeHidden();
+  await draft.getByLabel('Fee', { exact: true }).fill('41');
+  await page.getByRole('button', { name: 'Back to result analysis', exact: true }).click();
+  await expect(analysis).toBeVisible();
+  await expect(draft).toBeHidden();
+  const configuration = page.getByLabel('Selected run configuration', { exact: true });
+  await configuration.locator('summary').click();
+  await expect(
+    configuration.getByText('Cost assumptions', { exact: true }).locator('..'),
+  ).toContainText('Fee 11 + Slippage 3 bps');
+  await configuration.locator('summary').click();
+  await page.getByRole('button', { name: 'Study ledger', exact: true }).click();
+  await expect(ledger).toBeVisible();
+  await expect(analysis).toBeHidden();
+  for (const id of [first, second]) {
+    await ledger.getByRole('checkbox', { name: `Compare ${id}`, exact: true }).check();
+  }
+  await ledger.getByRole('button', { name: 'Compare selected (2)', exact: true }).click();
+  const comparison = page.locator('.comparison-panel');
+  await expect(
+    comparison.getByRole('heading', { name: 'Run comparison', exact: true }),
+  ).toBeFocused();
+  const compared = comparison.getByRole('region', { name: 'Compared configurations', exact: true });
+  for (const id of [first, second])
+    await expect(compared.getByText(id, { exact: true })).toBeVisible();
+  const costs = compared.getByRole('row').filter({
+    has: page.getByRole('rowheader', { name: 'Cost assumptions', exact: true }),
+  });
+  await expect(costs).toHaveClass('is-different');
+  await expect(costs).toContainText('Fee 11 + Slippage 3 bps');
+  await expect(costs).toContainText('Fee 27 + Slippage 3 bps');
+  await expect(comparison).toContainText('Matching inputs do not establish independent evidence.');
+  await expect(comparison).toContainText(
+    'A higher return or Sharpe does not establish alpha or paper eligibility.',
+  );
+  await expect(comparison.getByText('Whole-window net return', { exact: true })).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width,
+  );
+  await page.getByRole('button', { name: 'Next trial draft', exact: true }).click();
+  await expect(draft.getByLabel('Fee', { exact: true })).toHaveValue('41');
+  await expect(comparison).toBeHidden();
+  await page.getByRole('button', { name: 'Result analysis', exact: true }).click();
+  await expect(analysis).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`run=${first}`));
 });
 
 test('captured evidence drives all six analysis views, normalized chart and trade exports', async ({
@@ -157,7 +278,7 @@ test('captured evidence drives all six analysis views, normalized chart and trad
   await page.goto(`/#research?source=example&view=advanced&run=${id}`);
   const report = page.getByRole('region', { name: 'Backtest analysis', exact: true });
   await expect(report).toBeVisible();
-  await expect(report.getByText('Completed trades', { exact: true })).toBeVisible();
+  await expect(report.getByText('Max drawdown', { exact: true })).toBeVisible();
   await expect(report.getByRole('button', { name: '1M', exact: true })).toBeVisible();
   await report.getByRole('button', { name: '1M', exact: true }).click();
   await report.getByRole('button', { name: 'Equity · USDT', exact: true }).click();
@@ -238,7 +359,7 @@ test('captured evidence drives all six analysis views, normalized chart and trad
   if (process.env.TIDEBENCH_CAPTURE_ASSETS === '1') {
     await mkdir('../docs/assets', { recursive: true });
     await page.screenshot({
-      path: `../docs/assets/backtest-analysis-${info.project.name}.png`,
+      path: `../docs/assets/backtest-analysis-v017-${info.project.name}.png`,
       fullPage: false,
     });
   }
@@ -272,7 +393,7 @@ test('performance controls wait for verified diagnostics and preserve their init
     await page.goto(`/#research?source=example&view=advanced&run=${id}`);
     const report = page.getByRole('region', { name: 'Backtest analysis', exact: true });
     await expect(report.getByText('Net return', { exact: true })).toBeVisible();
-    await expect(report.getByText('Completed trades', { exact: true })).toBeVisible();
+    await expect(report.getByText('Max drawdown', { exact: true })).toBeVisible();
     await expect.poll(() => replyFetched).toBe(true);
     const loading = report
       .getByRole('status')

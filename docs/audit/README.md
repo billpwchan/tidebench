@@ -1,6 +1,6 @@
 # Red-team record
 
-Latest: [v0.16 interface review and measured layout checks](trader-interface-0.16.0.zh-CN.md), [v0.15 backtest methods](../backtest-analysis.md) and [verification](../verification.md).
+Latest: [v0.17 professional workspace task and interaction review](professional-workspace-0.17.0.zh-CN.md), [v0.16 interface review and measured layout checks](trader-interface-0.16.0.zh-CN.md), [v0.15 backtest methods](../backtest-analysis.md) and [verification](../verification.md).
 
 Previous: [v0.14 fresh trader baseline](fresh-trader-experience-v0.13-baseline.zh-CN.md), [independent visual baseline](fresh-visual-review-v0.13-baseline.zh-CN.md), [implemented scope and remaining issues](trader-experience-0.14.0.zh-CN.md) and [acceptance history](acceptance-history-0.14.0.md).
 
