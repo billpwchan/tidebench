@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "updated_on": "2026-10-11",
+  "policy": "Only independently validated, executable strategies enter platform presets. Rejected and unvalidated hypotheses remain offline research artifacts.",
+  "strategy_recipe_ids": [],
+  "portfolio_recipe_ids": [],
+  "minimum_evidence": [
+    "Locked specification and independently scored sample",
+    "Positive net economics after native execution and financing costs",
+    "Delay, regime, asset-concentration and multiple-testing checks",
+    "Native instrument lots, executable capacity and path solvency",
+    "Evidence report with reproducible inputs and implementation identity"
+  ],
+  "validated_alpha_count": 0
+}

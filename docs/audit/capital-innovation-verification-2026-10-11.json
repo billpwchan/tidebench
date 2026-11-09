@@ -1,0 +1,8 @@
+{
+  "report_sha256": "3c1db36f92e7b6e690d241b613d64b3a2a792018e3ab3f00b132bb7b772d5d9f",
+  "replay_report_sha256": "3c1db36f92e7b6e690d241b613d64b3a2a792018e3ab3f00b132bb7b772d5d9f",
+  "frozen_replay_byte_identical": true,
+  "verified_simulation_ledgers": 120,
+  "admitted_strategies": 0,
+  "holdout_loaded": false
+}

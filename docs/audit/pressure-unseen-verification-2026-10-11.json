@@ -1,0 +1,11 @@
+{
+  "report_sha256": "11c6ca81013404f6f5d78c52a72827b008aaed2060db553a8b087802021ca3f3",
+  "verified_scenario_ledgers": 48,
+  "source_archives": 2472,
+  "source_bytes": 31385123,
+  "source_invalid_observations": {},
+  "holdout_2025_loaded": false,
+  "validated_alpha_count": 0,
+  "frozen_replay_byte_identical": true,
+  "replay_report_sha256": "11c6ca81013404f6f5d78c52a72827b008aaed2060db553a8b087802021ca3f3"
+}

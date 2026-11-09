@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-11",
+  "python": "3.13.15",
+  "verification_scope": "Related research and admission behavior; no full-platform acceptance or investment-edge claim",
+  "python_tests_passed": 128,
+  "ruff_passed": true,
+  "frontend_build_passed": true,
+  "browser_checks_passed": [
+    "withdrawal of all unqualified library dossiers and presets: desktop and mobile",
+    "custom paired models: desktop and mobile",
+    "custom risk-budgeted portfolios: desktop and mobile",
+    "custom strategy versions and custom managed-portfolio workflows"
+  ],
+  "scenario_count": 824,
+  "frozen_report_sha256": {
+    "capital-innovation": "3c1db36f92e7b6e690d241b613d64b3a2a792018e3ab3f00b132bb7b772d5d9f",
+    "flow-pressure": "29844e5fd4498eb444f3d458425a301b234c8f0a8454877dce94a96e1b2cb03a",
+    "okx-absorption": "f06c4493d1b2011dcf1456cee9df43893fa0d8af26ce588e3e926b90e8657209",
+    "okx-release-calendar": "cdd1b3098c8e7ac22fac2bd97ccfc5e88e47be94c9fccb4072675ede1dc507e1",
+    "pressure-unseen": "11c6ca81013404f6f5d78c52a72827b008aaed2060db553a8b087802021ca3f3"
+  },
+  "validated_alpha_count": 0,
+  "live_orders_submitted": false,
+  "holdout_2025_loaded": false,
+  "current_files": {
+    "backend/tidebench/microstructure_research.py": "fd86d73fa0e024f616ad71f3bf22d0f5e20fc43ad6efc2b031ee530011c5ea0f",
+    "frontend/src/lib/strategyAdmission.ts": "6d331ecf71a0a879cf4505f1b7526388641df6dd3b4a2a2d3fa71c6d50989903",
+    "frontend/src/components/StrategyResearchLibrary.tsx": "2069560ad580b1102655e8b23d72df112ee3b72108c1215be955ff02761988fb",
+    "examples/strategy-admission.json": "1f69e67a3bdf70ddd2f7f4437feb6f1367cd2d57015e9d12e0538b9ceef186cd"
+  },
+  "native_model_note": "Current unresolved-position logging was improved after sealing the experiments. All archived native experiment exits completed; historical implementations remain preserved and their frozen rescoring is byte-identical."
+}

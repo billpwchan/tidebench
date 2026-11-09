@@ -64,6 +64,8 @@
 
 [真实 OKX 的 108 案例](docs/strategy-research.md)保留相邻参数、双倍成本与消融的全部结果。默认动量仅 4/12 个相关情景为正，回归为 6/12；过滤器未一致改善结果。这是公开的探索性反证，不是已盈利策略宣传。捕获重放验证了全部输入／结果哈希。
 
+2026-10-11 复核后，上面这些档案和预设都没有达到准入要求，平台的准入名单为空（[`examples/strategy-admission.json`](examples/strategy-admission.json)）。复核和后续挖掘见[Alpha 准入收紧与进一步市场挖掘](docs/alpha-admission-and-discovery.zh-CN.md)：现金／杠杆成交压力 44 个规格、284 个情景；开发期最强的规则在 2026 年未观察数据上从 +26.27% 变成 −2.61%，四个完整版本全部亏损。证据和核验记录在 docs/audit。撤下这些档案与预设的平台改动还没有合入这个公开分支。
+
 ![双语策略研究库](docs/assets/strategy-library-mobile-zh.png)
 
 ### 仓位配置也需要独立验证

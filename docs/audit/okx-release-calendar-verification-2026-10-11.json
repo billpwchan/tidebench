@@ -1,0 +1,13 @@
+{
+  "report_sha256": "cdd1b3098c8e7ac22fac2bd97ccfc5e88e47be94c9fccb4072675ede1dc507e1",
+  "verified_scenario_ledgers": 336,
+  "verified_capture_files": 91,
+  "native_archives": 42,
+  "downloaded_bytes": 1474821171,
+  "book_rows": 45771660,
+  "all_tick_file_rows": 15882961,
+  "complete_calendar": true,
+  "validated_alpha_count": 0,
+  "frozen_replay_byte_identical": true,
+  "replay_report_sha256": "cdd1b3098c8e7ac22fac2bd97ccfc5e88e47be94c9fccb4072675ede1dc507e1"
+}

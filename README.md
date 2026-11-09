@@ -63,6 +63,8 @@ The bilingual research library covers weekly momentum, conditional reversion, ma
 
 The [public 108-case OKX battery](docs/strategy-research.md) includes all neighbors, cost stress and filter ablations. Default momentum was positive in 4/12 correlated scenarios; reversion in 6/12. The filter did not consistently help. These are disclosed exploratory results, not a profitable-strategy claim. Captured replay matched every input/result hash.
 
+After a review on 2026-10-11, none of the dossiers and presets above met the admission bar, so the platform's admission list is empty ([`examples/strategy-admission.json`](examples/strategy-admission.json)). The review and the further search are written up in [Alpha admission and further market discovery](docs/alpha-admission-and-discovery.zh-CN.md) (Chinese): 44 specifications and 284 scenarios of cash and leverage trade pressure; the strongest development-period rule went from +26.27% to −2.61% on unseen 2026 data, and all four complete variants lost money. Evidence and verification records are in docs/audit. The platform change that withdraws these dossiers and presets is not yet merged into this public branch.
+
 ![Strategy research library with actual public-data checks](docs/assets/strategy-library-desktop.png)
 
 ### Position sizing has its own hypothesis

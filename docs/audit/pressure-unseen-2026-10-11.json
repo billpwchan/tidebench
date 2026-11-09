@@ -1,0 +1,4012 @@
+{
+  "campaign": "leveraged-pressure-failure-unseen-2026-v1",
+  "identity": {
+    "implementation": {
+      "plan_sha256": "b56678db8ece768f5a5b8f7dfb40fd84e61e96d333001176780d4d5db2aa2934",
+      "collector_sha256": "1f71eb7e969b59832051a79a6b780837ff3d4adbe3d0d37117b76eab5f50127b",
+      "reader_sha256": "5361644dac4f3a1ddac4f744c3e1460059f45a55c81e78a5bb2620634b668a07",
+      "model_sha256": "490a0ed720b79ea2faa6963b2f4354ff8d8b4678621c82c62fabea3b809289b0",
+      "ledger_sha256": "db019d7254f9daa9a1d037cdc4d6c5e802173c8481a9275879dc2c80f5c311a2",
+      "runner_sha256": "4c7cc735df1418c75eef58f24ad4b383bf3b306674d2c0d77dfe8a26d1e83f17"
+    },
+    "source_manifest_sha256": "02a719e0e693ac215ba2f3080b0113af7917afbef6d5fbe0d363955f72ddaab3"
+  },
+  "evaluation": {
+    "start": "2026-03-08",
+    "end_exclusive": "2026-10-01"
+  },
+  "evidence_status": "Fixed rules on unseen retrospective 2026 outcomes; no optimization or platform promotion",
+  "source_coverage": {
+    "manifest_sha256": "02a719e0e693ac215ba2f3080b0113af7917afbef6d5fbe0d363955f72ddaab3",
+    "archives": 2472,
+    "bytes": 31385123,
+    "invalid_observations": {},
+    "observations": {
+      "BTCUSDT": {
+        "futures": 6552,
+        "spot": 6552,
+        "mark": 6528,
+        "funding": 819,
+        "metrics": 19656
+      },
+      "ETHUSDT": {
+        "futures": 6552,
+        "spot": 6552,
+        "mark": 6528,
+        "funding": 819,
+        "metrics": 19656
+      },
+      "SOLUSDT": {
+        "futures": 6552,
+        "spot": 6552,
+        "mark": 6528,
+        "funding": 819,
+        "metrics": 19656
+      },
+      "XRPUSDT": {
+        "futures": 6552,
+        "spot": 6552,
+        "mark": 6528,
+        "funding": 819,
+        "metrics": 19656
+      },
+      "ADAUSDT": {
+        "futures": 6552,
+        "spot": 6552,
+        "mark": 6528,
+        "funding": 819,
+        "metrics": 19656
+      },
+      "DOGEUSDT": {
+        "futures": 6552,
+        "spot": 6552,
+        "mark": 6528,
+        "funding": 819,
+        "metrics": 19656
+      },
+      "LINKUSDT": {
+        "futures": 6552,
+        "spot": 6552,
+        "mark": 6528,
+        "funding": 819,
+        "metrics": 19656
+      },
+      "AVAXUSDT": {
+        "futures": 6552,
+        "spot": 6552,
+        "mark": 6528,
+        "funding": 819,
+        "metrics": 19656
+      }
+    }
+  },
+  "feature_coverage": {
+    "ETHUSDT": {
+      "blocks": 1091,
+      "usable": 850,
+      "refused_missing_or_unstable_fit": 239
+    },
+    "SOLUSDT": {
+      "blocks": 1091,
+      "usable": 850,
+      "refused_missing_or_unstable_fit": 239
+    },
+    "XRPUSDT": {
+      "blocks": 1091,
+      "usable": 850,
+      "refused_missing_or_unstable_fit": 239
+    },
+    "ADAUSDT": {
+      "blocks": 1091,
+      "usable": 850,
+      "refused_missing_or_unstable_fit": 239
+    },
+    "DOGEUSDT": {
+      "blocks": 1091,
+      "usable": 850,
+      "refused_missing_or_unstable_fit": 239
+    },
+    "LINKUSDT": {
+      "blocks": 1091,
+      "usable": 850,
+      "refused_missing_or_unstable_fit": 239
+    },
+    "AVAXUSDT": {
+      "blocks": 1091,
+      "usable": 850,
+      "refused_missing_or_unstable_fit": 239
+    }
+  },
+  "feature_identity": {
+    "sha256": "4e72251378826c3718ca90a1aab1fd16bead5e46929c54736af518dd9758b9e0"
+  },
+  "cases": [
+    {
+      "identity": "leveraged_pressure_failure:z1.5:h168",
+      "specification": {
+        "family": "leveraged_pressure_failure",
+        "threshold": 1.5,
+        "horizon": 168
+      },
+      "variants": {
+        "full": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": null,
+            "trades": 15,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -2.2060289960586763,
+            "mean_daily_bps": -1.0657144908496021,
+            "max_daily_drawdown_pct": 2.7642798609617723,
+            "quarter_net_pct": {
+              "2026-Q1": -0.048364190957121654,
+              "2026-Q2": -0.8883903376088045,
+              "2026-Q3": -1.26927446749275
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.005292583807646399
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.019647695803496006
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": -0.07020724123594035
+              },
+              "ADAUSDT": {
+                "trades": 1,
+                "net": -0.05381449360623146
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.04209126279919693
+              },
+              "LINKUSDT": {
+                "trades": 2,
+                "net": 0.025319587116064912
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.027983731194652917
+              }
+            },
+            "components": {
+              "price": -0.019917681842691628,
+              "fees": 0.002930656362170698,
+              "funding": 0.0007880482442755895,
+              "funding_debits": 0.0008719180294716407,
+              "funding_credits": 0.0016599662737472303
+            },
+            "net_without_funding_credit": -0.023720256234333964,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-full-base.json.gz",
+              "sha256": "3233144e1dec233008eb3f51e427afd1035765fd5d05f254387bb897fc625404",
+              "uncompressed_sha256": "d244cb2aa843516da090b72d5c678ba7859b258e071ffa1e57c50e19c08e62a8"
+            },
+            "long_trades": 12,
+            "short_trades": 3,
+            "absolute_symbol_profit_share": 0.287314697088967
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": null,
+            "trades": 15,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -2.5362839013339085,
+            "mean_daily_bps": -1.2252579233497143,
+            "max_daily_drawdown_pct": 3.0488920313483847,
+            "quarter_net_pct": {
+              "2026-Q1": -0.07114846604886113,
+              "2026-Q2": -1.020491647646559,
+              "2026-Q3": -1.4446437876384883
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.009975943288372726
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.016411706366173662
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": -0.07605477205124678
+              },
+              "ADAUSDT": {
+                "trades": 1,
+                "net": -0.05522724811266821
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.04516118360124441
+              },
+              "LINKUSDT": {
+                "trades": 2,
+                "net": 0.022044099988707322
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.02957653239472244
+              }
+            },
+            "components": {
+              "price": -0.019882492100486895,
+              "fees": 0.006267177440305151,
+              "funding": 0.0007868305274529651,
+              "funding_debits": 0.0008699198419422106,
+              "funding_credits": 0.0016567503693951757
+            },
+            "net_without_funding_credit": -0.027019589382734258,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-full-stress.json.gz",
+              "sha256": "1f1baa48310bca8650214478838f602143e9b8d22c3982593040e13afba846b1",
+              "uncompressed_sha256": "bdb6c7583ee30b7c892a76801ae45ba6afa46d1c822775ecd34e27ed6a7f8c65"
+            },
+            "long_trades": 12,
+            "short_trades": 3,
+            "absolute_symbol_profit_share": 0.2988969461553428
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": null,
+            "trades": 15,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -2.5130878457955634,
+            "mean_daily_bps": -1.2140520994181465,
+            "max_daily_drawdown_pct": 3.0197155840818533,
+            "quarter_net_pct": {
+              "2026-Q1": -0.08666097235187534,
+              "2026-Q2": -1.0674644324803904,
+              "2026-Q3": -1.358962440963298
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.010358424193956781
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.017131684562032345
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": -0.06230352025749615
+              },
+              "ADAUSDT": {
+                "trades": 1,
+                "net": -0.056259052396802706
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.04490918392548425
+              },
+              "LINKUSDT": {
+                "trades": 2,
+                "net": 0.015285045167368306
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.034502698161350175
+              }
+            },
+            "components": {
+              "price": -0.019651690190535052,
+              "fees": 0.006272144810281513,
+              "funding": 0.0007929565428609324,
+              "funding_debits": 0.0008629765181166522,
+              "funding_credits": 0.0016559330609775848
+            },
+            "net_without_funding_credit": -0.026786811518933216,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-full-additional_latency.json.gz",
+              "sha256": "638e94ccb6451aa0f1d08f43cc6bb85dbee1616134cab5e91d4e94fb13c1f7bc",
+              "uncompressed_sha256": "2a0476fb8bfa7f9dabe14ebef963435be15377df4e14f0bf7033b2c6aca31433"
+            },
+            "long_trades": 12,
+            "short_trades": 3,
+            "absolute_symbol_profit_share": 0.258789705217434
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.2252579233497143,
+            "bootstrap_se_bps": 0.5990385197105785,
+            "familywise_95_lower_bps": -2.648722357574898,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "without_oi": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_oi",
+            "trades": 35,
+            "active_symbols": 7,
+            "positive_symbols": 4,
+            "net_return_pct": -1.1814193202853756,
+            "mean_daily_bps": -0.5707339711523554,
+            "max_daily_drawdown_pct": 2.4929884943169,
+            "quarter_net_pct": {
+              "2026-Q1": 0.04722780686496705,
+              "2026-Q2": -1.2204083230009353,
+              "2026-Q3": -0.008238804149407149
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 5,
+                "net": 0.016509113861816003
+              },
+              "SOLUSDT": {
+                "trades": 7,
+                "net": 0.01704203269638481
+              },
+              "XRPUSDT": {
+                "trades": 5,
+                "net": 0.018668742448953186
+              },
+              "ADAUSDT": {
+                "trades": 5,
+                "net": -0.05784314235257838
+              },
+              "DOGEUSDT": {
+                "trades": 3,
+                "net": -0.06061660608002216
+              },
+              "LINKUSDT": {
+                "trades": 8,
+                "net": 0.05602518790386582
+              },
+              "AVAXUSDT": {
+                "trades": 2,
+                "net": -0.07248468089839549
+              }
+            },
+            "components": {
+              "price": -0.005933399564213144,
+              "fees": 0.006947406858201936,
+              "funding": 0.0010666132195613315,
+              "funding_debits": 0.0024363120004953537,
+              "funding_credits": 0.003502925220056685
+            },
+            "net_without_funding_credit": -0.015317118422910433,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-without_oi-base.json.gz",
+              "sha256": "392cbeba631aaa9595c66de89240709e8d25da6945a10fe3fa5218075b7a4e92",
+              "uncompressed_sha256": "949eab81dfd3267acc5c1726ed93b08896c407946263d972294fcaceb755d6b4"
+            },
+            "long_trades": 25,
+            "short_trades": 10,
+            "absolute_symbol_profit_share": 0.24227013109130333
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_oi",
+            "trades": 35,
+            "active_symbols": 7,
+            "positive_symbols": 4,
+            "net_return_pct": -1.9767919697191525,
+            "mean_daily_bps": -0.9549719660478997,
+            "max_daily_drawdown_pct": 2.6740251414934932,
+            "quarter_net_pct": {
+              "2026-Q1": 0.002369641285240474,
+              "2026-Q2": -1.5982050975217363,
+              "2026-Q3": -0.3809565134826569
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 5,
+                "net": 0.008507827929010049
+              },
+              "SOLUSDT": {
+                "trades": 7,
+                "net": 0.0058340896969361
+              },
+              "XRPUSDT": {
+                "trades": 5,
+                "net": 0.010524157188870058
+              },
+              "ADAUSDT": {
+                "trades": 5,
+                "net": -0.06525266816566777
+              },
+              "DOGEUSDT": {
+                "trades": 3,
+                "net": -0.06517468702112919
+              },
+              "LINKUSDT": {
+                "trades": 8,
+                "net": 0.04259821270968721
+              },
+              "AVAXUSDT": {
+                "trades": 2,
+                "net": -0.07541237021804714
+              }
+            },
+            "components": {
+              "price": -0.006011896593768787,
+              "fees": 0.01481914037332411,
+              "funding": 0.0010631172699013722,
+              "funding_debits": 0.0024236219381625667,
+              "funding_credits": 0.003486739208063939
+            },
+            "net_without_funding_credit": -0.023254658905255462,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-without_oi-stress.json.gz",
+              "sha256": "782cb2a9864cbfbfc68535e9767b6de8a587219465f074b3988454383fb783da",
+              "uncompressed_sha256": "5ad4383c40d6e7626c5ce107589aa04c8926b4e516c833f05ea57835b696dc2f"
+            },
+            "long_trades": 25,
+            "short_trades": 10,
+            "absolute_symbol_profit_share": 0.2759285142203242
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "without_oi",
+            "trades": 35,
+            "active_symbols": 7,
+            "positive_symbols": 4,
+            "net_return_pct": -1.9889370234681285,
+            "mean_daily_bps": -0.9608391417720428,
+            "max_daily_drawdown_pct": 2.75978320601751,
+            "quarter_net_pct": {
+              "2026-Q1": 0.06728449947176789,
+              "2026-Q2": -1.6595884236322387,
+              "2026-Q3": -0.39663309930765706
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 5,
+                "net": 0.007052319114067871
+              },
+              "SOLUSDT": {
+                "trades": 7,
+                "net": 0.008936310735996982
+              },
+              "XRPUSDT": {
+                "trades": 5,
+                "net": 0.00947527274724308
+              },
+              "ADAUSDT": {
+                "trades": 5,
+                "net": -0.08392657454435896
+              },
+              "DOGEUSDT": {
+                "trades": 3,
+                "net": -0.061762881275314416
+              },
+              "LINKUSDT": {
+                "trades": 8,
+                "net": 0.06352457710478907
+              },
+              "AVAXUSDT": {
+                "trades": 2,
+                "net": -0.08252461552519266
+              }
+            },
+            "components": {
+              "price": -0.006129471936754765,
+              "fees": 0.014830895450717654,
+              "funding": 0.0010709971527911334,
+              "funding_debits": 0.002416484193139155,
+              "funding_credits": 0.0034874813459302868
+            },
+            "net_without_funding_credit": -0.023376851580611573,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-without_oi-additional_latency.json.gz",
+              "sha256": "9c29b5ba3a2e2ce37e7e4d2106b8fe506304899fb7a3d11ab0f7002d0f223618",
+              "uncompressed_sha256": "116d48cd16704d1eb7b4aff5c4f00649da2a075c9bfaf8cc808dd6b9e7511520"
+            },
+            "long_trades": 25,
+            "short_trades": 10,
+            "absolute_symbol_profit_share": 0.26458354217943636
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -0.9549719660478998,
+            "bootstrap_se_bps": 0.7239023307001176,
+            "familywise_95_lower_bps": -2.675143854330125,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "without_confirmation": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_confirmation",
+            "trades": 17,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -2.2884731358926382,
+            "mean_daily_bps": -1.1055425777259122,
+            "max_daily_drawdown_pct": 2.8466602699199224,
+            "quarter_net_pct": {
+              "2026-Q1": -0.048364190957121654,
+              "2026-Q2": -0.8883903376088045,
+              "2026-Q3": -1.351718607326712
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.005292583807646399
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.019647695803496006
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": -0.07020724123594035
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.053713175061053234
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.04209126279919693
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.01944717878250931
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.027983731194652917
+              }
+            },
+            "components": {
+              "price": -0.020332300496607548,
+              "fees": 0.003323302740056563,
+              "funding": 0.0007708718777377511,
+              "funding_debits": 0.0010499273458845868,
+              "funding_credits": 0.0018207992236223378
+            },
+            "net_without_funding_credit": -0.024705530582548697,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-without_confirmation-base.json.gz",
+              "sha256": "965b0b38d2656e75e91a195cd07dff23e046ad298dbebe7e9304dee2807b7901",
+              "uncompressed_sha256": "cd67d51ba2596740b64fcb00af1571a5dd3c6252674ca9a022b28d4334f2a1bf"
+            },
+            "long_trades": 12,
+            "short_trades": 5,
+            "absolute_symbol_profit_share": 0.29451462524709
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_confirmation",
+            "trades": 17,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -2.6636704059980603,
+            "mean_daily_bps": -1.2867972975836037,
+            "max_daily_drawdown_pct": 3.176209177471318,
+            "quarter_net_pct": {
+              "2026-Q1": -0.07114846604886113,
+              "2026-Q2": -1.020491647646559,
+              "2026-Q3": -1.5720302923026397
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.009975943288372726
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.016411706366173662
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": -0.07605477205124678
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.056634781529920866
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.04516118360124441
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.014534578079469358
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.02957653239472244
+              }
+            },
+            "components": {
+              "price": -0.0203005387497637,
+              "fees": 0.007105885540149821,
+              "funding": 0.0007697202299329273,
+              "funding_debits": 0.0010473635964276197,
+              "funding_credits": 0.0018170838263605468
+            },
+            "net_without_funding_credit": -0.028453787886341137,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-without_confirmation-stress.json.gz",
+              "sha256": "42f170cc33505d6231b26a699a714c069741b4f0e2cda7ff247a99e9ca6fdbd2",
+              "uncompressed_sha256": "b5e7220890e919dee148a9ac3b03592cf8bec9ded2436b5d7b41aedf6c2333c9"
+            },
+            "long_trades": 12,
+            "short_trades": 5,
+            "absolute_symbol_profit_share": 0.3062408938801267
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "without_confirmation",
+            "trades": 17,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -2.559169895153644,
+            "mean_daily_bps": -1.2363139590114223,
+            "max_daily_drawdown_pct": 3.065779736815373,
+            "quarter_net_pct": {
+              "2026-Q1": -0.08666097235187534,
+              "2026-Q2": -1.0674644324803904,
+              "2026-Q3": -1.4050444903213781
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.010358424193956781
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.017131684562032345
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": -0.06230352025749615
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.05329629660345728
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.04490918392548425
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.009096545918957248
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.034502698161350175
+              }
+            },
+            "components": {
+              "price": -0.019256454356147548,
+              "fees": 0.007110658772721549,
+              "funding": 0.0007754141773326609,
+              "funding_debits": 0.0010403991848958515,
+              "funding_credits": 0.0018158133622285127
+            },
+            "net_without_funding_credit": -0.02740751231376495,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-without_confirmation-additional_latency.json.gz",
+              "sha256": "da7af45c3879ca778bb0a575169810877bd33fcee1779f4d56ae26d7e27d6d15",
+              "uncompressed_sha256": "3d9d5469187b0689d1a565fc381c76f9c803c4e8be2f36dce0be2cc9485532cf"
+            },
+            "long_trades": 12,
+            "short_trades": 5,
+            "absolute_symbol_profit_share": 0.26901538496679667
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.2867972975836042,
+            "bootstrap_se_bps": 0.5892586472640546,
+            "familywise_95_lower_bps": -2.6870223237560107,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "price_reversal_control": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "price_reversal_control",
+            "trades": 129,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -3.463677268851607,
+            "mean_daily_bps": -1.6732740429234814,
+            "max_daily_drawdown_pct": 7.136446865709145,
+            "quarter_net_pct": {
+              "2026-Q1": 0.31841925278205213,
+              "2026-Q2": -0.2359616204679155,
+              "2026-Q3": -3.5461349011657437
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 18,
+                "net": -0.0773187919723267
+              },
+              "SOLUSDT": {
+                "trades": 18,
+                "net": -0.08810315735628005
+              },
+              "XRPUSDT": {
+                "trades": 18,
+                "net": -0.021664902975593946
+              },
+              "ADAUSDT": {
+                "trades": 18,
+                "net": -0.09197699257860631
+              },
+              "DOGEUSDT": {
+                "trades": 19,
+                "net": 0.10405473839658569
+              },
+              "LINKUSDT": {
+                "trades": 20,
+                "net": 0.07661306607787233
+              },
+              "AVAXUSDT": {
+                "trades": 18,
+                "net": -0.1440613684112638
+              }
+            },
+            "components": {
+              "price": -0.009519976015987263,
+              "fees": 0.02585660985210451,
+              "funding": 0.0007398131795756569,
+              "funding_debits": 0.010454744719430295,
+              "funding_credits": 0.011194557899005956
+            },
+            "net_without_funding_credit": -0.04583133058752207,
+            "execution_rejections": {
+              "funding_accounting_coverage": 29
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-price_reversal_control-base.json.gz",
+              "sha256": "4021311d193aa8ce1cf12b0249281352eb5d693ab5141621aa460bd760cd8bac",
+              "uncompressed_sha256": "e53f498f6e8118c3f740371eeb19db1cfdd84e77aff3a3769e2e82c4fe259c1c"
+            },
+            "long_trades": 51,
+            "short_trades": 78,
+            "absolute_symbol_profit_share": 0.23859396212244943
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "price_reversal_control",
+            "trades": 129,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -6.292700722456872,
+            "mean_daily_bps": -3.0399520398342377,
+            "max_daily_drawdown_pct": 9.062948865523534,
+            "quarter_net_pct": {
+              "2026-Q1": 0.028983164302603014,
+              "2026-Q2": -1.523866581214574,
+              "2026-Q3": -4.797817305544902
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 18,
+                "net": -0.103711139971855
+              },
+              "SOLUSDT": {
+                "trades": 18,
+                "net": -0.1141816774857636
+              },
+              "XRPUSDT": {
+                "trades": 18,
+                "net": -0.049632868090948724
+              },
+              "ADAUSDT": {
+                "trades": 18,
+                "net": -0.11786682635727251
+              },
+              "DOGEUSDT": {
+                "trades": 19,
+                "net": 0.07107496433672242
+              },
+              "LINKUSDT": {
+                "trades": 20,
+                "net": 0.04252661373325327
+              },
+              "AVAXUSDT": {
+                "trades": 18,
+                "net": -0.16869811673611684
+              }
+            },
+            "components": {
+              "price": -0.009070661646607914,
+              "fees": 0.05459830652056872,
+              "funding": 0.0007419609426078996,
+              "funding_debits": 0.01028641736677533,
+              "funding_credits": 0.011028378309383226
+            },
+            "net_without_funding_credit": -0.07395538553395195,
+            "execution_rejections": {
+              "funding_accounting_coverage": 29
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-price_reversal_control-stress.json.gz",
+              "sha256": "44d14952bbc8b8c3fc002fcbd26dc16a0113e26acce6d8a79e7b3734cc96dfa9",
+              "uncompressed_sha256": "9d90a02b216ca1c25286d0fabf5cc043642d092bd40f615b77ad2f5322385ed2"
+            },
+            "long_trades": 51,
+            "short_trades": 78,
+            "absolute_symbol_profit_share": 0.2526585079776131
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "price_reversal_control",
+            "trades": 129,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -6.520656579117018,
+            "mean_daily_bps": -3.150075642085516,
+            "max_daily_drawdown_pct": 9.003951454043634,
+            "quarter_net_pct": {
+              "2026-Q1": -0.00943093031841799,
+              "2026-Q2": -1.3855455814319164,
+              "2026-Q3": -5.125680067366685
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 18,
+                "net": -0.07847816028515536
+              },
+              "SOLUSDT": {
+                "trades": 18,
+                "net": -0.10507456141334384
+              },
+              "XRPUSDT": {
+                "trades": 18,
+                "net": -0.05682001270386179
+              },
+              "ADAUSDT": {
+                "trades": 18,
+                "net": -0.1393459759960315
+              },
+              "DOGEUSDT": {
+                "trades": 19,
+                "net": 0.05683968864349528
+              },
+              "LINKUSDT": {
+                "trades": 20,
+                "net": 0.0573985691707927
+              },
+              "AVAXUSDT": {
+                "trades": 18,
+                "net": -0.19096550795408676
+              }
+            },
+            "components": {
+              "price": -0.011326689198377246,
+              "fees": 0.05455378092209046,
+              "funding": 0.0006739043292975492,
+              "funding_debits": 0.010283699144870454,
+              "funding_credits": 0.010957603474168007
+            },
+            "net_without_funding_credit": -0.07616416926533817,
+            "execution_rejections": {
+              "funding_accounting_coverage": 29
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h168-price_reversal_control-additional_latency.json.gz",
+              "sha256": "62c7a3bb2bde06ee62a34d1cb33d19142506e4bb15d53bfd8767a20f2368e07d",
+              "uncompressed_sha256": "cb2840f7840945790d428a2aac7f3ea9f6093eac44691891fd0ee7811fa264e5"
+            },
+            "long_trades": 51,
+            "short_trades": 78,
+            "absolute_symbol_profit_share": 0.2788133177098277
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -3.0399520398342377,
+            "bootstrap_se_bps": 1.6086793438251568,
+            "familywise_95_lower_bps": -6.862574052712751,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        }
+      },
+      "mechanism_screen": {
+        "stress_positive": false,
+        "latency_positive": false,
+        "familywise_lower_positive": false,
+        "increment_over_every_control": false
+      }
+    },
+    {
+      "identity": "leveraged_pressure_failure:z1.5:h336",
+      "specification": {
+        "family": "leveraged_pressure_failure",
+        "threshold": 1.5,
+        "horizon": 336
+      },
+      "variants": {
+        "full": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": null,
+            "trades": 12,
+            "active_symbols": 6,
+            "positive_symbols": 1,
+            "net_return_pct": -2.336415694512803,
+            "mean_daily_bps": -1.1287032340641558,
+            "max_daily_drawdown_pct": 2.561188487596962,
+            "quarter_net_pct": {
+              "2026-Q1": -0.048364190957121654,
+              "2026-Q2": -0.8307057202890558,
+              "2026-Q3": -1.4573457832666257
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.02163951192870254
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.014440122073102628
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.043755620271444466
+              },
+              "ADAUSDT": {
+                "trades": 1,
+                "net": -0.047692206942526225
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.06813016085699265
+              },
+              "LINKUSDT": {
+                "trades": 2,
+                "net": 0.03210852345687223
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.02240149458923947,
+              "fees": 0.0024033876749396106,
+              "funding": 0.0014407253190510453,
+              "funding_debits": 0.0011990571639373573,
+              "funding_credits": 0.002639782482988403
+            },
+            "net_without_funding_credit": -0.02600393942811644,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-full-base.json.gz",
+              "sha256": "df78b3a802540fa7a5213a956f3ca019943156b0119de4689e12561d013eba1b",
+              "uncompressed_sha256": "84c42e0f9de1b88455d2d2cd14b92bbc2e0ccf50058d8d661d957bc45c4a6217"
+            },
+            "long_trades": 10,
+            "short_trades": 2,
+            "absolute_symbol_profit_share": 0.2991232990248167
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": null,
+            "trades": 12,
+            "active_symbols": 6,
+            "positive_symbols": 1,
+            "net_return_pct": -2.6058259714770515,
+            "mean_daily_bps": -1.2588531263174165,
+            "max_daily_drawdown_pct": 2.7389553109626803,
+            "quarter_net_pct": {
+              "2026-Q1": -0.07114846604886113,
+              "2026-Q2": -0.9671580351466798,
+              "2026-Q3": -1.5675194702815105
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.026456220546714485
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.01765319274968905
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.04678353359936773
+              },
+              "ADAUSDT": {
+                "trades": 1,
+                "net": -0.04915556951603
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.07117568438308239
+              },
+              "LINKUSDT": {
+                "trades": 2,
+                "net": 0.02881638279149002
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.022355923830970657,
+              "fees": 0.005141112656012102,
+              "funding": 0.0014387767722122424,
+              "funding_debits": 0.0011964851377612659,
+              "funding_credits": 0.002635261909973508
+            },
+            "net_without_funding_credit": -0.028693521624744023,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-full-stress.json.gz",
+              "sha256": "505d6def8588c6c7b64d7fe9382ec7194f8a3f3232c650628f7c500d2cf3f99b",
+              "uncompressed_sha256": "9cd6c90c0878dbd1931962a3e238122fbd40b71df0002645ced12b636cb6d032"
+            },
+            "long_trades": 10,
+            "short_trades": 2,
+            "absolute_symbol_profit_share": 0.2965152113849585
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": null,
+            "trades": 12,
+            "active_symbols": 6,
+            "positive_symbols": 1,
+            "net_return_pct": -2.617847957844167,
+            "mean_daily_bps": -1.2646608492000806,
+            "max_daily_drawdown_pct": 2.7707713464122907,
+            "quarter_net_pct": {
+              "2026-Q1": -0.08666097235187534,
+              "2026-Q2": -1.2818784367537475,
+              "2026-Q3": -1.2493085487385445
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.025354754959133224
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.01623259699733936
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.03962078525971376
+              },
+              "ADAUSDT": {
+                "trades": 1,
+                "net": -0.061164217101195684
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.06793192972067488
+              },
+              "LINKUSDT": {
+                "trades": 2,
+                "net": 0.027054926988965205
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.02246059671306802,
+              "fees": 0.0051364323900775595,
+              "funding": 0.001418549524703911,
+              "funding_debits": 0.0011896371343320283,
+              "funding_credits": 0.0026081866590359397
+            },
+            "net_without_funding_credit": -0.02878666623747761,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-full-additional_latency.json.gz",
+              "sha256": "31b4d3b46417f2b6f19164e3453fce522a5e50be41e89a5f19b7a53d78012e24",
+              "uncompressed_sha256": "aa2b757ab41e4ab5b373b0ce92008c6303f598396b30435725ed7011942c9c41"
+            },
+            "long_trades": 10,
+            "short_trades": 2,
+            "absolute_symbol_profit_share": 0.2861988352031604
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.2588531263174163,
+            "bootstrap_se_bps": 0.6902608497029957,
+            "familywise_95_lower_bps": -2.899084493016485,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "without_oi": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_oi",
+            "trades": 28,
+            "active_symbols": 7,
+            "positive_symbols": 3,
+            "net_return_pct": -0.9024004971782141,
+            "mean_daily_bps": -0.4359422691682194,
+            "max_daily_drawdown_pct": 3.2735356844240893,
+            "quarter_net_pct": {
+              "2026-Q1": 0.23144766924981958,
+              "2026-Q2": -0.5212543132950281,
+              "2026-Q3": -0.6125938531330061
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 5,
+                "net": 0.002894412125197693
+              },
+              "SOLUSDT": {
+                "trades": 6,
+                "net": -0.0022933745442647
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": 0.07467223614342759
+              },
+              "ADAUSDT": {
+                "trades": 5,
+                "net": -0.09294595352451149
+              },
+              "DOGEUSDT": {
+                "trades": 3,
+                "net": -0.06529605288212964
+              },
+              "LINKUSDT": {
+                "trades": 5,
+                "net": 0.08066637608040661
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.06086567820060117
+              }
+            },
+            "components": {
+              "price": -0.005033266581289158,
+              "fees": 0.005663966659766059,
+              "funding": 0.0016732282692730604,
+              "funding_debits": 0.003782113572234784,
+              "funding_credits": 0.005455341841507843
+            },
+            "net_without_funding_credit": -0.014479346813290002,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-without_oi-base.json.gz",
+              "sha256": "15f9b276847afc2a43f8ab8d54f3962fcafeb1f3ff10514dceba0fa760068bd4",
+              "uncompressed_sha256": "5d9f6a508c3812a050691c967560b1c49575253963276de09e8da69e01983308"
+            },
+            "long_trades": 20,
+            "short_trades": 8,
+            "absolute_symbol_profit_share": 0.24483037104433103
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_oi",
+            "trades": 28,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -1.5438828082179417,
+            "mean_daily_bps": -0.7458371054192955,
+            "max_daily_drawdown_pct": 3.3945336067255374,
+            "quarter_net_pct": {
+              "2026-Q1": 0.19702842569403897,
+              "2026-Q2": -0.8723174948385867,
+              "2026-Q3": -0.8685937390733941
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 5,
+                "net": -0.005231995281724208
+              },
+              "SOLUSDT": {
+                "trades": 6,
+                "net": -0.011962275017539253
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": 0.06946366975731941
+              },
+              "ADAUSDT": {
+                "trades": 5,
+                "net": -0.1000810523917767
+              },
+              "DOGEUSDT": {
+                "trades": 3,
+                "net": -0.06987504589417098
+              },
+              "LINKUSDT": {
+                "trades": 5,
+                "net": 0.0719631975842694
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.062348295331633455
+              }
+            },
+            "components": {
+              "price": -0.005015852034684699,
+              "fees": 0.01209173436960155,
+              "funding": 0.0016687583221068477,
+              "funding_debits": 0.0037660691609046376,
+              "funding_credits": 0.0054348274830114856
+            },
+            "net_without_funding_credit": -0.02087365556519089,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-without_oi-stress.json.gz",
+              "sha256": "002387da54d99069cd64b7117066bfbbc136fd92342401d361d2a10dfa82ed07",
+              "uncompressed_sha256": "9aa992822126e2c272002d1eec5d979b788a7d1f218db94c16e71b8ebf4160b3"
+            },
+            "long_trades": 20,
+            "short_trades": 8,
+            "absolute_symbol_profit_share": 0.25601052985617107
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "without_oi",
+            "trades": 28,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -1.7253478716243962,
+            "mean_daily_bps": -0.8335013872581624,
+            "max_daily_drawdown_pct": 3.2914411448302636,
+            "quarter_net_pct": {
+              "2026-Q1": 0.2515622172682741,
+              "2026-Q2": -0.9004118284611766,
+              "2026-Q3": -1.0764982604314934
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 5,
+                "net": -0.0033239932505944886
+              },
+              "SOLUSDT": {
+                "trades": 6,
+                "net": -0.0018007709610633194
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": 0.058969475249776956
+              },
+              "ADAUSDT": {
+                "trades": 5,
+                "net": -0.1207444981110218
+              },
+              "DOGEUSDT": {
+                "trades": 3,
+                "net": -0.061330551789895285
+              },
+              "LINKUSDT": {
+                "trades": 5,
+                "net": 0.07035989364644307
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.06290390579735289
+              }
+            },
+            "components": {
+              "price": -0.006832323869980407,
+              "fees": 0.01207086745643698,
+              "funding": 0.0016497126101734203,
+              "funding_debits": 0.003763302076466497,
+              "funding_credits": 0.005413014686639918
+            },
+            "net_without_funding_credit": -0.022666493402883882,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-without_oi-additional_latency.json.gz",
+              "sha256": "5ddfb240637c610b430d34d9c026b1e0e32d74bd5a30d7953387ee07fc2be574",
+              "uncompressed_sha256": "567559d1a936e8ec80a6f6d70aaed657ca3c95b16fb3b1dfb8f0420231a5e5a2"
+            },
+            "long_trades": 20,
+            "short_trades": 8,
+            "absolute_symbol_profit_share": 0.3182234277219563
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -0.7458371054192955,
+            "bootstrap_se_bps": 1.4042459890238526,
+            "familywise_95_lower_bps": -4.082674648428339,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "without_confirmation": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_confirmation",
+            "trades": 14,
+            "active_symbols": 6,
+            "positive_symbols": 1,
+            "net_return_pct": -1.8901152409198403,
+            "mean_daily_bps": -0.9130991502028214,
+            "max_daily_drawdown_pct": 2.1134926759355808,
+            "quarter_net_pct": {
+              "2026-Q1": -0.048364190957121654,
+              "2026-Q2": -0.8307057202890558,
+              "2026-Q3": -1.0110453296736623
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.02163951192870254
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.014440122073102628
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.043755620271444466
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.003552315430646602
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.06813016085699265
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.019209663696500012
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.017451504950285867,
+              "fees": 0.002792049217924697,
+              "funding": 0.0013424017590121585,
+              "funding_debits": 0.0015701688977675613,
+              "funding_credits": 0.0029125706567797206
+            },
+            "net_without_funding_credit": -0.021813723065978126,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-without_confirmation-base.json.gz",
+              "sha256": "2764ed952a89415db257aa6d427c4af858958eb34857c109b42a4a454dc98b7b",
+              "uncompressed_sha256": "148de483f42abe75c80a1e3d9d806616339de9e062e6d6b53461af7bf8b3f5d7"
+            },
+            "long_trades": 10,
+            "short_trades": 4,
+            "absolute_symbol_profit_share": 0.39905816610941486
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_confirmation",
+            "trades": 14,
+            "active_symbols": 6,
+            "positive_symbols": 1,
+            "net_return_pct": -2.2049951858171126,
+            "mean_daily_bps": -1.0652150656121318,
+            "max_daily_drawdown_pct": 2.3362707120351356,
+            "quarter_net_pct": {
+              "2026-Q1": -0.07114846604886113,
+              "2026-Q2": -0.9671580351466798,
+              "2026-Q3": -1.1666886846215714
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.026456220546714485
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.01765319274968905
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.04678353359936773
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.0066090347225974885
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.07117568438308239
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.01432800299425327
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.01741928565663935,
+              "fees": 0.0059712935831923155,
+              "funding": 0.0013406273816605411,
+              "funding_debits": 0.0015665099793927021,
+              "funding_credits": 0.002907137361053243
+            },
+            "net_without_funding_credit": -0.02495708921922437,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-without_confirmation-stress.json.gz",
+              "sha256": "1e8e3e5f7810226ce83053bcc909ecf0faa7c85b1f0a2cd557de772812e27328",
+              "uncompressed_sha256": "044cf2798e55c3c79791956c2f9ddb3caf8553cc800ddd3ae60ac685b30253a0"
+            },
+            "long_trades": 10,
+            "short_trades": 4,
+            "absolute_symbol_profit_share": 0.38892611782836656
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "without_confirmation",
+            "trades": 14,
+            "active_symbols": 6,
+            "positive_symbols": 1,
+            "net_return_pct": -2.2117651572764934,
+            "mean_daily_bps": -1.0684855832253592,
+            "max_daily_drawdown_pct": 2.36312658768128,
+            "quarter_net_pct": {
+              "2026-Q1": -0.08666097235187534,
+              "2026-Q2": -1.2818784367537475,
+              "2026-Q3": -0.8432257481708708
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 3,
+                "net": -0.025354754959133224
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.01623259699733936
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.03962078525971376
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.01811281879235288
+              },
+              "DOGEUSDT": {
+                "trades": 2,
+                "net": -0.06793192972067488
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.012429324719859539
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.017477237368393565,
+              "fees": 0.005961004894086514,
+              "funding": 0.00132059068971514,
+              "funding_debits": 0.0015568766352117979,
+              "funding_credits": 0.002877467324926938
+            },
+            "net_without_funding_credit": -0.024995118897691876,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-without_confirmation-additional_latency.json.gz",
+              "sha256": "1590ce45edc3767cfaa77425b367aa2b60825a730cc60fc24d2a4d717c4ab7cc",
+              "uncompressed_sha256": "d057a3c91060a7f94bb5689381a2cf2ccdc162097bcd559ef4ff944bc39a6305"
+            },
+            "long_trades": 10,
+            "short_trades": 4,
+            "absolute_symbol_profit_share": 0.3780670860565157
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.0652150656121315,
+            "bootstrap_se_bps": 0.648739330029587,
+            "familywise_95_lower_bps": -2.6067809799816333,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "price_reversal_control": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "price_reversal_control",
+            "trades": 75,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -1.337253672857571,
+            "mean_daily_bps": -0.6460162670809522,
+            "max_daily_drawdown_pct": 5.6953133593954615,
+            "quarter_net_pct": {
+              "2026-Q1": -0.027682812710336093,
+              "2026-Q2": -1.4894704083081822,
+              "2026-Q3": 0.17989954816094686
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 11,
+                "net": -0.030847314207041898
+              },
+              "SOLUSDT": {
+                "trades": 11,
+                "net": -0.03448224244415447
+              },
+              "XRPUSDT": {
+                "trades": 10,
+                "net": -0.01772736175910288
+              },
+              "ADAUSDT": {
+                "trades": 11,
+                "net": -0.09887713046576455
+              },
+              "DOGEUSDT": {
+                "trades": 10,
+                "net": 0.06416628865201605
+              },
+              "LINKUSDT": {
+                "trades": 11,
+                "net": -0.041974313203022764
+              },
+              "AVAXUSDT": {
+                "trades": 11,
+                "net": 0.06613431632704024
+              }
+            },
+            "components": {
+              "price": 0.001067645635643523,
+              "fees": 0.014961544653918163,
+              "funding": 0.0005213622896988802,
+              "funding_debits": 0.01212568551425097,
+              "funding_credits": 0.012647047803949851
+            },
+            "net_without_funding_credit": -0.026019584532525612,
+            "execution_rejections": {
+              "funding_accounting_coverage": 40
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-price_reversal_control-base.json.gz",
+              "sha256": "108fb17b2c9385c11192461a590b82a8c012a7ce196eddb6751080de0beb174f",
+              "uncompressed_sha256": "454d0e817756b7c4197e985b1907f554dc6fba2f888a97def5514f4b9920b075"
+            },
+            "long_trades": 28,
+            "short_trades": 47,
+            "absolute_symbol_profit_share": 0.2791491454521365
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "price_reversal_control",
+            "trades": 75,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -3.0286103462927816,
+            "mean_daily_bps": -1.4630967856486867,
+            "max_daily_drawdown_pct": 7.105260084721751,
+            "quarter_net_pct": {
+              "2026-Q1": -0.2446595353146919,
+              "2026-Q2": -2.2265608407419655,
+              "2026-Q3": -0.5573899702361225
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 11,
+                "net": -0.04802311968781356
+              },
+              "SOLUSDT": {
+                "trades": 11,
+                "net": -0.05163561753265943
+              },
+              "XRPUSDT": {
+                "trades": 10,
+                "net": -0.03336710154611279
+              },
+              "ADAUSDT": {
+                "trades": 11,
+                "net": -0.11461482143813144
+              },
+              "DOGEUSDT": {
+                "trades": 10,
+                "net": 0.0471052237865224
+              },
+              "LINKUSDT": {
+                "trades": 11,
+                "net": -0.058872004381002825
+              },
+              "AVAXUSDT": {
+                "trades": 11,
+                "net": 0.047404716558703236
+              }
+            },
+            "components": {
+              "price": 0.0009725198325681444,
+              "fees": 0.031785906293071285,
+              "funding": 0.0005272829975753603,
+              "funding_debits": 0.01201077672309808,
+              "funding_credits": 0.012538059720673444
+            },
+            "net_without_funding_credit": -0.04282416318360122,
+            "execution_rejections": {
+              "funding_accounting_coverage": 40
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-price_reversal_control-stress.json.gz",
+              "sha256": "9a1f2778b976f598e21ba5f565471ff161d93cf5079c8c6c25e0d28a132de027",
+              "uncompressed_sha256": "b85e9f7848dba170c7d63237ae468ede043594c92211366e4f7ee21955dd6c6b"
+            },
+            "long_trades": 28,
+            "short_trades": 47,
+            "absolute_symbol_profit_share": 0.2858063860461622
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 1.5,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z1.5:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "price_reversal_control",
+            "trades": 75,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": -3.8098852869266024,
+            "mean_daily_bps": -1.840524293201257,
+            "max_daily_drawdown_pct": 7.439314055897355,
+            "quarter_net_pct": {
+              "2026-Q1": -0.3235028839231107,
+              "2026-Q2": -2.658583444246629,
+              "2026-Q3": -0.8277989587568646
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 11,
+                "net": -0.05297738183129722
+              },
+              "SOLUSDT": {
+                "trades": 11,
+                "net": -0.06509910252487527
+              },
+              "XRPUSDT": {
+                "trades": 10,
+                "net": -0.042438770214952445
+              },
+              "ADAUSDT": {
+                "trades": 11,
+                "net": -0.10469027100731496
+              },
+              "DOGEUSDT": {
+                "trades": 10,
+                "net": 0.041660951382110276
+              },
+              "LINKUSDT": {
+                "trades": 11,
+                "net": -0.05107066142608949
+              },
+              "AVAXUSDT": {
+                "trades": 11,
+                "net": 0.007923265537557123
+              }
+            },
+            "components": {
+              "price": -0.00691947519104974,
+              "fees": 0.0316731947826589,
+              "funding": 0.0004938171044426402,
+              "funding_debits": 0.011979771911797497,
+              "funding_credits": 0.01247358901624014
+            },
+            "net_without_funding_credit": -0.050572441885506136,
+            "execution_rejections": {
+              "funding_accounting_coverage": 40
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z1.5-h336-price_reversal_control-additional_latency.json.gz",
+              "sha256": "ecad00af78ce6bc4817b044ccd33cf4f4d74e50d2aa1139f3e874e3e231ceefa",
+              "uncompressed_sha256": "1b543931dac09d6506bc5cdeda4fd262ee20c54b2f52cef3f28951f88c997fcf"
+            },
+            "long_trades": 28,
+            "short_trades": 47,
+            "absolute_symbol_profit_share": 0.2861481315944917
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.4630967856486867,
+            "bootstrap_se_bps": 2.182523925934168,
+            "familywise_95_lower_bps": -6.649316174201213,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        }
+      },
+      "mechanism_screen": {
+        "stress_positive": false,
+        "latency_positive": false,
+        "familywise_lower_positive": false,
+        "increment_over_every_control": false
+      }
+    },
+    {
+      "identity": "leveraged_pressure_failure:z2:h168",
+      "specification": {
+        "family": "leveraged_pressure_failure",
+        "threshold": 2,
+        "horizon": 168
+      },
+      "variants": {
+        "full": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": null,
+            "trades": 8,
+            "active_symbols": 5,
+            "positive_symbols": 1,
+            "net_return_pct": -1.9199267946967742,
+            "mean_daily_bps": -0.9275008670032726,
+            "max_daily_drawdown_pct": 2.4294553586121888,
+            "quarter_net_pct": {
+              "2026-Q1": -0.2053707185053574,
+              "2026-Q2": -0.2828883182554973,
+              "2026-Q3": -1.4316677579359198
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.017538389758638154
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.019647695803496006
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": -0.06311695145860027
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.04540349902037877
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.027983731194652917
+              }
+            },
+            "components": {
+              "price": -0.018003780213465288,
+              "fees": 0.0015590815531750042,
+              "funding": 0.0003635938196725613,
+              "funding_debits": 0.0005798770669742472,
+              "funding_credits": 0.0009434708866468085
+            },
+            "net_without_funding_credit": -0.02014273883361454,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-full-base.json.gz",
+              "sha256": "faf5aa8d8d7f1200e412d0b6c2bc5e26f62c2bace2516ad5e10134d212d18a5f",
+              "uncompressed_sha256": "e2cea095f74714b463a217738b9e47d58621d94d41e3f948fef09e7b27c35f02"
+            },
+            "long_trades": 7,
+            "short_trades": 1,
+            "absolute_symbol_profit_share": 0.3633879575585298
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": null,
+            "trades": 8,
+            "active_symbols": 5,
+            "positive_symbols": 1,
+            "net_return_pct": -2.0955636102630724,
+            "mean_daily_bps": -1.0123495701753973,
+            "max_daily_drawdown_pct": 2.5705941180707184,
+            "quarter_net_pct": {
+              "2026-Q1": -0.21661812225350238,
+              "2026-Q2": -0.3367700931766139,
+              "2026-Q3": -1.5421753948329566
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.0190365275835883
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.016411706366173662
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": -0.06755890943816473
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.04692918966811332
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.02957653239472244
+              }
+            },
+            "components": {
+              "price": -0.01798314861102855,
+              "fees": 0.003335630869162265,
+              "funding": 0.0003631433775600875,
+              "funding_debits": 0.0005788654486799584,
+              "funding_credits": 0.0009420088262400459
+            },
+            "net_without_funding_credit": -0.021897644928870776,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-full-stress.json.gz",
+              "sha256": "c45a659dfdcd899149f366228fbb472e767a95322f05bf141bbfeb84b28686b9",
+              "uncompressed_sha256": "0f521550478ea93422217313ff640a2077e9f10354d5886d38af689af0e25696"
+            },
+            "long_trades": 7,
+            "short_trades": 1,
+            "absolute_symbol_profit_share": 0.37634578039029226
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": null,
+            "trades": 8,
+            "active_symbols": 5,
+            "positive_symbols": 1,
+            "net_return_pct": -1.8673734406373654,
+            "mean_daily_bps": -0.9021127732547659,
+            "max_daily_drawdown_pct": 2.38581935914194,
+            "quarter_net_pct": {
+              "2026-Q1": -0.18020025783502064,
+              "2026-Q2": -0.3045229570569788,
+              "2026-Q3": -1.3826502257453661
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.01689753545869127
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.017131684562032345
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": -0.05197464775867754
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.044472944027928916
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.034502698161350175
+              }
+            },
+            "components": {
+              "price": -0.01569913119284584,
+              "fees": 0.0033460534193688117,
+              "funding": 0.0003714502058409996,
+              "funding_debits": 0.0005729252363956019,
+              "funding_credits": 0.0009443754422366016
+            },
+            "net_without_funding_credit": -0.019618109848610257,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-full-additional_latency.json.gz",
+              "sha256": "8d3e4ede3a99e41307ff87a745c0bc1e2c452bf7ac584e589bbe81c2b8d08fb6",
+              "uncompressed_sha256": "757a64c92d4a65d28c75a6c4fef1f91e9f608cb8ac589612383c031634502e22"
+            },
+            "long_trades": 7,
+            "short_trades": 1,
+            "absolute_symbol_profit_share": 0.3150369871297619
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.0123495701753973,
+            "bootstrap_se_bps": 0.4779312905618647,
+            "familywise_95_lower_bps": -2.1480331226234903,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "without_oi": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_oi",
+            "trades": 19,
+            "active_symbols": 7,
+            "positive_symbols": 3,
+            "net_return_pct": -1.8768303757743952,
+            "mean_daily_bps": -0.906681340953814,
+            "max_daily_drawdown_pct": 2.556573080078496,
+            "quarter_net_pct": {
+              "2026-Q1": -0.2053707185053574,
+              "2026-Q2": -1.4118737903006289,
+              "2026-Q3": -0.25958586696840924
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.017538389758638154
+              },
+              "SOLUSDT": {
+                "trades": 5,
+                "net": 0.026488888494865963
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": 0.02643677086496548
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.12119273503470858
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.04540349902037877
+              },
+              "LINKUSDT": {
+                "trades": 5,
+                "net": 0.027814569344339575
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.027983731194652917
+              }
+            },
+            "components": {
+              "price": -0.01585178522807984,
+              "fees": 0.0037390786882391734,
+              "funding": 0.0008225601585751017,
+              "funding_debits": 0.0013132932020157844,
+              "funding_credits": 0.002135853360590886
+            },
+            "net_without_funding_credit": -0.0209041571183348,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-without_oi-base.json.gz",
+              "sha256": "56d1ba184e49f094b692082c440966b7e81afd882b51a4ef5a8390182c7181e8",
+              "uncompressed_sha256": "2ef49b0227cf7af42b8b6b669b09a027687ac8435b95302a4e51ba2b5c5f1810"
+            },
+            "long_trades": 15,
+            "short_trades": 4,
+            "absolute_symbol_profit_share": 0.41382681531255144
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_oi",
+            "trades": 19,
+            "active_symbols": 7,
+            "positive_symbols": 3,
+            "net_return_pct": -2.3076705770327437,
+            "mean_daily_bps": -1.1148167038805525,
+            "max_daily_drawdown_pct": 2.7826856685039156,
+            "quarter_net_pct": {
+              "2026-Q1": -0.21661812225350238,
+              "2026-Q2": -1.5965157116871482,
+              "2026-Q3": -0.4945367430920931
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.0190365275835883
+              },
+              "SOLUSDT": {
+                "trades": 5,
+                "net": 0.018436135646442885
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": 0.01981613050825969
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.1239313294565184
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.04692918966811332
+              },
+              "LINKUSDT": {
+                "trades": 5,
+                "net": 0.01968437255594787
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.02957653239472244
+              }
+            },
+            "components": {
+              "price": -0.015909914646035583,
+              "fees": 0.007987637024210865,
+              "funding": 0.000820845899919011,
+              "funding_debits": 0.0013084119981208577,
+              "funding_credits": 0.002129257898039869
+            },
+            "net_without_funding_credit": -0.025205963668367307,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-without_oi-stress.json.gz",
+              "sha256": "1552630a5be2c4f8a2b6edce5e51912a169cf7eb4fc3aff6540d31aa1277a05c",
+              "uncompressed_sha256": "cd1affbf0d81ea7bc8ef1222db3b6612be12c7c1a56d419527859d68ee3b843b"
+            },
+            "long_trades": 15,
+            "short_trades": 4,
+            "absolute_symbol_profit_share": 0.44674392469492474
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "without_oi",
+            "trades": 19,
+            "active_symbols": 7,
+            "positive_symbols": 3,
+            "net_return_pct": -1.6651177909415191,
+            "mean_daily_bps": -0.8044047299234393,
+            "max_daily_drawdown_pct": 2.6497708703823997,
+            "quarter_net_pct": {
+              "2026-Q1": -0.18020025783502064,
+              "2026-Q2": -1.4461947578777545,
+              "2026-Q3": -0.03872277522874424
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.01689753545869127
+              },
+              "SOLUSDT": {
+                "trades": 5,
+                "net": 0.02530015510332832
+              },
+              "XRPUSDT": {
+                "trades": 4,
+                "net": 0.02059479980975234
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.11604224475207432
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.044472944027928916
+              },
+              "LINKUSDT": {
+                "trades": 5,
+                "net": 0.049462222121057886
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.034502698161350175
+              }
+            },
+            "components": {
+              "price": -0.00946159756322544,
+              "fees": 0.008021839485520888,
+              "funding": 0.0008322591393311608,
+              "funding_debits": 0.0013058257982256705,
+              "funding_credits": 0.0021380849375568314
+            },
+            "net_without_funding_credit": -0.018789262846972,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-without_oi-additional_latency.json.gz",
+              "sha256": "d980bbc9bf9aeb6fcce385b90363ed98d947dfc614c931a640a9072ca6eefbce",
+              "uncompressed_sha256": "c51a8f2fa9caca9109f79ccae41c9c4d2b4b7375af46f7b755a571692645a0b7"
+            },
+            "long_trades": 15,
+            "short_trades": 4,
+            "absolute_symbol_profit_share": 0.37765243293985995
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.1148167038805525,
+            "bootstrap_se_bps": 0.730494142334267,
+            "familywise_95_lower_bps": -2.8506523752244357,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "without_confirmation": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_confirmation",
+            "trades": 8,
+            "active_symbols": 5,
+            "positive_symbols": 1,
+            "net_return_pct": -1.9199267946967742,
+            "mean_daily_bps": -0.9275008670032726,
+            "max_daily_drawdown_pct": 2.4294553586121888,
+            "quarter_net_pct": {
+              "2026-Q1": -0.2053707185053574,
+              "2026-Q2": -0.2828883182554973,
+              "2026-Q3": -1.4316677579359198
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.017538389758638154
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.019647695803496006
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": -0.06311695145860027
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.04540349902037877
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.027983731194652917
+              }
+            },
+            "components": {
+              "price": -0.018003780213465288,
+              "fees": 0.0015590815531750042,
+              "funding": 0.0003635938196725613,
+              "funding_debits": 0.0005798770669742472,
+              "funding_credits": 0.0009434708866468085
+            },
+            "net_without_funding_credit": -0.02014273883361454,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-without_confirmation-base.json.gz",
+              "sha256": "faf5aa8d8d7f1200e412d0b6c2bc5e26f62c2bace2516ad5e10134d212d18a5f",
+              "uncompressed_sha256": "e2cea095f74714b463a217738b9e47d58621d94d41e3f948fef09e7b27c35f02"
+            },
+            "long_trades": 7,
+            "short_trades": 1,
+            "absolute_symbol_profit_share": 0.3633879575585298
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_confirmation",
+            "trades": 8,
+            "active_symbols": 5,
+            "positive_symbols": 1,
+            "net_return_pct": -2.0955636102630724,
+            "mean_daily_bps": -1.0123495701753973,
+            "max_daily_drawdown_pct": 2.5705941180707184,
+            "quarter_net_pct": {
+              "2026-Q1": -0.21661812225350238,
+              "2026-Q2": -0.3367700931766139,
+              "2026-Q3": -1.5421753948329566
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.0190365275835883
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.016411706366173662
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": -0.06755890943816473
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.04692918966811332
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.02957653239472244
+              }
+            },
+            "components": {
+              "price": -0.01798314861102855,
+              "fees": 0.003335630869162265,
+              "funding": 0.0003631433775600875,
+              "funding_debits": 0.0005788654486799584,
+              "funding_credits": 0.0009420088262400459
+            },
+            "net_without_funding_credit": -0.021897644928870776,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-without_confirmation-stress.json.gz",
+              "sha256": "c45a659dfdcd899149f366228fbb472e767a95322f05bf141bbfeb84b28686b9",
+              "uncompressed_sha256": "0f521550478ea93422217313ff640a2077e9f10354d5886d38af689af0e25696"
+            },
+            "long_trades": 7,
+            "short_trades": 1,
+            "absolute_symbol_profit_share": 0.37634578039029226
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "without_confirmation",
+            "trades": 8,
+            "active_symbols": 5,
+            "positive_symbols": 1,
+            "net_return_pct": -1.8673734406373654,
+            "mean_daily_bps": -0.9021127732547659,
+            "max_daily_drawdown_pct": 2.38581935914194,
+            "quarter_net_pct": {
+              "2026-Q1": -0.18020025783502064,
+              "2026-Q2": -0.3045229570569788,
+              "2026-Q3": -1.3826502257453661
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.01689753545869127
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": 0.017131684562032345
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": -0.05197464775867754
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.044472944027928916
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 1,
+                "net": -0.034502698161350175
+              }
+            },
+            "components": {
+              "price": -0.01569913119284584,
+              "fees": 0.0033460534193688117,
+              "funding": 0.0003714502058409996,
+              "funding_debits": 0.0005729252363956019,
+              "funding_credits": 0.0009443754422366016
+            },
+            "net_without_funding_credit": -0.019618109848610257,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-without_confirmation-additional_latency.json.gz",
+              "sha256": "8d3e4ede3a99e41307ff87a745c0bc1e2c452bf7ac584e589bbe81c2b8d08fb6",
+              "uncompressed_sha256": "757a64c92d4a65d28c75a6c4fef1f91e9f608cb8ac589612383c031634502e22"
+            },
+            "long_trades": 7,
+            "short_trades": 1,
+            "absolute_symbol_profit_share": 0.3150369871297619
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.0123495701753973,
+            "bootstrap_se_bps": 0.4779312905618647,
+            "familywise_95_lower_bps": -2.1480331226234903,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "price_reversal_control": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "price_reversal_control",
+            "trades": 95,
+            "active_symbols": 7,
+            "positive_symbols": 1,
+            "net_return_pct": -5.172338878187635,
+            "mean_daily_bps": -2.49871443390707,
+            "max_daily_drawdown_pct": 8.17575892772912,
+            "quarter_net_pct": {
+              "2026-Q1": 0.05282861144959755,
+              "2026-Q2": -3.260347416520736,
+              "2026-Q3": -1.9648200731164966
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 14,
+                "net": -0.02502723479575705
+              },
+              "SOLUSDT": {
+                "trades": 13,
+                "net": -0.03527443053039522
+              },
+              "XRPUSDT": {
+                "trades": 14,
+                "net": 0.019390662955975958
+              },
+              "ADAUSDT": {
+                "trades": 13,
+                "net": -0.049444697147245906
+              },
+              "DOGEUSDT": {
+                "trades": 12,
+                "net": -0.03328670271914548
+              },
+              "LINKUSDT": {
+                "trades": 14,
+                "net": -0.094279050629043
+              },
+              "AVAXUSDT": {
+                "trades": 15,
+                "net": -0.14414226860752372
+              }
+            },
+            "components": {
+              "price": -0.03338596177296174,
+              "fees": 0.018630614752220467,
+              "funding": 0.0002931877433058737,
+              "funding_debits": 0.007894758012761202,
+              "funding_credits": 0.008187945756067077
+            },
+            "net_without_funding_credit": -0.059911334537943416,
+            "execution_rejections": {
+              "funding_accounting_coverage": 11
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-price_reversal_control-base.json.gz",
+              "sha256": "e0d1b6dad5b2cd07a732a1f158048faf4b24c8b1c9032d5bf9561dc4cfe53c9f",
+              "uncompressed_sha256": "54e6e3a80ec37daa5c8435d5665664f1699b94bfc435cfd6467bf8046145b662"
+            },
+            "long_trades": 35,
+            "short_trades": 60,
+            "absolute_symbol_profit_share": 0.3595959824072573
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "price_reversal_control",
+            "trades": 95,
+            "active_symbols": 7,
+            "positive_symbols": 0,
+            "net_return_pct": -7.221881370826669,
+            "mean_daily_bps": -3.488831580109502,
+            "max_daily_drawdown_pct": 9.663149826966965,
+            "quarter_net_pct": {
+              "2026-Q1": -0.14244398181764337,
+              "2026-Q2": -4.137563275319881,
+              "2026-Q3": -2.941874113689145
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 14,
+                "net": -0.0468079333050457
+              },
+              "SOLUSDT": {
+                "trades": 13,
+                "net": -0.05521206003583581
+              },
+              "XRPUSDT": {
+                "trades": 14,
+                "net": -0.003346656388939089
+              },
+              "ADAUSDT": {
+                "trades": 13,
+                "net": -0.06920572852195497
+              },
+              "DOGEUSDT": {
+                "trades": 12,
+                "net": -0.05172909769612066
+              },
+              "LINKUSDT": {
+                "trades": 14,
+                "net": -0.11441971213468108
+              },
+              "AVAXUSDT": {
+                "trades": 15,
+                "net": -0.16481050787528928
+              }
+            },
+            "components": {
+              "price": -0.03302309733018318,
+              "fees": 0.039491761542696145,
+              "funding": 0.0002960451646126721,
+              "funding_debits": 0.007800777127844568,
+              "funding_credits": 0.00809682229245724
+            },
+            "net_without_funding_credit": -0.08031563600072389,
+            "execution_rejections": {
+              "funding_accounting_coverage": 11
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-price_reversal_control-stress.json.gz",
+              "sha256": "2f8303f04088eb58d5c26d16b538975f6547186b493588fac2ec9f232062393f",
+              "uncompressed_sha256": "f40f3fbdfb2da76b3051d290fcfab7cbe80690326984a9c87485638bfa102317"
+            },
+            "long_trades": 35,
+            "short_trades": 60,
+            "absolute_symbol_profit_share": 0.32601419296372935
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 168
+            },
+            "identity": "leveraged_pressure_failure:z2:h168",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "price_reversal_control",
+            "trades": 95,
+            "active_symbols": 7,
+            "positive_symbols": 0,
+            "net_return_pct": -7.875917413681634,
+            "mean_daily_bps": -3.804791021102239,
+            "max_daily_drawdown_pct": 9.969481502015718,
+            "quarter_net_pct": {
+              "2026-Q1": -0.20761282077868623,
+              "2026-Q2": -3.6937528772498944,
+              "2026-Q3": -3.9745517156530505
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 14,
+                "net": -0.0398528345004627
+              },
+              "SOLUSDT": {
+                "trades": 13,
+                "net": -0.07088540613298076
+              },
+              "XRPUSDT": {
+                "trades": 14,
+                "net": -0.00021094745916172553
+              },
+              "ADAUSDT": {
+                "trades": 13,
+                "net": -0.05621983851189441
+              },
+              "DOGEUSDT": {
+                "trades": 12,
+                "net": -0.06890070314182194
+              },
+              "LINKUSDT": {
+                "trades": 14,
+                "net": -0.1352364030824161
+              },
+              "AVAXUSDT": {
+                "trades": 15,
+                "net": -0.18000808612897676
+              }
+            },
+            "components": {
+              "price": -0.03953625593427024,
+              "fees": 0.0394627937936383,
+              "funding": 0.00023987559109219187,
+              "funding_debits": 0.007802796580013133,
+              "funding_credits": 0.008042672171105327
+            },
+            "net_without_funding_credit": -0.08680184630792166,
+            "execution_rejections": {
+              "funding_accounting_coverage": 11
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h168-price_reversal_control-additional_latency.json.gz",
+              "sha256": "d149d748690c649219fc03261ac3db7a6124ab074ed79b903c710909035b63af",
+              "uncompressed_sha256": "c533e1ce7dfc426685a0084a0be5cf3bc3e2fe98746a194f80593830f40ee164"
+            },
+            "long_trades": 35,
+            "short_trades": 60,
+            "absolute_symbol_profit_share": 0.32650724385322505
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -3.488831580109502,
+            "bootstrap_se_bps": 1.7360357722370923,
+            "familywise_95_lower_bps": -7.614084125665485,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        }
+      },
+      "mechanism_screen": {
+        "stress_positive": false,
+        "latency_positive": false,
+        "familywise_lower_positive": false,
+        "increment_over_every_control": false
+      }
+    },
+    {
+      "identity": "leveraged_pressure_failure:z2:h336",
+      "specification": {
+        "family": "leveraged_pressure_failure",
+        "threshold": 2,
+        "horizon": 336
+      },
+      "variants": {
+        "full": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": null,
+            "trades": 6,
+            "active_symbols": 4,
+            "positive_symbols": 0,
+            "net_return_pct": -1.8196258810063295,
+            "mean_daily_bps": -0.8790463193267292,
+            "max_daily_drawdown_pct": 1.9670195823655947,
+            "quarter_net_pct": {
+              "2026-Q1": -0.2053707185053574,
+              "2026-Q2": -0.1840423092903797,
+              "2026-Q3": -1.4302128532105922
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.015853600804602637
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.014440122073102628
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.043755620271444466
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.05332446852129343
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.017707880227629084,
+              "fees": 0.0011893303742864527,
+              "funding": 0.0007009517918522281,
+              "funding_debits": 0.0006954649596555426,
+              "funding_credits": 0.001396416751507771
+            },
+            "net_without_funding_credit": -0.019592675561571078,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-full-base.json.gz",
+              "sha256": "2dd4ad109254695c27c7f13bf96d14433b7faed6e03479e27b20743f3e9c14c1",
+              "uncompressed_sha256": "ea7eb473a45a58f5604d915c8a7241ebdd25c62e7799bd0bdaeeb45980de8a0c"
+            },
+            "long_trades": 6,
+            "short_trades": 0,
+            "absolute_symbol_profit_share": 0.4186454642596463
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": null,
+            "trades": 6,
+            "active_symbols": 4,
+            "positive_symbols": 0,
+            "net_return_pct": -1.9529145193688264,
+            "mean_daily_bps": -0.9434369658786601,
+            "max_daily_drawdown_pct": 2.0549933801445595,
+            "quarter_net_pct": {
+              "2026-Q1": -0.21661812225350238,
+              "2026-Q2": -0.24024434008449186,
+              "2026-Q3": -1.4960520570308329
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.01740731213585655
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.01765319274968905
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.04678353359936773
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.0548599778709046
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.017683955985268056,
+              "fees": 0.0025451690374565313,
+              "funding": 0.0006999798290363113,
+              "funding_debits": 0.0006944272649666502,
+              "funding_credits": 0.0013944070940029615
+            },
+            "net_without_funding_credit": -0.020923552287691237,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-full-stress.json.gz",
+              "sha256": "5bff2cfb9a481914653c521fec894967433feab560345732f4b500c41b26d0f8",
+              "uncompressed_sha256": "bc345416c503306355500906bfc76cf039885dee161d69457e3ba715e3795f97"
+            },
+            "long_trades": 6,
+            "short_trades": 0,
+            "absolute_symbol_profit_share": 0.4013047994735806
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": null,
+            "trades": 6,
+            "active_symbols": 4,
+            "positive_symbols": 0,
+            "net_return_pct": -1.7124979560488154,
+            "mean_daily_bps": -0.827293698574307,
+            "max_daily_drawdown_pct": 1.9008984215144336,
+            "quarter_net_pct": {
+              "2026-Q1": -0.18020025783502064,
+              "2026-Q2": -0.3141072125412303,
+              "2026-Q3": -1.2181904856725647
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.014312431847566982
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.01623259699733936
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.03962078525971376
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.049709042818796866
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.015261804431792089,
+              "fees": 0.0025474981386180385,
+              "funding": 0.0006843230099219898,
+              "funding_debits": 0.000689473467024267,
+              "funding_credits": 0.0013737964769462568
+            },
+            "net_without_funding_credit": -0.018498776037434394,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-full-additional_latency.json.gz",
+              "sha256": "1e516dc74acc04997666db15067a1035a4506dee6c402c3affbe93d843cf7020",
+              "uncompressed_sha256": "af4f3098962e04ae9d08da400916d92f5367c66a01606b0ac9c78b1a81eb0191"
+            },
+            "long_trades": 6,
+            "short_trades": 0,
+            "absolute_symbol_profit_share": 0.4146744704817783
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -0.9434369658786602,
+            "bootstrap_se_bps": 0.6544905585800137,
+            "familywise_95_lower_bps": -2.4986692289473877,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "without_oi": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_oi",
+            "trades": 14,
+            "active_symbols": 6,
+            "positive_symbols": 2,
+            "net_return_pct": -1.81392384158902,
+            "mean_daily_bps": -0.87629171091257,
+            "max_daily_drawdown_pct": 3.139203320122537,
+            "quarter_net_pct": {
+              "2026-Q1": -0.2053707185053574,
+              "2026-Q2": -1.0027983864824104,
+              "2026-Q3": -0.605754736601252
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.015853600804602637
+              },
+              "SOLUSDT": {
+                "trades": 4,
+                "net": -0.013863126876743303
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": 0.07467223614342759
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.1268476659456682
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.05332446852129343
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.008241957093648559
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.016446077256409435,
+              "fees": 0.0027975678062567674,
+              "funding": 0.0011044066467760009,
+              "funding_debits": 0.0018049681779536393,
+              "funding_credits": 0.0029093748247296398
+            },
+            "net_without_funding_credit": -0.02104861324061984,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-without_oi-base.json.gz",
+              "sha256": "3579874134a9e5a5a0f7783a29275c2fac0e30d7d8c81ff4d313b332c2bbf01b",
+              "uncompressed_sha256": "a3ff544c3cedb25472f77e514075b002930df4d19e235b7ad4d4b62ebbe14d1c"
+            },
+            "long_trades": 12,
+            "short_trades": 2,
+            "absolute_symbol_profit_share": 0.43321838216036673
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_oi",
+            "trades": 14,
+            "active_symbols": 6,
+            "positive_symbols": 2,
+            "net_return_pct": -2.13379980706439,
+            "mean_daily_bps": -1.0308211628330386,
+            "max_daily_drawdown_pct": 3.1673181839699707,
+            "quarter_net_pct": {
+              "2026-Q1": -0.21661812225350238,
+              "2026-Q2": -1.1686814080528212,
+              "2026-Q3": -0.7485002767580665
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.01740731213585655
+              },
+              "SOLUSDT": {
+                "trades": 4,
+                "net": -0.02033338967268161
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": 0.06946366975731941
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.12963952547441232
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.0548599778709046
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.0034105489020284305
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.01645958005984779,
+              "fees": 0.0059808577044363695,
+              "funding": 0.0011024396936402713,
+              "funding_debits": 0.001799932386549368,
+              "funding_credits": 0.002902372080189639
+            },
+            "net_without_funding_credit": -0.02424037015083353,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-without_oi-stress.json.gz",
+              "sha256": "d0f6bb76a022d2cb9ac85e8ddef19ee7705a75d6adf1979c11b06116b23f116a",
+              "uncompressed_sha256": "b9c3ae9c9019eb2e3e8793ece5b00696a201a97716f11c97a369ddf05b9d69b3"
+            },
+            "long_trades": 12,
+            "short_trades": 2,
+            "absolute_symbol_profit_share": 0.43928562961893586
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "without_oi",
+            "trades": 14,
+            "active_symbols": 6,
+            "positive_symbols": 2,
+            "net_return_pct": -1.757120380734474,
+            "mean_daily_bps": -0.8488504254755912,
+            "max_daily_drawdown_pct": 3.1118936965777886,
+            "quarter_net_pct": {
+              "2026-Q1": -0.18020025783502064,
+              "2026-Q2": -1.088467629105561,
+              "2026-Q3": -0.48845249379389255
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.014312431847566982
+              },
+              "SOLUSDT": {
+                "trades": 4,
+                "net": -0.009859722770052443
+              },
+              "XRPUSDT": {
+                "trades": 3,
+                "net": 0.058969475249776956
+              },
+              "ADAUSDT": {
+                "trades": 2,
+                "net": -0.11737925150924498
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.049709042818796866
+              },
+              "LINKUSDT": {
+                "trades": 3,
+                "net": 0.009292547044471237
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.01268079315287028,
+              "fees": 0.005988119144420389,
+              "funding": 0.0010977084899459436,
+              "funding_debits": 0.001800039890229846,
+              "funding_credits": 0.0028977483801757905
+            },
+            "net_without_funding_credit": -0.02046895218752051,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-without_oi-additional_latency.json.gz",
+              "sha256": "47f061f4dac0d8e22411f9c9cd44fc3622d3d2b040f6d82298f267a4e138eb89",
+              "uncompressed_sha256": "915a1671ccd69ae7edd9e9fc94fc1987125c3be8873f300244105ff81e9eab8d"
+            },
+            "long_trades": 12,
+            "short_trades": 2,
+            "absolute_symbol_profit_share": 0.4522893564801812
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -1.0308211628330386,
+            "bootstrap_se_bps": 1.0784823490755888,
+            "familywise_95_lower_bps": -3.593563317695538,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "without_confirmation": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_confirmation",
+            "trades": 6,
+            "active_symbols": 4,
+            "positive_symbols": 0,
+            "net_return_pct": -1.8196258810063295,
+            "mean_daily_bps": -0.8790463193267292,
+            "max_daily_drawdown_pct": 1.9670195823655947,
+            "quarter_net_pct": {
+              "2026-Q1": -0.2053707185053574,
+              "2026-Q2": -0.1840423092903797,
+              "2026-Q3": -1.4302128532105922
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.015853600804602637
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.014440122073102628
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.043755620271444466
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.05332446852129343
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.017707880227629084,
+              "fees": 0.0011893303742864527,
+              "funding": 0.0007009517918522281,
+              "funding_debits": 0.0006954649596555426,
+              "funding_credits": 0.001396416751507771
+            },
+            "net_without_funding_credit": -0.019592675561571078,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-without_confirmation-base.json.gz",
+              "sha256": "2dd4ad109254695c27c7f13bf96d14433b7faed6e03479e27b20743f3e9c14c1",
+              "uncompressed_sha256": "ea7eb473a45a58f5604d915c8a7241ebdd25c62e7799bd0bdaeeb45980de8a0c"
+            },
+            "long_trades": 6,
+            "short_trades": 0,
+            "absolute_symbol_profit_share": 0.4186454642596463
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "without_confirmation",
+            "trades": 6,
+            "active_symbols": 4,
+            "positive_symbols": 0,
+            "net_return_pct": -1.9529145193688264,
+            "mean_daily_bps": -0.9434369658786601,
+            "max_daily_drawdown_pct": 2.0549933801445595,
+            "quarter_net_pct": {
+              "2026-Q1": -0.21661812225350238,
+              "2026-Q2": -0.24024434008449186,
+              "2026-Q3": -1.4960520570308329
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.01740731213585655
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.01765319274968905
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.04678353359936773
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.0548599778709046
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.017683955985268056,
+              "fees": 0.0025451690374565313,
+              "funding": 0.0006999798290363113,
+              "funding_debits": 0.0006944272649666502,
+              "funding_credits": 0.0013944070940029615
+            },
+            "net_without_funding_credit": -0.020923552287691237,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-without_confirmation-stress.json.gz",
+              "sha256": "5bff2cfb9a481914653c521fec894967433feab560345732f4b500c41b26d0f8",
+              "uncompressed_sha256": "bc345416c503306355500906bfc76cf039885dee161d69457e3ba715e3795f97"
+            },
+            "long_trades": 6,
+            "short_trades": 0,
+            "absolute_symbol_profit_share": 0.4013047994735806
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "without_confirmation",
+            "trades": 6,
+            "active_symbols": 4,
+            "positive_symbols": 0,
+            "net_return_pct": -1.7124979560488154,
+            "mean_daily_bps": -0.827293698574307,
+            "max_daily_drawdown_pct": 1.9008984215144336,
+            "quarter_net_pct": {
+              "2026-Q1": -0.18020025783502064,
+              "2026-Q2": -0.3141072125412303,
+              "2026-Q3": -1.2181904856725647
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 1,
+                "net": -0.014312431847566982
+              },
+              "SOLUSDT": {
+                "trades": 2,
+                "net": -0.01623259699733936
+              },
+              "XRPUSDT": {
+                "trades": 2,
+                "net": -0.03962078525971376
+              },
+              "ADAUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "DOGEUSDT": {
+                "trades": 1,
+                "net": -0.049709042818796866
+              },
+              "LINKUSDT": {
+                "trades": 0,
+                "net": 0.0
+              },
+              "AVAXUSDT": {
+                "trades": 0,
+                "net": 0.0
+              }
+            },
+            "components": {
+              "price": -0.015261804431792089,
+              "fees": 0.0025474981386180385,
+              "funding": 0.0006843230099219898,
+              "funding_debits": 0.000689473467024267,
+              "funding_credits": 0.0013737964769462568
+            },
+            "net_without_funding_credit": -0.018498776037434394,
+            "execution_rejections": {},
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-without_confirmation-additional_latency.json.gz",
+              "sha256": "1e516dc74acc04997666db15067a1035a4506dee6c402c3affbe93d843cf7020",
+              "uncompressed_sha256": "af4f3098962e04ae9d08da400916d92f5367c66a01606b0ac9c78b1a81eb0191"
+            },
+            "long_trades": 6,
+            "short_trades": 0,
+            "absolute_symbol_profit_share": 0.4146744704817783
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": -0.9434369658786602,
+            "bootstrap_se_bps": 0.6544905585800137,
+            "familywise_95_lower_bps": -2.4986692289473877,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        },
+        "price_reversal_control": {
+          "base": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 5,
+              "slippage_bps": 2
+            },
+            "entry_delay_bars": 2,
+            "ablation": "price_reversal_control",
+            "trades": 61,
+            "active_symbols": 7,
+            "positive_symbols": 3,
+            "net_return_pct": 2.961195299987617,
+            "mean_daily_bps": 1.4305291304288004,
+            "max_daily_drawdown_pct": 3.6857586781392637,
+            "quarter_net_pct": {
+              "2026-Q1": 0.3545585827259324,
+              "2026-Q2": 2.95346900377708,
+              "2026-Q3": -0.3468322865153953
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 8,
+                "net": -0.024691170952901142
+              },
+              "SOLUSDT": {
+                "trades": 9,
+                "net": 0.08741611970755973
+              },
+              "XRPUSDT": {
+                "trades": 9,
+                "net": 0.003800363768063043
+              },
+              "ADAUSDT": {
+                "trades": 10,
+                "net": 0.251704761855408
+              },
+              "DOGEUSDT": {
+                "trades": 9,
+                "net": -0.07170769298167541
+              },
+              "LINKUSDT": {
+                "trades": 8,
+                "net": -0.01871176146590363
+              },
+              "AVAXUSDT": {
+                "trades": 8,
+                "net": -0.020526948931417474
+              }
+            },
+            "components": {
+              "price": 0.0424082663067916,
+              "fees": 0.012615994709308007,
+              "funding": -0.0001803185976074283,
+              "funding_debits": 0.010645710804901953,
+              "funding_credits": 0.010465392207294527
+            },
+            "net_without_funding_credit": 0.01914656079258164,
+            "execution_rejections": {
+              "funding_accounting_coverage": 32
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-price_reversal_control-base.json.gz",
+              "sha256": "735d5793d6a705d0a40ce38cc2901b4ef18aa3ec4552fd6a8f404d7ad399b6a3",
+              "uncompressed_sha256": "c42b15a6f4c95c53b752c72e8e7e38808c7d8c440b3c78168764e22014932334"
+            },
+            "long_trades": 19,
+            "short_trades": 42,
+            "absolute_symbol_profit_share": 0.5259641062151891
+          },
+          "stress": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 2,
+            "ablation": "price_reversal_control",
+            "trades": 61,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": 1.5184067636473133,
+            "mean_daily_bps": 0.7335298375107794,
+            "max_daily_drawdown_pct": 3.855506518958844,
+            "quarter_net_pct": {
+              "2026-Q1": 0.2074679362900111,
+              "2026-Q2": 2.336527716856368,
+              "2026-Q3": -1.0255888894990675
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 8,
+                "net": -0.03739311109672128
+              },
+              "SOLUSDT": {
+                "trades": 9,
+                "net": 0.07199417931407955
+              },
+              "XRPUSDT": {
+                "trades": 9,
+                "net": -0.010734373085657601
+              },
+              "ADAUSDT": {
+                "trades": 10,
+                "net": 0.2321805466079397
+              },
+              "DOGEUSDT": {
+                "trades": 9,
+                "net": -0.08526544715722349
+              },
+              "LINKUSDT": {
+                "trades": 8,
+                "net": -0.03138165243460915
+              },
+              "AVAXUSDT": {
+                "trades": 8,
+                "net": -0.033111668692495766
+              }
+            },
+            "components": {
+              "price": 0.04220104884726339,
+              "fees": 0.026843308970719917,
+              "funding": -0.00017367224007034415,
+              "funding_debits": 0.010563292706105022,
+              "funding_credits": 0.010389620466034673
+            },
+            "net_without_funding_credit": 0.00479444717043845,
+            "execution_rejections": {
+              "funding_accounting_coverage": 32
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-price_reversal_control-stress.json.gz",
+              "sha256": "398455108ec66e1366f9222e92fbfbbc80123a64578730b894d48825973c9e6a",
+              "uncompressed_sha256": "3482dbfe1604d746bcb6dce7543bd7ea80520a747c10f5c112f4cf634679b9ee"
+            },
+            "long_trades": 19,
+            "short_trades": 42,
+            "absolute_symbol_profit_share": 0.4624548742128515
+          },
+          "additional_latency": {
+            "specification": {
+              "family": "leveraged_pressure_failure",
+              "threshold": 2,
+              "horizon": 336
+            },
+            "identity": "leveraged_pressure_failure:z2:h336",
+            "period": {
+              "start": "2026-03-08",
+              "end_exclusive": "2026-10-01"
+            },
+            "cost": {
+              "fee_bps": 10,
+              "slippage_bps": 5
+            },
+            "entry_delay_bars": 4,
+            "ablation": "price_reversal_control",
+            "trades": 61,
+            "active_symbols": 7,
+            "positive_symbols": 2,
+            "net_return_pct": 0.8670398555770092,
+            "mean_daily_bps": 0.41885983361208173,
+            "max_daily_drawdown_pct": 3.9480590842144814,
+            "quarter_net_pct": {
+              "2026-Q1": -0.09473476115226624,
+              "2026-Q2": 1.9264909529854268,
+              "2026-Q3": -0.9647163362561517
+            },
+            "per_symbol": {
+              "ETHUSDT": {
+                "trades": 8,
+                "net": -0.037969471991423566
+              },
+              "SOLUSDT": {
+                "trades": 9,
+                "net": 0.07581294078488249
+              },
+              "XRPUSDT": {
+                "trades": 9,
+                "net": -0.008458767969993092
+              },
+              "ADAUSDT": {
+                "trades": 10,
+                "net": 0.21241843480444206
+              },
+              "DOGEUSDT": {
+                "trades": 9,
+                "net": -0.08434636052741273
+              },
+              "LINKUSDT": {
+                "trades": 8,
+                "net": -0.04677745244592166
+              },
+              "AVAXUSDT": {
+                "trades": 8,
+                "net": -0.049986532764182634
+              }
+            },
+            "components": {
+              "price": 0.03560057197620047,
+              "fees": 0.026671463902558038,
+              "funding": -0.0002587095178723219,
+              "funding_debits": 0.010530101593942886,
+              "funding_credits": 0.010271392076070565
+            },
+            "net_without_funding_credit": -0.0016009935203004522,
+            "execution_rejections": {
+              "funding_accounting_coverage": 32
+            },
+            "ledger": {
+              "file": "ledgers/leveraged_pressure_failure-z2-h336-price_reversal_control-additional_latency.json.gz",
+              "sha256": "348a6a4b3a5a1b45312c6441774e7c330ff0973f18f43ea7ffca307983daf09f",
+              "uncompressed_sha256": "80eece1975e950b26355bc1d8a2681120a629593e56c6ef454bf7d9d5c0acc3a"
+            },
+            "long_trades": 19,
+            "short_trades": 42,
+            "absolute_symbol_profit_share": 0.4118472395598155
+          },
+          "simultaneous_inference": {
+            "mean_daily_bps": 0.7335298375107794,
+            "bootstrap_se_bps": 1.6602918469485108,
+            "familywise_95_lower_bps": -3.211736312831426,
+            "critical_max_t": 2.3762485840024463,
+            "family_size": 16
+          }
+        }
+      },
+      "mechanism_screen": {
+        "stress_positive": false,
+        "latency_positive": false,
+        "familywise_lower_positive": false,
+        "increment_over_every_control": false
+      }
+    }
+  ],
+  "simulations": 48,
+  "simultaneous_family_size": 16,
+  "validated_alpha_count": 0,
+  "final_strategy": null,
+  "holdout_2025_loaded": false,
+  "live_execution_enabled": false,
+  "limitations": "Only incremental, net-cost evidence can support the mechanism. Single-venue hourly proxies, selected surviving assets, unknown historical publication clocks, spreads, capacity, native account rules and intrahour margin remain admission blockers even for a positive result."
+}
